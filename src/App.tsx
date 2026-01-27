@@ -5,6 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { CrmLayout } from "./components/crm/layout/CrmLayout";
+import CrmIndex from "./pages/crm/Index";
+import CrmClients from "./pages/crm/Clients";
+import ClientDetail from "./pages/crm/ClientDetail";
+import CrmSettings from "./pages/crm/Settings";
 
 const queryClient = new QueryClient();
 
@@ -16,6 +21,15 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          
+          {/* CRM Routes */}
+          <Route path="/crm" element={<CrmLayout />}>
+            <Route index element={<CrmIndex />} />
+            <Route path="clients" element={<CrmClients />} />
+            <Route path="clients/:id" element={<ClientDetail />} />
+            <Route path="settings" element={<CrmSettings />} />
+          </Route>
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
