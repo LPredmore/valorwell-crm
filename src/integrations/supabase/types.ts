@@ -3013,6 +3013,339 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_activity_events: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by_profile_id: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          new_value: string | null
+          old_value: string | null
+          tenant_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          new_value?: string | null
+          old_value?: string | null
+          tenant_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          new_value?: string | null
+          old_value?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_activity_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_activity_events_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_activity_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_bulk_send_logs: {
+        Row: {
+          body_html: string
+          completed_at: string | null
+          created_at: string
+          created_by_profile_id: string
+          failed_count: number
+          id: string
+          recipient_count: number
+          sent_count: number
+          status: string
+          subject: string
+          template_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          body_html: string
+          completed_at?: string | null
+          created_at?: string
+          created_by_profile_id: string
+          failed_count?: number
+          id?: string
+          recipient_count?: number
+          sent_count?: number
+          status?: string
+          subject: string
+          template_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          body_html?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by_profile_id?: string
+          failed_count?: number
+          id?: string
+          recipient_count?: number
+          sent_count?: number
+          status?: string
+          subject?: string
+          template_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_bulk_send_logs_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bulk_send_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "crm_email_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bulk_send_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_bulk_send_recipients: {
+        Row: {
+          bulk_send_id: string
+          client_id: string
+          error_message: string | null
+          id: string
+          sent_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          bulk_send_id: string
+          client_id: string
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          bulk_send_id?: string
+          client_id?: string
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_bulk_send_recipients_bulk_send_id_fkey"
+            columns: ["bulk_send_id"]
+            isOneToOne: false
+            referencedRelation: "crm_bulk_send_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bulk_send_recipients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bulk_send_recipients_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_email_templates: {
+        Row: {
+          body_html: string
+          created_at: string
+          created_by_profile_id: string
+          id: string
+          is_active: boolean
+          name: string
+          subject: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          body_html: string
+          created_at?: string
+          created_by_profile_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          subject: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          body_html?: string
+          created_at?: string
+          created_by_profile_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          subject?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_email_templates_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_email_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_missive_settings: {
+        Row: {
+          connection_status: string | null
+          created_at: string
+          from_email: string | null
+          from_name: string | null
+          id: string
+          is_connected: boolean
+          last_sync_at: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          connection_status?: string | null
+          created_at?: string
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          is_connected?: boolean
+          last_sync_at?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          connection_status?: string | null
+          created_at?: string
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          is_connected?: boolean
+          last_sync_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_missive_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_notes: {
+        Row: {
+          client_id: string | null
+          conversation_id: string | null
+          created_at: string
+          created_by_profile_id: string
+          id: string
+          is_pinned: boolean
+          note_content: string
+          note_type: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by_profile_id: string
+          id?: string
+          is_pinned?: boolean
+          note_content: string
+          note_type?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by_profile_id?: string
+          id?: string
+          is_pinned?: boolean
+          note_content?: string
+          note_type?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_notes_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_fields: {
         Row: {
           client_editable_default: boolean
@@ -3875,6 +4208,115 @@ export type Database = {
           updated?: string | null
         }
         Relationships: []
+      }
+      missive_conversation_links: {
+        Row: {
+          client_id: string
+          conversation_id: string
+          created_at: string
+          id: string
+          link_type: string
+          linked_by_profile_id: string
+          tenant_id: string
+        }
+        Insert: {
+          client_id: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          link_type?: string
+          linked_by_profile_id: string
+          tenant_id: string
+        }
+        Update: {
+          client_id?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          link_type?: string
+          linked_by_profile_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "missive_conversation_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missive_conversation_links_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "missive_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missive_conversation_links_linked_by_profile_id_fkey"
+            columns: ["linked_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missive_conversation_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      missive_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          is_archived: boolean
+          last_message_at: string | null
+          missive_conversation_id: string
+          needs_reply: boolean
+          participants: Json | null
+          snippet: string | null
+          subject: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          last_message_at?: string | null
+          missive_conversation_id: string
+          needs_reply?: boolean
+          participants?: Json | null
+          snippet?: string | null
+          subject?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          last_message_at?: string | null
+          missive_conversation_id?: string
+          needs_reply?: boolean
+          participants?: Json | null
+          snippet?: string | null
+          subject?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "missive_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pat_rel: {
         Row: {

@@ -1,0 +1,95 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import type { CrmClient, ClientFilters, PatStatus } from '@/lib/crm/types';
+import { useCrmAuth } from './useCrmAuth';
+
+interface UseClientsOptions {
+  filters?: ClientFilters;
+  enabled?: boolean;
+}
+
+export function useClients(options: UseClientsOptions = {}) {
+  const { tenantId, isAuthenticated } = useCrmAuth();
+  const { filters, enabled = true } = options;
+
+  return useQuery({
+    queryKey: ['crm-clients', tenantId, filters],
+    queryFn: async (): Promise<CrmClient[]> => {
+      let query = supabase
+        .from('clients')
+        .select(`
+          id,
+          tenant_id,
+          pat_name_f,
+          pat_name_m,
+          pat_name_l,
+          pat_name_preferred,
+          email,
+          phone,
+          pat_state,
+          pat_status,
+          created_at,
+          updated_at,
+          primary_staff:staff!clients_primary_staff_id_fkey (
+            id,
+            prov_name_f,
+            prov_name_l,
+            prov_name_for_clients
+          )
+        `)
+        .eq('tenant_id', tenantId)
+        .order('updated_at', { ascending: false });
+
+      // Apply status filter
+      if (filters?.statuses && filters.statuses.length > 0) {
+        query = query.in('pat_status', filters.statuses);
+      }
+
+      // Apply state filter - cast to any to handle state enum
+      if (filters?.states && filters.states.length > 0) {
+        query = query.in('pat_state', filters.states as any);
+      }
+
+      // Apply search filter
+      if (filters?.search && filters.search.trim()) {
+        const searchTerm = `%${filters.search.trim()}%`;
+        query = query.or(`pat_name_f.ilike.${searchTerm},pat_name_l.ilike.${searchTerm},pat_name_preferred.ilike.${searchTerm},email.ilike.${searchTerm}`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching clients:', error);
+        throw error;
+      }
+
+      // Transform the data to match CrmClient type
+      return (data || []).map(client => ({
+        ...client,
+        pat_status: client.pat_status as PatStatus | null,
+        primary_staff: Array.isArray(client.primary_staff) 
+          ? client.primary_staff[0] || null 
+          : client.primary_staff,
+      }));
+    },
+    enabled: enabled && isAuthenticated && !!tenantId,
+  });
+}
+
+export function useClientsByStatus(options: UseClientsOptions = {}) {
+  const clientsQuery = useClients(options);
+
+  const clientsByStatus = clientsQuery.data?.reduce((acc, client) => {
+    const status = client.pat_status || 'New';
+    if (!acc[status]) {
+      acc[status] = [];
+    }
+    acc[status].push(client);
+    return acc;
+  }, {} as Record<PatStatus, CrmClient[]>) || {};
+
+  return {
+    ...clientsQuery,
+    clientsByStatus,
+  };
+}
