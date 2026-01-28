@@ -1,273 +1,321 @@
 
 
-# Kanban Status Configuration Implementation Plan
+# HelpScout Email Integration - Implementation Plan
 
-## Discovery Summary
+## Overview
 
-### Current State Analysis
-
-**Database Enum (20 statuses):**
-Interested, New, Active, Inactive, Registered, Waitlist, Matching, Unscheduled, Scheduled, Early Sessions, Established, Not the Right Time, Found Somewhere Else, Went Dark (Previously Seen), Blacklisted, Unresponsive - Warm, Unresponsive - Cold, Manual Check, No Insurance, DNC
-
-**Current Code (17 statuses):**
-Missing: Manual Check, No Insurance, DNC
-
-**Tags Column:**
-`public.clients.tags` is a TEXT field (single value per client) with existing values like "Unresponsive Warm", "LEGACY", "DNC"
+Replace the planned Missive integration with HelpScout to provide native email capabilities within the CRM. This includes viewing conversations, replying to clients, linking conversations to client records, and detecting "Needs Reply" status.
 
 ---
 
-## Technical Decision: Per-Tenant Database Configuration
+## Technical Decision: HelpScout Mailbox API v2
 
-### Why This Architecture
+HelpScout provides two APIs:
+- **Mailbox API v2** - Full access to conversations, threads, customers, and mailboxes
+- **Conversations API** - Embedded widget (not suitable for native CRM inbox)
 
-**Option A: Hardcoded in code** - Rejected
-- No runtime configurability
-- Requires code deployment to change order
-- All tenants forced to use same workflow
+**Decision: Mailbox API v2** is required for building a native inbox UI with full control over display and workflow.
 
-**Option B: LocalStorage per-user** - Rejected
-- Doesn't sync across devices/browsers
-- Each user configures separately (inconsistent team experience)
-- Lost on browser clear
-
-**Option C: Database per-user** - Rejected
-- Different team members see different pipelines
-- Confusing for collaboration ("I don't see that column")
-
-**Option D: Database per-tenant** - Selected
-- Business workflows are organizational decisions, not personal preferences
-- Admins configure once, all team members share same view
-- Persists correctly across sessions and devices
-- Follows existing multi-tenant architecture pattern
-- Standard CRM practice (HubSpot, Pipedrive work this way)
+### Authentication Model
+HelpScout uses OAuth 2.0 with App credentials (client_id + client_secret). The Edge Function will:
+1. Store credentials securely in Supabase secrets
+2. Exchange credentials for access tokens
+3. Proxy all API calls through the Edge Function (never expose tokens client-side)
 
 ---
 
-## Implementation Architecture
+## Database Changes
 
-### New Database Table
+### 1. Rename/Repurpose Settings Table
+Update `crm_missive_settings` → create new `crm_helpscout_settings`:
 
-```text
-crm_kanban_config
+```
+crm_helpscout_settings
   - id (uuid, PK)
   - tenant_id (uuid, FK tenants, UNIQUE)
-  - visible_statuses (text[])  -- Ordered array of status names
+  - mailbox_id (text)          -- HelpScout mailbox ID
+  - from_name (text)           -- Display name for outbound
+  - from_email (text)          -- Verified sending email
+  - connection_status (text)   -- connected/disconnected/error
+  - last_sync_at (timestamptz)
   - created_at (timestamptz)
   - updated_at (timestamptz)
 ```
 
-**Why text[] array:**
-- Order matters and is preserved
-- Simple to add/remove/reorder
-- No junction table complexity
-- Matches PostgreSQL's native array features
+### 2. Conversation-Client Links Table
+Already partially exists conceptually. Create explicit linking:
 
-### Default Status Configuration
-
-Based on typical therapy practice client journey, the recommended default order:
-
-```text
-Pipeline Stage          | Status           | Rationale
-------------------------|------------------|---------------------------
-1. Intake               | Interested       | Initial inquiry received
-2. Intake               | New              | Completed intake form
-3. Review Required      | No Insurance     | Needs insurance resolution
-4. Review Required      | Manual Check     | Requires admin review
-5. Waiting              | Waitlist         | Waiting for availability
-6. Matching             | Matching         | Finding right therapist
-7. Onboarding           | Registered       | Paperwork completed
-8. Onboarding           | Unscheduled      | Registered, no appointment yet
-9. Onboarding           | Scheduled        | Has upcoming appointment
-10. Active Care         | Early Sessions   | First 1-3 appointments
-11. Active Care         | Established      | Ongoing therapeutic relationship
-12. Terminal            | Inactive         | Paused or completed care
-13. Terminal            | Blacklisted      | Do not contact (serious)
-14. Terminal            | DNC              | Do not contact (preference)
+```
+crm_conversation_links
+  - id (uuid, PK)
+  - tenant_id (uuid, FK tenants)
+  - client_id (uuid, FK clients)
+  - helpscout_conversation_id (text)  -- HelpScout conversation ID
+  - linked_by_profile_id (uuid)       -- Who linked it
+  - linked_at (timestamptz)
+  - link_type (text)                  -- 'auto' or 'manual'
+  - created_at (timestamptz)
 ```
 
-**Excluded from default Kanban view:**
-- Active (redundant with Established)
-- Not the Right Time (closed state)
-- Found Somewhere Else (closed state)
-- Went Dark (Previously Seen) (legacy tracking)
-- Unresponsive - Warm/Cold (can be handled with tags)
+### 3. Conversation Cache Table (Optional Performance)
+Cache conversation metadata locally to reduce API calls:
 
----
-
-## Tags Filtering Approach
-
-### Current Constraint
-Cannot modify `clients` table (additive-only rule). Tags is a single TEXT field.
-
-### Solution: Smart Filter UI
-Add a tags filter dropdown that:
-1. Queries distinct tag values from clients table
-2. Applies ILIKE filter to show matching clients within each Kanban column
-3. Works with existing data structure
-
-**Query for distinct tags:**
-```sql
-SELECT DISTINCT tags FROM clients 
-WHERE tenant_id = $1 AND tags IS NOT NULL
 ```
-
-**Filter application:**
-```sql
--- When tag filter is active
-.ilike('tags', `%${selectedTag}%`)
+crm_conversation_cache
+  - id (uuid, PK)
+  - tenant_id (uuid, FK tenants)
+  - helpscout_conversation_id (text, UNIQUE)
+  - subject (text)
+  - status (text)               -- active/pending/closed
+  - customer_email (text)
+  - customer_name (text)
+  - preview_text (text)
+  - last_thread_at (timestamptz)
+  - needs_reply (boolean)
+  - cached_at (timestamptz)
 ```
 
 ---
 
-## File Changes
+## Edge Functions Architecture
 
-### New Files
+### 1. `helpscout-proxy` (Main API Proxy)
+Single Edge Function handling all HelpScout API operations:
 
-```text
-src/hooks/crm/useKanbanConfig.ts       -- Fetch/save Kanban settings
-src/hooks/crm/useTagOptions.ts         -- Fetch distinct tags
-src/components/crm/settings/
-  KanbanConfigPanel.tsx                -- Drag-drop status ordering UI
-```
+**Endpoints:**
+- `GET /conversations` - List conversations from mailbox
+- `GET /conversations/:id` - Get full conversation with threads
+- `POST /conversations/:id/reply` - Send reply
+- `POST /conversations` - Create new conversation (compose)
+- `GET /customers/search` - Search by email for auto-linking
 
-### Modified Files
+**Security:**
+- Validates JWT from Supabase Auth
+- Retrieves HelpScout credentials from secrets
+- Rate limiting awareness
+- Error handling with retry logic
 
-```text
-src/lib/crm/types.ts                   -- Add 3 missing statuses to PatStatus
-src/lib/crm/status-config.ts           -- Add configs for all 20 statuses
-src/components/crm/clients/ClientKanban.tsx      -- Use dynamic config
-src/components/crm/clients/ClientFilters.tsx     -- Add tags filter
-src/hooks/crm/useClients.ts            -- Support tags filter
-src/pages/crm/Settings.tsx             -- Add Kanban config section
-```
-
----
-
-## Implementation Steps
-
-### Step 1: Database Migration
-Create `crm_kanban_config` table with:
-- Tenant foreign key (unique constraint)
-- text[] for ordered visible statuses
-- RLS policies matching existing pattern
-
-### Step 2: Sync Status Definitions
-Update TypeScript types and STATUS_CONFIG to include all 20 database enum values:
-- Manual Check (orange, review category)
-- No Insurance (amber, review category)
-- DNC (red, closed category)
-
-### Step 3: Create Configuration Hook
-`useKanbanConfig` hook that:
-- Fetches tenant's Kanban config
-- Returns default if none exists
-- Provides save mutation for admins
-- Caches with TanStack Query
-
-### Step 4: Update Kanban Component
-Modify `ClientKanban.tsx` to:
-- Consume `useKanbanConfig` instead of hardcoded `KANBAN_STATUSES`
-- Render columns in config-specified order
-- Only show configured statuses
-
-### Step 5: Add Tags Filtering
-- Create `useTagOptions` hook to fetch distinct tags
-- Add tags filter to `ClientFilters.tsx`
-- Update `useClients` to apply tag filter
-
-### Step 6: Build Settings UI
-Create `KanbanConfigPanel.tsx` with:
-- List of all available statuses
-- Checkboxes to toggle visibility
-- Drag-and-drop to reorder visible statuses
-- Save button (admin only)
-- Preview of current Kanban order
+### 2. `helpscout-webhook` (Inbound Events)
+Receives HelpScout webhooks for real-time updates:
+- New conversation created
+- Reply received
+- Status changed
+- Auto-updates conversation cache
+- Triggers activity events in CRM
 
 ---
 
-## UI Design for Settings
+## UI Components
 
-```text
+### 1. Inbox Page (`/crm/inbox`)
+
+```
 +------------------------------------------+
-| Kanban Column Configuration              |
+| Inbox                    [Compose] [⚙️]   |
 +------------------------------------------+
-| Visible Columns (drag to reorder)        |
-| +--------------------------------------+ |
-| | ≡ Interested                    [x]  | |
-| | ≡ New                           [x]  | |
-| | ≡ No Insurance                  [x]  | |
-| | ≡ Manual Check                  [x]  | |
-| | ≡ Waitlist                      [x]  | |
-| | ≡ Matching                      [x]  | |
-| | ...                                  | |
-| +--------------------------------------+ |
-|                                          |
-| Hidden Statuses                          |
-| +--------------------------------------+ |
-| | [ ] Active                           | |
-| | [ ] Not the Right Time               | |
-| | [ ] Found Somewhere Else             | |
-| | ...                                  | |
-| +--------------------------------------+ |
-|                                          |
-| [Save Configuration]                     |
+| Filters: [All ▼] [Status ▼] [Needs Reply]|
++------------------------------------------+
+| ┌──────────────────┐ ┌─────────────────┐ |
+| │ Conversation List│ │ Thread Viewer   │ |
+| │                  │ │                 │ |
+| │ ○ John Doe      │ │ Subject: ...    │ |
+| │   Re: Question  │ │                 │ |
+| │   2h ago        │ │ [Message 1]     │ |
+| │                  │ │ [Message 2]     │ |
+| │ ● Jane Smith    │ │ [Message 3]     │ |
+| │   Insurance... │ │                 │ |
+| │   5h ago  🔴    │ │ ┌─────────────┐ │ |
+| │                  │ │ │ Reply box  │ │ |
+| │ ○ Bob Wilson    │ │ │             │ │ |
+| │   Appointment   │ │ └─────────────┘ │ |
+| └──────────────────┘ └─────────────────┘ |
 +------------------------------------------+
 ```
+
+**Components:**
+- `InboxPage.tsx` - Main layout
+- `ConversationList.tsx` - Left panel
+- `ConversationThread.tsx` - Main panel
+- `ReplyComposer.tsx` - Reply input
+- `LinkedClientCard.tsx` - Right panel context
+
+### 2. Conversation-Client Linking UI
+
+**Auto-linking logic:**
+1. Extract customer email from conversation
+2. Query `clients.email` for exact match
+3. If found, create link with `link_type: 'auto'`
+4. Display linked client info in sidebar
+
+**Manual linking:**
+- "Link to Client" button on conversation
+- Client search modal
+- Confirm and create link
+
+### 3. "Needs Reply" Detection
+
+HelpScout provides `status` field:
+- `active` - Waiting for agent reply
+- `pending` - Waiting for customer
+- `closed` - Resolved
+
+**Logic:** Conversation needs reply when:
+- `status === 'active'` AND
+- Last thread was from customer (not agent)
+
+Display badge count in sidebar navigation.
+
+---
+
+## File Structure
+
+```
+src/
+  pages/crm/
+    Inbox.tsx                    -- NEW: Main inbox page
+  components/crm/inbox/
+    ConversationList.tsx         -- NEW: Left panel
+    ConversationListItem.tsx     -- NEW: List row
+    ConversationThread.tsx       -- NEW: Thread viewer
+    ThreadMessage.tsx            -- NEW: Single message
+    ReplyComposer.tsx            -- NEW: Reply input
+    ComposeDialog.tsx            -- NEW: New conversation
+    LinkedClientCard.tsx         -- NEW: Client context
+    LinkClientDialog.tsx         -- NEW: Manual linking
+  components/crm/settings/
+    HelpScoutConfigPanel.tsx     -- NEW: Connection settings
+  hooks/crm/
+    useConversations.ts          -- NEW: Fetch conversations
+    useConversationDetail.ts     -- NEW: Single conversation
+    useConversationLink.ts       -- NEW: Client linking
+    useHelpScoutSettings.ts      -- NEW: Settings hook
+    useSendReply.ts              -- NEW: Reply mutation
+
+supabase/functions/
+  helpscout-proxy/
+    index.ts                     -- NEW: API proxy
+  helpscout-webhook/
+    index.ts                     -- NEW: Webhook handler
+```
+
+---
+
+## Implementation Phases
+
+### Phase 3A: Foundation (Week 1)
+1. Create HelpScout settings table (migration)
+2. Create conversation links table (migration)
+3. Create `helpscout-proxy` Edge Function
+4. Add HelpScout API credentials to secrets
+5. Build `HelpScoutConfigPanel` for settings
+
+### Phase 3B: Inbox UI (Week 2)
+1. Create Inbox page with three-panel layout
+2. Build ConversationList with filtering
+3. Build ConversationThread viewer
+4. Implement "Needs Reply" badge
+
+### Phase 3C: Replies & Linking (Week 3)
+1. Build ReplyComposer with rich text
+2. Implement auto-linking by email match
+3. Build manual LinkClientDialog
+4. Add LinkedClientCard sidebar
+
+### Phase 3D: Polish (Week 4)
+1. Webhook handler for real-time updates
+2. Conversation cache for performance
+3. Activity timeline integration
+4. Error handling and retry logic
+
+---
+
+## Security Considerations
+
+- HelpScout API credentials stored as Supabase secrets (never in code)
+- All API calls proxied through Edge Function
+- RLS policies on conversation links table
+- Webhook signature validation
+- Rate limiting handling
+
+---
+
+## Required Secrets
+
+| Secret Name | Purpose |
+|-------------|---------|
+| `HELPSCOUT_APP_ID` | OAuth app identifier |
+| `HELPSCOUT_APP_SECRET` | OAuth secret |
+| `HELPSCOUT_MAILBOX_ID` | Default mailbox |
+
+---
+
+## HelpScout API Reference
+
+Key endpoints for Mailbox API v2:
+
+| Operation | Endpoint |
+|-----------|----------|
+| List conversations | `GET /v2/conversations?mailbox={id}` |
+| Get conversation | `GET /v2/conversations/{id}?embed=threads` |
+| Reply to conversation | `POST /v2/conversations/{id}/reply` |
+| Create conversation | `POST /v2/conversations` |
+| Search customers | `GET /v2/customers?email={email}` |
 
 ---
 
 ## Data Flow
 
-```text
-1. User loads /crm/clients
-        |
-2. useKanbanConfig fetches crm_kanban_config for tenant
-        |
-3a. Config exists -> Return visible_statuses array
-3b. No config -> Return default 14-status array
-        |
-4. ClientKanban renders columns in specified order
-        |
-5. Admin visits Settings -> Can modify config
-        |
-6. On save -> Updates crm_kanban_config
-        |
-7. TanStack Query invalidates -> Kanban re-renders
+```
+User opens Inbox
+      ↓
+useConversations hook
+      ↓
+Edge Function (helpscout-proxy)
+      ↓
+HelpScout Mailbox API
+      ↓
+Return conversations list
+      ↓
+For each: Check crm_conversation_links for client match
+      ↓
+Display with linked client indicator
+      ↓
+User selects conversation
+      ↓
+useConversationDetail fetches threads
+      ↓
+Display thread + linked client card
+      ↓
+User types reply → useSendReply mutation
+      ↓
+Edge Function posts to HelpScout
+      ↓
+Create activity event in crm_activity_events
 ```
 
 ---
 
-## Security
+## What Still Remains After Email Integration
 
-- RLS on crm_kanban_config: tenant members can read, admin-only writes
-- No modification to existing tables
-- Tags filter uses parameterized queries (no SQL injection)
+After Phase 3 (HelpScout), these items remain from the PRD:
+
+| Feature | Phase | Status |
+|---------|-------|--------|
+| Bulk Messaging UI | 4 | DB ready, needs UI |
+| Email Templates UI | 4 | DB ready, needs UI |
+| Segment Builder | 4 | Not started |
+| Dashboard Stats | 5 | Not started |
+| Reporting | 5 | Not started |
 
 ---
 
-## Complete Status Configuration (All 20)
+## Summary
 
-| Status | Label | Color | Category | Default Visible |
-|--------|-------|-------|----------|-----------------|
-| Interested | Interested | Blue | lead | Yes |
-| New | New | Purple | lead | Yes |
-| No Insurance | No Insurance | Amber | review | Yes |
-| Manual Check | Manual Check | Orange | review | Yes |
-| Waitlist | Waitlist | Yellow | lead | Yes |
-| Matching | Matching | Orange | onboarding | Yes |
-| Registered | Registered | Teal | onboarding | Yes |
-| Unscheduled | Unscheduled | Amber | onboarding | Yes |
-| Scheduled | Scheduled | Cyan | onboarding | Yes |
-| Early Sessions | Early Sessions | Green | active | Yes |
-| Established | Established | Emerald | active | Yes |
-| Active | Active | Green | active | No |
-| Inactive | Inactive | Gray | closed | Yes |
-| Blacklisted | Blacklisted | Red | closed | Yes |
-| DNC | Do Not Contact | Red | closed | Yes |
-| Not the Right Time | Not the Right Time | Violet | closed | No |
-| Found Somewhere Else | Found Elsewhere | Slate | closed | No |
-| Went Dark | Went Dark | Gray | inactive | No |
-| Unresponsive - Warm | Unresponsive (Warm) | Orange | inactive | No |
-| Unresponsive - Cold | Unresponsive (Cold) | Slate | inactive | No |
+The CRM foundation is solid. The next major milestone is **HelpScout email integration** which requires:
+1. Two new database tables
+2. Two Edge Functions
+3. ~10 new UI components
+4. HelpScout API credentials
+
+This provides native inbox functionality, conversation-client linking, and "Needs Reply" tracking - the core email workflow from the PRD.
 
