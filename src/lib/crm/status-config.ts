@@ -214,9 +214,6 @@ export function getClientDisplayName(client: {
   pat_name_f?: string | null;
   pat_name_l?: string | null;
 }): string {
-  if (client.pat_name_preferred) {
-    return client.pat_name_preferred;
-  }
   const parts = [client.pat_name_f, client.pat_name_l].filter(Boolean);
   return parts.length > 0 ? parts.join(' ') : 'Unknown Client';
 }
