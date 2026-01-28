@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCrmAuth } from './useCrmAuth';
+import { helpscoutApi, HelpScoutApiError } from '@/lib/crm/helpscout-api';
 
 export interface HelpScoutSettings {
   id: string;
@@ -12,6 +13,12 @@ export interface HelpScoutSettings {
   last_sync_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface TestConnectionResult {
+  connected: boolean;
+  mailboxName: string;
+  mailboxEmail: string;
 }
 
 export function useHelpScoutSettings() {
@@ -37,34 +44,7 @@ export function useHelpScoutSettings() {
 
   const testConnection = useMutation({
     mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const response = await supabase.functions.invoke('helpscout-proxy', {
-        body: null,
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      // Use query params for the action
-      const url = new URL('https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/helpscout-proxy');
-      url.searchParams.set('action', 'test-connection');
-
-      const res = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Connection test failed');
-      }
-
-      return res.json();
+      return helpscoutApi<TestConnectionResult>('test-connection');
     },
     onSuccess: async (data) => {
       // Update settings with connected status
