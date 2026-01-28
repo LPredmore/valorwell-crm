@@ -1,373 +1,108 @@
 
-# ValorWell CRM - Sprint 1 Implementation Plan
+# Add Authentication Page for CRM Access
 
-## Overview
+## Problem Identified
 
-Build Phase 1 of the CRM: Foundation, Authentication, and Core Client Views. This sprint focuses on establishing the CRM infrastructure with **zero modifications to existing tables**.
+The CRM authentication flow is correctly implemented in `useCrmAuth.ts` - it checks for:
+1. A valid Supabase auth session
+2. Admin or staff role in `user_roles` table
+3. Tenant membership in `tenant_memberships` table
 
----
+However, when authentication fails, users are redirected to `/` which shows "Welcome to Your Blank App" - there's no actual login page.
 
-## Database Discovery Summary
+## Solution
 
-### Existing Tables We Will READ FROM (Never Modify)
-
-| Table | Key Columns for CRM |
-|-------|---------------------|
-| `clients` | id, tenant_id, pat_name_f/m/l, pat_name_preferred, email, phone, pat_state, pat_status (enum), primary_staff_id |
-| `profiles` | id, email, is_active |
-| `staff` | id, tenant_id, profile_id, prov_name_f/l, prov_name_for_clients |
-| `tenant_memberships` | tenant_id, profile_id, tenant_role |
-| `user_roles` | user_id, role (admin/staff/client) |
-| `tenants` | id |
-
-### Existing Status Pipeline (17 values)
-Active, Blacklisted, Early Sessions, Established, Found Somewhere Else, Inactive, Interested, Matching, New, Not the Right Time, Registered, Scheduled, Unresponsive - Cold, Unresponsive - Warm, Unscheduled, Waitlist, Went Dark (Previously Seen)
-
-### Existing RLS Pattern
-Uses `tenant_memberships` subquery for tenant isolation and `has_role()` security definer function for role checks.
+Create a dedicated login page at `/auth` that allows admin and staff users to sign in, then update the CRM redirect to point there instead of the root page.
 
 ---
 
-## Phase 1A: New CRM Database Tables
+## Implementation Steps
 
-### 8 New Tables (Additive Only)
+### Step 1: Create Authentication Page
 
-```text
-1. crm_notes
-   - id (uuid, PK)
-   - tenant_id (uuid, FK tenants, NOT NULL)
-   - client_id (uuid, FK clients, nullable)
-   - conversation_id (text, nullable) -- Missive conversation ID
-   - created_by_profile_id (uuid, FK profiles, NOT NULL)
-   - note_content (text, NOT NULL)
-   - note_type (text: 'internal' | 'system')
-   - is_pinned (boolean, default false)
-   - created_at, updated_at (timestamptz)
+Create `src/pages/Auth.tsx` with:
+- Email/password login form using shadcn/ui components
+- Error handling for invalid credentials
+- Automatic redirect to `/crm/clients` on successful login
+- Clean, professional styling that matches the CRM design
 
-2. crm_activity_events
-   - id (uuid, PK)
-   - tenant_id (uuid, FK tenants, NOT NULL)
-   - client_id (uuid, FK clients, NOT NULL)
-   - event_type (text: 'status_change' | 'note_added' | 'email_sent' | 'email_received' | 'conversation_linked' | 'bulk_send')
-   - old_value (text, nullable)
-   - new_value (text, nullable)
-   - metadata (jsonb)
-   - created_by_profile_id (uuid, FK profiles, nullable)
-   - created_at (timestamptz)
+### Step 2: Update CRM Layout Redirect
 
-3. missive_conversations
-   - id (uuid, PK)
-   - tenant_id (uuid, FK tenants, NOT NULL)
-   - missive_conversation_id (text, UNIQUE, NOT NULL)
-   - subject (text)
-   - snippet (text) -- Preview text
-   - participants (jsonb) -- Array of {email, name}
-   - last_message_at (timestamptz)
-   - needs_reply (boolean, default false)
-   - is_archived (boolean, default false)
-   - created_at, updated_at (timestamptz)
+Modify `src/components/crm/layout/CrmLayout.tsx`:
+- Change redirect from `/` to `/auth` when not authenticated
+- This ensures unauthenticated users see the login page
 
-4. missive_conversation_links
-   - id (uuid, PK)
-   - tenant_id (uuid, FK tenants, NOT NULL)
-   - conversation_id (uuid, FK missive_conversations, NOT NULL)
-   - client_id (uuid, FK clients, NOT NULL)
-   - linked_by_profile_id (uuid, FK profiles, NOT NULL)
-   - link_type (text: 'auto' | 'manual')
-   - created_at (timestamptz)
-   - UNIQUE(conversation_id, client_id)
+### Step 3: Update Root Page
 
-5. crm_email_templates
-   - id (uuid, PK)
-   - tenant_id (uuid, FK tenants, NOT NULL)
-   - name (text, NOT NULL)
-   - subject (text, NOT NULL)
-   - body_html (text, NOT NULL)
-   - is_active (boolean, default true)
-   - created_by_profile_id (uuid, FK profiles, NOT NULL)
-   - created_at, updated_at (timestamptz)
+Modify `src/pages/Index.tsx`:
+- Check if user is already authenticated
+- If authenticated with CRM access, redirect to `/crm/clients`
+- If not authenticated, redirect to `/auth`
+- This prevents users from seeing the blank placeholder
 
-6. crm_bulk_send_logs
-   - id (uuid, PK)
-   - tenant_id (uuid, FK tenants, NOT NULL)
-   - template_id (uuid, FK crm_email_templates, nullable)
-   - subject (text, NOT NULL)
-   - body_html (text, NOT NULL)
-   - recipient_count (integer)
-   - sent_count (integer, default 0)
-   - failed_count (integer, default 0)
-   - status (text: 'pending' | 'in_progress' | 'completed' | 'failed')
-   - created_by_profile_id (uuid, FK profiles, NOT NULL)
-   - created_at (timestamptz)
-   - completed_at (timestamptz, nullable)
+### Step 4: Add Route Configuration
 
-7. crm_bulk_send_recipients
-   - id (uuid, PK)
-   - bulk_send_id (uuid, FK crm_bulk_send_logs, NOT NULL)
-   - client_id (uuid, FK clients, NOT NULL)
-   - tenant_id (uuid, FK tenants, NOT NULL)
-   - status (text: 'pending' | 'sent' | 'failed')
-   - error_message (text, nullable)
-   - sent_at (timestamptz, nullable)
-
-8. crm_missive_settings
-   - id (uuid, PK)
-   - tenant_id (uuid, FK tenants, UNIQUE, NOT NULL)
-   - from_email (text)
-   - from_name (text)
-   - is_connected (boolean, default false)
-   - last_sync_at (timestamptz, nullable)
-   - connection_status (text)
-   - created_at, updated_at (timestamptz)
-```
-
-### RLS Policies (Using Existing Pattern)
-
-All new tables will use the same tenant isolation pattern:
-```sql
--- Read access for tenant members
-tenant_id IN (
-  SELECT tenant_id FROM tenant_memberships 
-  WHERE profile_id = auth.uid()
-)
-
--- Admin-only write operations where needed
-has_role(auth.uid(), 'admin')
-```
+Update `src/App.tsx`:
+- Add `/auth` route pointing to the new Auth page
+- Ensure proper route ordering
 
 ---
 
-## Phase 1B: Authentication & Layout
+## Technical Details
 
-### Authentication Flow
-1. Check if user is authenticated via Supabase Auth
-2. Verify user has `admin` or `staff` role via `user_roles` table
-3. Verify user has tenant membership via `tenant_memberships`
-4. Store current tenant context for queries
+### Auth Page Features
+- Email input with validation
+- Password input with secure handling
+- Sign in button with loading state
+- Error messages for failed attempts
+- "Forgot password" link (future enhancement)
+- Responsive design
 
-### Route Structure
-```text
-/crm                     -> Redirect to /crm/clients
-/crm/clients             -> Client list (Kanban + Table views)
-/crm/clients/:id         -> Client detail page
-/crm/inbox               -> Missive inbox (Phase 3)
-/crm/inbox/:id           -> Conversation detail (Phase 3)
-/crm/bulk                -> Bulk messaging (Phase 4)
-/crm/settings            -> Settings hub
-/crm/settings/templates  -> Email templates
-/crm/settings/missive    -> Missive connection
-```
+### Security Considerations
+- Uses Supabase Auth (existing integration)
+- No client-side role storage
+- Server-side validation via RLS policies
+- Proper error handling without exposing sensitive info
 
-### Layout Components
-```text
-src/
-  components/
-    crm/
-      layout/
-        CrmLayout.tsx      -- Main layout wrapper with auth check
-        CrmSidebar.tsx     -- Navigation sidebar
-        CrmHeader.tsx      -- Top bar with user menu
-```
-
----
-
-## Phase 1C: Core CRM Interface
-
-### 1. Dashboard Stats (Quick Overview)
-- Total clients count
-- Clients by status (chart)
-- Needs reply count (when inbox ready)
-- Recent activity feed
-
-### 2. Client Kanban Board
-- Columns for each status in pipeline order
-- Draggable cards showing:
-  - Client name (preferred or full)
-  - State (pat_state)
-  - Primary therapist name
-  - Days since last status change
-- Drag-and-drop creates activity event
-- Click opens client detail
-
-### 3. Client Table View
-- Sortable columns: Name, Email, Status, State, Therapist, Created
-- Filters: Status (multi-select), State (multi-select)
-- Search by name/email
-- Quick status change dropdown
-- Toggle between Kanban/Table views
-
-### 4. Client Detail Page
-- Header: Name, current status (dropdown to change), email, phone
-- Left panel: Client info card with key details
-- Right panel: Activity timeline
-  - Status changes
-  - Internal notes
-  - Future: Email activity
-- Add note form
-- Linked conversations section (Phase 3)
-
----
-
-## File Structure
-
+### File Changes
 ```text
 src/
   pages/
-    crm/
-      Index.tsx              -- Dashboard/redirect
-      Clients.tsx            -- Kanban + Table views
-      ClientDetail.tsx       -- Single client page
-      Inbox.tsx              -- (Phase 3)
-      BulkMessaging.tsx      -- (Phase 4)
-      Settings.tsx           -- Settings index
-      settings/
-        Templates.tsx        -- (Phase 4)
-        MissiveConnection.tsx -- (Phase 3)
-  
+    Auth.tsx                 -- NEW: Login page
+    Index.tsx                -- MODIFY: Add redirect logic
   components/
     crm/
       layout/
-        CrmLayout.tsx
-        CrmSidebar.tsx
-        CrmHeader.tsx
-      clients/
-        ClientKanban.tsx
-        ClientKanbanColumn.tsx
-        ClientKanbanCard.tsx
-        ClientTable.tsx
-        ClientFilters.tsx
-        StatusBadge.tsx
-        StatusSelect.tsx
-      detail/
-        ClientInfoCard.tsx
-        ActivityTimeline.tsx
-        ActivityItem.tsx
-        NoteForm.tsx
-      common/
-        QuickStats.tsx
-  
-  hooks/
-    crm/
-      useClients.ts           -- Fetch/filter clients
-      useClientDetail.ts      -- Single client + updates
-      useActivityEvents.ts    -- Timeline data
-      useCrmNotes.ts          -- Notes CRUD
-      useCrmAuth.ts           -- Auth + tenant context
-      useStatusUpdate.ts      -- Status change with activity log
-
-  lib/
-    crm/
-      status-config.ts        -- Status colors, order, labels
-      types.ts                -- TypeScript interfaces
+        CrmLayout.tsx        -- MODIFY: Redirect to /auth
+  App.tsx                    -- MODIFY: Add /auth route
 ```
 
 ---
 
-## New Dependencies Required
+## User Flow After Implementation
 
-| Package | Purpose |
-|---------|---------|
-| `@dnd-kit/core` | Drag-and-drop for Kanban |
-| `@dnd-kit/sortable` | Sortable items in Kanban |
-
----
-
-## Technical Implementation Details
-
-### Status Configuration
-Map the 17 existing statuses to colors and pipeline order:
-```typescript
-const STATUS_CONFIG = {
-  'Interested': { color: 'blue', order: 1, category: 'lead' },
-  'New': { color: 'purple', order: 2, category: 'lead' },
-  'Waitlist': { color: 'yellow', order: 3, category: 'lead' },
-  'Matching': { color: 'orange', order: 4, category: 'onboarding' },
-  'Scheduled': { color: 'cyan', order: 5, category: 'onboarding' },
-  'Registered': { color: 'teal', order: 6, category: 'onboarding' },
-  'Early Sessions': { color: 'green', order: 7, category: 'active' },
-  'Established': { color: 'emerald', order: 8, category: 'active' },
-  'Active': { color: 'green', order: 9, category: 'active' },
-  // ... etc
-};
-```
-
-### Client Query with Joins
-```typescript
-const { data: clients } = await supabase
-  .from('clients')
-  .select(`
-    id, pat_name_f, pat_name_m, pat_name_l, pat_name_preferred,
-    email, phone, pat_state, pat_status, created_at, updated_at,
-    primary_staff:staff!clients_primary_staff_id_fkey (
-      id, prov_name_f, prov_name_l, prov_name_for_clients
-    )
-  `)
-  .eq('tenant_id', tenantId)
-  .order('updated_at', { ascending: false });
-```
-
-### Activity Event Logging
-When status changes:
-```typescript
-await supabase.from('crm_activity_events').insert({
-  tenant_id: tenantId,
-  client_id: clientId,
-  event_type: 'status_change',
-  old_value: previousStatus,
-  new_value: newStatus,
-  created_by_profile_id: userId,
-  metadata: { source: 'kanban_drag' }
-});
+```text
+1. User visits /crm/clients (or any CRM route)
+         ↓
+2. CrmLayout checks authentication via useCrmAuth
+         ↓
+3a. If authenticated + has role + has tenant → Show CRM
+3b. If not authenticated → Redirect to /auth
+         ↓
+4. User enters credentials on /auth page
+         ↓
+5. On success → Redirect to /crm/clients
+6. On failure → Show error message
 ```
 
 ---
 
-## Security Considerations
+## Notes
 
-1. **No existing table modifications** - All reads are safe
-2. **Tenant isolation** - Every query scoped to user's tenant
-3. **Role verification** - Only admin/staff can access CRM
-4. **RLS on all new tables** - Using existing proven pattern
-5. **Status changes audited** - Activity events create paper trail
-
----
-
-## Implementation Order
-
-### Step 1: Database Migration
-- Create all 8 new CRM tables
-- Add RLS policies using existing pattern
-- Add indexes for common queries
-
-### Step 2: Authentication & Layout
-- CrmLayout with auth check
-- CrmSidebar with navigation
-- Route configuration
-
-### Step 3: Client List Views
-- useClients hook for data fetching
-- ClientTable component
-- ClientKanban component with drag-and-drop
-- Status filters
-
-### Step 4: Client Detail Page
-- ClientDetail page
-- ClientInfoCard
-- ActivityTimeline
-- NoteForm and useCrmNotes hook
-
----
-
-## What This Plan Does NOT Touch
-
-| Existing Resource | Our Approach |
-|-------------------|--------------|
-| `clients` table | READ ONLY - no schema changes |
-| `profiles` table | READ ONLY |
-| `staff` table | READ ONLY |
-| `tenant_memberships` | READ ONLY |
-| `user_roles` table | READ ONLY |
-| `pat_status_enum` | Use as-is, no modifications |
-| `has_role()` function | Use existing function |
-| Any existing RLS policies | Leave untouched |
-| Any existing triggers | Leave untouched |
+- This uses your existing Supabase Auth setup
+- Users must already exist in your database with:
+  - An entry in `auth.users` (Supabase Auth)
+  - A matching entry in `profiles`
+  - A role in `user_roles` (admin or staff)
+  - A tenant membership in `tenant_memberships`
+- No signup flow is included (admin-only user creation is assumed)
