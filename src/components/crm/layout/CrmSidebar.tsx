@@ -30,7 +30,7 @@ const navItems: NavItem[] = [
     label: 'Inbox',
     href: '/crm/inbox',
     icon: Inbox,
-    disabled: true, // Phase 3
+    disabled: false, // HelpScout integration ready
   },
   {
     label: 'Bulk Messaging',

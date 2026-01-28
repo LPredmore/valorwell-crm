@@ -3193,6 +3193,111 @@ export type Database = {
           },
         ]
       }
+      crm_conversation_cache: {
+        Row: {
+          cached_at: string
+          customer_email: string | null
+          customer_name: string | null
+          helpscout_conversation_id: string
+          id: string
+          last_thread_at: string | null
+          needs_reply: boolean | null
+          preview_text: string | null
+          status: string | null
+          subject: string | null
+          tenant_id: string
+        }
+        Insert: {
+          cached_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          helpscout_conversation_id: string
+          id?: string
+          last_thread_at?: string | null
+          needs_reply?: boolean | null
+          preview_text?: string | null
+          status?: string | null
+          subject?: string | null
+          tenant_id: string
+        }
+        Update: {
+          cached_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          helpscout_conversation_id?: string
+          id?: string
+          last_thread_at?: string | null
+          needs_reply?: boolean | null
+          preview_text?: string | null
+          status?: string | null
+          subject?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_conversation_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_conversation_links: {
+        Row: {
+          client_id: string
+          created_at: string
+          helpscout_conversation_id: string
+          id: string
+          link_type: string
+          linked_at: string
+          linked_by_profile_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          helpscout_conversation_id: string
+          id?: string
+          link_type?: string
+          linked_at?: string
+          linked_by_profile_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          helpscout_conversation_id?: string
+          id?: string
+          link_type?: string
+          linked_at?: string
+          linked_by_profile_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_conversation_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_conversation_links_linked_by_profile_id_fkey"
+            columns: ["linked_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_conversation_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_email_templates: {
         Row: {
           body_html: string
@@ -3239,6 +3344,50 @@ export type Database = {
             foreignKeyName: "crm_email_templates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_helpscout_settings: {
+        Row: {
+          connection_status: string
+          created_at: string
+          from_email: string | null
+          from_name: string | null
+          id: string
+          last_sync_at: string | null
+          mailbox_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          connection_status?: string
+          created_at?: string
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          last_sync_at?: string | null
+          mailbox_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          connection_status?: string
+          created_at?: string
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          last_sync_at?: string | null
+          mailbox_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_helpscout_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },

@@ -202,12 +202,14 @@ supabase/functions/
 
 ## Implementation Phases
 
-### Phase 3A: Foundation (Week 1)
-1. Create HelpScout settings table (migration)
-2. Create conversation links table (migration)
-3. Create `helpscout-proxy` Edge Function
-4. Add HelpScout API credentials to secrets
-5. Build `HelpScoutConfigPanel` for settings
+### Phase 3A: Foundation (Week 1) ✅ COMPLETE
+1. ✅ Create HelpScout settings table (migration)
+2. ✅ Create conversation links table (migration)
+3. ✅ Create `helpscout-proxy` Edge Function
+4. ✅ Add HelpScout API credentials to secrets
+5. ✅ Build `HelpScoutConfigPanel` for settings
+6. ✅ Create basic Inbox page shell
+7. ✅ Enable Inbox in sidebar navigation
 
 ### Phase 3B: Inbox UI (Week 2)
 1. Create Inbox page with three-panel layout
