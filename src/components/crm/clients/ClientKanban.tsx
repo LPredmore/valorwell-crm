@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { ClientKanbanColumn } from './ClientKanbanColumn';
 import { ClientKanbanCard } from './ClientKanbanCard';
-import { KANBAN_STATUSES, getStatusConfig } from '@/lib/crm/status-config';
+import { getStatusConfig } from '@/lib/crm/status-config';
+import { useKanbanConfig } from '@/hooks/crm/useKanbanConfig';
 import type { CrmClient, PatStatus } from '@/lib/crm/types';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
@@ -16,8 +17,9 @@ interface ClientKanbanProps {
 
 export function ClientKanban({ clientsByStatus, isLoading, onClientClick }: ClientKanbanProps) {
   const [activeClient, setActiveClient] = useState<CrmClient | null>(null);
+  const { visibleStatuses, isLoading: configLoading } = useKanbanConfig();
 
-  if (isLoading) {
+  if (isLoading || configLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -71,7 +73,7 @@ export function ClientKanban({ clientsByStatus, isLoading, onClientClick }: Clie
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          {KANBAN_STATUSES.map((status) => {
+          {visibleStatuses.map((status) => {
             const clients = clientsByStatus[status] || [];
             const config = getStatusConfig(status);
 

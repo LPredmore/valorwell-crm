@@ -16,6 +16,7 @@ export default function CrmClients() {
     statuses: [],
     states: [],
     search: '',
+    tags: [],
   });
 
   const { data: clients, isLoading, clientsByStatus } = useClientsByStatus({ filters });
