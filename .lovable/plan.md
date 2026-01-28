@@ -1,271 +1,230 @@
 
 
-# Inbox: Display Emails from Known Clients Only
+# Distinguish Sent vs Received Emails in Inbox
 
-## Problem Statement
+## Problem Analysis
 
-The Inbox page is currently a shell. You need it to:
-1. Fetch conversations from HelpScout
-2. Filter out any conversations where the sender's email doesn't match a client in the database
-3. Display the filtered conversation list
-4. Allow viewing conversation threads
+The Inbox currently shows all conversations without indicating their direction. Users cannot distinguish between:
+- **Received emails** - Conversations initiated by or last replied to by the client (need attention)
+- **Sent emails** - Conversations initiated by or last replied to by staff (awaiting response)
+
+This is confusing because the "All" view mixes both types with no visual differentiation.
 
 ---
 
-## Architecture Decision: Server-Side Filtering
+## Technical Decision: Use HelpScout's `source.via` Field
 
-**Decision:** Filter conversations in the Edge Function, not the client.
+**Decision:** Capture the `source.via` field from HelpScout's API and use it to determine conversation direction.
 
 **Why this is correct:**
-1. **Security** - Client-side filtering would expose all HelpScout conversations to the browser, including emails from non-clients. The Edge Function should only return data the user should see.
-2. **Performance** - Fetching 100 conversations then filtering to 10 on the client wastes bandwidth. Better to do the filtering server-side.
-3. **Pagination** - HelpScout paginates results. If you filter client-side, page 1 might have 0 results while page 2 has 25. Server-side filtering can handle this properly.
-4. **Tenant isolation** - The Edge Function already has the tenant context and can query the clients table directly.
+
+1. **HelpScout provides this data natively.** The API includes a `source` object with `via: "customer"` or `via: "user"` that indicates who initiated the conversation. This is the authoritative source.
+
+2. **No database changes needed.** The direction is a property of the HelpScout conversation, not something we need to store. We simply need to pass it through.
+
+3. **Consistent with thread-level logic.** The `ThreadMessage` component already uses `thread.type === 'customer'` to style individual messages. Extending this to the conversation level is a natural progression.
+
+4. **Enables future filtering.** Once we have the direction data, we can add filter options to show only "Needs Reply" (received) or "Sent" conversations.
 
 ---
 
-## Data Flow
+## Data Flow Enhancement
 
 ```text
-Client requests: GET /helpscout-proxy?action=list-conversations
-                              |
-                              v
-Edge Function fetches conversations from HelpScout API
-                              |
-                              v
-For each conversation, extract primaryCustomer.email
-                              |
-                              v
-Query clients table: SELECT id, email FROM clients 
-                     WHERE tenant_id = ? AND email IN (list of emails)
-                              |
-                              v
-Filter conversations to only those with matching client emails
-                              |
-                              v
-Return filtered list + client_id for each conversation
-                              |
-                              v
-UI renders conversation list with client info
+HelpScout API returns:
+{
+  "source": { "type": "email", "via": "customer" },  <-- CURRENTLY IGNORED
+  "primaryCustomer": {...},
+  "subject": "...",
+  ...
+}
+         |
+         v
+Edge Function passes through source field
+         |
+         v
+UI uses source.via to determine:
+  - "customer" = Received (client sent this)
+  - "user" = Sent (staff sent this)
+         |
+         v
+Visual indicators in ConversationListItem:
+  - Icon (ArrowDownLeft for received, ArrowUpRight for sent)
+  - Badge/label ("Received" / "Sent")
+  - Left border color differentiation
 ```
 
 ---
 
 ## Implementation Phases
 
-### Phase 1: Enhance Edge Function `list-conversations` Action
+### Phase 1: Extend TypeScript Types
 
-**Current behavior:** Returns raw HelpScout response  
-**New behavior:** Filters to known clients + enriches with client_id
+Update `src/lib/crm/types.ts` to include the `source` object in `HelpScoutConversation`:
 
-Changes to `supabase/functions/helpscout-proxy/index.ts`:
-
-1. After fetching conversations from HelpScout, extract all unique customer emails
-2. Query the `clients` table to find which emails exist in the tenant
-3. Filter conversations to only include those with matching emails
-4. Add `client_id` to each conversation object for linking
-5. Return the filtered + enriched response
-
-**Why modify existing action vs new action:**
-- Keeps the API simple (one action for listing)
-- All callers automatically get the filtering behavior
-- Avoids duplicating pagination logic
-
-### Phase 2: Create `useConversations` Hook
-
-New hook: `src/hooks/crm/useConversations.ts`
-
-Features:
-- Fetches conversations via `helpscoutApi('list-conversations', { params: { status, page } })`
-- Handles loading/error states
-- Supports status filtering (active/pending/closed/all)
-- Pagination support
-- Auto-refetch on interval (optional, for "live" inbox feel)
-
-### Phase 3: Create Conversation List UI
-
-New component: `src/components/crm/inbox/ConversationList.tsx`
-
-Displays:
-- Subject line
-- Customer name (from client record)
-- Preview text (first line of last message)
-- Status badge (active/pending/closed)
-- "Needs reply" indicator
-- Timestamp (relative, e.g., "2 hours ago")
-- Click to select
-
-### Phase 4: Update Inbox Page
-
-Modify `src/pages/crm/Inbox.tsx`:
-
-- Replace placeholder with actual ConversationList
-- Add status filter tabs (All, Active, Pending, Closed)
-- Track selected conversation ID
-- When conversation selected, show thread viewer (Phase 5)
-
-### Phase 5: Create Thread Viewer
-
-New components:
-- `src/components/crm/inbox/ConversationThread.tsx` - displays full conversation
-- `src/components/crm/inbox/ThreadMessage.tsx` - single message in thread
-
-New hook: `src/hooks/crm/useConversationDetail.ts`
-- Fetches single conversation with embedded threads
-- Uses `helpscoutApi('get-conversation', { params: { id } })`
-
----
-
-## File Structure
-
-```text
-src/
-  components/crm/inbox/
-    ConversationList.tsx       -- NEW: List of conversations
-    ConversationListItem.tsx   -- NEW: Single list item
-    ConversationThread.tsx     -- NEW: Full conversation view
-    ThreadMessage.tsx          -- NEW: Single message bubble
-    StatusFilterTabs.tsx       -- NEW: Active/Pending/Closed tabs
-  hooks/crm/
-    useConversations.ts        -- NEW: Fetch filtered conversations
-    useConversationDetail.ts   -- NEW: Fetch single conversation
-  pages/crm/
-    Inbox.tsx                  -- EDIT: Wire up components
-
-supabase/functions/
-  helpscout-proxy/
-    index.ts                   -- EDIT: Add filtering logic to list-conversations
-```
-
----
-
-## Edge Function Filter Logic (Technical Detail)
-
-```text
-case "list-conversations": {
-  // 1. Get user's tenant_id from their profile
-  const { data: membership } = await supabase
-    .from('tenant_memberships')
-    .select('tenant_id')
-    .eq('profile_id', userId)
-    .single();
-  
-  // 2. Fetch conversations from HelpScout
-  const hsResponse = await helpscoutRequest("GET", endpoint);
-  const hsData = await hsResponse.json();
-  
-  // 3. Extract all customer emails from conversations
-  const customerEmails = hsData._embedded.conversations
-    .map(c => c.primaryCustomer?.email)
-    .filter(Boolean);
-  
-  // 4. Find matching clients in database
-  const { data: clients } = await supabase
-    .from('clients')
-    .select('id, email')
-    .eq('tenant_id', membership.tenant_id)
-    .in('email', customerEmails);
-  
-  // 5. Create email -> client_id lookup
-  const emailToClientId = new Map(clients.map(c => [c.email.toLowerCase(), c.id]));
-  
-  // 6. Filter and enrich conversations
-  const filteredConversations = hsData._embedded.conversations
-    .filter(c => {
-      const email = c.primaryCustomer?.email?.toLowerCase();
-      return email && emailToClientId.has(email);
-    })
-    .map(c => ({
-      ...c,
-      client_id: emailToClientId.get(c.primaryCustomer.email.toLowerCase())
-    }));
-  
-  result = {
-    conversations: filteredConversations,
-    page: hsData.page,
-  };
-  break;
+```typescript
+interface HelpScoutSource {
+  type: 'email' | 'web' | 'api' | 'chat';
+  via: 'customer' | 'user';
 }
-```
 
----
-
-## TypeScript Types
-
-Add to `src/lib/crm/types.ts`:
-
-```text
 interface HelpScoutConversation {
-  id: number;
-  number: number;
-  subject: string;
-  status: 'active' | 'pending' | 'closed' | 'spam';
-  preview: string;
-  primaryCustomer: {
-    id: number;
-    email: string;
-    first: string;
-    last: string;
-  };
-  createdAt: string;
-  userUpdatedAt: string;
-  client_id: string; // Added by our filtering
-}
-
-interface ConversationsResponse {
-  conversations: HelpScoutConversation[];
-  page: {
-    size: number;
-    totalElements: number;
-    totalPages: number;
-    number: number;
-  };
+  // ... existing fields
+  source: HelpScoutSource;
 }
 ```
 
+### Phase 2: Update Edge Function
+
+Ensure the `list-conversations` action in `helpscout-proxy` passes through the `source` field. Currently the conversation object is spread directly from HelpScout, so this should already work - but we need to verify it's included in the filtered response.
+
+The HelpScout API already returns this field. The current code:
+```typescript
+.map((c) => ({
+  ...c,  // This spreads all fields including source
+  client_id: emailToClientId.get(...)
+}));
+```
+
+This should already preserve `source`. If testing shows it's missing, we explicitly include it.
+
+### Phase 3: Update ConversationListItem UI
+
+Modify `src/components/crm/inbox/ConversationListItem.tsx` to:
+
+1. Derive direction from `conversation.source?.via`
+2. Add a direction indicator (icon + label)
+3. Apply distinct styling for sent vs received
+
+**Visual Design:**
+```text
+RECEIVED (source.via === 'customer'):
++------------------------------------------+
+| [↓ icon] John Smith              2h ago  |
+| RE: Question about scheduling            |
+| "I wanted to follow up..."   [Received]  |
++------------------------------------------+
+Border: accent color (needs attention)
+
+SENT (source.via === 'user'):  
++------------------------------------------+
+| [↑ icon] Jane Doe                3h ago  |
+| Welcome to our practice                  |
+| "Thank you for reaching..."      [Sent]  |
++------------------------------------------+
+Border: muted color (awaiting reply)
+```
+
+### Phase 4: Add Direction Filter
+
+Update `StatusFilterTabs.tsx` to support an additional dimension of filtering, or add a secondary filter dropdown/toggle for direction. 
+
+**Options:**
+1. **Toggle button:** "Show All / Received Only / Sent Only"
+2. **Add to existing tabs:** "Needs Reply" (combines active + received direction)
+
+**Recommended approach:** Add a simple toggle or second row of tabs for direction filtering. This keeps status and direction as independent filters.
+
+### Phase 5: Update useConversations Hook and Edge Function
+
+Add a `direction` parameter to the hook and edge function:
+
+```typescript
+// useConversations options
+interface UseConversationsOptions {
+  status?: 'all' | 'active' | 'pending' | 'closed';
+  direction?: 'all' | 'received' | 'sent';  // NEW
+  page?: number;
+  enabled?: boolean;
+}
+```
+
+Edge function filters conversations based on `source.via` before returning:
+- `received` = `source.via === 'customer'`
+- `sent` = `source.via === 'user'`
+- `all` = no filter (default)
+
 ---
 
-## Edge Cases Handled
+## File Changes
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src/lib/crm/types.ts` | EDIT | Add `HelpScoutSource` interface, add `source` to `HelpScoutConversation` |
+| `supabase/functions/helpscout-proxy/index.ts` | EDIT | Add direction filter param to `list-conversations` |
+| `src/components/crm/inbox/ConversationListItem.tsx` | EDIT | Add direction icon, label, and conditional styling |
+| `src/components/crm/inbox/StatusFilterTabs.tsx` | EDIT | Add direction filter controls |
+| `src/hooks/crm/useConversations.ts` | EDIT | Add direction parameter |
+| `src/pages/crm/Inbox.tsx` | EDIT | Add direction state and pass to hook/filter |
+
+---
+
+## Visual Differentiation Specification
+
+**Received Conversations (from client):**
+- Icon: `ArrowDownLeft` or `Mail` (lucide)
+- Badge: "Received" with secondary variant
+- Left border: Primary color (attention needed)
+- Background on hover: Slightly warmer tone
+
+**Sent Conversations (from staff):**
+- Icon: `Send` or `ArrowUpRight` (lucide)
+- Badge: "Sent" with outline variant
+- Left border: Muted/gray
+- Background on hover: Neutral tone
+
+**Visual Hierarchy Goal:** Received emails should visually "pop" more than sent emails, since received emails typically require action.
+
+---
+
+## Edge Cases
 
 | Scenario | Handling |
 |----------|----------|
-| Conversation has no primaryCustomer | Filtered out |
-| Email not in clients table | Filtered out |
-| Case mismatch (JOHN@example.com vs john@example.com) | Normalize to lowercase before comparison |
-| Client deleted after conversation created | Conversation disappears from list (correct behavior) |
-| Empty inbox (no matching clients) | Show "No conversations" message |
-| HelpScout API error | Show error state with retry button |
-| Pagination with sparse results | May return fewer than 25 per page (acceptable) |
+| Missing `source` field | Default to "received" (fail safe to show as needing attention) |
+| Conversation type is not email (chat, phone) | Still use `source.via` - same logic applies |
+| Conversation started by customer, staff replied | `source.via` shows who *started* the conversation, not last activity. This is the correct indicator for inbox organization. |
 
 ---
 
-## Scope Boundaries
+## Technical Detail: "Needs Reply" Detection
 
-**Included:**
-- Fetch conversations from HelpScout
-- Filter to known clients only
-- Display conversation list with status filtering
-- View conversation threads
-- Link conversations to client records (via client_id)
+The combination of:
+- `source.via === 'customer'` (they initiated)
+- `status === 'active'` (not pending/closed)
 
-**Not Included (Future phases):**
-- Reply composer
-- Creating new conversations from inbox
-- Real-time updates via webhooks
-- Caching in crm_conversation_cache table
-- Automatic client linking UI
+...indicates a conversation that "needs reply". This can power a "Needs Reply" quick filter in the future.
+
+Currently, `needsReply` in `ConversationListItem.tsx` only checks status:
+```typescript
+const needsReply = conversation.status === 'active';
+```
+
+This can be enhanced to:
+```typescript
+const needsReply = conversation.status === 'active' && 
+                   conversation.source?.via === 'customer';
+```
 
 ---
 
-## Phase Summary
+## Implementation Order
 
-| Phase | Scope | Complexity |
-|-------|-------|------------|
-| 1 | Edge Function filtering | High |
-| 2 | useConversations hook | Medium |
-| 3 | ConversationList component | Medium |
-| 4 | Inbox page wiring | Low |
-| 5 | Thread viewer | Medium |
+1. **Types** - Update TypeScript interfaces (2 minutes)
+2. **Edge Function** - Add direction filter param (5 minutes)
+3. **List Item UI** - Add direction indicator (10 minutes)
+4. **Hook** - Add direction param (2 minutes)
+5. **Filter UI** - Add direction toggle/tabs (10 minutes)
+6. **Inbox Page** - Wire up direction state (5 minutes)
 
-**Recommended order:** 1 → 2 → 3 → 4 → 5 (backend first, then UI)
+---
+
+## Outcome
+
+After implementation:
+- Users can instantly see which emails are sent vs received
+- Visual hierarchy guides attention to emails needing response
+- Optional direction filter allows focusing on sent or received only
+- "Needs Reply" logic becomes more accurate (active + received)
+- Consistent with how modern email clients display inbox
 
