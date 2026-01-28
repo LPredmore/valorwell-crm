@@ -16,7 +16,7 @@ export function CrmLayout() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   return (
