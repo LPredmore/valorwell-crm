@@ -97,6 +97,11 @@ export interface HelpScoutCustomer {
   last: string;
 }
 
+export interface HelpScoutSource {
+  type: 'email' | 'web' | 'api' | 'chat';
+  via: 'customer' | 'user';
+}
+
 export interface HelpScoutConversation {
   id: number;
   number: number;
@@ -104,6 +109,7 @@ export interface HelpScoutConversation {
   status: 'active' | 'pending' | 'closed' | 'spam';
   preview: string;
   primaryCustomer: HelpScoutCustomer;
+  source: HelpScoutSource;
   createdAt: string;
   userUpdatedAt: string;
   client_id: string; // Added by our filtering

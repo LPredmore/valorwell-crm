@@ -297,6 +297,7 @@ Deno.serve(async (req) => {
     switch (action) {
       case "list-conversations": {
         const status = url.searchParams.get("status") || "all";
+        const direction = url.searchParams.get("direction") || "all";
         const page = url.searchParams.get("page") || "1";
         
         // Get user's tenant_id
@@ -357,15 +358,32 @@ Deno.serve(async (req) => {
         );
         
         // Filter and enrich conversations
-        const filteredConversations = conversations
-          .filter((c: { primaryCustomer?: { email?: string } }) => {
+        interface HelpScoutConversationRaw {
+          primaryCustomer?: { email?: string };
+          source?: { via?: string };
+        }
+        
+        let filteredConversations = conversations
+          .filter((c: HelpScoutConversationRaw) => {
             const email = c.primaryCustomer?.email?.toLowerCase();
             return email && emailToClientId.has(email);
           })
-          .map((c: { primaryCustomer?: { email?: string } }) => ({
+          .map((c: HelpScoutConversationRaw) => ({
             ...c,
             client_id: emailToClientId.get(c.primaryCustomer?.email?.toLowerCase() || ""),
           }));
+        
+        // Apply direction filter based on source.via
+        // "customer" = received from client, "user" = sent by staff
+        if (direction === "received") {
+          filteredConversations = filteredConversations.filter(
+            (c: { source?: { via?: string } }) => c.source?.via !== "user"
+          );
+        } else if (direction === "sent") {
+          filteredConversations = filteredConversations.filter(
+            (c: { source?: { via?: string } }) => c.source?.via === "user"
+          );
+        }
         
         result = {
           conversations: filteredConversations,
