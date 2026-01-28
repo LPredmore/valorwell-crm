@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LayoutGrid, List, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,11 @@ import { useClientsByStatus } from '@/hooks/crm/useClients';
 import { ClientKanban } from '@/components/crm/clients/ClientKanban';
 import { ClientTable } from '@/components/crm/clients/ClientTable';
 import { ClientFilters } from '@/components/crm/clients/ClientFilters';
+import { BulkActionBar } from '@/components/crm/clients/BulkActionBar';
+import { BulkComposeDialog } from '@/components/crm/bulk/BulkComposeDialog';
+import { BulkProgressModal } from '@/components/crm/bulk/BulkProgressModal';
+import { useBulkSend } from '@/hooks/crm/useBulkSend';
+import { useBulkSendStatus } from '@/hooks/crm/useBulkSendStatus';
 import type { ClientFilters as ClientFiltersType, CrmClient, PatStatus } from '@/lib/crm/types';
 
 export default function CrmClients() {
@@ -19,7 +24,17 @@ export default function CrmClients() {
     tags: [],
   });
 
+  // Selection state
+  const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+  
+  // Bulk email dialog state
+  const [composeDialogOpen, setComposeDialogOpen] = useState(false);
+  const [progressModalOpen, setProgressModalOpen] = useState(false);
+  const [activeBulkSendId, setActiveBulkSendId] = useState<string | null>(null);
+
   const { data: clients, isLoading, clientsByStatus } = useClientsByStatus({ filters });
+  const { createBulkSend } = useBulkSend();
+  const { data: bulkSendStatus } = useBulkSendStatus(activeBulkSendId);
 
   const handleClientClick = (clientId: string) => {
     navigate(`/crm/clients/${clientId}`);
@@ -31,6 +46,66 @@ export default function CrmClients() {
 
   const handleFiltersChange = (newFilters: Partial<ClientFiltersType>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
+  };
+
+  // Selection handlers
+  const handleSelectionChange = useCallback((clientId: string, selected: boolean) => {
+    setSelectedClientIds(prev => {
+      const next = new Set(prev);
+      if (selected) {
+        next.add(clientId);
+      } else {
+        next.delete(clientId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback((selected: boolean) => {
+    if (selected && clients) {
+      setSelectedClientIds(new Set(clients.map(c => c.id)));
+    } else {
+      setSelectedClientIds(new Set());
+    }
+  }, [clients]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedClientIds(new Set());
+  }, []);
+
+  // Bulk email handlers
+  const handleOpenCompose = () => {
+    setComposeDialogOpen(true);
+  };
+
+  const handleSendBulkEmail = async (subject: string, bodyHtml: string) => {
+    try {
+      const result = await createBulkSend.mutateAsync({
+        clientIds: Array.from(selectedClientIds),
+        subject,
+        bodyHtml,
+      });
+      
+      setComposeDialogOpen(false);
+      setActiveBulkSendId(result.bulkSendId);
+      setProgressModalOpen(true);
+      setSelectedClientIds(new Set());
+    } catch (error) {
+      console.error('Failed to start bulk send:', error);
+    }
+  };
+
+  const handleProgressModalClose = (open: boolean) => {
+    if (!open) {
+      setProgressModalOpen(false);
+      setActiveBulkSendId(null);
+    }
+  };
+
+  // Clear selection when switching views
+  const handleViewChange = (v: string) => {
+    setView(v as 'kanban' | 'table');
+    setSelectedClientIds(new Set());
   };
 
   return (
@@ -50,7 +125,7 @@ export default function CrmClients() {
           <ClientFilters filters={filters} onChange={handleFiltersChange} />
         </div>
 
-        <Tabs value={view} onValueChange={(v) => setView(v as 'kanban' | 'table')}>
+        <Tabs value={view} onValueChange={handleViewChange}>
           <TabsList>
             <TabsTrigger value="kanban" className="gap-2">
               <LayoutGrid className="h-4 w-4" />
@@ -76,9 +151,40 @@ export default function CrmClients() {
             clients={clients || []}
             isLoading={isLoading}
             onClientClick={handleClientClick}
+            selectedClientIds={selectedClientIds}
+            onSelectionChange={handleSelectionChange}
+            onSelectAll={handleSelectAll}
           />
         )}
       </div>
+
+      {/* Bulk Action Bar - only in table view */}
+      {view === 'table' && (
+        <BulkActionBar
+          selectedCount={selectedClientIds.size}
+          onSendEmail={handleOpenCompose}
+          onClear={handleClearSelection}
+        />
+      )}
+
+      {/* Compose Dialog */}
+      <BulkComposeDialog
+        open={composeDialogOpen}
+        onOpenChange={setComposeDialogOpen}
+        recipientCount={selectedClientIds.size}
+        onSend={handleSendBulkEmail}
+        isSending={createBulkSend.isPending}
+      />
+
+      {/* Progress Modal */}
+      <BulkProgressModal
+        open={progressModalOpen}
+        onOpenChange={handleProgressModalClose}
+        status={bulkSendStatus?.status ?? 'pending'}
+        recipientCount={bulkSendStatus?.recipientCount ?? selectedClientIds.size}
+        sentCount={bulkSendStatus?.sentCount ?? 0}
+        failedCount={bulkSendStatus?.failedCount ?? 0}
+      />
     </div>
   );
 }
