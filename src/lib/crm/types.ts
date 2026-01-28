@@ -3,13 +3,16 @@
 export type PatStatus = 
   | 'Active'
   | 'Blacklisted'
+  | 'DNC'
   | 'Early Sessions'
   | 'Established'
   | 'Found Somewhere Else'
   | 'Inactive'
   | 'Interested'
+  | 'Manual Check'
   | 'Matching'
   | 'New'
+  | 'No Insurance'
   | 'Not the Right Time'
   | 'Registered'
   | 'Scheduled'
@@ -83,4 +86,5 @@ export interface ClientFilters {
   statuses: PatStatus[];
   states: string[];
   search: string;
+  tags: string[];
 }

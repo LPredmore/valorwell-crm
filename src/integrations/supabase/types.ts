@@ -3244,6 +3244,38 @@ export type Database = {
           },
         ]
       }
+      crm_kanban_config: {
+        Row: {
+          created_at: string
+          id: string
+          tenant_id: string
+          updated_at: string
+          visible_statuses: string[]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tenant_id: string
+          updated_at?: string
+          visible_statuses?: string[]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tenant_id?: string
+          updated_at?: string
+          visible_statuses?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_kanban_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_missive_settings: {
         Row: {
           connection_status: string | null

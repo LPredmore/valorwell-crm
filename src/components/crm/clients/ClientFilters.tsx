@@ -1,4 +1,4 @@
-import { Filter } from 'lucide-react';
+import { Filter, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ALL_STATUSES, STATUS_CONFIG } from '@/lib/crm/status-config';
+import { useTagOptions } from '@/hooks/crm/useTagOptions';
 import type { ClientFilters as ClientFiltersType, PatStatus } from '@/lib/crm/types';
 
 interface ClientFiltersProps {
@@ -25,7 +26,8 @@ const US_STATES = [
 ];
 
 export function ClientFilters({ filters, onChange }: ClientFiltersProps) {
-  const activeFilterCount = filters.statuses.length + filters.states.length;
+  const { data: tagOptions = [], isLoading: tagsLoading } = useTagOptions();
+  const activeFilterCount = filters.statuses.length + filters.states.length + filters.tags.length;
 
   const handleStatusChange = (status: PatStatus, checked: boolean) => {
     const newStatuses = checked
@@ -41,8 +43,15 @@ export function ClientFilters({ filters, onChange }: ClientFiltersProps) {
     onChange({ states: newStates });
   };
 
+  const handleTagChange = (tag: string, checked: boolean) => {
+    const newTags = checked
+      ? [...filters.tags, tag]
+      : filters.tags.filter(t => t !== tag);
+    onChange({ tags: newTags });
+  };
+
   const clearFilters = () => {
-    onChange({ statuses: [], states: [] });
+    onChange({ statuses: [], states: [], tags: [] });
   };
 
   return (
@@ -58,7 +67,7 @@ export function ClientFilters({ filters, onChange }: ClientFiltersProps) {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80" align="start">
+      <PopoverContent className="w-96" align="start">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-medium">Filters</h4>
@@ -69,6 +78,30 @@ export function ClientFilters({ filters, onChange }: ClientFiltersProps) {
             )}
           </div>
 
+          {/* Tags Filter */}
+          {tagOptions.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                Tags
+              </Label>
+              <div className="flex flex-wrap gap-2 max-h-24 overflow-auto">
+                {tagOptions.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant={filters.tags.includes(tag) ? 'default' : 'outline'}
+                    className="cursor-pointer"
+                    onClick={() => handleTagChange(tag, !filters.tags.includes(tag))}
+                  >
+                    {tag}
+                    {filters.tags.includes(tag) && (
+                      <X className="ml-1 h-3 w-3" />
+                    )}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Status Filter */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Status</Label>
