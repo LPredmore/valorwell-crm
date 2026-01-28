@@ -1,15 +1,31 @@
 import { useState } from 'react';
 import { useHelpScoutSettings } from '@/hooks/crm/useHelpScoutSettings';
+import { useConversations } from '@/hooks/crm/useConversations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Loader2, Inbox as InboxIcon, Settings, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ConversationList } from '@/components/crm/inbox/ConversationList';
+import { ConversationThread } from '@/components/crm/inbox/ConversationThread';
+import { StatusFilterTabs } from '@/components/crm/inbox/StatusFilterTabs';
+import { HelpScoutConversation } from '@/lib/crm/types';
 
 export default function Inbox() {
-  const { settings, isLoading, isConnected } = useHelpScoutSettings();
+  const { settings, isLoading: settingsLoading, isConnected } = useHelpScoutSettings();
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'closed'>('all');
+  const [selectedConversation, setSelectedConversation] = useState<HelpScoutConversation | null>(null);
 
-  if (isLoading) {
+  const {
+    data: conversationsData,
+    isLoading: conversationsLoading,
+    isError: conversationsError,
+    refetch,
+  } = useConversations({
+    status: statusFilter,
+    enabled: isConnected,
+  });
+
+  if (settingsLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -52,32 +68,35 @@ export default function Inbox() {
     <div className="flex h-full">
       {/* Conversation List - Left Panel */}
       <div className="w-80 border-r flex flex-col">
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Inbox</h2>
-            <Badge variant="secondary">Connected</Badge>
-          </div>
+        <div className="p-3 border-b space-y-3">
+          <h2 className="font-semibold">Inbox</h2>
+          <StatusFilterTabs value={statusFilter} onChange={setStatusFilter} />
         </div>
-        <div className="flex-1 overflow-auto p-4">
-          <div className="text-center text-muted-foreground py-8">
-            <InboxIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="text-sm">Loading conversations...</p>
-            <p className="text-xs mt-1">
-              Conversation list UI coming in Phase 3B
-            </p>
-          </div>
-        </div>
+        <ConversationList
+          conversations={conversationsData?.conversations || []}
+          isLoading={conversationsLoading}
+          isError={conversationsError}
+          selectedId={selectedConversation?.id ?? null}
+          onSelect={setSelectedConversation}
+          onRetry={() => refetch()}
+        />
       </div>
 
       {/* Thread Viewer - Main Panel */}
-      <div className="flex-1 flex items-center justify-center bg-muted/30">
-        <div className="text-center text-muted-foreground">
-          <InboxIcon className="h-16 w-16 mx-auto mb-4 opacity-30" />
-          <h3 className="text-lg font-medium mb-2">Select a conversation</h3>
-          <p className="text-sm">
-            Choose a conversation from the list to view the thread.
-          </p>
-        </div>
+      <div className="flex-1 flex flex-col bg-background">
+        {selectedConversation ? (
+          <ConversationThread conversation={selectedConversation} />
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-muted/30">
+            <div className="text-center text-muted-foreground">
+              <InboxIcon className="h-16 w-16 mx-auto mb-4 opacity-30" />
+              <h3 className="text-lg font-medium mb-2">Select a conversation</h3>
+              <p className="text-sm">
+                Choose a conversation from the list to view the thread.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

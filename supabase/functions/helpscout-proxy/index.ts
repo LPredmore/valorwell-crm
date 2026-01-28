@@ -299,6 +299,18 @@ Deno.serve(async (req) => {
         const status = url.searchParams.get("status") || "all";
         const page = url.searchParams.get("page") || "1";
         
+        // Get user's tenant_id
+        const { data: membership, error: membershipError } = await supabase
+          .from("tenant_memberships")
+          .select("tenant_id")
+          .eq("profile_id", userId)
+          .maybeSingle();
+        
+        if (membershipError || !membership) {
+          console.error("Membership lookup error:", membershipError);
+          throw new Error("Could not determine tenant");
+        }
+        
         let endpoint = `/conversations?mailbox=${mailboxId}&page=${page}`;
         if (status !== "all") {
           endpoint += `&status=${status}`;
@@ -310,7 +322,55 @@ Deno.serve(async (req) => {
           console.error("HelpScout list error:", error);
           throw new Error(`HelpScout API error: ${response.status}`);
         }
-        result = await response.json();
+        
+        const hsData = await response.json();
+        const conversations = hsData._embedded?.conversations || [];
+        
+        // Extract all customer emails from conversations
+        const customerEmails = conversations
+          .map((c: { primaryCustomer?: { email?: string } }) => c.primaryCustomer?.email?.toLowerCase())
+          .filter(Boolean) as string[];
+        
+        if (customerEmails.length === 0) {
+          result = {
+            conversations: [],
+            page: hsData.page || { size: 0, totalElements: 0, totalPages: 0, number: 1 },
+          };
+          break;
+        }
+        
+        // Find matching clients in database (case-insensitive)
+        const { data: clients, error: clientsError } = await supabase
+          .from("clients")
+          .select("id, email")
+          .eq("tenant_id", membership.tenant_id)
+          .in("email", customerEmails);
+        
+        if (clientsError) {
+          console.error("Clients lookup error:", clientsError);
+          throw new Error("Could not fetch clients");
+        }
+        
+        // Create email -> client_id lookup (lowercase for case-insensitive matching)
+        const emailToClientId = new Map<string, string>(
+          (clients || []).map((c: { id: string; email: string }) => [c.email.toLowerCase(), c.id])
+        );
+        
+        // Filter and enrich conversations
+        const filteredConversations = conversations
+          .filter((c: { primaryCustomer?: { email?: string } }) => {
+            const email = c.primaryCustomer?.email?.toLowerCase();
+            return email && emailToClientId.has(email);
+          })
+          .map((c: { primaryCustomer?: { email?: string } }) => ({
+            ...c,
+            client_id: emailToClientId.get(c.primaryCustomer?.email?.toLowerCase() || ""),
+          }));
+        
+        result = {
+          conversations: filteredConversations,
+          page: hsData.page || { size: 0, totalElements: 0, totalPages: 0, number: 1 },
+        };
         break;
       }
 

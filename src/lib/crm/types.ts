@@ -88,3 +88,59 @@ export interface ClientFilters {
   search: string;
   tags: string[];
 }
+
+// HelpScout Inbox types
+export interface HelpScoutCustomer {
+  id: number;
+  email: string;
+  first: string;
+  last: string;
+}
+
+export interface HelpScoutConversation {
+  id: number;
+  number: number;
+  subject: string;
+  status: 'active' | 'pending' | 'closed' | 'spam';
+  preview: string;
+  primaryCustomer: HelpScoutCustomer;
+  createdAt: string;
+  userUpdatedAt: string;
+  client_id: string; // Added by our filtering
+}
+
+export interface ConversationsResponse {
+  conversations: HelpScoutConversation[];
+  page: {
+    size: number;
+    totalElements: number;
+    totalPages: number;
+    number: number;
+  };
+}
+
+export interface HelpScoutThread {
+  id: number;
+  type: 'customer' | 'reply' | 'note' | 'message';
+  status: string;
+  body: string;
+  source: {
+    type: string;
+    via: string;
+  };
+  customer?: HelpScoutCustomer;
+  createdBy?: {
+    id: number;
+    type: string;
+    email: string;
+    first: string;
+    last: string;
+  };
+  createdAt: string;
+}
+
+export interface HelpScoutConversationDetail extends HelpScoutConversation {
+  _embedded?: {
+    threads?: HelpScoutThread[];
+  };
+}
