@@ -8,7 +8,8 @@ export type HelpScoutAction =
   | 'get-conversation'
   | 'reply'
   | 'create-conversation'
-  | 'search-customers';
+  | 'search-customers'
+  | 'bulk-send';
 
 export interface HelpScoutApiOptions {
   params?: Record<string, string>;

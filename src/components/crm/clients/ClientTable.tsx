@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge } from './StatusBadge';
 import { getClientDisplayName, getTherapistDisplayName } from '@/lib/crm/status-config';
 import type { CrmClient } from '@/lib/crm/types';
@@ -17,9 +18,23 @@ interface ClientTableProps {
   clients: CrmClient[];
   isLoading: boolean;
   onClientClick: (clientId: string) => void;
+  selectedClientIds?: Set<string>;
+  onSelectionChange?: (clientId: string, selected: boolean) => void;
+  onSelectAll?: (selected: boolean) => void;
 }
 
-export function ClientTable({ clients, isLoading, onClientClick }: ClientTableProps) {
+export function ClientTable({
+  clients,
+  isLoading,
+  onClientClick,
+  selectedClientIds = new Set(),
+  onSelectionChange,
+  onSelectAll,
+}: ClientTableProps) {
+  const selectionEnabled = !!onSelectionChange && !!onSelectAll;
+  const allSelected = clients.length > 0 && clients.every(c => selectedClientIds.has(c.id));
+  const someSelected = clients.some(c => selectedClientIds.has(c.id)) && !allSelected;
+
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -36,11 +51,34 @@ export function ClientTable({ clients, isLoading, onClientClick }: ClientTablePr
     );
   }
 
+  const handleRowClick = (clientId: string, e: React.MouseEvent) => {
+    // Don't navigate if clicking on checkbox
+    if ((e.target as HTMLElement).closest('[data-checkbox]')) {
+      return;
+    }
+    onClientClick(clientId);
+  };
+
+  const handleCheckboxClick = (clientId: string, checked: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelectionChange?.(clientId, checked);
+  };
+
   return (
     <ScrollArea className="h-full">
       <Table>
         <TableHeader>
           <TableRow>
+            {selectionEnabled && (
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                  onCheckedChange={(checked) => onSelectAll?.(checked === true)}
+                  aria-label="Select all clients"
+                  data-checkbox
+                />
+              </TableHead>
+            )}
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Status</TableHead>
@@ -54,8 +92,21 @@ export function ClientTable({ clients, isLoading, onClientClick }: ClientTablePr
             <TableRow
               key={client.id}
               className="cursor-pointer hover:bg-muted/50"
-              onClick={() => onClientClick(client.id)}
+              onClick={(e) => handleRowClick(client.id, e)}
             >
+              {selectionEnabled && (
+                <TableCell>
+                  <Checkbox
+                    checked={selectedClientIds.has(client.id)}
+                    onCheckedChange={(checked) => {
+                      onSelectionChange?.(client.id, checked === true);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Select ${getClientDisplayName(client)}`}
+                    data-checkbox
+                  />
+                </TableCell>
+              )}
               <TableCell className="font-medium">
                 {getClientDisplayName(client)}
               </TableCell>
