@@ -312,11 +312,13 @@ Deno.serve(async (req) => {
           throw new Error("Could not determine tenant");
         }
         
-        let endpoint = `/conversations?mailbox=${mailboxId}&page=${page}`;
+        // Embed threads to determine who sent the last message
+        let endpoint = `/conversations?mailbox=${mailboxId}&page=${page}&embed=threads`;
         if (status !== "all") {
           endpoint += `&status=${status}`;
         }
         
+        console.log("Fetching conversations with endpoint:", endpoint);
         const response = await helpscoutRequest("GET", endpoint);
         if (!response.ok) {
           const error = await response.text();
@@ -357,10 +359,20 @@ Deno.serve(async (req) => {
           (clients || []).map((c: { id: string; email: string }) => [c.email.toLowerCase(), c.id])
         );
         
-        // Filter and enrich conversations
+        // Thread type interface
+        interface HelpScoutThread {
+          type: string; // 'customer' | 'reply' | 'message' | 'note' | etc.
+          createdAt?: string;
+        }
+        
+        // Filter and enrich conversations with lastMessageBy
         interface HelpScoutConversationRaw {
           primaryCustomer?: { email?: string };
           source?: { via?: string };
+          status?: string;
+          _embedded?: {
+            threads?: HelpScoutThread[];
+          };
         }
         
         let filteredConversations = conversations
@@ -368,20 +380,54 @@ Deno.serve(async (req) => {
             const email = c.primaryCustomer?.email?.toLowerCase();
             return email && emailToClientId.has(email);
           })
-          .map((c: HelpScoutConversationRaw) => ({
-            ...c,
-            client_id: emailToClientId.get(c.primaryCustomer?.email?.toLowerCase() || ""),
-          }));
+          .map((c: HelpScoutConversationRaw) => {
+            // Determine lastMessageBy from embedded threads
+            const threads = c._embedded?.threads || [];
+            
+            // Find the most recent non-note thread
+            // HelpScout returns threads newest first by default
+            const lastRelevantThread = threads.find((t: HelpScoutThread) => 
+              t.type === 'customer' || t.type === 'reply' || t.type === 'message'
+            );
+            
+            // Determine who sent the last message
+            // customer = client replied last (needs attention)
+            // staff = staff replied last (awaiting client)
+            let lastMessageBy: 'customer' | 'staff' = 'customer'; // default to customer (fail safe)
+            
+            if (lastRelevantThread) {
+              if (lastRelevantThread.type === 'customer') {
+                lastMessageBy = 'customer';
+              } else {
+                // 'reply' or 'message' = sent by staff
+                lastMessageBy = 'staff';
+              }
+            }
+            
+            const needsReply = c.status === 'active' && lastMessageBy === 'customer';
+            
+            console.log(`Conv ${(c as { id?: number }).id}: lastThread=${lastRelevantThread?.type || 'none'}, lastMessageBy=${lastMessageBy}, needsReply=${needsReply}`);
+            
+            return {
+              ...c,
+              client_id: emailToClientId.get(c.primaryCustomer?.email?.toLowerCase() || ""),
+              lastMessageBy,
+              needsReply,
+              // Remove embedded threads from response to reduce payload
+              _embedded: undefined,
+            };
+          });
         
-        // Apply direction filter based on source.via
-        // "customer" = received from client, "user" = sent by staff
-        if (direction === "received") {
+        // Apply direction filter based on lastMessageBy (thread-based, not source-based)
+        // "inbox" or "received" = customer sent last message (needs reply)
+        // "sent" = staff sent last message (awaiting customer)
+        if (direction === "received" || direction === "inbox") {
           filteredConversations = filteredConversations.filter(
-            (c: { source?: { via?: string } }) => c.source?.via !== "user"
+            (c: { lastMessageBy: string }) => c.lastMessageBy === "customer"
           );
         } else if (direction === "sent") {
           filteredConversations = filteredConversations.filter(
-            (c: { source?: { via?: string } }) => c.source?.via === "user"
+            (c: { lastMessageBy: string }) => c.lastMessageBy === "staff"
           );
         }
         
