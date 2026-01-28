@@ -1,323 +1,124 @@
 
+# Fix HelpScout Connection Test - Implementation Plan
 
-# HelpScout Email Integration - Implementation Plan
+## Problem Summary
 
-## Overview
-
-Replace the planned Missive integration with HelpScout to provide native email capabilities within the CRM. This includes viewing conversations, replying to clients, linking conversations to client records, and detecting "Needs Reply" status.
-
----
-
-## Technical Decision: HelpScout Mailbox API v2
-
-HelpScout provides two APIs:
-- **Mailbox API v2** - Full access to conversations, threads, customers, and mailboxes
-- **Conversations API** - Embedded widget (not suitable for native CRM inbox)
-
-**Decision: Mailbox API v2** is required for building a native inbox UI with full control over display and workflow.
-
-### Authentication Model
-HelpScout uses OAuth 2.0 with App credentials (client_id + client_secret). The Edge Function will:
-1. Store credentials securely in Supabase secrets
-2. Exchange credentials for access tokens
-3. Proxy all API calls through the Edge Function (never expose tokens client-side)
+The `testConnection` mutation in `useHelpScoutSettings.ts` contains dead code that fires a request without the required `action` parameter, causing a 400 error. The second request succeeds, masking the issue from the UI but polluting logs.
 
 ---
 
-## Database Changes
+## Technical Decision: Standardize on Helper Function Pattern
 
-### 1. Rename/Repurpose Settings Table
-Update `crm_missive_settings` → create new `crm_helpscout_settings`:
+**Decision:** Create a reusable `helpscoutApi` utility function that all HelpScout hooks will use.
 
-```
-crm_helpscout_settings
-  - id (uuid, PK)
-  - tenant_id (uuid, FK tenants, UNIQUE)
-  - mailbox_id (text)          -- HelpScout mailbox ID
-  - from_name (text)           -- Display name for outbound
-  - from_email (text)          -- Verified sending email
-  - connection_status (text)   -- connected/disconnected/error
-  - last_sync_at (timestamptz)
-  - created_at (timestamptz)
-  - updated_at (timestamptz)
-```
+**Why this is the right approach:**
 
-### 2. Conversation-Client Links Table
-Already partially exists conceptually. Create explicit linking:
+1. **The edge function is query-parameter-based by design.** The `helpscout-proxy` function uses `?action=X` for routing, which is a valid REST-like pattern. Changing this now would require refactoring the entire edge function and all future hooks.
 
-```
-crm_conversation_links
-  - id (uuid, PK)
-  - tenant_id (uuid, FK tenants)
-  - client_id (uuid, FK clients)
-  - helpscout_conversation_id (text)  -- HelpScout conversation ID
-  - linked_by_profile_id (uuid)       -- Who linked it
-  - linked_at (timestamptz)
-  - link_type (text)                  -- 'auto' or 'manual'
-  - created_at (timestamptz)
-```
+2. **`supabase.functions.invoke` doesn't handle query params cleanly.** The SDK is designed for RPC-style calls where everything goes in the body. Fighting this creates awkward code.
 
-### 3. Conversation Cache Table (Optional Performance)
-Cache conversation metadata locally to reduce API calls:
+3. **Consistency matters more than ideology.** The Inbox feature (Phase 3B) will require 5+ additional API calls: `list-conversations`, `get-conversation`, `reply`, `create-conversation`, `search-customers`. All will need the same auth + URL construction + query params pattern. A helper function prevents copy-paste code.
 
-```
-crm_conversation_cache
-  - id (uuid, PK)
-  - tenant_id (uuid, FK tenants)
-  - helpscout_conversation_id (text, UNIQUE)
-  - subject (text)
-  - status (text)               -- active/pending/closed
-  - customer_email (text)
-  - customer_name (text)
-  - preview_text (text)
-  - last_thread_at (timestamptz)
-  - needs_reply (boolean)
-  - cached_at (timestamptz)
-```
+4. **Centralized error handling.** A single helper can standardize how HelpScout API errors are parsed and reported across all hooks.
 
 ---
 
-## Edge Functions Architecture
+## Implementation
 
-### 1. `helpscout-proxy` (Main API Proxy)
-Single Edge Function handling all HelpScout API operations:
+### Step 1: Create `helpscoutApi` Helper
 
-**Endpoints:**
-- `GET /conversations` - List conversations from mailbox
-- `GET /conversations/:id` - Get full conversation with threads
-- `POST /conversations/:id/reply` - Send reply
-- `POST /conversations` - Create new conversation (compose)
-- `GET /customers/search` - Search by email for auto-linking
+Create `src/lib/crm/helpscout-api.ts`:
 
-**Security:**
-- Validates JWT from Supabase Auth
-- Retrieves HelpScout credentials from secrets
-- Rate limiting awareness
-- Error handling with retry logic
+```text
++-----------------------------------------------+
+|  helpscoutApi(action, params?, body?)         |
++-----------------------------------------------+
+| 1. Get session from Supabase Auth             |
+| 2. Build URL with action + query params       |
+| 3. Make fetch request with auth header        |
+| 4. Parse response and handle errors           |
+| 5. Return typed result                        |
++-----------------------------------------------+
+```
 
-### 2. `helpscout-webhook` (Inbound Events)
-Receives HelpScout webhooks for real-time updates:
-- New conversation created
-- Reply received
-- Status changed
-- Auto-updates conversation cache
-- Triggers activity events in CRM
+**Key features:**
+- Typed action names (autocomplete + compile-time safety)
+- Centralized URL (no hardcoding in hooks)
+- Standardized error messages
+- Automatic auth header injection
+
+### Step 2: Fix `useHelpScoutSettings.ts`
+
+Remove lines 43-48 (the dead `supabase.functions.invoke` call) and replace lines 50-67 with a single call to the new helper:
+
+```typescript
+// Before: 25 lines of duplicated code
+// After: 1 line
+const result = await helpscoutApi('test-connection');
+```
+
+### Step 3: Prepare for Phase 3B Hooks
+
+The helper will be ready for upcoming hooks:
+
+| Hook | Helper Call |
+|------|-------------|
+| `useConversations` | `helpscoutApi('list-conversations', { status, page })` |
+| `useConversationDetail` | `helpscoutApi('get-conversation', { id })` |
+| `useSendReply` | `helpscoutApi('reply', { id }, { text })` |
+| `useComposeEmail` | `helpscoutApi('create-conversation', null, { subject, ... })` |
 
 ---
 
-## UI Components
+## File Changes
 
-### 1. Inbox Page (`/crm/inbox`)
-
-```
-+------------------------------------------+
-| Inbox                    [Compose] [⚙️]   |
-+------------------------------------------+
-| Filters: [All ▼] [Status ▼] [Needs Reply]|
-+------------------------------------------+
-| ┌──────────────────┐ ┌─────────────────┐ |
-| │ Conversation List│ │ Thread Viewer   │ |
-| │                  │ │                 │ |
-| │ ○ John Doe      │ │ Subject: ...    │ |
-| │   Re: Question  │ │                 │ |
-| │   2h ago        │ │ [Message 1]     │ |
-| │                  │ │ [Message 2]     │ |
-| │ ● Jane Smith    │ │ [Message 3]     │ |
-| │   Insurance... │ │                 │ |
-| │   5h ago  🔴    │ │ ┌─────────────┐ │ |
-| │                  │ │ │ Reply box  │ │ |
-| │ ○ Bob Wilson    │ │ │             │ │ |
-| │   Appointment   │ │ └─────────────┘ │ |
-| └──────────────────┘ └─────────────────┘ |
-+------------------------------------------+
-```
-
-**Components:**
-- `InboxPage.tsx` - Main layout
-- `ConversationList.tsx` - Left panel
-- `ConversationThread.tsx` - Main panel
-- `ReplyComposer.tsx` - Reply input
-- `LinkedClientCard.tsx` - Right panel context
-
-### 2. Conversation-Client Linking UI
-
-**Auto-linking logic:**
-1. Extract customer email from conversation
-2. Query `clients.email` for exact match
-3. If found, create link with `link_type: 'auto'`
-4. Display linked client info in sidebar
-
-**Manual linking:**
-- "Link to Client" button on conversation
-- Client search modal
-- Confirm and create link
-
-### 3. "Needs Reply" Detection
-
-HelpScout provides `status` field:
-- `active` - Waiting for agent reply
-- `pending` - Waiting for customer
-- `closed` - Resolved
-
-**Logic:** Conversation needs reply when:
-- `status === 'active'` AND
-- Last thread was from customer (not agent)
-
-Display badge count in sidebar navigation.
+| File | Action |
+|------|--------|
+| `src/lib/crm/helpscout-api.ts` | **Create** - Reusable API helper |
+| `src/hooks/crm/useHelpScoutSettings.ts` | **Edit** - Remove dead code, use helper |
 
 ---
 
-## File Structure
+## Helper Function Specification
 
-```
-src/
-  pages/crm/
-    Inbox.tsx                    -- NEW: Main inbox page
-  components/crm/inbox/
-    ConversationList.tsx         -- NEW: Left panel
-    ConversationListItem.tsx     -- NEW: List row
-    ConversationThread.tsx       -- NEW: Thread viewer
-    ThreadMessage.tsx            -- NEW: Single message
-    ReplyComposer.tsx            -- NEW: Reply input
-    ComposeDialog.tsx            -- NEW: New conversation
-    LinkedClientCard.tsx         -- NEW: Client context
-    LinkClientDialog.tsx         -- NEW: Manual linking
-  components/crm/settings/
-    HelpScoutConfigPanel.tsx     -- NEW: Connection settings
-  hooks/crm/
-    useConversations.ts          -- NEW: Fetch conversations
-    useConversationDetail.ts     -- NEW: Single conversation
-    useConversationLink.ts       -- NEW: Client linking
-    useHelpScoutSettings.ts      -- NEW: Settings hook
-    useSendReply.ts              -- NEW: Reply mutation
+```typescript
+type HelpScoutAction = 
+  | 'test-connection'
+  | 'list-conversations'
+  | 'get-conversation'
+  | 'reply'
+  | 'create-conversation'
+  | 'search-customers';
 
-supabase/functions/
-  helpscout-proxy/
-    index.ts                     -- NEW: API proxy
-  helpscout-webhook/
-    index.ts                     -- NEW: Webhook handler
+interface HelpScoutApiOptions {
+  params?: Record<string, string>;
+  body?: unknown;
+  method?: 'GET' | 'POST';
+}
+
+async function helpscoutApi<T>(
+  action: HelpScoutAction, 
+  options?: HelpScoutApiOptions
+): Promise<T>
 ```
 
 ---
 
-## Implementation Phases
+## Why Not Alternative Approaches
 
-### Phase 3A: Foundation (Week 1) ✅ COMPLETE
-1. ✅ Create HelpScout settings table (migration)
-2. ✅ Create conversation links table (migration)
-3. ✅ Create `helpscout-proxy` Edge Function
-4. ✅ Add HelpScout API credentials to secrets
-5. ✅ Build `HelpScoutConfigPanel` for settings
-6. ✅ Create basic Inbox page shell
-7. ✅ Enable Inbox in sidebar navigation
-
-### Phase 3B: Inbox UI (Week 2)
-1. Create Inbox page with three-panel layout
-2. Build ConversationList with filtering
-3. Build ConversationThread viewer
-4. Implement "Needs Reply" badge
-
-### Phase 3C: Replies & Linking (Week 3)
-1. Build ReplyComposer with rich text
-2. Implement auto-linking by email match
-3. Build manual LinkClientDialog
-4. Add LinkedClientCard sidebar
-
-### Phase 3D: Polish (Week 4)
-1. Webhook handler for real-time updates
-2. Conversation cache for performance
-3. Activity timeline integration
-4. Error handling and retry logic
-
----
-
-## Security Considerations
-
-- HelpScout API credentials stored as Supabase secrets (never in code)
-- All API calls proxied through Edge Function
-- RLS policies on conversation links table
-- Webhook signature validation
-- Rate limiting handling
-
----
-
-## Required Secrets
-
-| Secret Name | Purpose |
+| Alternative | Why Not |
 |-------------|---------|
-| `HELPSCOUT_APP_ID` | OAuth app identifier |
-| `HELPSCOUT_APP_SECRET` | OAuth secret |
-| `HELPSCOUT_MAILBOX_ID` | Default mailbox |
+| Move `action` to request body | Requires edge function refactor; query params are standard REST |
+| Use `invoke('helpscout-proxy?action=X')` | Undocumented behavior; may break in SDK updates |
+| Keep inline fetch in each hook | Copy-paste code; inconsistent error handling |
 
 ---
 
-## HelpScout API Reference
+## Outcome
 
-Key endpoints for Mailbox API v2:
-
-| Operation | Endpoint |
-|-----------|----------|
-| List conversations | `GET /v2/conversations?mailbox={id}` |
-| Get conversation | `GET /v2/conversations/{id}?embed=threads` |
-| Reply to conversation | `POST /v2/conversations/{id}/reply` |
-| Create conversation | `POST /v2/conversations` |
-| Search customers | `GET /v2/customers?email={email}` |
-
----
-
-## Data Flow
-
-```
-User opens Inbox
-      ↓
-useConversations hook
-      ↓
-Edge Function (helpscout-proxy)
-      ↓
-HelpScout Mailbox API
-      ↓
-Return conversations list
-      ↓
-For each: Check crm_conversation_links for client match
-      ↓
-Display with linked client indicator
-      ↓
-User selects conversation
-      ↓
-useConversationDetail fetches threads
-      ↓
-Display thread + linked client card
-      ↓
-User types reply → useSendReply mutation
-      ↓
-Edge Function posts to HelpScout
-      ↓
-Create activity event in crm_activity_events
-```
-
----
-
-## What Still Remains After Email Integration
-
-After Phase 3 (HelpScout), these items remain from the PRD:
-
-| Feature | Phase | Status |
-|---------|-------|--------|
-| Bulk Messaging UI | 4 | DB ready, needs UI |
-| Email Templates UI | 4 | DB ready, needs UI |
-| Segment Builder | 4 | Not started |
-| Dashboard Stats | 5 | Not started |
-| Reporting | 5 | Not started |
-
----
-
-## Summary
-
-The CRM foundation is solid. The next major milestone is **HelpScout email integration** which requires:
-1. Two new database tables
-2. Two Edge Functions
-3. ~10 new UI components
-4. HelpScout API credentials
-
-This provides native inbox functionality, conversation-client linking, and "Needs Reply" tracking - the core email workflow from the PRD.
-
+After implementation:
+- Single request per test (no spurious 400 errors)
+- Clean, reusable pattern for all HelpScout hooks
+- Type-safe action names with autocomplete
+- Centralized error handling
+- Ready for Phase 3B (Inbox UI)
