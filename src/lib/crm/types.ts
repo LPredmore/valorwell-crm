@@ -113,6 +113,8 @@ export interface HelpScoutConversation {
   createdAt: string;
   userUpdatedAt: string;
   client_id: string; // Added by our filtering
+  lastMessageBy: 'customer' | 'staff'; // Who sent the last message (thread-based)
+  needsReply: boolean; // True if active + customer last messaged
 }
 
 export interface ConversationsResponse {

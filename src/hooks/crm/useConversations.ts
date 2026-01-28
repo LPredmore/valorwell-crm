@@ -4,21 +4,22 @@ import { ConversationsResponse } from '@/lib/crm/types';
 
 interface UseConversationsOptions {
   status?: 'all' | 'active' | 'pending' | 'closed';
-  direction?: 'all' | 'received' | 'sent';
+  /** 'inbox' = customer last messaged (needs reply), 'sent' = staff last messaged */
+  view?: 'inbox' | 'sent';
   page?: number;
   enabled?: boolean;
 }
 
 export function useConversations(options: UseConversationsOptions = {}) {
-  const { status = 'all', direction = 'all', page = 1, enabled = true } = options;
+  const { status = 'all', view = 'inbox', page = 1, enabled = true } = options;
 
   return useQuery({
-    queryKey: ['conversations', status, direction, page],
+    queryKey: ['conversations', view, status, page],
     queryFn: async () => {
       const response = await helpscoutApi<ConversationsResponse>('list-conversations', {
         params: {
           status,
-          direction,
+          direction: view, // 'inbox' or 'sent' maps to direction param in edge function
           page: String(page),
         },
       });

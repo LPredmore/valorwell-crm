@@ -7,14 +7,18 @@ import { Loader2, Inbox as InboxIcon, Settings, AlertCircle } from 'lucide-react
 import { Link } from 'react-router-dom';
 import { ConversationList } from '@/components/crm/inbox/ConversationList';
 import { ConversationThread } from '@/components/crm/inbox/ConversationThread';
-import { StatusFilterTabs } from '@/components/crm/inbox/StatusFilterTabs';
+import { InboxSentTabs } from '@/components/crm/inbox/InboxSentTabs';
+import { SentStatusFilter } from '@/components/crm/inbox/SentStatusFilter';
 import { HelpScoutConversation } from '@/lib/crm/types';
 
 export default function Inbox() {
-  const { settings, isLoading: settingsLoading, isConnected } = useHelpScoutSettings();
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'closed'>('all');
-  const [directionFilter, setDirectionFilter] = useState<'all' | 'received' | 'sent'>('all');
+  const { isLoading: settingsLoading, isConnected } = useHelpScoutSettings();
+  const [activeView, setActiveView] = useState<'inbox' | 'sent'>('inbox');
+  const [sentStatusFilter, setSentStatusFilter] = useState<'all' | 'active' | 'pending' | 'closed'>('all');
   const [selectedConversation, setSelectedConversation] = useState<HelpScoutConversation | null>(null);
+
+  // Inbox always shows active only; Sent allows status filtering
+  const effectiveStatus = activeView === 'inbox' ? 'active' : sentStatusFilter;
 
   const {
     data: conversationsData,
@@ -22,8 +26,8 @@ export default function Inbox() {
     isError: conversationsError,
     refetch,
   } = useConversations({
-    status: statusFilter,
-    direction: directionFilter,
+    view: activeView,
+    status: effectiveStatus,
     enabled: isConnected,
   });
 
@@ -71,13 +75,11 @@ export default function Inbox() {
       {/* Conversation List - Left Panel */}
       <div className="w-80 border-r flex flex-col">
         <div className="p-3 border-b space-y-3">
-          <h2 className="font-semibold">Inbox</h2>
-          <StatusFilterTabs 
-            value={statusFilter} 
-            onChange={setStatusFilter}
-            direction={directionFilter}
-            onDirectionChange={setDirectionFilter}
-          />
+          <InboxSentTabs value={activeView} onChange={setActiveView} />
+          {/* Only show status filter in Sent view */}
+          {activeView === 'sent' && (
+            <SentStatusFilter value={sentStatusFilter} onChange={setSentStatusFilter} />
+          )}
         </div>
         <ConversationList
           conversations={conversationsData?.conversations || []}
