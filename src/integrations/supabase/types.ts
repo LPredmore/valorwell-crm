@@ -2814,6 +2814,7 @@ export type Database = {
           primary_staff_id: string | null
           profile_id: string
           referral_source: string | null
+          tags: string | null
           tenant_id: string
           updated_at: string
         }
@@ -2846,6 +2847,7 @@ export type Database = {
           primary_staff_id?: string | null
           profile_id: string
           referral_source?: string | null
+          tags?: string | null
           tenant_id: string
           updated_at?: string
         }
@@ -2878,6 +2880,7 @@ export type Database = {
           primary_staff_id?: string | null
           profile_id?: string
           referral_source?: string | null
+          tags?: string | null
           tenant_id?: string
           updated_at?: string
         }
@@ -5772,6 +5775,9 @@ export type Database = {
         | "Blacklisted"
         | "Unresponsive - Warm"
         | "Unresponsive - Cold"
+        | "Manual Check"
+        | "No Insurance"
+        | "DNC"
       phq9_severity_enum:
         | "minimal"
         | "mild"
@@ -6031,6 +6037,9 @@ export const Constants = {
         "Blacklisted",
         "Unresponsive - Warm",
         "Unresponsive - Cold",
+        "Manual Check",
+        "No Insurance",
+        "DNC",
       ],
       phq9_severity_enum: [
         "minimal",
