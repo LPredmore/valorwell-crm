@@ -13,6 +13,7 @@ import { HelpScoutConversation } from '@/lib/crm/types';
 export default function Inbox() {
   const { settings, isLoading: settingsLoading, isConnected } = useHelpScoutSettings();
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'closed'>('all');
+  const [directionFilter, setDirectionFilter] = useState<'all' | 'received' | 'sent'>('all');
   const [selectedConversation, setSelectedConversation] = useState<HelpScoutConversation | null>(null);
 
   const {
@@ -22,6 +23,7 @@ export default function Inbox() {
     refetch,
   } = useConversations({
     status: statusFilter,
+    direction: directionFilter,
     enabled: isConnected,
   });
 
@@ -70,7 +72,12 @@ export default function Inbox() {
       <div className="w-80 border-r flex flex-col">
         <div className="p-3 border-b space-y-3">
           <h2 className="font-semibold">Inbox</h2>
-          <StatusFilterTabs value={statusFilter} onChange={setStatusFilter} />
+          <StatusFilterTabs 
+            value={statusFilter} 
+            onChange={setStatusFilter}
+            direction={directionFilter}
+            onDirectionChange={setDirectionFilter}
+          />
         </div>
         <ConversationList
           conversations={conversationsData?.conversations || []}
