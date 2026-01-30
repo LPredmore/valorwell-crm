@@ -75,6 +75,20 @@ async function helpscoutRequest(
   return response;
 }
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function maskEmail(email: string) {
+  const normalized = normalizeEmail(email);
+  const [local, domain] = normalized.split("@");
+  if (!local || !domain) return "(invalid-email)";
+
+  const first = local[0] ?? "*";
+  const last = local.length > 1 ? local[local.length - 1] : "*";
+  return `${first}***${last}@${domain}`;
+}
+
 // Handle bulk sending of emails
 async function handleBulkSend(
   bulkSendId: string,
@@ -330,9 +344,16 @@ Deno.serve(async (req) => {
         const conversations = hsData._embedded?.conversations || [];
         
         // Extract all customer emails from conversations
-        const customerEmails = conversations
-          .map((c: { primaryCustomer?: { email?: string } }) => c.primaryCustomer?.email?.toLowerCase())
-          .filter(Boolean) as string[];
+        const customerEmails = Array.from(
+          new Set(
+            conversations
+              .map((c: { primaryCustomer?: { email?: string } }) => {
+                const raw = c.primaryCustomer?.email;
+                return raw ? normalizeEmail(raw) : null;
+              })
+              .filter(Boolean) as string[]
+          )
+        );
         
         if (customerEmails.length === 0) {
           result = {
@@ -356,7 +377,9 @@ Deno.serve(async (req) => {
         
         // Create email -> client_id lookup (lowercase for case-insensitive matching)
         const emailToClientId = new Map<string, string>(
-          (clients || []).map((c: { id: string; email: string }) => [c.email.toLowerCase(), c.id])
+          (clients || [])
+            .filter((c: { id: string; email: string | null }) => Boolean(c.email))
+            .map((c: { id: string; email: string | null }) => [normalizeEmail(c.email as string), c.id])
         );
         
         // Thread type interface
@@ -377,7 +400,7 @@ Deno.serve(async (req) => {
         
         let filteredConversations = conversations
           .filter((c: HelpScoutConversationRaw) => {
-            const email = c.primaryCustomer?.email?.toLowerCase();
+            const email = c.primaryCustomer?.email ? normalizeEmail(c.primaryCustomer.email) : undefined;
             return email && emailToClientId.has(email);
           })
           .map((c: HelpScoutConversationRaw) => {
@@ -410,7 +433,9 @@ Deno.serve(async (req) => {
             
             return {
               ...c,
-              client_id: emailToClientId.get(c.primaryCustomer?.email?.toLowerCase() || ""),
+              client_id: c.primaryCustomer?.email
+                ? emailToClientId.get(normalizeEmail(c.primaryCustomer.email))
+                : undefined,
               lastMessageBy,
               needsReply,
               // Remove embedded threads from response to reduce payload
@@ -431,9 +456,18 @@ Deno.serve(async (req) => {
           );
         }
         
+        const debugInfo = {
+          hs_total_elements: hsData.page?.totalElements,
+          hs_conversations_in_payload: conversations.length,
+          extracted_customer_emails_unique: customerEmails.length,
+          matched_clients: (clients || []).length,
+          sample_customer_emails_masked: customerEmails.slice(0, 8).map(maskEmail),
+        };
+
         result = {
           conversations: filteredConversations,
           page: hsData.page || { size: 0, totalElements: 0, totalPages: 0, number: 1 },
+          ...(filteredConversations.length === 0 ? { _debug: debugInfo } : {}),
         };
         break;
       }
