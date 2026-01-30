@@ -5994,6 +5994,13 @@ export type Database = {
       }
     }
     Functions: {
+      find_clients_by_emails_insensitive: {
+        Args: { p_emails: string[]; p_tenant_id: string }
+        Returns: {
+          email: string
+          id: string
+        }[]
+      }
       format_timestamp_in_timezone: {
         Args: { p_format?: string; p_timestamp: string; p_timezone: string }
         Returns: string
