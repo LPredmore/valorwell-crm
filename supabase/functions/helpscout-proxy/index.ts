@@ -312,7 +312,7 @@ Deno.serve(async (req) => {
       case "list-conversations": {
         const status = url.searchParams.get("status") || "all";
         const direction = url.searchParams.get("direction") || "all";
-        const page = url.searchParams.get("page") || "1";
+        const requestedPage = parseInt(url.searchParams.get("page") || "1", 10);
         
         // Get user's tenant_id
         const { data: membership, error: membershipError } = await supabase
@@ -326,70 +326,14 @@ Deno.serve(async (req) => {
           throw new Error("Could not determine tenant");
         }
         
-        // Embed threads to determine who sent the last message
-        let endpoint = `/conversations?mailbox=${mailboxId}&page=${page}&embed=threads`;
-        if (status !== "all") {
-          endpoint += `&status=${status}`;
-        }
-        
-        console.log("Fetching conversations with endpoint:", endpoint);
-        const response = await helpscoutRequest("GET", endpoint);
-        if (!response.ok) {
-          const error = await response.text();
-          console.error("HelpScout list error:", error);
-          throw new Error(`HelpScout API error: ${response.status}`);
-        }
-        
-        const hsData = await response.json();
-        const conversations = hsData._embedded?.conversations || [];
-        
-        // Extract all customer emails from conversations
-        const customerEmails = Array.from(
-          new Set(
-            conversations
-              .map((c: { primaryCustomer?: { email?: string } }) => {
-                const raw = c.primaryCustomer?.email;
-                return raw ? normalizeEmail(raw) : null;
-              })
-              .filter(Boolean) as string[]
-          )
-        );
-        
-        if (customerEmails.length === 0) {
-          result = {
-            conversations: [],
-            page: hsData.page || { size: 0, totalElements: 0, totalPages: 0, number: 1 },
-          };
-          break;
-        }
-        
-        // Find matching clients in database (case-insensitive via RPC function)
-        const { data: clients, error: clientsError } = await supabase
-          .rpc("find_clients_by_emails_insensitive", {
-            p_tenant_id: membership.tenant_id,
-            p_emails: customerEmails,
-          });
-        
-        if (clientsError) {
-          console.error("Clients lookup error:", clientsError);
-          throw new Error("Could not fetch clients");
-        }
-        
-        // Create email -> client_id lookup (lowercase for case-insensitive matching)
-        const emailToClientId = new Map<string, string>(
-          (clients || [])
-            .filter((c: { id: string; email: string | null }) => Boolean(c.email))
-            .map((c: { id: string; email: string | null }) => [normalizeEmail(c.email as string), c.id])
-        );
-        
         // Thread type interface
         interface HelpScoutThread {
-          type: string; // 'customer' | 'reply' | 'message' | 'note' | etc.
+          type: string;
           createdAt?: string;
         }
         
-        // Filter and enrich conversations with lastMessageBy
         interface HelpScoutConversationRaw {
+          id?: number;
           primaryCustomer?: { email?: string };
           source?: { via?: string };
           status?: string;
@@ -398,76 +342,170 @@ Deno.serve(async (req) => {
           };
         }
         
-        let filteredConversations = conversations
-          .filter((c: HelpScoutConversationRaw) => {
-            const email = c.primaryCustomer?.email ? normalizeEmail(c.primaryCustomer.email) : undefined;
-            return email && emailToClientId.has(email);
-          })
-          .map((c: HelpScoutConversationRaw) => {
-            // Determine lastMessageBy from embedded threads
-            const threads = c._embedded?.threads || [];
-            
-            // Find the most recent non-note thread
-            // HelpScout returns threads newest first by default
-            const lastRelevantThread = threads.find((t: HelpScoutThread) => 
-              t.type === 'customer' || t.type === 'reply' || t.type === 'message'
-            );
-            
-            // Determine who sent the last message
-            // customer = client replied last (needs attention)
-            // staff = staff replied last (awaiting client)
-            let lastMessageBy: 'customer' | 'staff' = 'customer'; // default to customer (fail safe)
-            
-            if (lastRelevantThread) {
-              if (lastRelevantThread.type === 'customer') {
-                lastMessageBy = 'customer';
-              } else {
-                // 'reply' or 'message' = sent by staff
-                lastMessageBy = 'staff';
-              }
-            }
-            
-            const needsReply = c.status === 'active' && lastMessageBy === 'customer';
-            
-            console.log(`Conv ${(c as { id?: number }).id}: lastThread=${lastRelevantThread?.type || 'none'}, lastMessageBy=${lastMessageBy}, needsReply=${needsReply}`);
-            
-            return {
-              ...c,
-              client_id: c.primaryCustomer?.email
-                ? emailToClientId.get(normalizeEmail(c.primaryCustomer.email))
-                : undefined,
-              lastMessageBy,
-              needsReply,
-              // Remove embedded threads from response to reduce payload
-              _embedded: undefined,
-            };
-          });
-        
-        // Apply direction filter based on lastMessageBy (thread-based, not source-based)
-        // "inbox" or "received" = customer sent last message (needs reply)
-        // "sent" = staff sent last message (awaiting customer)
-        if (direction === "received" || direction === "inbox") {
-          filteredConversations = filteredConversations.filter(
-            (c: { lastMessageBy: string }) => c.lastMessageBy === "customer"
-          );
-        } else if (direction === "sent") {
-          filteredConversations = filteredConversations.filter(
-            (c: { lastMessageBy: string }) => c.lastMessageBy === "staff"
-          );
+        interface EnrichedConversation extends Omit<HelpScoutConversationRaw, '_embedded'> {
+          client_id?: string;
+          lastMessageBy: 'customer' | 'staff';
+          needsReply: boolean;
         }
         
+        // Configuration for multi-page aggregation
+        const targetCount = 25; // Target conversations per virtual page
+        const maxHelpScoutPages = 10; // Safety limit to prevent infinite loops
+        const allMatchingConversations: EnrichedConversation[] = [];
+        let hsPage = 1;
+        let totalHelpScoutPages = 1;
+        let totalHelpScoutElements = 0;
+        let pagesScanned = 0;
+        
+        console.log(`Starting multi-page scan for direction=${direction}, status=${status}`);
+        
+        // Scan HelpScout pages until we have enough matching conversations
+        while (allMatchingConversations.length < targetCount && hsPage <= maxHelpScoutPages) {
+          let endpoint = `/conversations?mailbox=${mailboxId}&page=${hsPage}&embed=threads`;
+          if (status !== "all") {
+            endpoint += `&status=${status}`;
+          }
+          
+          console.log(`Fetching HelpScout page ${hsPage}: ${endpoint}`);
+          const response = await helpscoutRequest("GET", endpoint);
+          
+          if (!response.ok) {
+            const error = await response.text();
+            console.error("HelpScout list error:", error);
+            throw new Error(`HelpScout API error: ${response.status}`);
+          }
+          
+          const hsData = await response.json();
+          const conversations: HelpScoutConversationRaw[] = hsData._embedded?.conversations || [];
+          pagesScanned++;
+          
+          // Track pagination info from first page
+          if (hsPage === 1) {
+            totalHelpScoutPages = hsData.page?.totalPages || 1;
+            totalHelpScoutElements = hsData.page?.totalElements || 0;
+          }
+          
+          console.log(`Page ${hsPage}: got ${conversations.length} conversations`);
+          
+          if (conversations.length === 0) {
+            break;
+          }
+          
+          // Extract customer emails from this page
+          const customerEmails = Array.from(
+            new Set(
+              conversations
+                .map((c) => {
+                  const raw = c.primaryCustomer?.email;
+                  return raw ? normalizeEmail(raw) : null;
+                })
+                .filter(Boolean) as string[]
+            )
+          );
+          
+          if (customerEmails.length > 0) {
+            // Find matching clients for this batch
+            const { data: clients, error: clientsError } = await supabase
+              .rpc("find_clients_by_emails_insensitive", {
+                p_tenant_id: membership.tenant_id,
+                p_emails: customerEmails,
+              });
+            
+            if (clientsError) {
+              console.error("Clients lookup error:", clientsError);
+              throw new Error("Could not fetch clients");
+            }
+            
+            // Create email -> client_id lookup
+            const emailToClientId = new Map<string, string>(
+              (clients || [])
+                .filter((c: { id: string; email: string | null }) => Boolean(c.email))
+                .map((c: { id: string; email: string | null }) => [normalizeEmail(c.email as string), c.id])
+            );
+            
+            console.log(`Page ${hsPage}: ${customerEmails.length} unique emails, ${emailToClientId.size} matched clients`);
+            
+            // Filter to client-matching conversations and enrich
+            for (const c of conversations) {
+              const email = c.primaryCustomer?.email ? normalizeEmail(c.primaryCustomer.email) : undefined;
+              
+              if (!email || !emailToClientId.has(email)) {
+                continue;
+              }
+              
+              // Determine lastMessageBy from embedded threads
+              const threads = c._embedded?.threads || [];
+              const lastRelevantThread = threads.find((t) => 
+                t.type === 'customer' || t.type === 'reply' || t.type === 'message'
+              );
+              
+              let lastMessageBy: 'customer' | 'staff' = 'customer';
+              if (lastRelevantThread) {
+                lastMessageBy = lastRelevantThread.type === 'customer' ? 'customer' : 'staff';
+              }
+              
+              const needsReply = c.status === 'active' && lastMessageBy === 'customer';
+              
+              // Apply direction filter during accumulation
+              if (direction === "received" || direction === "inbox") {
+                if (lastMessageBy !== "customer") continue;
+              } else if (direction === "sent") {
+                if (lastMessageBy !== "staff") continue;
+              }
+              
+              // Create enriched conversation without embedded threads
+              const { _embedded: _, ...conversationWithoutEmbedded } = c;
+              const enriched: EnrichedConversation = {
+                ...conversationWithoutEmbedded,
+                client_id: emailToClientId.get(email),
+                lastMessageBy,
+                needsReply,
+              };
+              
+              allMatchingConversations.push(enriched);
+            }
+          }
+          
+          console.log(`After page ${hsPage}: ${allMatchingConversations.length} matching conversations accumulated`);
+          
+          // Check if we've exhausted HelpScout pages
+          if (hsPage >= totalHelpScoutPages) {
+            console.log(`Reached last HelpScout page (${hsPage}/${totalHelpScoutPages})`);
+            break;
+          }
+          
+          hsPage++;
+          
+          // Small delay to respect rate limits
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        
+        console.log(`Multi-page scan complete: scanned ${pagesScanned} pages, found ${allMatchingConversations.length} matching conversations`);
+        
+        // Virtual pagination: slice results based on requested page
+        const pageSize = 25;
+        const startIndex = (requestedPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const pageConversations = allMatchingConversations.slice(startIndex, endIndex);
+        const totalMatchingPages = Math.ceil(allMatchingConversations.length / pageSize) || 1;
+        
         const debugInfo = {
-          hs_total_elements: hsData.page?.totalElements,
-          hs_conversations_in_payload: conversations.length,
-          extracted_customer_emails_unique: customerEmails.length,
-          matched_clients: (clients || []).length,
-          sample_customer_emails_masked: customerEmails.slice(0, 8).map(maskEmail),
+          hs_total_elements: totalHelpScoutElements,
+          hs_pages_scanned: pagesScanned,
+          total_matching_conversations: allMatchingConversations.length,
+          direction_filter: direction,
+          requested_page: requestedPage,
         };
 
         result = {
-          conversations: filteredConversations,
-          page: hsData.page || { size: 0, totalElements: 0, totalPages: 0, number: 1 },
-          ...(filteredConversations.length === 0 ? { _debug: debugInfo } : {}),
+          conversations: pageConversations,
+          page: {
+            size: pageSize,
+            totalElements: allMatchingConversations.length,
+            totalPages: totalMatchingPages,
+            number: requestedPage,
+          },
+          ...(pageConversations.length === 0 ? { _debug: debugInfo } : {}),
         };
         break;
       }
