@@ -854,6 +854,13 @@ export type Database = {
             foreignKeyName: "claim_line_diagnoses_claim_line_id_fkey"
             columns: ["claim_line_id"]
             isOneToOne: false
+            referencedRelation: "claim_line_balances"
+            referencedColumns: ["claim_line_id"]
+          },
+          {
+            foreignKeyName: "claim_line_diagnoses_claim_line_id_fkey"
+            columns: ["claim_line_id"]
+            isOneToOne: false
             referencedRelation: "claim_lines"
             referencedColumns: ["id"]
           },
@@ -2108,6 +2115,141 @@ export type Database = {
           },
           {
             foreignKeyName: "client_insurance_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_payment_links: {
+        Row: {
+          amount_cents: number
+          claim_line_ids: string[] | null
+          client_id: string
+          created_at: string
+          currency: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          paid_at: string | null
+          status: string
+          stripe_checkout_session_id: string | null
+          stripe_customer_id: string | null
+          stripe_payment_link_id: string
+          stripe_payment_link_url: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          claim_line_ids?: string[] | null
+          client_id: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          paid_at?: string | null
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_payment_link_id: string
+          stripe_payment_link_url: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          claim_line_ids?: string[] | null
+          client_id?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          paid_at?: string | null
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_payment_link_id?: string
+          stripe_payment_link_url?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_payment_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_payment_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_payment_methods: {
+        Row: {
+          card_brand: string | null
+          card_exp_month: number | null
+          card_exp_year: number | null
+          card_last_four: string | null
+          client_id: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          stripe_customer_id: string
+          stripe_payment_method_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          card_brand?: string | null
+          card_exp_month?: number | null
+          card_exp_year?: number | null
+          card_last_four?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          stripe_customer_id: string
+          stripe_payment_method_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          card_brand?: string | null
+          card_exp_month?: number | null
+          card_exp_year?: number | null
+          card_last_four?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          stripe_customer_id?: string
+          stripe_payment_method_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_payment_methods_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_payment_methods_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3842,6 +3984,8 @@ export type Database = {
           created_at: string
           era_claim_id: string
           id: string
+          match_confidence: number | null
+          match_method: string | null
           mod1: string | null
           mod2: string | null
           mod3: string | null
@@ -3862,6 +4006,8 @@ export type Database = {
           created_at?: string
           era_claim_id: string
           id?: string
+          match_confidence?: number | null
+          match_method?: string | null
           mod1?: string | null
           mod2?: string | null
           mod3?: string | null
@@ -3882,6 +4028,8 @@ export type Database = {
           created_at?: string
           era_claim_id?: string
           id?: string
+          match_confidence?: number | null
+          match_method?: string | null
           mod1?: string | null
           mod2?: string | null
           mod3?: string | null
@@ -3896,6 +4044,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "era_service_lines_claim_line_id_fkey"
+            columns: ["claim_line_id"]
+            isOneToOne: false
+            referencedRelation: "claim_line_balances"
+            referencedColumns: ["claim_line_id"]
+          },
           {
             foreignKeyName: "era_service_lines_claim_line_id_fkey"
             columns: ["claim_line_id"]
@@ -4552,6 +4707,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payment_allocations_claim_line_id_fkey"
+            columns: ["claim_line_id"]
+            isOneToOne: false
+            referencedRelation: "claim_line_balances"
+            referencedColumns: ["claim_line_id"]
+          },
           {
             foreignKeyName: "payment_allocations_claim_line_id_fkey"
             columns: ["claim_line_id"]
@@ -5325,6 +5487,8 @@ export type Database = {
           prov_addr_2: string | null
           prov_bio: string | null
           prov_city: string | null
+          prov_degree: string | null
+          prov_dob: string | null
           prov_field: Database["public"]["Enums"]["specialty_enum"] | null
           prov_image_url: string | null
           prov_license_number: string | null
@@ -5359,6 +5523,8 @@ export type Database = {
           prov_addr_2?: string | null
           prov_bio?: string | null
           prov_city?: string | null
+          prov_degree?: string | null
+          prov_dob?: string | null
           prov_field?: Database["public"]["Enums"]["specialty_enum"] | null
           prov_image_url?: string | null
           prov_license_number?: string | null
@@ -5393,6 +5559,8 @@ export type Database = {
           prov_addr_2?: string | null
           prov_bio?: string | null
           prov_city?: string | null
+          prov_degree?: string | null
+          prov_dob?: string | null
           prov_field?: Database["public"]["Enums"]["specialty_enum"] | null
           prov_image_url?: string | null
           prov_license_number?: string | null
@@ -5788,7 +5956,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      claim_line_balances: {
+        Row: {
+          claim_id: string | null
+          claim_line_id: string | null
+          client_id: string | null
+          patient_responsibility: number | null
+          procedure_code: string | null
+          remaining_balance: number | null
+          service_date_from: string | null
+          tenant_id: string | null
+          total_paid: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_lines_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claims_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claims_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       format_timestamp_in_timezone: {
@@ -5850,6 +6053,17 @@ export type Database = {
               videoroom_url: string
             }[]
           }
+      get_client_balance_summary: {
+        Args: { p_client_id: string }
+        Returns: {
+          claim_count: number
+          newest_service_date: string
+          oldest_service_date: string
+          remaining_balance: number
+          total_paid: number
+          total_responsibility: number
+        }[]
+      }
       get_staff_calendar_appointments: {
         Args: { p_from_date?: string; p_staff_id: string; p_to_date?: string }
         Returns: {
