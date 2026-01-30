@@ -342,12 +342,12 @@ Deno.serve(async (req) => {
           break;
         }
         
-        // Find matching clients in database (case-insensitive)
+        // Find matching clients in database (case-insensitive via RPC function)
         const { data: clients, error: clientsError } = await supabase
-          .from("clients")
-          .select("id, email")
-          .eq("tenant_id", membership.tenant_id)
-          .in("email", customerEmails);
+          .rpc("find_clients_by_emails_insensitive", {
+            p_tenant_id: membership.tenant_id,
+            p_emails: customerEmails,
+          });
         
         if (clientsError) {
           console.error("Clients lookup error:", clientsError);
