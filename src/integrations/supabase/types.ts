@@ -3225,6 +3225,7 @@ export type Database = {
           failed_count: number
           id: string
           recipient_count: number
+          recipient_type: string
           sent_count: number
           status: string
           subject: string
@@ -3239,6 +3240,7 @@ export type Database = {
           failed_count?: number
           id?: string
           recipient_count?: number
+          recipient_type?: string
           sent_count?: number
           status?: string
           subject: string
@@ -3253,6 +3255,7 @@ export type Database = {
           failed_count?: number
           id?: string
           recipient_count?: number
+          recipient_type?: string
           sent_count?: number
           status?: string
           subject?: string
@@ -3328,6 +3331,61 @@ export type Database = {
           },
           {
             foreignKeyName: "crm_bulk_send_recipients_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_bulk_send_staff_recipients: {
+        Row: {
+          bulk_send_id: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          sent_at: string | null
+          staff_id: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          bulk_send_id: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          staff_id: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          bulk_send_id?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          staff_id?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_bulk_send_staff_recipients_bulk_send_id_fkey"
+            columns: ["bulk_send_id"]
+            isOneToOne: false
+            referencedRelation: "crm_bulk_send_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bulk_send_staff_recipients_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bulk_send_staff_recipients_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

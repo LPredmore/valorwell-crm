@@ -98,10 +98,10 @@ async function handleBulkSend(
   console.log(`Starting bulk send for job: ${bulkSendId}`);
 
   try {
-    // Fetch bulk send log
+    // Fetch bulk send log with recipient_type
     const { data: bulkSendLog, error: logError } = await supabase
       .from("crm_bulk_send_logs")
-      .select("*")
+      .select("*, recipient_type")
       .eq("id", bulkSendId)
       .single();
 
@@ -116,54 +116,120 @@ async function handleBulkSend(
       .update({ status: "sending" })
       .eq("id", bulkSendId);
 
-    // Fetch recipients with client email data
-    const { data: recipients, error: recipientsError } = await supabase
-      .from("crm_bulk_send_recipients")
-      .select(`
-        id,
-        client_id,
-        status,
-        clients!inner (
-          id,
-          email,
-          pat_name_f,
-          pat_name_l
-        )
-      `)
-      .eq("bulk_send_id", bulkSendId)
-      .eq("status", "pending");
+    const recipientType = bulkSendLog.recipient_type || 'client';
+    console.log(`Processing bulk send for recipient type: ${recipientType}`);
 
-    if (recipientsError) {
-      console.error("Failed to fetch recipients:", recipientsError);
-      await supabase
-        .from("crm_bulk_send_logs")
-        .update({ status: "failed" })
-        .eq("id", bulkSendId);
-      return;
+    // Fetch recipients based on type
+    interface RecipientData {
+      id: string;
+      email: string | null;
+      firstName: string;
+      lastName: string;
+      recipientTable: string;
     }
+
+    let recipientsToProcess: RecipientData[] = [];
+
+    if (recipientType === 'staff') {
+      // Fetch staff recipients
+      const { data: staffRecipients, error: staffRecipientsError } = await supabase
+        .from("crm_bulk_send_staff_recipients")
+        .select(`
+          id,
+          staff_id,
+          status,
+          staff!inner (
+            id,
+            prov_name_f,
+            prov_name_l,
+            profiles!inner (
+              email
+            )
+          )
+        `)
+        .eq("bulk_send_id", bulkSendId)
+        .eq("status", "pending");
+
+      if (staffRecipientsError) {
+        console.error("Failed to fetch staff recipients:", staffRecipientsError);
+        await supabase
+          .from("crm_bulk_send_logs")
+          .update({ status: "failed" })
+          .eq("id", bulkSendId);
+        return;
+      }
+
+      recipientsToProcess = (staffRecipients || []).map(r => {
+        const staffData = r.staff as unknown as {
+          id: string;
+          prov_name_f: string | null;
+          prov_name_l: string | null;
+          profiles: { email: string | null } | null;
+        };
+        return {
+          id: r.id,
+          email: staffData?.profiles?.email ?? null,
+          firstName: staffData?.prov_name_f || '',
+          lastName: staffData?.prov_name_l || '',
+          recipientTable: 'crm_bulk_send_staff_recipients',
+        };
+      });
+    } else {
+      // Fetch client recipients (existing logic)
+      const { data: clientRecipients, error: recipientsError } = await supabase
+        .from("crm_bulk_send_recipients")
+        .select(`
+          id,
+          client_id,
+          status,
+          clients!inner (
+            id,
+            email,
+            pat_name_f,
+            pat_name_l
+          )
+        `)
+        .eq("bulk_send_id", bulkSendId)
+        .eq("status", "pending");
+
+      if (recipientsError) {
+        console.error("Failed to fetch recipients:", recipientsError);
+        await supabase
+          .from("crm_bulk_send_logs")
+          .update({ status: "failed" })
+          .eq("id", bulkSendId);
+        return;
+      }
+
+      recipientsToProcess = (clientRecipients || []).map(r => {
+        const clientData = r.clients as unknown as {
+          id: string;
+          email: string | null;
+          pat_name_f: string | null;
+          pat_name_l: string | null;
+        };
+        return {
+          id: r.id,
+          email: clientData?.email ?? null,
+          firstName: clientData?.pat_name_f || '',
+          lastName: clientData?.pat_name_l || '',
+          recipientTable: 'crm_bulk_send_recipients',
+        };
+      });
+    }
+
+    console.log(`Processing ${recipientsToProcess.length} recipients`);
 
     let sentCount = 0;
     let failedCount = 0;
 
     // Process each recipient
-    for (const recipient of recipients || []) {
-      // Supabase returns joined data - clients is the joined row
-      const clientData = recipient.clients as unknown as {
-        id: string;
-        email: string | null;
-        pat_name_f: string | null;
-        pat_name_l: string | null;
-      };
-      const clientEmail = clientData?.email;
-      const clientName = [clientData?.pat_name_f, clientData?.pat_name_l]
-        .filter(Boolean)
-        .join(" ");
-
+    for (const recipient of recipientsToProcess) {
       // Skip if no email
-      if (!clientEmail) {
-        console.log(`Skipping client ${recipient.client_id}: no email`);
+      if (!recipient.email) {
+        console.log(`Skipping recipient ${recipient.id}: no email`);
         await supabase
-          .from("crm_bulk_send_recipients")
+          .from(recipient.recipientTable)
           .update({
             status: "failed",
             error_message: "No email address",
@@ -179,9 +245,9 @@ async function handleBulkSend(
         const conversationBody = {
           subject: bulkSendLog.subject,
           customer: {
-            email: clientEmail,
-            firstName: clientData?.pat_name_f || "",
-            lastName: clientData?.pat_name_l || "",
+            email: recipient.email,
+            firstName: recipient.firstName,
+            lastName: recipient.lastName,
           },
           mailboxId: parseInt(mailboxId || "0"),
           type: "email",
@@ -190,7 +256,7 @@ async function handleBulkSend(
             {
               type: "reply",
               customer: {
-                email: clientEmail,
+                email: recipient.email,
               },
               text: bulkSendLog.body_html,
             },
@@ -204,9 +270,9 @@ async function handleBulkSend(
         );
 
         if (response.ok || response.status === 201) {
-          console.log(`Email sent to ${clientEmail}`);
+          console.log(`Email sent to ${maskEmail(recipient.email)}`);
           await supabase
-            .from("crm_bulk_send_recipients")
+            .from(recipient.recipientTable)
             .update({
               status: "sent",
               sent_at: new Date().toISOString(),
@@ -215,9 +281,9 @@ async function handleBulkSend(
           sentCount++;
         } else {
           const errorText = await response.text();
-          console.error(`Failed to send to ${clientEmail}:`, errorText);
+          console.error(`Failed to send to ${maskEmail(recipient.email)}:`, errorText);
           await supabase
-            .from("crm_bulk_send_recipients")
+            .from(recipient.recipientTable)
             .update({
               status: "failed",
               error_message: `API error: ${response.status}`,
@@ -230,9 +296,9 @@ async function handleBulkSend(
         // Rate limiting: wait 150ms between requests
         await new Promise((resolve) => setTimeout(resolve, 150));
       } catch (error) {
-        console.error(`Error sending to ${clientEmail}:`, error);
+        console.error(`Error sending to ${maskEmail(recipient.email)}:`, error);
         await supabase
-          .from("crm_bulk_send_recipients")
+          .from(recipient.recipientTable)
           .update({
             status: "failed",
             error_message: error instanceof Error ? error.message : "Unknown error",
@@ -244,7 +310,7 @@ async function handleBulkSend(
     }
 
     // Update final counts and status
-    const finalStatus = failedCount === (recipients?.length || 0) ? "failed" : "completed";
+    const finalStatus = failedCount === recipientsToProcess.length ? "failed" : "completed";
     await supabase
       .from("crm_bulk_send_logs")
       .update({

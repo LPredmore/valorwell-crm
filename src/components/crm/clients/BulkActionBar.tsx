@@ -5,16 +5,21 @@ interface BulkActionBarProps {
   selectedCount: number;
   onSendEmail: () => void;
   onClear: () => void;
+  entityLabel?: 'client' | 'staff';
 }
 
-export function BulkActionBar({ selectedCount, onSendEmail, onClear }: BulkActionBarProps) {
+export function BulkActionBar({ selectedCount, onSendEmail, onClear, entityLabel = 'client' }: BulkActionBarProps) {
   if (selectedCount === 0) return null;
+
+  const label = entityLabel === 'staff' 
+    ? `${selectedCount} staff member${selectedCount !== 1 ? 's' : ''}`
+    : `${selectedCount} client${selectedCount !== 1 ? 's' : ''}`;
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
       <div className="flex items-center gap-4 rounded-lg border bg-card px-4 py-3 shadow-lg">
         <span className="text-sm font-medium">
-          {selectedCount} client{selectedCount !== 1 ? 's' : ''} selected
+          {label} selected
         </span>
         <div className="flex items-center gap-2">
           <Button onClick={onSendEmail} size="sm" className="gap-2">

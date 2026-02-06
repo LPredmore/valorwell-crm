@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { 
   Users, 
   Inbox, 
-  Send, 
+  UserCog, 
   Settings, 
   LayoutDashboard,
   ChevronLeft,
@@ -30,13 +30,11 @@ const navItems: NavItem[] = [
     label: 'Inbox',
     href: '/crm/inbox',
     icon: Inbox,
-    disabled: false, // HelpScout integration ready
   },
   {
-    label: 'Bulk Messaging',
-    href: '/crm/bulk',
-    icon: Send,
-    disabled: true, // Phase 4
+    label: 'Staff',
+    href: '/crm/staff',
+    icon: UserCog,
   },
   {
     label: 'Settings',
