@@ -5320,7 +5320,7 @@ export type Database = {
           last_login_at: string | null
           last_login_ip: string | null
           locked_until: string | null
-          password: string
+          password: string | null
           updated_at: string
         }
         Insert: {
@@ -5333,7 +5333,7 @@ export type Database = {
           last_login_at?: string | null
           last_login_ip?: string | null
           locked_until?: string | null
-          password: string
+          password?: string | null
           updated_at?: string
         }
         Update: {
@@ -5346,7 +5346,7 @@ export type Database = {
           last_login_at?: string | null
           last_login_ip?: string | null
           locked_until?: string | null
-          password?: string
+          password?: string | null
           updated_at?: string
         }
         Relationships: []
