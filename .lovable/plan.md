@@ -1,49 +1,76 @@
 
-# Staff Bulk Email Implementation Plan
+
+# Staff Bulk Email Implementation Plan (Refined)
 
 ## Executive Summary
 
-Extend the existing CRM bulk email system to support sending emails to Staff/Therapists. This leverages the existing infrastructure (HelpScout, bulk send tables, edge function) with minimal new code by following established patterns.
+Extend the CRM bulk email system to support Staff/Therapists, reusing existing HelpScout infrastructure with minimal new code. This plan incorporates all identified risks and ensures zero disruption to existing client bulk send functionality.
 
 ---
 
-## Technical Decision: Unified Bulk Send Architecture with a `recipient_type` Discriminator
+## Technical Decision: Unified Bulk Send with `recipient_type` Discriminator
 
-**The Right Approach: Extend existing tables rather than create parallel infrastructure.**
-
-### Why This Is Correct
+**Why this is the correct approach:**
 
 | Alternative | Problem |
 |-------------|---------|
-| Create separate `crm_staff_bulk_send_*` tables | Duplicates schema, requires separate edge function logic, doubles maintenance burden |
-| Create a generic `recipients` table from scratch | Requires migrating existing client bulk send data |
-| Add staff support inline to existing tables | Clean extension of existing pattern, minimal schema change, reuses all existing code |
+| Separate `crm_staff_bulk_send_*` tables | Duplicates schema, requires separate edge function logic, doubles maintenance |
+| Make `client_id` nullable + add `staff_id` | Breaks existing FK constraints, requires code changes everywhere |
+| Generic polymorphic recipients table | Requires data migration, loses referential integrity |
 
-The existing `crm_bulk_send_recipients` table has a `client_id` FK. Rather than making this nullable and adding a separate `staff_id` column (which would break existing code), we will:
+The chosen approach:
+1. Add `recipient_type` column to `crm_bulk_send_logs` (defaults to `'client'`)
+2. Create parallel `crm_bulk_send_staff_recipients` table with `staff_id` FK
+3. Branch in edge function based on `recipient_type`
 
-1. Add a `recipient_type` column to `crm_bulk_send_logs` to indicate whether recipients are `'client'` or `'staff'`
-2. Create a new `crm_bulk_send_staff_recipients` table that mirrors the structure of `crm_bulk_send_recipients` but references `staff.id`
-3. Extend the edge function to check `recipient_type` and process accordingly
-
-This approach:
-- Preserves all existing client bulk send functionality untouched
-- Keeps referential integrity (FK constraints remain valid)
-- Minimal edge function changes (one conditional branch)
-- Clear separation of concerns
+This preserves **100% backward compatibility** - existing client sends continue working unchanged.
 
 ---
 
-## Database Changes
+## Deployment Sequence (Critical Order)
 
-### 1. Add `recipient_type` to `crm_bulk_send_logs`
+Incorrect ordering causes failures. This sequence is mandatory:
+
+```text
+1. Database Migration
+   └── Add recipient_type column (defaults to 'client')
+   └── Create crm_bulk_send_staff_recipients table with RLS
+   
+2. Wait for TypeScript types regeneration
+   └── Types auto-regenerate after migration
+   
+3. Edge Function Update
+   └── Add staff branch to handleBulkSend
+   └── Deploy function
+   
+4. Frontend Changes
+   └── Type definitions (staff-types.ts)
+   └── Hook (useStaff.ts)
+   └── Components (StaffTable, StaffFilters, StaffStatusBadge)
+   └── Page (Staff.tsx)
+   └── Routing (App.tsx, CrmSidebar.tsx)
+   └── Modify useBulkSend hook
+   └── Generalize BulkActionBar and BulkComposeDialog
+```
+
+---
+
+## Database Schema Changes
+
+### Migration 1: Extend bulk_send_logs
 
 ```sql
+-- Add recipient_type discriminator
 ALTER TABLE crm_bulk_send_logs 
 ADD COLUMN recipient_type TEXT NOT NULL DEFAULT 'client' 
 CHECK (recipient_type IN ('client', 'staff'));
+
+-- Index for filtering
+CREATE INDEX idx_bulk_send_logs_recipient_type 
+ON crm_bulk_send_logs(recipient_type);
 ```
 
-### 2. Create Staff Recipients Table
+### Migration 2: Staff recipients table
 
 ```sql
 CREATE TABLE crm_bulk_send_staff_recipients (
@@ -53,10 +80,18 @@ CREATE TABLE crm_bulk_send_staff_recipients (
   tenant_id UUID NOT NULL REFERENCES tenants(id),
   status TEXT NOT NULL DEFAULT 'pending',
   error_message TEXT,
-  sent_at TIMESTAMPTZ
+  sent_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- RLS policies matching existing pattern
+-- Performance indexes
+CREATE INDEX idx_bulk_send_staff_recipients_bulk_send 
+ON crm_bulk_send_staff_recipients(bulk_send_id);
+
+CREATE INDEX idx_bulk_send_staff_recipients_status 
+ON crm_bulk_send_staff_recipients(bulk_send_id, status);
+
+-- RLS policies (matching client recipients pattern exactly)
 ALTER TABLE crm_bulk_send_staff_recipients ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view staff recipients in their tenant"
@@ -70,181 +105,41 @@ CREATE POLICY "Users can insert staff recipients in their tenant"
   WITH CHECK (tenant_id IN (
     SELECT tenant_id FROM tenant_memberships WHERE profile_id = auth.uid()
   ));
+
+CREATE POLICY "Users can update staff recipients in their tenant"
+  ON crm_bulk_send_staff_recipients FOR UPDATE
+  USING (tenant_id IN (
+    SELECT tenant_id FROM tenant_memberships WHERE profile_id = auth.uid()
+  ));
 ```
 
 ---
 
-## Frontend Components
+## Files Created
 
-### New Files
+### 1. `src/lib/crm/staff-types.ts`
 
-| File | Purpose |
-|------|---------|
-| `src/pages/crm/Staff.tsx` | Main staff page with table view, filters, and bulk selection |
-| `src/hooks/crm/useStaff.ts` | Query staff with filters (status, state) + join profiles for email |
-| `src/components/crm/staff/StaffTable.tsx` | Table component with checkboxes, mirrors ClientTable |
-| `src/components/crm/staff/StaffFilters.tsx` | Popover with Status (New/Active/Inactive) and State filters |
-| `src/components/crm/staff/StaffStatusBadge.tsx` | Status badge for clinician_status_enum values |
-| `src/lib/crm/staff-types.ts` | TypeScript types for CrmStaff, StaffFilters, etc. |
-
-### Modified Files
-
-| File | Change |
-|------|--------|
-| `src/components/crm/layout/CrmSidebar.tsx` | Add "Staff" nav item (remove disabled flag from or replace Bulk Messaging) |
-| `src/App.tsx` | Add route `/crm/staff` |
-| `src/hooks/crm/useBulkSend.ts` | Add support for `recipientType: 'client' | 'staff'` and `staffIds` |
-| `src/components/crm/clients/BulkActionBar.tsx` | Generalize to accept `entityType` prop for display text |
-| `supabase/functions/helpscout-proxy/index.ts` | Handle `recipient_type === 'staff'` in bulk-send action |
-
----
-
-## Component Architecture
-
-```text
-Staff.tsx
-  ├── StaffFilters (status, state dropdowns)
-  ├── StaffTable
-  │     ├── Checkbox (select all / individual)
-  │     ├── Name column (prov_name_f + prov_name_l)
-  │     ├── Email column (from profiles.email)
-  │     ├── Status column (StaffStatusBadge)
-  │     └── State column (prov_state)
-  ├── BulkActionBar (shared with clients, shows "X staff selected")
-  ├── BulkComposeDialog (reused as-is)
-  └── BulkProgressModal (reused as-is)
-```
-
----
-
-## Data Flow
-
-```text
-User selects staff → clicks "Send Email" → BulkComposeDialog opens
-        ↓
-User enters subject/body → clicks Send
-        ↓
-useBulkSend.createBulkSend({
-  staffIds: [...],
-  recipientType: 'staff',
-  subject,
-  bodyHtml
-})
-        ↓
-Creates crm_bulk_send_logs with recipient_type='staff'
-Creates crm_bulk_send_staff_recipients records
-Triggers helpscout-proxy?action=bulk-send
-        ↓
-Edge function checks recipient_type
-Fetches from crm_bulk_send_staff_recipients
-Joins staff → profiles for email
-Sends via HelpScout API
-```
-
----
-
-## useStaff Hook Implementation
+Type definitions for staff management:
 
 ```typescript
-export function useStaff(options: UseStaffOptions = {}) {
-  const { tenantId, isAuthenticated } = useCrmAuth();
-  const { filters, enabled = true } = options;
-
-  return useQuery({
-    queryKey: ['crm-staff', tenantId, filters],
-    queryFn: async (): Promise<CrmStaff[]> => {
-      let query = supabase
-        .from('staff')
-        .select(`
-          id,
-          tenant_id,
-          prov_name_f,
-          prov_name_l,
-          prov_name_for_clients,
-          prov_status,
-          prov_state,
-          profiles!inner (
-            email
-          )
-        `)
-        .eq('tenant_id', tenantId)
-        .order('prov_name_l', { ascending: true });
-
-      if (filters?.statuses?.length > 0) {
-        query = query.in('prov_status', filters.statuses);
-      }
-
-      if (filters?.states?.length > 0) {
-        query = query.in('prov_state', filters.states);
-      }
-
-      if (filters?.search?.trim()) {
-        const term = `%${filters.search.trim()}%`;
-        query = query.or(`prov_name_f.ilike.${term},prov_name_l.ilike.${term}`);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return data.map(s => ({
-        ...s,
-        email: s.profiles?.email ?? null,
-      }));
-    },
-    enabled: enabled && isAuthenticated && !!tenantId,
-  });
-}
-```
-
----
-
-## Edge Function Changes
-
-In `handleBulkSend`:
-
-```typescript
-// Fetch bulk send log
-const { data: bulkSendLog } = await supabase
-  .from("crm_bulk_send_logs")
-  .select("*, recipient_type")
-  .eq("id", bulkSendId)
-  .single();
-
-if (bulkSendLog.recipient_type === 'staff') {
-  // Fetch staff recipients
-  const { data: recipients } = await supabase
-    .from("crm_bulk_send_staff_recipients")
-    .select(`
-      id,
-      staff_id,
-      status,
-      staff!inner (
-        id,
-        prov_name_f,
-        prov_name_l,
-        profiles!inner (email)
-      )
-    `)
-    .eq("bulk_send_id", bulkSendId)
-    .eq("status", "pending");
-
-  // Process each recipient
-  for (const recipient of recipients) {
-    const email = recipient.staff?.profiles?.email;
-    // ... same HelpScout conversation creation logic
-  }
-} else {
-  // Existing client logic unchanged
-}
-```
-
----
-
-## Staff Status Configuration
-
-```typescript
-// src/lib/crm/staff-types.ts
 export type StaffStatus = 'Invited' | 'New' | 'Active' | 'Inactive';
+
+export interface CrmStaff {
+  id: string;
+  tenant_id: string;
+  prov_name_f: string | null;
+  prov_name_l: string | null;
+  prov_name_for_clients: string | null;
+  prov_status: StaffStatus | null;
+  prov_state: string | null;
+  email: string | null; // Joined from profiles
+}
+
+export interface StaffFilters {
+  statuses: StaffStatus[];
+  states: string[];
+  search: string;
+}
 
 export const STAFF_STATUS_CONFIG: Record<StaffStatus, {
   label: string;
@@ -274,38 +169,276 @@ export const STAFF_STATUS_CONFIG: Record<StaffStatus, {
 };
 ```
 
+### 2. `src/hooks/crm/useStaff.ts`
+
+Query hook with filtering (mirrors useClients pattern):
+
+```typescript
+export function useStaff(options: UseStaffOptions = {}) {
+  const { tenantId, isAuthenticated } = useCrmAuth();
+  const { filters, enabled = true } = options;
+
+  return useQuery({
+    queryKey: ['crm-staff', tenantId, filters],
+    queryFn: async (): Promise<CrmStaff[]> => {
+      let query = supabase
+        .from('staff')
+        .select(`
+          id,
+          tenant_id,
+          prov_name_f,
+          prov_name_l,
+          prov_name_for_clients,
+          prov_status,
+          prov_state,
+          profiles!inner (email)
+        `)
+        .eq('tenant_id', tenantId)
+        .order('prov_name_l', { ascending: true });
+
+      if (filters?.statuses?.length > 0) {
+        query = query.in('prov_status', filters.statuses);
+      }
+      if (filters?.states?.length > 0) {
+        query = query.in('prov_state', filters.states);
+      }
+      if (filters?.search?.trim()) {
+        const term = `%${filters.search.trim()}%`;
+        query = query.or(`prov_name_f.ilike.${term},prov_name_l.ilike.${term}`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return data.map(s => ({
+        ...s,
+        email: s.profiles?.email ?? null,
+      }));
+    },
+    enabled: enabled && isAuthenticated && !!tenantId,
+  });
+}
+```
+
+### 3. `src/components/crm/staff/StaffTable.tsx`
+
+Table with checkboxes, name, email, status, state columns.
+
+### 4. `src/components/crm/staff/StaffFilters.tsx`
+
+Popover with Status and State multi-select dropdowns.
+
+### 5. `src/components/crm/staff/StaffStatusBadge.tsx`
+
+Badge component using STAFF_STATUS_CONFIG.
+
+### 6. `src/pages/crm/Staff.tsx`
+
+Main page composing all staff components with bulk selection state.
+
 ---
 
-## Sidebar Update
+## Files Modified
 
-Replace the disabled "Bulk Messaging" nav item with an active "Staff" link:
+### 1. `src/hooks/crm/useBulkSend.ts`
 
+**Current signature:**
+```typescript
+interface CreateBulkSendParams {
+  clientIds: string[];
+  subject: string;
+  bodyHtml: string;
+}
+```
+
+**New signature (backward compatible):**
+```typescript
+interface CreateBulkSendParams {
+  subject: string;
+  bodyHtml: string;
+  // One of these must be provided
+  clientIds?: string[];
+  staffIds?: string[];
+}
+```
+
+**Logic changes:**
+- Determine `recipientType` from which IDs array is provided
+- Insert into `crm_bulk_send_logs` with `recipient_type`
+- Insert into appropriate recipients table based on type
+- Existing client calls continue working (clientIds still works)
+
+### 2. `src/components/crm/clients/BulkActionBar.tsx`
+
+Add `entityLabel` prop:
+
+```typescript
+interface BulkActionBarProps {
+  selectedCount: number;
+  onSendEmail: () => void;
+  onClear: () => void;
+  entityLabel?: 'client' | 'staff'; // defaults to 'client'
+}
+```
+
+Display: `"{count} {entityLabel}s selected"`
+
+### 3. `src/components/crm/bulk/BulkComposeDialog.tsx`
+
+Add `recipientLabel` prop:
+
+```typescript
+interface BulkComposeDialogProps {
+  // ... existing props
+  recipientLabel?: 'client' | 'staff member'; // defaults to 'client'
+}
+```
+
+Updates description and button text based on label.
+
+### 4. `src/App.tsx`
+
+Add route:
+```typescript
+<Route path="staff" element={<CrmStaff />} />
+```
+
+### 5. `src/components/crm/layout/CrmSidebar.tsx`
+
+Replace disabled "Bulk Messaging" with active "Staff":
 ```typescript
 {
   label: 'Staff',
   href: '/crm/staff',
-  icon: Users, // or UserCog from lucide
-},
+  icon: UserCog, // or Users
+  disabled: false,
+}
+```
+
+### 6. `supabase/functions/helpscout-proxy/index.ts`
+
+**In `handleBulkSend` function:**
+
+```typescript
+// Fetch bulk send log with recipient_type
+const { data: bulkSendLog } = await supabase
+  .from("crm_bulk_send_logs")
+  .select("*, recipient_type")
+  .eq("id", bulkSendId)
+  .single();
+
+let recipients;
+let getRecipientData;
+
+if (bulkSendLog.recipient_type === 'staff') {
+  // Staff path
+  const { data } = await supabase
+    .from("crm_bulk_send_staff_recipients")
+    .select(`
+      id,
+      staff_id,
+      status,
+      staff!inner (
+        id,
+        prov_name_f,
+        prov_name_l,
+        profiles!inner (email)
+      )
+    `)
+    .eq("bulk_send_id", bulkSendId)
+    .eq("status", "pending");
+  
+  recipients = data;
+  getRecipientData = (r) => ({
+    id: r.id,
+    email: r.staff?.profiles?.email,
+    firstName: r.staff?.prov_name_f || '',
+    lastName: r.staff?.prov_name_l || '',
+    recipientTable: 'crm_bulk_send_staff_recipients',
+  });
+} else {
+  // Client path (existing logic unchanged)
+  const { data } = await supabase
+    .from("crm_bulk_send_recipients")
+    .select(`...existing query...`)
+    .eq("bulk_send_id", bulkSendId)
+    .eq("status", "pending");
+  
+  recipients = data;
+  getRecipientData = (r) => ({
+    id: r.id,
+    email: r.clients?.email,
+    firstName: r.clients?.pat_name_f || '',
+    lastName: r.clients?.pat_name_l || '',
+    recipientTable: 'crm_bulk_send_recipients',
+  });
+}
+
+// Unified processing loop
+for (const recipient of recipients || []) {
+  const data = getRecipientData(recipient);
+  // ... HelpScout conversation creation (same for both types)
+  // ... Update correct table using data.recipientTable
+}
 ```
 
 ---
 
-## Implementation Sequence
+## Component Architecture
 
-1. **Database migration**: Add `recipient_type` column and create `crm_bulk_send_staff_recipients` table
-2. **Type definitions**: Create `src/lib/crm/staff-types.ts`
-3. **Hook**: Create `src/hooks/crm/useStaff.ts`
-4. **Components**: Create `StaffTable.tsx`, `StaffFilters.tsx`, `StaffStatusBadge.tsx`
-5. **Page**: Create `src/pages/crm/Staff.tsx`
-6. **Routing**: Add route in `App.tsx`, update sidebar
-7. **Modify useBulkSend**: Support `recipientType` parameter
-8. **Edge function**: Add staff recipient processing branch
-9. **Testing**: End-to-end verification
+```text
+Staff.tsx
+├── Toolbar
+│   ├── Search Input
+│   └── StaffFilters (status, state dropdowns)
+├── StaffTable
+│   ├── Select All Checkbox
+│   ├── Name Column (prov_name_f + prov_name_l)
+│   ├── Email Column (from profiles.email)
+│   ├── Status Column (StaffStatusBadge)
+│   └── State Column (prov_state)
+├── BulkActionBar (shared, entityLabel="staff")
+├── BulkComposeDialog (shared, recipientLabel="staff member")
+└── BulkProgressModal (reused as-is)
+```
 
 ---
 
-## Risk Mitigation
+## Risk Analysis & Mitigations
 
-- **No changes to existing client bulk send flow**: The `recipient_type` column defaults to `'client'`, so existing data and code paths are unaffected
-- **Email availability**: Staff email comes from `profiles.email` via FK join, verified to work (sample query confirmed emails exist)
-- **RLS**: New table follows existing RLS patterns for tenant isolation
+| Risk | Mitigation |
+|------|------------|
+| Breaking existing client bulk sends | `recipient_type` defaults to `'client'`; existing code paths unchanged |
+| Staff without email | Edge function already handles missing email (skip + log + mark failed) |
+| TypeScript type mismatch | Types auto-regenerate after migration; wait before frontend changes |
+| Edge function deployed before migration | Deployment sequence enforces DB first |
+| RLS policy gaps | Exact same policy pattern as client recipients table |
+| HelpScout rate limits | Existing 150ms delay between sends applies to staff too |
+
+---
+
+## Testing Checklist
+
+1. **Existing client bulk send still works** - Send to 2-3 clients, verify delivery
+2. **Staff page loads** - Navigate to /crm/staff, verify table renders
+3. **Staff filters work** - Filter by Active status, filter by state
+4. **Staff selection works** - Select 2+ staff, verify BulkActionBar appears
+5. **Staff bulk send completes** - Send email, verify progress modal, verify HelpScout
+6. **Staff emails appear in HelpScout** - Check mailbox for new conversations
+7. **Edge function logs** - Verify no errors, correct recipient_type branching
+
+---
+
+## Summary
+
+This implementation extends bulk email to staff with:
+- Zero changes to existing client functionality
+- Minimal database additions (1 column, 1 table)
+- Reuse of all existing UI components
+- Single conditional branch in edge function
+- Proper tenant isolation via RLS
+
+Total new files: 6
+Total modified files: 6
+Estimated implementation time: 2-3 hours
+
