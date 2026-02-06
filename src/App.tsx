@@ -12,6 +12,7 @@ import CrmClients from "./pages/crm/Clients";
 import ClientDetail from "./pages/crm/ClientDetail";
 import CrmSettings from "./pages/crm/Settings";
 import CrmInbox from "./pages/crm/Inbox";
+import CrmStaff from "./pages/crm/Staff";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route index element={<CrmIndex />} />
             <Route path="clients" element={<CrmClients />} />
             <Route path="clients/:id" element={<ClientDetail />} />
+            <Route path="staff" element={<CrmStaff />} />
             <Route path="inbox" element={<CrmInbox />} />
             <Route path="settings" element={<CrmSettings />} />
           </Route>

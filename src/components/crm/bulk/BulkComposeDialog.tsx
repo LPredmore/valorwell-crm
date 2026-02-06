@@ -19,6 +19,7 @@ interface BulkComposeDialogProps {
   recipientCount: number;
   onSend: (subject: string, bodyHtml: string) => Promise<void>;
   isSending: boolean;
+  recipientLabel?: 'client' | 'staff member';
 }
 
 export function BulkComposeDialog({
@@ -27,6 +28,7 @@ export function BulkComposeDialog({
   recipientCount,
   onSend,
   isSending,
+  recipientLabel = 'client',
 }: BulkComposeDialogProps) {
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -61,7 +63,7 @@ export function BulkComposeDialog({
         <DialogHeader>
           <DialogTitle>Compose Email</DialogTitle>
           <DialogDescription>
-            Sending individual emails to {recipientCount} client{recipientCount !== 1 ? 's' : ''}.
+            Sending individual emails to {recipientCount} {recipientLabel}{recipientCount !== 1 ? 's' : ''}.
             Each recipient will receive their own conversation.
           </DialogDescription>
         </DialogHeader>
@@ -111,9 +113,9 @@ export function BulkComposeDialog({
                 Sending...
               </>
             ) : (
-              <>
+            <>
                 <Send className="h-4 w-4" />
-                Send to {recipientCount} Client{recipientCount !== 1 ? 's' : ''}
+                Send to {recipientCount} {recipientLabel === 'staff member' ? 'Staff Member' : 'Client'}{recipientCount !== 1 ? 's' : ''}
               </>
             )}
           </Button>
