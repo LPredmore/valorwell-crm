@@ -84,7 +84,7 @@ export function ClientFilters({ filters, onChange }: ClientFiltersProps) {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-96 p-0" align="start">
-        <ScrollArea className="max-h-[70vh]">
+        <ScrollArea className="[&>[data-radix-scroll-area-viewport]]:max-h-[70vh]">
           <div className="space-y-4 p-4">
             <div className="flex items-center justify-between">
               <h4 className="font-medium">Filters</h4>
