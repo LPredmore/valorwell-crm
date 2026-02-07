@@ -7,6 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { STAFF_STATUS_CONFIG, type StaffFilters as StaffFiltersType, type StaffStatus } from '@/lib/crm/staff-types';
 
 // US States for filter
@@ -59,58 +60,60 @@ export function StaffFilters({ filters, onChange }: StaffFiltersProps) {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80" align="start">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium">Filters</h4>
-            {activeFilterCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={handleClearFilters}>
-                Clear all
-              </Button>
-            )}
-          </div>
-
-          {/* Status filter */}
-          <div className="space-y-2">
-            <h5 className="text-sm font-medium text-muted-foreground">Status</h5>
-            <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(STAFF_STATUS_CONFIG) as StaffStatus[]).map(status => (
-                <label
-                  key={status}
-                  className="flex items-center gap-2 text-sm cursor-pointer"
-                >
-                  <Checkbox
-                    checked={filters.statuses.includes(status)}
-                    onCheckedChange={() => handleStatusToggle(status)}
-                  />
-                  {STAFF_STATUS_CONFIG[status].label}
-                </label>
-              ))}
+      <PopoverContent className="w-80 p-0" align="start">
+        <ScrollArea className="[&>[data-radix-scroll-area-viewport]]:max-h-[70vh]">
+          <div className="space-y-4 p-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium">Filters</h4>
+              {activeFilterCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+                  Clear all
+                </Button>
+              )}
             </div>
-          </div>
 
-          {/* State filter */}
-          <div className="space-y-2">
-            <h5 className="text-sm font-medium text-muted-foreground">State</h5>
-            <div className="max-h-40 overflow-y-auto rounded border p-2">
-              <div className="grid grid-cols-4 gap-1">
-                {US_STATES.map(state => (
+            {/* Status filter */}
+            <div className="space-y-2">
+              <h5 className="text-sm font-medium text-muted-foreground">Status</h5>
+              <div className="grid grid-cols-2 gap-2">
+                {(Object.keys(STAFF_STATUS_CONFIG) as StaffStatus[]).map(status => (
                   <label
-                    key={state}
-                    className="flex items-center gap-1.5 text-xs cursor-pointer"
+                    key={status}
+                    className="flex items-center gap-2 text-sm cursor-pointer"
                   >
                     <Checkbox
-                      checked={filters.states.includes(state)}
-                      onCheckedChange={() => handleStateToggle(state)}
-                      className="h-3.5 w-3.5"
+                      checked={filters.statuses.includes(status)}
+                      onCheckedChange={() => handleStatusToggle(status)}
                     />
-                    {state}
+                    {STAFF_STATUS_CONFIG[status].label}
                   </label>
                 ))}
               </div>
             </div>
+
+            {/* State filter */}
+            <div className="space-y-2">
+              <h5 className="text-sm font-medium text-muted-foreground">State</h5>
+              <div className="max-h-40 overflow-y-auto rounded border p-2">
+                <div className="grid grid-cols-4 gap-1">
+                  {US_STATES.map(state => (
+                    <label
+                      key={state}
+                      className="flex items-center gap-1.5 text-xs cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={filters.states.includes(state)}
+                        onCheckedChange={() => handleStateToggle(state)}
+                        className="h-3.5 w-3.5"
+                      />
+                      {state}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </ScrollArea>
       </PopoverContent>
     </Popover>
   );
