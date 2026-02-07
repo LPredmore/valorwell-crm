@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Mail, Phone, MapPin, User, ExternalLink } from 'lucide-react';
+import { Mail, Phone, MapPin, User, ExternalLink, Megaphone, Pause, Play, X } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -20,8 +21,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from './StatusBadge';
 import { useUpdateClientStatus } from '@/hooks/crm/useUpdateClientStatus';
+import { useClientActiveEnrollment, useUpdateEnrollmentStatus } from '@/hooks/crm/useCampaignEnrollments';
+import { EnrollInCampaignDialog } from '@/components/crm/campaigns/EnrollInCampaignDialog';
 import {
   getClientDisplayName,
   getTherapistDisplayName,
@@ -58,6 +63,11 @@ export function ClientQuickProfile({
 }: ClientQuickProfileProps) {
   const navigate = useNavigate();
   const updateStatus = useUpdateClientStatus();
+  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
+  
+  // Fetch active enrollment for this client
+  const { data: activeEnrollment, isLoading: loadingEnrollment } = useClientActiveEnrollment(client?.id);
+  const updateEnrollmentStatus = useUpdateEnrollmentStatus();
 
   if (!client) return null;
 
@@ -80,6 +90,33 @@ export function ClientQuickProfile({
   const handleViewFullProfile = () => {
     onOpenChange(false);
     navigate(`/crm/clients/${client.id}`);
+  };
+
+  const handlePauseEnrollment = () => {
+    if (activeEnrollment) {
+      updateEnrollmentStatus.mutate({
+        enrollmentId: activeEnrollment.id,
+        status: 'paused',
+      });
+    }
+  };
+
+  const handleResumeEnrollment = () => {
+    if (activeEnrollment) {
+      updateEnrollmentStatus.mutate({
+        enrollmentId: activeEnrollment.id,
+        status: 'active',
+      });
+    }
+  };
+
+  const handleCancelEnrollment = () => {
+    if (activeEnrollment) {
+      updateEnrollmentStatus.mutate({
+        enrollmentId: activeEnrollment.id,
+        status: 'cancelled',
+      });
+    }
   };
 
   return (
@@ -210,6 +247,81 @@ export function ClientQuickProfile({
               </SelectContent>
             </Select>
           </div>
+
+          <Separator />
+
+          {/* Campaign Enrollment */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Campaign
+            </h4>
+            
+            {loadingEnrollment ? (
+              <Skeleton className="h-10 w-full" />
+            ) : activeEnrollment ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Megaphone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">
+                      {activeEnrollment.campaign?.name || 'Unknown Campaign'}
+                    </span>
+                  </div>
+                  <Badge variant={activeEnrollment.status === 'active' ? 'default' : 'secondary'}>
+                    {activeEnrollment.status}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  {activeEnrollment.status === 'active' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={handlePauseEnrollment}
+                      disabled={updateEnrollmentStatus.isPending}
+                    >
+                      <Pause className="h-3 w-3" />
+                      Pause
+                    </Button>
+                  )}
+                  {activeEnrollment.status === 'paused' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={handleResumeEnrollment}
+                      disabled={updateEnrollmentStatus.isPending}
+                    >
+                      <Play className="h-3 w-3" />
+                      Resume
+                    </Button>
+                  )}
+                  {(activeEnrollment.status === 'active' || activeEnrollment.status === 'paused') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1 text-destructive hover:text-destructive"
+                      onClick={handleCancelEnrollment}
+                      disabled={updateEnrollmentStatus.isPending}
+                    >
+                      <X className="h-3 w-3" />
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => setEnrollDialogOpen(true)}
+              >
+                <Megaphone className="h-4 w-4" />
+                Enroll in Campaign
+              </Button>
+            )}
+          </div>
         </div>
 
         <SheetFooter className="mt-8">
@@ -223,6 +335,13 @@ export function ClientQuickProfile({
           </Button>
         </SheetFooter>
       </SheetContent>
+
+      {/* Enrollment Dialog */}
+      <EnrollInCampaignDialog
+        open={enrollDialogOpen}
+        onOpenChange={setEnrollDialogOpen}
+        clientIds={client ? [client.id] : []}
+      />
     </Sheet>
   );
 }
