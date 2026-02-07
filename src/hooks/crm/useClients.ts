@@ -82,13 +82,32 @@ export function useClients(options: UseClientsOptions = {}) {
       }
 
       // Transform the data to match CrmClient type
-      return (data || []).map(client => ({
+      let clientsData = (data || []).map(client => ({
         ...client,
         pat_status: client.pat_status as PatStatus | null,
         primary_staff: Array.isArray(client.primary_staff) 
           ? client.primary_staff[0] || null 
           : client.primary_staff,
       }));
+
+      // Apply active campaign filter client-side
+      if (filters?.activeCampaign && filters.activeCampaign !== 'all') {
+        const { data: activeEnrollments } = await supabase
+          .from('crm_campaign_enrollments')
+          .select('client_id')
+          .eq('tenant_id', tenantId)
+          .eq('status', 'active');
+        
+        const enrolledClientIds = new Set(activeEnrollments?.map(e => e.client_id) || []);
+        
+        if (filters.activeCampaign === 'yes') {
+          clientsData = clientsData.filter(client => enrolledClientIds.has(client.id));
+        } else {
+          clientsData = clientsData.filter(client => !enrolledClientIds.has(client.id));
+        }
+      }
+
+      return clientsData;
     },
     enabled: enabled && isAuthenticated && !!tenantId,
   });

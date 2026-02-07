@@ -30,6 +30,7 @@ export default function CrmClients() {
     tags: [],
     joinedDateFrom: undefined,
     joinedDateTo: undefined,
+    activeCampaign: 'all',
   });
 
   // Selection state
