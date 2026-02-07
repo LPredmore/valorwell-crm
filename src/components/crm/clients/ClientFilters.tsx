@@ -1,4 +1,4 @@
-import { Filter, Tag, X, CalendarIcon } from 'lucide-react';
+import { Filter, Tag, X, CalendarIcon, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +11,13 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ALL_STATUSES, STATUS_CONFIG } from '@/lib/crm/status-config';
 import { useTagOptions } from '@/hooks/crm/useTagOptions';
 import { cn } from '@/lib/utils';
@@ -37,7 +44,8 @@ export function ClientFilters({ filters, onChange }: ClientFiltersProps) {
     filters.states.length + 
     filters.tags.length +
     (filters.joinedDateFrom ? 1 : 0) +
-    (filters.joinedDateTo ? 1 : 0);
+    (filters.joinedDateTo ? 1 : 0) +
+    (filters.activeCampaign && filters.activeCampaign !== 'all' ? 1 : 0);
 
   const handleStatusChange = (status: PatStatus, checked: boolean) => {
     const newStatuses = checked
@@ -67,6 +75,7 @@ export function ClientFilters({ filters, onChange }: ClientFiltersProps) {
       tags: [],
       joinedDateFrom: undefined,
       joinedDateTo: undefined,
+      activeCampaign: 'all',
     });
   };
 
@@ -93,6 +102,27 @@ export function ClientFilters({ filters, onChange }: ClientFiltersProps) {
                   Clear all
                 </Button>
               )}
+            </div>
+
+            {/* Active Campaign Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Active Campaign
+              </Label>
+              <Select
+                value={filters.activeCampaign || 'all'}
+                onValueChange={(value: 'all' | 'yes' | 'no') => onChange({ activeCampaign: value })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="yes">Yes</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Joined Date Filter */}

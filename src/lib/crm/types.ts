@@ -89,6 +89,7 @@ export interface ClientFilters {
   tags: string[];
   joinedDateFrom?: Date;
   joinedDateTo?: Date;
+  activeCampaign?: 'all' | 'yes' | 'no';
 }
 
 // HelpScout Inbox types
