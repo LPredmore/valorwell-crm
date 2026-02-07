@@ -549,8 +549,8 @@ async function processCampaignMessages() {
           .eq('id', stepLog.id);
         skipped++;
         
-        // Still schedule next step
-        await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign);
+      // Still schedule next step
+      await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign, stepLog.tenant_id);
         continue;
       }
 
@@ -564,7 +564,7 @@ async function processCampaignMessages() {
         skipped++;
         
         // Still schedule next step
-        await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign);
+        await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign, stepLog.tenant_id);
         continue;
       }
 
@@ -579,7 +579,7 @@ async function processCampaignMessages() {
           skipped++;
           
           // Still schedule next step
-          await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign);
+          await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign, stepLog.tenant_id);
           continue;
         }
       }
@@ -680,7 +680,7 @@ async function processCampaignMessages() {
       }
 
       // Schedule next step
-      await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign);
+      await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign, stepLog.tenant_id);
       processed++;
     } catch (error) {
       console.error(`Error processing step log ${stepLog.id}:`, error);
@@ -702,7 +702,8 @@ async function scheduleNextStep(
   supabase: ReturnType<typeof createClient>,
   enrollment: CampaignEnrollment,
   currentStep: CampaignStep,
-  campaign: Campaign
+  campaign: Campaign,
+  tenantId: string
 ) {
   // Get all steps for this campaign
   const { data: steps, error: stepsError } = await supabase
@@ -744,7 +745,7 @@ async function scheduleNextStep(
     .insert({
       enrollment_id: enrollment.id,
       step_id: nextStep.id,
-      tenant_id: campaign.id ? enrollment.campaign_id : enrollment.campaign_id, // Need tenant_id
+      tenant_id: tenantId,
       client_id: enrollment.client_id,
       scheduled_for: nextScheduledFor.toISOString(),
       status: 'scheduled',

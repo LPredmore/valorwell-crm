@@ -55,6 +55,9 @@ export function useCampaigns() {
       }));
     },
     enabled: !!tenantId,
+    refetchOnWindowFocus: true,
+    staleTime: 30000, // 30 seconds
+    refetchOnMount: 'always',
   });
 }
 
