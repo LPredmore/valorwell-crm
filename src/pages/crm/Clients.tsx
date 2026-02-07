@@ -26,6 +26,8 @@ export default function CrmClients() {
     states: [],
     search: '',
     tags: [],
+    joinedDateFrom: undefined,
+    joinedDateTo: undefined,
   });
 
   // Selection state

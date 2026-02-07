@@ -63,6 +63,17 @@ export function useClients(options: UseClientsOptions = {}) {
         query = query.or(tagFilters);
       }
 
+      // Apply joined date range filter
+      if (filters?.joinedDateFrom) {
+        query = query.gte('created_at', filters.joinedDateFrom.toISOString());
+      }
+      if (filters?.joinedDateTo) {
+        // Include the entire "To" date by setting to end of day
+        const endOfDay = new Date(filters.joinedDateTo);
+        endOfDay.setHours(23, 59, 59, 999);
+        query = query.lte('created_at', endOfDay.toISOString());
+      }
+
       const { data, error } = await query;
 
       if (error) {
