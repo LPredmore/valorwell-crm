@@ -316,8 +316,8 @@ async function sendEmail(
   lastName: string
 ): Promise<{ success: boolean; conversationId?: string; error?: string }> {
   try {
-    // Create conversation with a "message" thread (staff-initiated outbound email)
-    // This sends the email directly without creating a fake customer message to reply to
+    // Step 1: Create conversation with a customer thread (required by HelpScout)
+    // We use the actual email body as the initial thread text to avoid quoted replies
     const createResponse = await fetch('https://api.helpscout.net/v2/conversations', {
       method: 'POST',
       headers: {
@@ -333,10 +333,10 @@ async function sendEmail(
         },
         mailboxId: parseInt(mailboxId),
         type: 'email',
-        status: 'active',
+        status: 'pending',
         threads: [
           {
-            type: 'message',
+            type: 'customer',
             customer: { email: toEmail },
             text: bodyHtml,
           },
@@ -355,10 +355,30 @@ async function sendEmail(
     const conversationId = locationHeader?.split('/').pop();
 
     if (!conversationId) {
-      console.warn('No conversation ID returned from HelpScout, but email was sent');
+      return { success: false, error: 'No conversation ID returned' };
     }
 
-    await createResponse.text(); // Consume response body
+    // Step 2: Send reply (this triggers actual SMTP email delivery)
+    const replyResponse = await fetch(`https://api.helpscout.net/v2/conversations/${conversationId}/reply`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: bodyHtml,
+        status: 'active',
+        customer: { email: toEmail },
+      }),
+    });
+
+    if (!replyResponse.ok && replyResponse.status !== 201) {
+      const errorText = await replyResponse.text();
+      console.error('HelpScout reply failed:', replyResponse.status, errorText);
+      return { success: false, error: `Reply failed: ${replyResponse.status}` };
+    }
+
+    await replyResponse.text(); // Consume response body
     return { success: true, conversationId };
   } catch (error) {
     console.error('Email send error:', error);
