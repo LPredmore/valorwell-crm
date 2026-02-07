@@ -9,10 +9,11 @@ import type { CrmClient } from '@/lib/crm/types';
 interface ClientKanbanCardProps {
   client: CrmClient;
   onClick: () => void;
+  onDoubleClick?: () => void;
   isDragging?: boolean;
 }
 
-export function ClientKanbanCard({ client, onClick, isDragging }: ClientKanbanCardProps) {
+export function ClientKanbanCard({ client, onClick, onDoubleClick, isDragging }: ClientKanbanCardProps) {
   const {
     attributes,
     listeners,
@@ -38,6 +39,7 @@ export function ClientKanbanCard({ client, onClick, isDragging }: ClientKanbanCa
         (isDragging || isSortableDragging) && "opacity-50 shadow-lg"
       )}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
     >
       <CardContent className="p-3 space-y-2">
         <div className="font-medium text-sm truncate">

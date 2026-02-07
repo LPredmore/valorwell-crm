@@ -197,6 +197,7 @@ export default function CrmClients() {
             clientsByStatus={clientsByStatus as Record<PatStatus, CrmClient[]>}
             isLoading={isLoading}
             onClientClick={handleClientClick}
+            onQuickView={handleQuickView}
           />
         ) : (
           <ClientTable
