@@ -3393,6 +3393,173 @@ export type Database = {
           },
         ]
       }
+      crm_bulk_sms_logs: {
+        Row: {
+          body_text: string
+          completed_at: string | null
+          created_at: string
+          created_by_profile_id: string
+          failed_count: number
+          id: string
+          recipient_count: number
+          recipient_type: string
+          sent_count: number
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          body_text: string
+          completed_at?: string | null
+          created_at?: string
+          created_by_profile_id: string
+          failed_count?: number
+          id?: string
+          recipient_count?: number
+          recipient_type?: string
+          sent_count?: number
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          body_text?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by_profile_id?: string
+          failed_count?: number
+          id?: string
+          recipient_count?: number
+          recipient_type?: string
+          sent_count?: number
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_bulk_sms_logs_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bulk_sms_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_bulk_sms_recipients: {
+        Row: {
+          bulk_sms_id: string
+          client_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          sent_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          bulk_sms_id: string
+          client_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          bulk_sms_id?: string
+          client_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_bulk_sms_recipients_bulk_sms_id_fkey"
+            columns: ["bulk_sms_id"]
+            isOneToOne: false
+            referencedRelation: "crm_bulk_sms_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bulk_sms_recipients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bulk_sms_recipients_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_bulk_sms_staff_recipients: {
+        Row: {
+          bulk_sms_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          sent_at: string | null
+          staff_id: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          bulk_sms_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          staff_id: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          bulk_sms_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          sent_at?: string | null
+          staff_id?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_bulk_sms_staff_recipients_bulk_sms_id_fkey"
+            columns: ["bulk_sms_id"]
+            isOneToOne: false
+            referencedRelation: "crm_bulk_sms_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bulk_sms_staff_recipients_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bulk_sms_staff_recipients_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_conversation_cache: {
         Row: {
           cached_at: string

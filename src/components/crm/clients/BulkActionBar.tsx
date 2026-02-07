@@ -1,14 +1,15 @@
-import { Mail, X } from 'lucide-react';
+import { Mail, MessageSquare, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface BulkActionBarProps {
   selectedCount: number;
   onSendEmail: () => void;
+  onSendSms?: () => void;
   onClear: () => void;
   entityLabel?: 'client' | 'staff';
 }
 
-export function BulkActionBar({ selectedCount, onSendEmail, onClear, entityLabel = 'client' }: BulkActionBarProps) {
+export function BulkActionBar({ selectedCount, onSendEmail, onSendSms, onClear, entityLabel = 'client' }: BulkActionBarProps) {
   if (selectedCount === 0) return null;
 
   const label = entityLabel === 'staff' 
@@ -26,6 +27,12 @@ export function BulkActionBar({ selectedCount, onSendEmail, onClear, entityLabel
             <Mail className="h-4 w-4" />
             Send Email
           </Button>
+          {onSendSms && (
+            <Button onClick={onSendSms} size="sm" variant="secondary" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Send Text
+            </Button>
+          )}
           <Button onClick={onClear} variant="ghost" size="sm" className="gap-2">
             <X className="h-4 w-4" />
             Clear

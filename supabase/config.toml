@@ -2,3 +2,6 @@ project_id = "ahqauomkgflopxgnlndd"
 
 [functions.helpscout-proxy]
 verify_jwt = false
+
+[functions.ringcentral-sms]
+verify_jwt = false
