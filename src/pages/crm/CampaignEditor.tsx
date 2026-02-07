@@ -1,0 +1,414 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Plus, Save, Loader2 } from 'lucide-react';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCampaign, useCreateCampaign, useUpdateCampaign } from '@/hooks/crm/useCampaigns';
+import { useCampaignSteps, useSaveCampaignSteps } from '@/hooks/crm/useCampaignSteps';
+import { CampaignStepEditor } from '@/components/crm/campaigns/CampaignStepEditor';
+import type { CampaignFormData, CampaignStepFormData } from '@/lib/crm/campaign-types';
+import { TIMEZONE_OPTIONS, PERSONALIZATION_VARIABLES } from '@/lib/crm/campaign-types';
+
+// Generate time options for select
+const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => {
+  const hour = i.toString().padStart(2, '0');
+  return { value: `${hour}:00:00`, label: `${hour}:00` };
+});
+
+// Sortable wrapper for steps
+function SortableStep({
+  step,
+  stepIndex,
+  onChange,
+  onRemove,
+}: {
+  step: CampaignStepFormData;
+  stepIndex: number;
+  onChange: (updates: Partial<CampaignStepFormData>) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: step.id || `new-${stepIndex}`,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <CampaignStepEditor
+        step={step}
+        stepIndex={stepIndex}
+        onChange={onChange}
+        onRemove={onRemove}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
+  );
+}
+
+export default function CampaignEditor() {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isNew = id === 'new';
+
+  const { data: campaign, isLoading: campaignLoading } = useCampaign(isNew ? undefined : id);
+  const { data: existingSteps, isLoading: stepsLoading } = useCampaignSteps(isNew ? undefined : id);
+
+  const createCampaign = useCreateCampaign();
+  const updateCampaign = useUpdateCampaign();
+  const saveSteps = useSaveCampaignSteps();
+
+  const [formData, setFormData] = useState<CampaignFormData>({
+    name: '',
+    description: '',
+    is_active: true,
+    weekdays_only: false,
+    send_window_start: '09:00:00',
+    send_window_end: '17:00:00',
+    default_timezone: 'America/Chicago',
+  });
+
+  const [steps, setSteps] = useState<CampaignStepFormData[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load existing campaign data
+  useEffect(() => {
+    if (campaign) {
+      setFormData({
+        name: campaign.name,
+        description: campaign.description || '',
+        is_active: campaign.is_active,
+        weekdays_only: campaign.weekdays_only,
+        send_window_start: campaign.send_window_start,
+        send_window_end: campaign.send_window_end,
+        default_timezone: campaign.default_timezone,
+      });
+    }
+  }, [campaign]);
+
+  // Load existing steps
+  useEffect(() => {
+    if (existingSteps) {
+      setSteps(
+        existingSteps.map((s) => ({
+          id: s.id,
+          step_order: s.step_order,
+          delay_days: s.delay_days,
+          delay_hours: s.delay_hours,
+          channel: s.channel,
+          email_subject: s.email_subject || '',
+          email_body_html: s.email_body_html || '',
+          sms_body_text: s.sms_body_text || '',
+          is_active: s.is_active,
+        }))
+      );
+    }
+  }, [existingSteps]);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setSteps((items) => {
+        const activeId = String(active.id);
+        const overId = String(over.id);
+        const oldIndex = items.findIndex((i) => (i.id || `new-${items.indexOf(i)}`) === activeId);
+        const newIndex = items.findIndex((i) => (i.id || `new-${items.indexOf(i)}`) === overId);
+        const reordered = arrayMove(items, oldIndex, newIndex);
+        // Update step_order after reorder
+        return reordered.map((s, idx) => ({ ...s, step_order: idx + 1 }));
+      });
+    }
+  };
+
+  const addStep = () => {
+    setSteps((prev) => [
+      ...prev,
+      {
+        step_order: prev.length + 1,
+        delay_days: prev.length === 0 ? 0 : 1,
+        delay_hours: 0,
+        channel: 'email',
+        email_subject: '',
+        email_body_html: '',
+        sms_body_text: '',
+        is_active: true,
+      },
+    ]);
+  };
+
+  const updateStep = (index: number, updates: Partial<CampaignStepFormData>) => {
+    setSteps((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, ...updates } : s))
+    );
+  };
+
+  const removeStep = (index: number) => {
+    setSteps((prev) => {
+      const newSteps = prev.filter((_, i) => i !== index);
+      // Re-order remaining steps
+      return newSteps.map((s, idx) => ({ ...s, step_order: idx + 1 }));
+    });
+  };
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) return;
+
+    setIsSaving(true);
+    try {
+      if (isNew) {
+        const created = await createCampaign.mutateAsync(formData);
+        if (steps.length > 0) {
+          await saveSteps.mutateAsync({ campaignId: created.id, steps });
+        }
+        navigate('/crm/campaigns');
+      } else if (id) {
+        await updateCampaign.mutateAsync({ campaignId: id, formData });
+        await saveSteps.mutateAsync({ campaignId: id, steps });
+        navigate('/crm/campaigns');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const isLoading = !isNew && (campaignLoading || stepsLoading);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/crm/campaigns')}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold tracking-tight">
+            {isNew ? 'New Campaign' : 'Edit Campaign'}
+          </h1>
+        </div>
+        <Button onClick={handleSave} disabled={isSaving || !formData.name.trim()} className="gap-2">
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          Save Campaign
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Campaign Settings */}
+          <div className="lg:col-span-1 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Campaign Details</CardTitle>
+                <CardDescription>Basic information about this campaign</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Campaign Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., New Client Welcome"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                    placeholder="Optional notes about this campaign"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="is_active">Active</Label>
+                  <Switch
+                    id="is_active"
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_active: checked }))}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Schedule Settings</CardTitle>
+                <CardDescription>When messages can be sent</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="weekdays_only">Weekdays only</Label>
+                  <Switch
+                    id="weekdays_only"
+                    checked={formData.weekdays_only}
+                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, weekdays_only: checked }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Send window start</Label>
+                    <Select
+                      value={formData.send_window_start}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, send_window_start: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIME_OPTIONS.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Send window end</Label>
+                    <Select
+                      value={formData.send_window_end}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, send_window_end: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIME_OPTIONS.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Default timezone</Label>
+                  <Select
+                    value={formData.default_timezone}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, default_timezone: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIMEZONE_OPTIONS.map((tz) => (
+                        <SelectItem key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Variables Reference */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Personalization Variables</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-2">
+                {PERSONALIZATION_VARIABLES.map((v) => (
+                  <div key={v.key} className="flex justify-between">
+                    <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{v.key}</code>
+                    <span className="text-muted-foreground">{v.label}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Steps */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Campaign Steps</CardTitle>
+                    <CardDescription>
+                      Messages sent in sequence. Drag to reorder.
+                    </CardDescription>
+                  </div>
+                  <Button onClick={addStep} variant="outline" size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add Step
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {steps.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No steps yet. Add your first step to get started.</p>
+                    <Button onClick={addStep} variant="link" className="mt-2">
+                      Add Step
+                    </Button>
+                  </div>
+                ) : (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={steps.map((s, i) => s.id || `new-${i}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-3">
+                        {steps.map((step, index) => (
+                          <SortableStep
+                            key={step.id || `new-${index}`}
+                            step={step}
+                            stepIndex={index}
+                            onChange={(updates) => updateStep(index, updates)}
+                            onRemove={() => removeStep(index)}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
