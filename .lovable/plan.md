@@ -1,65 +1,104 @@
 
-
-# Plan: Remove SMS Segment Warning
+# Plan: Add "Active Campaign" Filter to Clients Page
 
 ## Overview
-Remove the 160-character segment warning UI elements from the SMS compose dialog. Users don't need to see this technical detail.
+Add a dropdown filter to the Clients page that lets you filter clients by whether they're currently enrolled in an active campaign. Options: All (default), Yes, No.
 
 ---
 
-## File to Modify
+## Files to Modify
 
-**`src/components/crm/bulk/SmsComposeDialog.tsx`**
+### 1. `src/lib/crm/types.ts`
 
-### Changes
+**Add new filter field to `ClientFilters` interface:**
 
-1. **Remove unused constant** (line 24)
-   - Delete `const SMS_SEGMENT_LENGTH = 160;`
-
-2. **Remove unused variables** (lines 51-53)
-   - Delete `characterCount`, `segmentCount`, and `isMultiSegment` calculations
-
-3. **Simplify character counter** (lines 69-72)
-   - Replace the conditional styling and segment count display with a simple character count
-   - Change from amber warning color to always use muted text
-
-4. **Remove warning paragraph** (lines 83-87)
-   - Delete the entire conditional block that shows "Messages over 160 characters will be split into multiple segments"
-
-### Before
 ```typescript
-const SMS_SEGMENT_LENGTH = 160;
-// ...
-const characterCount = body.length;
-const segmentCount = Math.ceil(characterCount / SMS_SEGMENT_LENGTH) || 1;
-const isMultiSegment = characterCount > SMS_SEGMENT_LENGTH;
-// ...
-<span className={`text-xs ${isMultiSegment ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
-  {characterCount} / {SMS_SEGMENT_LENGTH} characters
-  {isMultiSegment && ` (${segmentCount} segments)`}
-</span>
-// ...
-{isMultiSegment && (
-  <p className="text-xs text-amber-600 dark:text-amber-400">
-    Messages over 160 characters will be split into multiple segments.
-  </p>
-)}
+export interface ClientFilters {
+  statuses: PatStatus[];
+  states: string[];
+  search: string;
+  tags: string[];
+  joinedDateFrom?: Date;
+  joinedDateTo?: Date;
+  activeCampaign?: 'all' | 'yes' | 'no';  // NEW
+}
 ```
 
-### After
+---
+
+### 2. `src/pages/crm/Clients.tsx`
+
+**Update initial filter state to include the new field:**
+
 ```typescript
-// No segment constant needed
-// ...
-// Just show simple character count
-<span className="text-xs text-muted-foreground">
-  {body.length} characters
-</span>
-// ...
-// No warning paragraph
+const [filters, setFilters] = useState<ClientFiltersType>({
+  statuses: [],
+  states: [],
+  search: '',
+  tags: [],
+  joinedDateFrom: undefined,
+  joinedDateTo: undefined,
+  activeCampaign: 'all',  // NEW - default to "All"
+});
 ```
+
+---
+
+### 3. `src/components/crm/clients/ClientFilters.tsx`
+
+**Add a Select dropdown for Active Campaign filter:**
+
+- Import the `Select` components from `@/components/ui/select`
+- Add a new filter section with label "Active Campaign"
+- Use a dropdown with three options: All, Yes, No
+- Update the `activeFilterCount` calculation to count this filter when it's not "all"
+- Update `clearFilters` to reset this field to `'all'`
+
+**UI placement:** Add this as the first filter (before Joined Date) since it's likely to be commonly used.
+
+---
+
+### 4. `src/hooks/crm/useClients.ts`
+
+**Add filtering logic for active campaign enrollment:**
+
+The approach: Query clients, then fetch active enrollments, and filter client-side based on the filter value.
+
+```typescript
+// After fetching clients, if activeCampaign filter is 'yes' or 'no':
+if (filters?.activeCampaign && filters.activeCampaign !== 'all') {
+  // Fetch client IDs that have active campaign enrollments
+  const { data: activeEnrollments } = await supabase
+    .from('crm_campaign_enrollments')
+    .select('client_id')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active');
+  
+  const enrolledClientIds = new Set(activeEnrollments?.map(e => e.client_id) || []);
+  
+  // Filter the clients array
+  if (filters.activeCampaign === 'yes') {
+    // Keep only clients who are in an active campaign
+    return clientsData.filter(client => enrolledClientIds.has(client.id));
+  } else {
+    // Keep only clients who are NOT in an active campaign
+    return clientsData.filter(client => !enrolledClientIds.has(client.id));
+  }
+}
+```
+
+---
+
+## Summary
+
+| File | Change |
+|------|--------|
+| `src/lib/crm/types.ts` | Add `activeCampaign?: 'all' \| 'yes' \| 'no'` to `ClientFilters` interface |
+| `src/pages/crm/Clients.tsx` | Add `activeCampaign: 'all'` to initial filter state |
+| `src/components/crm/clients/ClientFilters.tsx` | Add Select dropdown for Active Campaign filter |
+| `src/hooks/crm/useClients.ts` | Add logic to filter clients based on active campaign enrollments |
 
 ---
 
 ## Result
-The SMS compose dialog will show a clean character count without any warnings about segment limits.
-
+Users will see a new "Active Campaign" dropdown in the filters panel. By default it shows "All" clients. Selecting "Yes" shows only clients currently enrolled in an active campaign. Selecting "No" shows clients not enrolled in any active campaign.
