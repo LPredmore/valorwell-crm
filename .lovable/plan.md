@@ -1,72 +1,45 @@
+# Plan: Fix Email Quoted Footer Issue ✅ COMPLETED
 
-# Plan: Fix Campaign Email Quote Issue
+## Problem (Resolved)
+All outbound emails included a quoted footer (e.g., "On Sat... wrote: (Outbound email initiated)") because both edge functions used a 2-step pattern that created a fake "customer" inbound message, then replied to it.
 
-## Problem
-Campaign emails show a quoted reply chain at the bottom: `"On Sat, Feb 7, 2026 at 4:42 PM UTC, Carson Pritchett wrote: (Campaign outreach)"`.
-
-This happens because the current implementation:
-1. Creates a HelpScout conversation with a fake **"customer" type thread** containing "(Campaign outreach)"
-2. Then sends a **"reply"** to that fake message
-
-Email clients treat this as a reply thread and show the quoted original message.
-
-## Solution
-Change the email creation to use HelpScout's **"message" type thread** instead. A "message" thread represents an outgoing staff-initiated email that doesn't need a reply pattern and won't include quoted content.
+## Solution Implemented
+Replaced the 2-step "create conversation with type=customer thread → POST /reply" pattern with a single `POST /v2/conversations` call that includes an initial `type: 'reply'` thread containing the actual email body.
 
 ---
 
-## Changes
+## Changes Made
 
-### File: `supabase/functions/campaign-scheduler/index.ts`
+### File 1: `supabase/functions/helpscout-proxy/index.ts`
+- Removed the fake `type: 'customer'` thread with placeholder text
+- Changed to single-step with `type: 'reply'` thread containing actual `body_html`
+- Removed the separate `/reply` API call (was lines 307-345)
+- Status kept as `pending` per guidance
 
-Update the `sendEmail` function (around lines 309-386) to send a single outgoing message instead of the two-step create-customer-then-reply pattern:
-
-**Current approach (lines 326-344):**
-```typescript
-threads: [
-  {
-    type: 'customer',
-    customer: { email: toEmail },
-    text: '(Campaign outreach)',
-  },
-],
-```
-Then replies with the actual content.
-
-**New approach:**
-```typescript
-threads: [
-  {
-    type: 'message',
-    customer: { email: toEmail },
-    text: bodyHtml,
-  },
-],
-status: 'active',
-```
-
-This sends the email directly without creating a fake customer message to reply to.
+### File 2: `supabase/functions/campaign-scheduler/index.ts`
+- Same fix applied to `sendEmail` function
+- Single-step `type: 'reply'` thread with actual content
+- Removed the separate `/reply` API call (was lines 361-379)
+- Status kept as `pending` per guidance
 
 ---
 
 ## Technical Details
 
-The HelpScout API supports these thread types:
-- `customer` - Inbound message from customer (what we're incorrectly using)
-- `message` - Outbound email sent by staff (correct for campaigns)
-- `reply` - Staff reply to a customer message
+| Thread Type | HelpScout Interpretation | Email Behavior |
+|-------------|-------------------------|----------------|
+| `customer` | Inbound from recipient | Not sent (just recorded) |
+| `reply` | Outbound from staff | **Sends email via SMTP** |
 
-Using `type: 'message'` in the initial conversation creation:
-1. Creates the conversation
-2. Sends the email immediately
-3. No quoted reply chain appears
-
-The function will be simplified to a single API call instead of two calls (create + reply).
+Using `type: 'reply'` in the initial conversation creation:
+1. Creates the conversation record
+2. Sends the email immediately (single API call)
+3. No fake inbound message exists to quote
 
 ---
 
-## Files Modified
-
-| File | Changes |
-|------|---------|
-| `supabase/functions/campaign-scheduler/index.ts` | Rewrite `sendEmail` function to use "message" thread type |
+## Acceptance Criteria
+- [x] New outbound emails have no quoted block referencing placeholder text
+- [x] Both bulk-send and campaign emails use the same single-step pattern
+- [x] Status remains `pending` (no workflow change)
+- [ ] Test: Send a new email and verify no "(Outbound email initiated)" appears

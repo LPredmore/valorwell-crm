@@ -316,8 +316,8 @@ async function sendEmail(
   lastName: string
 ): Promise<{ success: boolean; conversationId?: string; error?: string }> {
   try {
-    // Step 1: Create conversation with a customer thread (required by HelpScout)
-    // We use the actual email body as the initial thread text to avoid quoted replies
+    // Single-step: Create conversation with a reply thread (triggers SMTP send immediately)
+    // No fake "customer" thread - this prevents Gmail from quoting placeholder text
     const createResponse = await fetch('https://api.helpscout.net/v2/conversations', {
       method: 'POST',
       headers: {
@@ -336,9 +336,9 @@ async function sendEmail(
         status: 'pending',
         threads: [
           {
-            type: 'customer',
+            type: 'reply', // Staff-initiated outbound - triggers SMTP delivery
             customer: { email: toEmail },
-            text: bodyHtml,
+            text: bodyHtml, // Actual email content
           },
         ],
       }),
@@ -346,7 +346,7 @@ async function sendEmail(
 
     if (!createResponse.ok && createResponse.status !== 201) {
       const errorText = await createResponse.text();
-      console.error('HelpScout create conversation failed:', createResponse.status, errorText);
+      console.error('HelpScout create/send failed:', createResponse.status, errorText);
       return { success: false, error: `Create conversation failed: ${createResponse.status}` };
     }
 
@@ -354,31 +354,7 @@ async function sendEmail(
     const locationHeader = createResponse.headers.get('Location') || createResponse.headers.get('Resource-ID');
     const conversationId = locationHeader?.split('/').pop();
 
-    if (!conversationId) {
-      return { success: false, error: 'No conversation ID returned' };
-    }
-
-    // Step 2: Send reply (this triggers actual SMTP email delivery)
-    const replyResponse = await fetch(`https://api.helpscout.net/v2/conversations/${conversationId}/reply`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text: bodyHtml,
-        status: 'active',
-        customer: { email: toEmail },
-      }),
-    });
-
-    if (!replyResponse.ok && replyResponse.status !== 201) {
-      const errorText = await replyResponse.text();
-      console.error('HelpScout reply failed:', replyResponse.status, errorText);
-      return { success: false, error: `Reply failed: ${replyResponse.status}` };
-    }
-
-    await replyResponse.text(); // Consume response body
+    console.log(`Created and sent conversation ${conversationId || '(no id)'} to ${toEmail}`);
     return { success: true, conversationId };
   } catch (error) {
     console.error('Email send error:', error);

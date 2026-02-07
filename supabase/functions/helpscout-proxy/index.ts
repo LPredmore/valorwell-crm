@@ -241,7 +241,8 @@ async function handleBulkSend(
       }
 
       try {
-        // STEP 1: Create HelpScout conversation (no message content - just establishes record)
+        // Single-step: Create conversation with a reply thread (triggers SMTP send immediately)
+        // No fake "customer" thread - this prevents Gmail from quoting placeholder text
         const conversationBody = {
           subject: bulkSendLog.subject,
           customer: {
@@ -251,14 +252,14 @@ async function handleBulkSend(
           },
           mailboxId: parseInt(mailboxId || "0"),
           type: "email",
-          status: "pending", // Start as pending, reply will activate
+          status: "pending",
           threads: [
             {
-              type: "customer", // Placeholder inbound thread (required for conversation creation)
+              type: "reply", // Staff-initiated outbound - triggers SMTP delivery
               customer: {
                 email: recipient.email,
               },
-              text: "(Outbound email initiated)",
+              text: bulkSendLog.body_html, // Actual email content
             },
           ],
         };
@@ -271,7 +272,7 @@ async function handleBulkSend(
 
         if (!createResponse.ok && createResponse.status !== 201) {
           const errorText = await createResponse.text();
-          console.error(`Failed to create conversation for ${maskEmail(recipient.email)}:`, errorText);
+          console.error(`Failed to create/send conversation for ${maskEmail(recipient.email)}:`, errorText);
           await supabase
             .from(recipient.recipientTable)
             .update({
@@ -281,68 +282,23 @@ async function handleBulkSend(
             })
             .eq("id", recipient.id);
           failedCount++;
-          continue; // Skip to next recipient
+          continue;
         }
 
         // Extract conversation ID from Location header (format: /v2/conversations/123456)
         const locationHeader = createResponse.headers.get("Location") || createResponse.headers.get("Resource-ID");
         const conversationId = locationHeader?.split("/").pop();
 
-        if (!conversationId) {
-          console.error(`No conversation ID returned for ${maskEmail(recipient.email)}`);
-          await supabase
-            .from(recipient.recipientTable)
-            .update({
-              status: "failed",
-              error_message: "No conversation ID in response",
-              sent_at: new Date().toISOString(),
-            })
-            .eq("id", recipient.id);
-          failedCount++;
-          continue;
-        }
-
-        console.log(`Created conversation ${conversationId} for ${maskEmail(recipient.email)}`);
-
-        // STEP 2: Add reply to trigger actual email delivery
-        // This is the key fix - HelpScout's reply endpoint actually sends the email
-        const replyBody = {
-          text: bulkSendLog.body_html,
-          status: "active", // Activates the conversation and triggers send
-          customer: {
-            email: recipient.email,
-          },
-        };
-
-        const replyResponse = await helpscoutRequest(
-          "POST",
-          `/conversations/${conversationId}/reply`,
-          replyBody
-        );
-
-        if (replyResponse.ok || replyResponse.status === 201) {
-          console.log(`Reply sent to conversation ${conversationId}, email delivered to ${maskEmail(recipient.email)}`);
-          await supabase
-            .from(recipient.recipientTable)
-            .update({
-              status: "sent",
-              sent_at: new Date().toISOString(),
-            })
-            .eq("id", recipient.id);
-          sentCount++;
-        } else {
-          const errorText = await replyResponse.text();
-          console.error(`Failed to send reply for ${maskEmail(recipient.email)}:`, errorText);
-          await supabase
-            .from(recipient.recipientTable)
-            .update({
-              status: "failed",
-              error_message: `Reply API error: ${replyResponse.status}`,
-              sent_at: new Date().toISOString(),
-            })
-            .eq("id", recipient.id);
-          failedCount++;
-        }
+        console.log(`Created and sent conversation ${conversationId || '(no id)'} to ${maskEmail(recipient.email)}`);
+        
+        await supabase
+          .from(recipient.recipientTable)
+          .update({
+            status: "sent",
+            sent_at: new Date().toISOString(),
+          })
+          .eq("id", recipient.id);
+        sentCount++;
 
         // Rate limiting: wait 150ms between requests
         await new Promise((resolve) => setTimeout(resolve, 150));
