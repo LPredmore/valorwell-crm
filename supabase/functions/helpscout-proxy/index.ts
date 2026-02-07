@@ -309,6 +309,9 @@ async function handleBulkSend(
         const replyBody = {
           text: bulkSendLog.body_html,
           status: "active", // Activates the conversation and triggers send
+          customer: {
+            email: recipient.email,
+          },
         };
 
         const replyResponse = await helpscoutRequest(
