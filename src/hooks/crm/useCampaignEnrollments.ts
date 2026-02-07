@@ -123,21 +123,60 @@ export function useEnrollClients() {
         return { enrolled: 0, skipped: clientIds.length };
       }
 
+      // Get first active step for this campaign
+      const { data: firstStep } = await supabase
+        .from('crm_campaign_steps')
+        .select('id, delay_days, delay_hours, channel')
+        .eq('campaign_id', campaignId)
+        .eq('is_active', true)
+        .order('step_order', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
       const enrollments = toEnroll.map(clientId => ({
         campaign_id: campaignId,
         client_id: clientId,
         tenant_id: tenantId,
-        current_step: 0,
+        current_step: 1,
         status: 'active' as const,
         enrolled_at: new Date().toISOString(),
         enrolled_by_profile_id: userId,
       }));
 
-      const { error } = await supabase
+      // Insert enrollments and get the created records
+      const { data: createdEnrollments, error } = await supabase
         .from('crm_campaign_enrollments')
-        .insert(enrollments);
+        .insert(enrollments)
+        .select('id, client_id');
 
       if (error) throw error;
+
+      // Schedule the first step for each enrollment
+      if (firstStep && createdEnrollments && createdEnrollments.length > 0) {
+        const now = new Date();
+        const scheduledFor = new Date(now);
+        scheduledFor.setDate(scheduledFor.getDate() + (firstStep.delay_days || 0));
+        scheduledFor.setHours(scheduledFor.getHours() + (firstStep.delay_hours || 0));
+
+        const stepLogs = createdEnrollments.map(enrollment => ({
+          enrollment_id: enrollment.id,
+          step_id: firstStep.id,
+          tenant_id: tenantId,
+          client_id: enrollment.client_id,
+          scheduled_for: scheduledFor.toISOString(),
+          status: 'scheduled' as const,
+          channel: firstStep.channel,
+        }));
+
+        const { error: stepLogError } = await supabase
+          .from('crm_campaign_step_logs')
+          .insert(stepLogs);
+
+        if (stepLogError) {
+          console.error('Failed to schedule first step:', stepLogError);
+          // Don't throw - enrollment succeeded, step scheduling is secondary
+        }
+      }
 
       return { enrolled: toEnroll.length, skipped: alreadyEnrolledIds.size };
     },

@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.ringcentral-sms]
 verify_jwt = false
+
+[functions.campaign-scheduler]
+verify_jwt = false
