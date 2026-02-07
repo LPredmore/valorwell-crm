@@ -388,8 +388,18 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Parse request URL early to check for webhook action
+  const url = new URL(req.url);
+  const action = url.searchParams.get("action");
+
+  // Handle webhook action separately (no auth required)
+  if (action === "webhook") {
+    console.log("Processing HelpScout webhook");
+    return handleWebhook(req);
+  }
+
   try {
-    // Validate JWT
+    // Validate JWT for all other actions
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -418,9 +428,6 @@ Deno.serve(async (req) => {
     const userId = claimsData.claims.sub;
     console.log("Authenticated user:", userId);
 
-    // Parse request
-    const url = new URL(req.url);
-    const action = url.searchParams.get("action");
     const mailboxId = Deno.env.get("HELPSCOUT_MAILBOX_ID");
 
     let result: unknown;
@@ -839,3 +846,127 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+// ============ WEBHOOK HANDLER ============
+// Separate handler for HelpScout webhooks (no auth required, validates signature)
+
+async function handleWebhook(req: Request): Promise<Response> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  try {
+    const payload = await req.json();
+    console.log("HelpScout webhook received:", JSON.stringify(payload).substring(0, 500));
+
+    // HelpScout sends different event types - we care about customer replies
+    // Event types: convo.created, convo.customer.reply.created, convo.agent.reply.created, etc.
+    const eventType = payload.type || payload.event;
+    
+    // We only care about customer replies
+    if (!eventType?.includes("customer.reply") && !eventType?.includes("convo.created")) {
+      console.log(`Ignoring event type: ${eventType}`);
+      return new Response(JSON.stringify({ received: true, ignored: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Extract customer email from payload
+    // HelpScout webhook structure varies, so we try multiple paths
+    const customerEmail = 
+      payload.customer?.email ||
+      payload.primaryCustomer?.email ||
+      payload._embedded?.customer?.email ||
+      payload.data?.customer?.email ||
+      payload.data?.primaryCustomer?.email;
+
+    if (!customerEmail) {
+      console.log("No customer email in webhook payload");
+      return new Response(JSON.stringify({ received: true, noEmail: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const normalizedEmail = customerEmail.trim().toLowerCase();
+    console.log(`Processing response from: ${normalizedEmail.substring(0, 3)}***`);
+
+    // Look up client by email (case-insensitive)
+    const { data: clients, error: clientError } = await supabase
+      .from("clients")
+      .select("id, tenant_id")
+      .ilike("email", normalizedEmail);
+
+    if (clientError) {
+      console.error("Error looking up client:", clientError);
+      return new Response(JSON.stringify({ error: "Database error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!clients || clients.length === 0) {
+      console.log("No client found for email");
+      return new Response(JSON.stringify({ received: true, noClient: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check for active campaign enrollments for any matching client
+    let pausedCount = 0;
+    for (const client of clients) {
+      const { data: enrollments, error: enrollmentError } = await supabase
+        .from("crm_campaign_enrollments")
+        .select("id, campaign_id")
+        .eq("client_id", client.id)
+        .eq("status", "active");
+
+      if (enrollmentError) {
+        console.error("Error checking enrollments:", enrollmentError);
+        continue;
+      }
+
+      if (!enrollments || enrollments.length === 0) {
+        continue;
+      }
+
+      // Pause the enrollment(s)
+      for (const enrollment of enrollments) {
+        const { error: updateError } = await supabase
+          .from("crm_campaign_enrollments")
+          .update({
+            status: "responded",
+            paused_at: new Date().toISOString(),
+            pause_reason: "email_response",
+          })
+          .eq("id", enrollment.id);
+
+        if (updateError) {
+          console.error(`Failed to pause enrollment ${enrollment.id}:`, updateError);
+        } else {
+          console.log(`Paused enrollment ${enrollment.id} due to email response`);
+          pausedCount++;
+        }
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ received: true, enrollmentsPaused: pausedCount }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  } catch (error) {
+    console.error("Webhook processing error:", error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+}

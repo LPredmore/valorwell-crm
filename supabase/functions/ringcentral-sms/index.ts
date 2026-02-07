@@ -317,14 +317,171 @@ async function processBulkSms(bulkSmsId: string) {
   console.log(`Bulk SMS completed: ${sentCount} sent, ${failedCount} failed`);
 }
 
+// ============ INBOUND SMS WEBHOOK HANDLER ============
+// Handles incoming SMS messages from RingCentral to auto-pause campaigns
+
+async function handleInboundSms(req: Request): Promise<Response> {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  try {
+    const payload = await req.json();
+    console.log('RingCentral inbound SMS webhook:', JSON.stringify(payload).substring(0, 500));
+
+    // RingCentral webhook validation request
+    if (payload.event === '/restapi/v1.0/subscription/~?threshold=60&interval=15') {
+      // This is a subscription validation request
+      console.log('RingCentral subscription validation');
+      return new Response(JSON.stringify({ received: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Extract the from phone number from the webhook payload
+    // RingCentral webhook structure for SMS varies
+    const fromNumber = 
+      payload.body?.from?.phoneNumber ||
+      payload.from?.phoneNumber ||
+      payload.body?.message?.from?.phoneNumber ||
+      payload.message?.from?.phoneNumber;
+
+    if (!fromNumber) {
+      console.log('No from phone number in webhook payload');
+      return new Response(JSON.stringify({ received: true, noPhone: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Normalize the incoming phone number
+    const phoneResult = normalizePhoneNumber(fromNumber);
+    if (!phoneResult.valid) {
+      console.log(`Invalid phone format: ${fromNumber}`);
+      return new Response(JSON.stringify({ received: true, invalidPhone: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`Processing SMS response from: ${phoneResult.normalized}`);
+
+    // Look up client by phone - need to search for various formats
+    // The phone in DB might be stored differently (with dashes, spaces, etc.)
+    const normalizedDigits = phoneResult.normalized!.replace(/\D/g, '');
+    const last10Digits = normalizedDigits.slice(-10);
+    
+    // Search for clients with matching phone (flexible matching)
+    const { data: clients, error: clientError } = await supabase
+      .from('clients')
+      .select('id, tenant_id, phone')
+      .not('phone', 'is', null);
+
+    if (clientError) {
+      console.error('Error looking up clients:', clientError);
+      return new Response(JSON.stringify({ error: 'Database error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Find matching clients by comparing normalized phone numbers
+    const matchingClients = (clients || []).filter(client => {
+      if (!client.phone) return false;
+      const clientDigits = client.phone.replace(/\D/g, '');
+      const clientLast10 = clientDigits.slice(-10);
+      return clientLast10 === last10Digits;
+    });
+
+    if (matchingClients.length === 0) {
+      console.log('No client found for phone number');
+      return new Response(JSON.stringify({ received: true, noClient: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check for active campaign enrollments for any matching client
+    let pausedCount = 0;
+    for (const client of matchingClients) {
+      const { data: enrollments, error: enrollmentError } = await supabase
+        .from('crm_campaign_enrollments')
+        .select('id, campaign_id')
+        .eq('client_id', client.id)
+        .eq('status', 'active');
+
+      if (enrollmentError) {
+        console.error('Error checking enrollments:', enrollmentError);
+        continue;
+      }
+
+      if (!enrollments || enrollments.length === 0) {
+        continue;
+      }
+
+      // Pause the enrollment(s)
+      for (const enrollment of enrollments) {
+        const { error: updateError } = await supabase
+          .from('crm_campaign_enrollments')
+          .update({
+            status: 'responded',
+            paused_at: new Date().toISOString(),
+            pause_reason: 'sms_response',
+          })
+          .eq('id', enrollment.id);
+
+        if (updateError) {
+          console.error(`Failed to pause enrollment ${enrollment.id}:`, updateError);
+        } else {
+          console.log(`Paused enrollment ${enrollment.id} due to SMS response`);
+          pausedCount++;
+        }
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ received: true, enrollmentsPaused: pausedCount }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  } catch (error) {
+    console.error('Inbound SMS processing error:', error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+}
+
+// Declare EdgeRuntime for background tasks
+declare const EdgeRuntime: {
+  waitUntil: (promise: Promise<unknown>) => void;
+};
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // Parse URL to check for inbound action
+  const url = new URL(req.url);
+  const action = url.searchParams.get('action');
+
+  // Handle inbound SMS webhook (no auth required)
+  if (action === 'inbound') {
+    console.log('Processing inbound SMS webhook');
+    return handleInboundSms(req);
+  }
+
   try {
-    // Verify authentication
+    // Verify authentication for all other actions
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
