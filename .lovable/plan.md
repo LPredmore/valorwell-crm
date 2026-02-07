@@ -1,83 +1,140 @@
 
-# Plan: Add "Joined Date" Filter and Scrollable Filters Menu
+# Plan: Add Quick Client Profile Sheet with Status Change
 
 ## Overview
-Add a date range filter for "Joined Date" (using `clients.created_at`) to the Clients page filters, and make the entire filters popover content scrollable for better usability.
+Create a slide-out panel (Sheet) that shows a client's non-clinical contact information and allows changing their status quickly without navigating to the full detail page.
 
 ---
 
-## What Will Change
+## What Will Be Built
 
-### 1. Filter Type Updates
-The `ClientFilters` interface will be extended to include optional date range fields:
-- `joinedDateFrom` - Start date for filtering
-- `joinedDateTo` - End date for filtering
+### 1. Quick Profile Sheet Component
+A new `ClientQuickProfile.tsx` component that slides in from the right side, displaying:
+- Client name (with preferred name if different)
+- Email (clickable mailto link)
+- Phone (clickable tel link)
+- State
+- Primary Therapist
+- Current Status (as a dropdown/select for changing)
+- Client Since date
 
-### 2. Filter UI Updates
-The ClientFilters component will get:
-- A new "Joined Date" section with two date pickers (From and To)
-- The entire filter content wrapped in a ScrollArea component with a max height
-- Clear buttons for individual date selections
+### 2. Status Update Hook
+A new `useUpdateClientStatus.ts` hook that:
+- Updates `pat_status` in the `clients` table
+- Logs the change to `crm_activity_events` for audit trail
+- Invalidates the client queries to refresh the UI
 
-### 3. Query Updates
-The useClients hook will apply the date range filter:
-- If "From" date is set: filter where `created_at >= fromDate`
-- If "To" date is set: filter where `created_at <= toDate`
+### 3. Integration Points
+The quick profile can be triggered from:
+- **Kanban cards** - New "quick view" button (or click behavior option)
+- **Table rows** - Right-click context menu or dedicated button
+- Initially, we'll add a dedicated "eye" icon button in the table for simplicity
 
 ---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/components/crm/clients/ClientQuickProfile.tsx` | The slide-out Sheet panel component |
+| `src/hooks/crm/useUpdateClientStatus.ts` | Mutation hook for status updates with activity logging |
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/lib/crm/types.ts` | Add `joinedDateFrom?: Date` and `joinedDateTo?: Date` to ClientFilters interface |
-| `src/components/crm/clients/ClientFilters.tsx` | Add date picker UI, wrap content in ScrollArea |
-| `src/hooks/crm/useClients.ts` | Add date range filtering logic to the query |
-| `src/pages/crm/Clients.tsx` | Update initial filter state to include undefined date values |
-| `src/components/ui/calendar.tsx` | Add `pointer-events-auto` class for popover compatibility |
+| `src/components/crm/clients/ClientTable.tsx` | Add quick-view button column to trigger the sheet |
+| `src/pages/crm/Clients.tsx` | Add state for selected client and render the ClientQuickProfile sheet |
 
 ---
 
 ## Technical Details
 
-### Type Changes (types.ts)
-```typescript
-export interface ClientFilters {
-  statuses: PatStatus[];
-  states: string[];
-  search: string;
-  tags: string[];
-  joinedDateFrom?: Date;  // NEW
-  joinedDateTo?: Date;    // NEW
-}
+### ClientQuickProfile Component Structure
+```text
+Sheet (right side, sm:max-w-md)
+├── SheetHeader
+│   ├── SheetTitle: Client Name
+│   └── SheetDescription: "Client since [date]"
+├── SheetContent
+│   ├── Contact Info Section
+│   │   ├── Email with mail icon
+│   │   ├── Phone with phone icon
+│   │   └── State with map-pin icon
+│   ├── Therapist Section
+│   │   └── Primary Therapist name
+│   └── Status Section
+│       ├── Current status badge (visual)
+│       └── Select dropdown with all statuses to change
+└── SheetFooter
+    └── "View Full Profile" button → navigates to /crm/clients/:id
 ```
 
-### Date Filter UI Design
-- Two inline date pickers using the existing Calendar and Popover components
-- "From" and "To" labels with calendar icon buttons
-- Each picker shows the selected date or "Any" as placeholder
-- Individual clear (X) buttons when a date is selected
-
-### Query Logic (useClients.ts)
+### Status Update Hook Logic
 ```typescript
-// Apply joined date range filter
-if (filters?.joinedDateFrom) {
-  query = query.gte('created_at', filters.joinedDateFrom.toISOString());
-}
-if (filters?.joinedDateTo) {
-  // Add 1 day to include the entire "To" date
-  const endOfDay = new Date(filters.joinedDateTo);
-  endOfDay.setHours(23, 59, 59, 999);
-  query = query.lte('created_at', endOfDay.toISOString());
-}
+// In useUpdateClientStatus.ts
+useMutation({
+  mutationFn: async ({ clientId, newStatus, oldStatus }) => {
+    // 1. Update client status
+    await supabase
+      .from('clients')
+      .update({ pat_status: newStatus })
+      .eq('id', clientId);
+
+    // 2. Log activity event for audit trail
+    await supabase
+      .from('crm_activity_events')
+      .insert({
+        tenant_id: tenantId,
+        client_id: clientId,
+        event_type: 'status_change',
+        old_value: oldStatus,
+        new_value: newStatus,
+        created_by_profile_id: userId,
+      });
+  },
+  onSuccess: () => {
+    // Invalidate queries to refresh client list
+    queryClient.invalidateQueries(['crm-clients']);
+    queryClient.invalidateQueries(['crm-client', clientId]);
+    toast.success('Status updated');
+  }
+});
 ```
 
-### Scrollable Popover
-- Wrap filter content in `<ScrollArea>` component
-- Set `max-h-[70vh]` to limit height to 70% of viewport
-- Ensures usability on smaller screens while keeping all filters accessible
+### Table Integration
+Add a new column before "Last Updated" with an eye icon button:
+```typescript
+<TableCell>
+  <Button
+    variant="ghost"
+    size="icon"
+    onClick={(e) => {
+      e.stopPropagation();
+      onQuickView(client);
+    }}
+  >
+    <Eye className="h-4 w-4" />
+  </Button>
+</TableCell>
+```
 
-### Active Filter Count
-The badge count will include date filters:
-- +1 if `joinedDateFrom` is set
-- +1 if `joinedDateTo` is set
+### Status Select Component
+Uses the existing `ALL_STATUSES` from status-config and a Select component:
+- Shows status color dot next to each option
+- Grouped by category (Lead, Onboarding, Active, Inactive, Closed)
+- Triggers mutation on change with optimistic UI update
+
+---
+
+## User Experience Flow
+
+1. User is on Clients table view
+2. User sees an "eye" icon on each row
+3. User clicks the eye icon → Sheet slides in from right
+4. Sheet shows client contact info and current status
+5. User can:
+   - Click email/phone to contact
+   - Change status via dropdown (saves immediately with toast confirmation)
+   - Click "View Full Profile" to go to detail page
+6. User clicks X or outside to close sheet
