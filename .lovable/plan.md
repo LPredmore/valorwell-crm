@@ -1,45 +1,65 @@
-# Plan: Fix Email Quoted Footer Issue ✅ COMPLETED
 
-## Problem (Resolved)
-All outbound emails included a quoted footer (e.g., "On Sat... wrote: (Outbound email initiated)") because both edge functions used a 2-step pattern that created a fake "customer" inbound message, then replied to it.
 
-## Solution Implemented
-Replaced the 2-step "create conversation with type=customer thread → POST /reply" pattern with a single `POST /v2/conversations` call that includes an initial `type: 'reply'` thread containing the actual email body.
+# Plan: Remove SMS Segment Warning
 
----
-
-## Changes Made
-
-### File 1: `supabase/functions/helpscout-proxy/index.ts`
-- Removed the fake `type: 'customer'` thread with placeholder text
-- Changed to single-step with `type: 'reply'` thread containing actual `body_html`
-- Removed the separate `/reply` API call (was lines 307-345)
-- Status kept as `pending` per guidance
-
-### File 2: `supabase/functions/campaign-scheduler/index.ts`
-- Same fix applied to `sendEmail` function
-- Single-step `type: 'reply'` thread with actual content
-- Removed the separate `/reply` API call (was lines 361-379)
-- Status kept as `pending` per guidance
+## Overview
+Remove the 160-character segment warning UI elements from the SMS compose dialog. Users don't need to see this technical detail.
 
 ---
 
-## Technical Details
+## File to Modify
 
-| Thread Type | HelpScout Interpretation | Email Behavior |
-|-------------|-------------------------|----------------|
-| `customer` | Inbound from recipient | Not sent (just recorded) |
-| `reply` | Outbound from staff | **Sends email via SMTP** |
+**`src/components/crm/bulk/SmsComposeDialog.tsx`**
 
-Using `type: 'reply'` in the initial conversation creation:
-1. Creates the conversation record
-2. Sends the email immediately (single API call)
-3. No fake inbound message exists to quote
+### Changes
+
+1. **Remove unused constant** (line 24)
+   - Delete `const SMS_SEGMENT_LENGTH = 160;`
+
+2. **Remove unused variables** (lines 51-53)
+   - Delete `characterCount`, `segmentCount`, and `isMultiSegment` calculations
+
+3. **Simplify character counter** (lines 69-72)
+   - Replace the conditional styling and segment count display with a simple character count
+   - Change from amber warning color to always use muted text
+
+4. **Remove warning paragraph** (lines 83-87)
+   - Delete the entire conditional block that shows "Messages over 160 characters will be split into multiple segments"
+
+### Before
+```typescript
+const SMS_SEGMENT_LENGTH = 160;
+// ...
+const characterCount = body.length;
+const segmentCount = Math.ceil(characterCount / SMS_SEGMENT_LENGTH) || 1;
+const isMultiSegment = characterCount > SMS_SEGMENT_LENGTH;
+// ...
+<span className={`text-xs ${isMultiSegment ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
+  {characterCount} / {SMS_SEGMENT_LENGTH} characters
+  {isMultiSegment && ` (${segmentCount} segments)`}
+</span>
+// ...
+{isMultiSegment && (
+  <p className="text-xs text-amber-600 dark:text-amber-400">
+    Messages over 160 characters will be split into multiple segments.
+  </p>
+)}
+```
+
+### After
+```typescript
+// No segment constant needed
+// ...
+// Just show simple character count
+<span className="text-xs text-muted-foreground">
+  {body.length} characters
+</span>
+// ...
+// No warning paragraph
+```
 
 ---
 
-## Acceptance Criteria
-- [x] New outbound emails have no quoted block referencing placeholder text
-- [x] Both bulk-send and campaign emails use the same single-step pattern
-- [x] Status remains `pending` (no workflow change)
-- [ ] Test: Send a new email and verify no "(Outbound email initiated)" appears
+## Result
+The SMS compose dialog will show a clean character count without any warnings about segment limits.
+
