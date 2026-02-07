@@ -87,6 +87,8 @@ export interface ClientFilters {
   states: string[];
   search: string;
   tags: string[];
+  joinedDateFrom?: Date;
+  joinedDateTo?: Date;
 }
 
 // HelpScout Inbox types
