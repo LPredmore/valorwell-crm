@@ -10,8 +10,12 @@ import { ClientFilters } from '@/components/crm/clients/ClientFilters';
 import { BulkActionBar } from '@/components/crm/clients/BulkActionBar';
 import { BulkComposeDialog } from '@/components/crm/bulk/BulkComposeDialog';
 import { BulkProgressModal } from '@/components/crm/bulk/BulkProgressModal';
+import { SmsComposeDialog } from '@/components/crm/bulk/SmsComposeDialog';
+import { SmsProgressModal } from '@/components/crm/bulk/SmsProgressModal';
 import { useBulkSend } from '@/hooks/crm/useBulkSend';
 import { useBulkSendStatus } from '@/hooks/crm/useBulkSendStatus';
+import { useBulkSms } from '@/hooks/crm/useBulkSms';
+import { useBulkSmsStatus } from '@/hooks/crm/useBulkSmsStatus';
 import type { ClientFilters as ClientFiltersType, CrmClient, PatStatus } from '@/lib/crm/types';
 
 export default function CrmClients() {
@@ -27,14 +31,21 @@ export default function CrmClients() {
   // Selection state
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   
-  // Bulk email dialog state
+  // Email bulk dialog state
   const [composeDialogOpen, setComposeDialogOpen] = useState(false);
   const [progressModalOpen, setProgressModalOpen] = useState(false);
   const [activeBulkSendId, setActiveBulkSendId] = useState<string | null>(null);
 
+  // SMS bulk dialog state
+  const [smsComposeDialogOpen, setSmsComposeDialogOpen] = useState(false);
+  const [smsProgressModalOpen, setSmsProgressModalOpen] = useState(false);
+  const [activeBulkSmsId, setActiveBulkSmsId] = useState<string | null>(null);
+
   const { data: clients, isLoading, clientsByStatus } = useClientsByStatus({ filters });
   const { createBulkSend } = useBulkSend();
   const { data: bulkSendStatus } = useBulkSendStatus(activeBulkSendId);
+  const { createBulkSms } = useBulkSms();
+  const { data: bulkSmsStatus } = useBulkSmsStatus(activeBulkSmsId);
 
   const handleClientClick = (clientId: string) => {
     navigate(`/crm/clients/${clientId}`);
@@ -73,7 +84,7 @@ export default function CrmClients() {
     setSelectedClientIds(new Set());
   }, []);
 
-  // Bulk email handlers
+  // Email bulk handlers
   const handleOpenCompose = () => {
     setComposeDialogOpen(true);
   };
@@ -99,6 +110,34 @@ export default function CrmClients() {
     if (!open) {
       setProgressModalOpen(false);
       setActiveBulkSendId(null);
+    }
+  };
+
+  // SMS bulk handlers
+  const handleOpenSmsCompose = () => {
+    setSmsComposeDialogOpen(true);
+  };
+
+  const handleSendBulkSms = async (bodyText: string) => {
+    try {
+      const result = await createBulkSms.mutateAsync({
+        clientIds: Array.from(selectedClientIds),
+        bodyText,
+      });
+      
+      setSmsComposeDialogOpen(false);
+      setActiveBulkSmsId(result.bulkSmsId);
+      setSmsProgressModalOpen(true);
+      setSelectedClientIds(new Set());
+    } catch (error) {
+      console.error('Failed to start bulk SMS:', error);
+    }
+  };
+
+  const handleSmsProgressModalClose = (open: boolean) => {
+    if (!open) {
+      setSmsProgressModalOpen(false);
+      setActiveBulkSmsId(null);
     }
   };
 
@@ -163,11 +202,12 @@ export default function CrmClients() {
         <BulkActionBar
           selectedCount={selectedClientIds.size}
           onSendEmail={handleOpenCompose}
+          onSendSms={handleOpenSmsCompose}
           onClear={handleClearSelection}
         />
       )}
 
-      {/* Compose Dialog */}
+      {/* Email Compose Dialog */}
       <BulkComposeDialog
         open={composeDialogOpen}
         onOpenChange={setComposeDialogOpen}
@@ -176,7 +216,7 @@ export default function CrmClients() {
         isSending={createBulkSend.isPending}
       />
 
-      {/* Progress Modal */}
+      {/* Email Progress Modal */}
       <BulkProgressModal
         open={progressModalOpen}
         onOpenChange={handleProgressModalClose}
@@ -184,6 +224,25 @@ export default function CrmClients() {
         recipientCount={bulkSendStatus?.recipientCount ?? selectedClientIds.size}
         sentCount={bulkSendStatus?.sentCount ?? 0}
         failedCount={bulkSendStatus?.failedCount ?? 0}
+      />
+
+      {/* SMS Compose Dialog */}
+      <SmsComposeDialog
+        open={smsComposeDialogOpen}
+        onOpenChange={setSmsComposeDialogOpen}
+        recipientCount={selectedClientIds.size}
+        onSend={handleSendBulkSms}
+        isSending={createBulkSms.isPending}
+      />
+
+      {/* SMS Progress Modal */}
+      <SmsProgressModal
+        open={smsProgressModalOpen}
+        onOpenChange={handleSmsProgressModalClose}
+        status={bulkSmsStatus?.status ?? 'pending'}
+        recipientCount={bulkSmsStatus?.recipientCount ?? selectedClientIds.size}
+        sentCount={bulkSmsStatus?.sentCount ?? 0}
+        failedCount={bulkSmsStatus?.failedCount ?? 0}
       />
     </div>
   );

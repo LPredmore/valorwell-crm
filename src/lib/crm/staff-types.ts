@@ -10,6 +10,7 @@ export interface CrmStaff {
   prov_name_for_clients: string | null;
   prov_status: StaffStatus | null;
   prov_state: string | null;
+  prov_phone: string | null;
   email: string | null; // Joined from profiles
 }
 

@@ -25,6 +25,7 @@ export function useStaff(options: UseStaffOptions = {}) {
           prov_name_for_clients,
           prov_status,
           prov_state,
+          prov_phone,
           profiles!inner (
             email
           )
@@ -66,6 +67,7 @@ export function useStaff(options: UseStaffOptions = {}) {
           prov_name_for_clients: staff.prov_name_for_clients,
           prov_status: staff.prov_status as StaffStatus | null,
           prov_state: staff.prov_state,
+          prov_phone: staff.prov_phone,
           email: profiles?.email ?? null,
         };
       });
