@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -8,6 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
 import { getClientDisplayName, getTherapistDisplayName } from '@/lib/crm/status-config';
 import type { CrmClient } from '@/lib/crm/types';
@@ -18,6 +19,7 @@ interface ClientTableProps {
   clients: CrmClient[];
   isLoading: boolean;
   onClientClick: (clientId: string) => void;
+  onQuickView?: (client: CrmClient) => void;
   selectedClientIds?: Set<string>;
   onSelectionChange?: (clientId: string, selected: boolean) => void;
   onSelectAll?: (selected: boolean) => void;
@@ -27,6 +29,7 @@ export function ClientTable({
   clients,
   isLoading,
   onClientClick,
+  onQuickView,
   selectedClientIds = new Set(),
   onSelectionChange,
   onSelectAll,
@@ -84,6 +87,7 @@ export function ClientTable({
             <TableHead>Status</TableHead>
             <TableHead>State</TableHead>
             <TableHead>Therapist</TableHead>
+            <TableHead className="w-[50px]"></TableHead>
             <TableHead>Last Updated</TableHead>
           </TableRow>
         </TableHeader>
@@ -119,6 +123,22 @@ export function ClientTable({
               <TableCell>{client.pat_state || '—'}</TableCell>
               <TableCell className="text-muted-foreground">
                 {getTherapistDisplayName(client.primary_staff)}
+              </TableCell>
+              <TableCell>
+                {onQuickView && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onQuickView(client);
+                    }}
+                    title="Quick view"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                )}
               </TableCell>
               <TableCell className="text-muted-foreground">
                 {formatDistanceToNow(new Date(client.updated_at), { addSuffix: true })}

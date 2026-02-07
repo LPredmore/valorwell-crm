@@ -7,6 +7,7 @@ import { useClientsByStatus } from '@/hooks/crm/useClients';
 import { ClientKanban } from '@/components/crm/clients/ClientKanban';
 import { ClientTable } from '@/components/crm/clients/ClientTable';
 import { ClientFilters } from '@/components/crm/clients/ClientFilters';
+import { ClientQuickProfile } from '@/components/crm/clients/ClientQuickProfile';
 import { BulkActionBar } from '@/components/crm/clients/BulkActionBar';
 import { BulkComposeDialog } from '@/components/crm/bulk/BulkComposeDialog';
 import { BulkProgressModal } from '@/components/crm/bulk/BulkProgressModal';
@@ -42,6 +43,10 @@ export default function CrmClients() {
   const [smsComposeDialogOpen, setSmsComposeDialogOpen] = useState(false);
   const [smsProgressModalOpen, setSmsProgressModalOpen] = useState(false);
   const [activeBulkSmsId, setActiveBulkSmsId] = useState<string | null>(null);
+
+  // Quick profile sheet state
+  const [quickProfileClient, setQuickProfileClient] = useState<CrmClient | null>(null);
+  const [quickProfileOpen, setQuickProfileOpen] = useState(false);
 
   const { data: clients, isLoading, clientsByStatus } = useClientsByStatus({ filters });
   const { createBulkSend } = useBulkSend();
@@ -84,6 +89,12 @@ export default function CrmClients() {
 
   const handleClearSelection = useCallback(() => {
     setSelectedClientIds(new Set());
+  }, []);
+
+  // Quick profile handlers
+  const handleQuickView = useCallback((client: CrmClient) => {
+    setQuickProfileClient(client);
+    setQuickProfileOpen(true);
   }, []);
 
   // Email bulk handlers
@@ -192,6 +203,7 @@ export default function CrmClients() {
             clients={clients || []}
             isLoading={isLoading}
             onClientClick={handleClientClick}
+            onQuickView={handleQuickView}
             selectedClientIds={selectedClientIds}
             onSelectionChange={handleSelectionChange}
             onSelectAll={handleSelectAll}
@@ -245,6 +257,13 @@ export default function CrmClients() {
         recipientCount={bulkSmsStatus?.recipientCount ?? selectedClientIds.size}
         sentCount={bulkSmsStatus?.sentCount ?? 0}
         failedCount={bulkSmsStatus?.failedCount ?? 0}
+      />
+
+      {/* Quick Profile Sheet */}
+      <ClientQuickProfile
+        client={quickProfileClient}
+        open={quickProfileOpen}
+        onOpenChange={setQuickProfileOpen}
       />
     </div>
   );
