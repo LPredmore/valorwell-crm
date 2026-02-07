@@ -13,6 +13,7 @@ import { BulkComposeDialog } from '@/components/crm/bulk/BulkComposeDialog';
 import { BulkProgressModal } from '@/components/crm/bulk/BulkProgressModal';
 import { SmsComposeDialog } from '@/components/crm/bulk/SmsComposeDialog';
 import { SmsProgressModal } from '@/components/crm/bulk/SmsProgressModal';
+import { EnrollInCampaignDialog } from '@/components/crm/campaigns/EnrollInCampaignDialog';
 import { useBulkSend } from '@/hooks/crm/useBulkSend';
 import { useBulkSendStatus } from '@/hooks/crm/useBulkSendStatus';
 import { useBulkSms } from '@/hooks/crm/useBulkSms';
@@ -43,6 +44,9 @@ export default function CrmClients() {
   const [smsComposeDialogOpen, setSmsComposeDialogOpen] = useState(false);
   const [smsProgressModalOpen, setSmsProgressModalOpen] = useState(false);
   const [activeBulkSmsId, setActiveBulkSmsId] = useState<string | null>(null);
+
+  // Campaign enrollment dialog state
+  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
 
   // Quick profile sheet state
   const [quickProfileClient, setQuickProfileClient] = useState<CrmClient | null>(null);
@@ -154,6 +158,15 @@ export default function CrmClients() {
     }
   };
 
+  // Campaign enrollment handlers
+  const handleOpenEnrollDialog = () => {
+    setEnrollDialogOpen(true);
+  };
+
+  const handleEnrollSuccess = () => {
+    setSelectedClientIds(new Set());
+  };
+
   // Clear selection when switching views
   const handleViewChange = (v: string) => {
     setView(v as 'kanban' | 'table');
@@ -218,6 +231,7 @@ export default function CrmClients() {
           selectedCount={selectedClientIds.size}
           onSendEmail={handleOpenCompose}
           onSendSms={handleOpenSmsCompose}
+          onEnrollCampaign={handleOpenEnrollDialog}
           onClear={handleClearSelection}
         />
       )}
@@ -258,6 +272,14 @@ export default function CrmClients() {
         recipientCount={bulkSmsStatus?.recipientCount ?? selectedClientIds.size}
         sentCount={bulkSmsStatus?.sentCount ?? 0}
         failedCount={bulkSmsStatus?.failedCount ?? 0}
+      />
+
+      {/* Campaign Enrollment Dialog */}
+      <EnrollInCampaignDialog
+        open={enrollDialogOpen}
+        onOpenChange={setEnrollDialogOpen}
+        clientIds={Array.from(selectedClientIds)}
+        onSuccess={handleEnrollSuccess}
       />
 
       {/* Quick Profile Sheet */}

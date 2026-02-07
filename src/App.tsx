@@ -15,6 +15,7 @@ import CrmInbox from "./pages/crm/Inbox";
 import CrmStaff from "./pages/crm/Staff";
 import CrmCampaigns from "./pages/crm/Campaigns";
 import CrmCampaignEditor from "./pages/crm/CampaignEditor";
+import CrmCampaignEnrollments from "./pages/crm/CampaignEnrollments";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="staff" element={<CrmStaff />} />
             <Route path="campaigns" element={<CrmCampaigns />} />
             <Route path="campaigns/:id" element={<CrmCampaignEditor />} />
+            <Route path="campaigns/:id/enrollments" element={<CrmCampaignEnrollments />} />
             <Route path="inbox" element={<CrmInbox />} />
             <Route path="settings" element={<CrmSettings />} />
           </Route>
