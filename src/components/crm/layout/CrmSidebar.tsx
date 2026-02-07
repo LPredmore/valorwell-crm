@@ -6,7 +6,8 @@ import {
   Settings, 
   LayoutDashboard,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Megaphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,11 @@ const navItems: NavItem[] = [
     label: 'Inbox',
     href: '/crm/inbox',
     icon: Inbox,
+  },
+  {
+    label: 'Campaigns',
+    href: '/crm/campaigns',
+    icon: Megaphone,
   },
   {
     label: 'Staff',
