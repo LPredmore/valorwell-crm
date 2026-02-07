@@ -13,9 +13,10 @@ interface ClientKanbanProps {
   clientsByStatus: Record<PatStatus, CrmClient[]>;
   isLoading: boolean;
   onClientClick: (clientId: string) => void;
+  onQuickView: (client: CrmClient) => void;
 }
 
-export function ClientKanban({ clientsByStatus, isLoading, onClientClick }: ClientKanbanProps) {
+export function ClientKanban({ clientsByStatus, isLoading, onClientClick, onQuickView }: ClientKanbanProps) {
   const [activeClient, setActiveClient] = useState<CrmClient | null>(null);
   const { visibleStatuses, isLoading: configLoading } = useKanbanConfig();
 
@@ -77,15 +78,16 @@ export function ClientKanban({ clientsByStatus, isLoading, onClientClick }: Clie
             const clients = clientsByStatus[status] || [];
             const config = getStatusConfig(status);
 
-            return (
-              <ClientKanbanColumn
-                key={status}
-                status={status}
-                config={config}
-                clients={clients}
-                onClientClick={onClientClick}
-              />
-            );
+              return (
+                <ClientKanbanColumn
+                  key={status}
+                  status={status}
+                  config={config}
+                  clients={clients}
+                  onClientClick={onClientClick}
+                  onQuickView={onQuickView}
+                />
+              );
           })}
 
           <DragOverlay>

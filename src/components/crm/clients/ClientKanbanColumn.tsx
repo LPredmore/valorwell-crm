@@ -11,9 +11,10 @@ interface ClientKanbanColumnProps {
   config: StatusConfig;
   clients: CrmClient[];
   onClientClick: (clientId: string) => void;
+  onQuickView: (client: CrmClient) => void;
 }
 
-export function ClientKanbanColumn({ status, config, clients, onClientClick }: ClientKanbanColumnProps) {
+export function ClientKanbanColumn({ status, config, clients, onClientClick, onQuickView }: ClientKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
   });
@@ -51,7 +52,8 @@ export function ClientKanbanColumn({ status, config, clients, onClientClick }: C
               <ClientKanbanCard
                 key={client.id}
                 client={client}
-                onClick={() => onClientClick(client.id)}
+                onClick={() => onQuickView(client)}
+                onDoubleClick={() => onClientClick(client.id)}
               />
             ))}
             {clients.length === 0 && (
