@@ -21,8 +21,6 @@ interface SmsComposeDialogProps {
   recipientLabel?: 'client' | 'staff member';
 }
 
-const SMS_SEGMENT_LENGTH = 160;
-
 export function SmsComposeDialog({
   open,
   onOpenChange,
@@ -48,9 +46,6 @@ export function SmsComposeDialog({
   };
 
   const isValid = body.trim().length > 0;
-  const characterCount = body.length;
-  const segmentCount = Math.ceil(characterCount / SMS_SEGMENT_LENGTH) || 1;
-  const isMultiSegment = characterCount > SMS_SEGMENT_LENGTH;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -66,9 +61,8 @@ export function SmsComposeDialog({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="sms-body">Message</Label>
-              <span className={`text-xs ${isMultiSegment ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
-                {characterCount} / {SMS_SEGMENT_LENGTH} characters
-                {isMultiSegment && ` (${segmentCount} segments)`}
+              <span className="text-xs text-muted-foreground">
+                {body.length} characters
               </span>
             </div>
             <Textarea
@@ -80,11 +74,6 @@ export function SmsComposeDialog({
               disabled={isSending}
               className="resize-none"
             />
-            {isMultiSegment && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Messages over 160 characters will be split into multiple segments.
-              </p>
-            )}
           </div>
         </div>
 
