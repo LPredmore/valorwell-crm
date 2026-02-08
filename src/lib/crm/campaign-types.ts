@@ -10,6 +10,8 @@ export interface CrmCampaign {
   send_window_start: string; // time format HH:MM:SS
   send_window_end: string;
   default_timezone: string;
+  on_complete_action: 'do_nothing' | 'change_status';
+  on_complete_status: string | null;
   created_by_profile_id: string | null;
   created_at: string;
   updated_at: string;
@@ -92,6 +94,8 @@ export interface CampaignFormData {
   send_window_start: string;
   send_window_end: string;
   default_timezone: string;
+  on_complete_action: 'do_nothing' | 'change_status';
+  on_complete_status: string | null;
 }
 
 export interface CampaignStepFormData {
@@ -115,6 +119,12 @@ export const TIMEZONE_OPTIONS = [
   { value: 'America/Phoenix', label: 'Arizona (MST)' },
   { value: 'America/Anchorage', label: 'Alaska Time (AKT)' },
   { value: 'Pacific/Honolulu', label: 'Hawaii Time (HST)' },
+] as const;
+
+// Completion action options
+export const COMPLETION_ACTION_OPTIONS = [
+  { value: 'do_nothing', label: 'Do Nothing' },
+  { value: 'change_status', label: 'Change Client Status' },
 ] as const;
 
 // Personalization variables available in templates
