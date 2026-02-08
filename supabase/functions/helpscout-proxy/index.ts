@@ -809,10 +809,60 @@ Deno.serve(async (req) => {
 async function handleWebhook(req: Request): Promise<Response> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const webhookSecret = Deno.env.get("HELPSCOUT_WEBHOOK_SECRET");
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const payload = await req.json();
+    // Get raw body for signature validation
+    const rawBody = await req.text();
+    
+    // Validate signature if secret is configured
+    if (webhookSecret) {
+      const signature = req.headers.get("X-HelpScout-Signature");
+      
+      if (!signature) {
+        console.error("Missing X-HelpScout-Signature header");
+        return new Response(JSON.stringify({ error: "Missing signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Compute HMAC-SHA1 of body using secret
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(webhookSecret),
+        { name: "HMAC", hash: "SHA-1" },
+        false,
+        ["sign"]
+      );
+      const signatureBytes = await crypto.subtle.sign(
+        "HMAC",
+        key,
+        encoder.encode(rawBody)
+      );
+      
+      // Convert to Base64 for comparison
+      const computedSignature = btoa(
+        String.fromCharCode(...new Uint8Array(signatureBytes))
+      );
+
+      if (computedSignature !== signature) {
+        console.error("Invalid webhook signature");
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      console.log("Webhook signature validated successfully");
+    } else {
+      console.warn("HELPSCOUT_WEBHOOK_SECRET not configured - skipping signature validation");
+    }
+
+    // Parse the body (we already read it as text, so parse manually)
+    const payload = JSON.parse(rawBody);
     console.log("HelpScout webhook received:", JSON.stringify(payload).substring(0, 500));
 
     // HelpScout sends different event types - we care about customer replies
