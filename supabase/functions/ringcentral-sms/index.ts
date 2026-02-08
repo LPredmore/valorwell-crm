@@ -431,34 +431,35 @@ async function handleInboundSms(req: Request): Promise<Response> {
     });
 
     // Log the inbound SMS to the database for visibility in Communications UI
+    // ALWAYS log, even if no client match (for audit trail and manual association later)
     let loggedSmsId: string | null = null;
     const matchedClient = matchingClients.length > 0 ? matchingClients[0] : null;
 
-    if (matchedClient) {
-      // Log with client association
-      const { data: insertedLog, error: logError } = await supabase
-        .from('crm_inbound_sms_logs')
-        .insert({
-          tenant_id: matchedClient.tenant_id,
-          client_id: matchedClient.id,
-          from_phone: phoneResult.normalized!,
-          to_phone: toNumber || '',
-          message_body: messageBody,
-          ringcentral_message_id: messageId,
-          received_at: new Date().toISOString(),
-        })
-        .select('id')
-        .single();
+    // Determine tenant_id: use matched client's tenant, or fall back to default
+    const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+    const tenantIdForLog = matchedClient?.tenant_id || DEFAULT_TENANT_ID;
 
-      if (logError) {
-        // Don't fail the webhook, just log the error
-        console.error('Failed to log inbound SMS:', logError);
-      } else {
-        loggedSmsId = insertedLog?.id || null;
-        console.log(`Logged inbound SMS with id: ${loggedSmsId}`);
-      }
+    const { data: insertedLog, error: logError } = await supabase
+      .from('crm_inbound_sms_logs')
+      .insert({
+        tenant_id: tenantIdForLog,
+        client_id: matchedClient?.id || null,
+        from_phone: phoneResult.normalized!,
+        to_phone: toNumber || '',
+        message_body: messageBody,
+        ringcentral_message_id: messageId,
+        received_at: new Date().toISOString(),
+        is_read: false,
+      })
+      .select('id')
+      .single();
+
+    if (logError) {
+      // Don't fail the webhook, just log the error
+      console.error('Failed to log inbound SMS:', logError);
     } else {
-      console.log('No client found for phone number, SMS not logged to database');
+      loggedSmsId = insertedLog?.id || null;
+      console.log(`Logged inbound SMS with id: ${loggedSmsId}, client_id: ${matchedClient?.id || 'null'}`);
     }
 
     // Check for active campaign enrollments for any matching client

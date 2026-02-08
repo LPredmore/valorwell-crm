@@ -1,4 +1,4 @@
-import { Loader2, MessageSquare, User } from 'lucide-react';
+import { Loader2, MessageSquare, User, Circle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -69,12 +69,19 @@ export function SmsConversationList({
               onClick={() => onSelect(thread)}
             >
               <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center relative">
                   <User className="h-4 w-4 text-muted-foreground" />
+                  {thread.hasUnread && (
+                    <Circle className="absolute -top-0.5 -right-0.5 h-3 w-3 fill-primary text-primary" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className={cn('text-sm font-medium truncate', hasInbound && 'text-primary')}>
+                    <span className={cn(
+                      'text-sm truncate',
+                      thread.hasUnread ? 'font-semibold' : 'font-medium',
+                      hasInbound && 'text-primary'
+                    )}>
                       {thread.client_name || thread.phone}
                     </span>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -84,7 +91,10 @@ export function SmsConversationList({
                   {thread.client_name && (
                     <p className="text-xs text-muted-foreground truncate">{thread.phone}</p>
                   )}
-                  <p className="text-sm text-muted-foreground truncate mt-0.5">
+                  <p className={cn(
+                    'text-sm truncate mt-0.5',
+                    thread.hasUnread ? 'text-foreground font-medium' : 'text-muted-foreground'
+                  )}>
                     {lastMessage?.direction === 'inbound' ? '← ' : '→ '}
                     {lastMessage?.message || '(No message)'}
                   </p>

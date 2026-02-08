@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useHelpScoutSettings } from '@/hooks/crm/useHelpScoutSettings';
 import { useConversations } from '@/hooks/crm/useConversations';
-import { useSmsConversations, SmsThread } from '@/hooks/crm/useSmsConversations';
+import { useSmsConversations, SmsThread, SmsFilter } from '@/hooks/crm/useSmsConversations';
+import { useMarkSmsRead } from '@/hooks/crm/useMarkSmsRead';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,6 +29,7 @@ export default function Inbox() {
   
   // SMS-specific state
   const [selectedSmsThread, setSelectedSmsThread] = useState<SmsThread | null>(null);
+  const [smsFilter, setSmsFilter] = useState<SmsFilter>('all');
 
   // Inbox always shows active only; Sent allows status filtering
   const effectiveStatus = activeView === 'inbox' ? 'active' : sentStatusFilter;
@@ -48,7 +50,18 @@ export default function Inbox() {
     isLoading: smsLoading,
     isError: smsError,
     refetch: refetchSms,
-  } = useSmsConversations();
+  } = useSmsConversations(smsFilter);
+
+  const markSmsRead = useMarkSmsRead();
+
+  // Mark messages as read when selecting a thread
+  const handleSelectSmsThread = (thread: SmsThread) => {
+    setSelectedSmsThread(thread);
+    // Mark as read if thread has unread messages
+    if (thread.hasUnread) {
+      markSmsRead.mutate(thread.phone);
+    }
+  };
 
   if (settingsLoading) {
     return (
@@ -155,15 +168,33 @@ export default function Inbox() {
           <>
             {/* SMS List - Left Panel */}
             <div className="w-80 border-r flex flex-col">
-              <div className="p-3 border-b">
+              <div className="p-3 border-b space-y-3">
                 <h3 className="font-medium text-sm text-muted-foreground">SMS Conversations</h3>
+                <div className="flex gap-1">
+                  <Button
+                    variant={smsFilter === 'new' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setSmsFilter('new')}
+                  >
+                    New
+                  </Button>
+                  <Button
+                    variant={smsFilter === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setSmsFilter('all')}
+                  >
+                    All
+                  </Button>
+                </div>
               </div>
               <SmsConversationList
                 threads={smsThreads || []}
                 isLoading={smsLoading}
                 isError={smsError}
                 selectedPhone={selectedSmsThread?.phone ?? null}
-                onSelect={setSelectedSmsThread}
+                onSelect={handleSelectSmsThread}
                 onRetry={() => refetchSms()}
               />
             </div>
