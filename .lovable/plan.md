@@ -1,275 +1,123 @@
 
-
-# Plan: End of Campaign Action - Automatic Status Change
+# Plan: Add HelpScout Webhook Signature Validation
 
 ## Overview
 
-Add the ability for campaigns to automatically change a client's status upon completion. This feature integrates with the existing campaign scheduler edge function and requires schema changes, UI updates, and backend logic modifications.
+Now that you've added the `HELPSCOUT_WEBHOOK_SECRET` to Supabase, I need to update the `handleWebhook` function to validate incoming requests using HelpScout's signature verification.
 
 ---
 
-## Technical Decision: Store Configuration on the Campaign, Execute in Edge Function
+## How HelpScout Webhook Signatures Work
 
-**Why this approach is correct:**
+HelpScout sends a signature in the `X-HelpScout-Signature` header. This signature is:
+1. A Base64-encoded HMAC-SHA1 hash of the raw request body
+2. Using your secret key as the HMAC key
 
-1. **Single source of truth**: The campaign table already stores all campaign behavior configuration (send windows, weekdays_only, timezone). Adding completion behavior here follows the established pattern.
-
-2. **Edge function is the right execution point**: The `campaign-scheduler` edge function already handles the completion transition (lines 702-713). This is the natural place to apply side effects - it runs with service role permissions and already has access to all required data.
-
-3. **Activity logging for auditability**: The system already logs `status_change` events in `crm_activity_events`. We'll use this same pattern but with metadata indicating the change was triggered by campaign completion - this maintains a clear audit trail.
-
-4. **No new tables or complexity**: This is a simple additive change - two columns on an existing CRM table, matching the project constraint that CRM changes must be additive only.
+To validate, we compute the same hash and compare.
 
 ---
 
-## Database Changes
+## Changes Required
 
-Add two columns to `crm_campaigns`:
+### File: `supabase/functions/helpscout-proxy/index.ts`
 
-```sql
-ALTER TABLE crm_campaigns 
-ADD COLUMN on_complete_action TEXT NOT NULL DEFAULT 'do_nothing';
+Update the `handleWebhook` function (lines 809-928) to:
 
-ALTER TABLE crm_campaigns 
-ADD COLUMN on_complete_status TEXT DEFAULT NULL;
-
--- Add constraint to validate action values
-ALTER TABLE crm_campaigns 
-ADD CONSTRAINT crm_campaigns_on_complete_action_check 
-CHECK (on_complete_action IN ('do_nothing', 'change_status'));
-```
-
-**Design notes:**
-- `on_complete_action` defaults to `'do_nothing'` for backward compatibility with existing campaigns
-- `on_complete_status` is nullable - only used when action is `'change_status'`
-- No foreign key to a statuses table because `pat_status` is stored as TEXT in the clients table (it's an application-level enum, not a database enum)
-
----
-
-## Files to Modify
-
-### 1. `src/lib/crm/campaign-types.ts`
-
-Add types and constants for the completion action:
+1. **Read the raw request body first** (before parsing JSON)
+2. **Get the signature header** from `X-HelpScout-Signature`
+3. **Compute HMAC-SHA1** of the raw body using the secret
+4. **Compare signatures** - reject if they don't match
+5. **Then parse the JSON** and continue with existing logic
 
 ```typescript
-// Add to CrmCampaign interface
-export interface CrmCampaign {
-  // ... existing fields ...
-  on_complete_action: 'do_nothing' | 'change_status';
-  on_complete_status: string | null;
-}
+async function handleWebhook(req: Request): Promise<Response> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const webhookSecret = Deno.env.get("HELPSCOUT_WEBHOOK_SECRET");
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Add to CampaignFormData interface
-export interface CampaignFormData {
-  // ... existing fields ...
-  on_complete_action: 'do_nothing' | 'change_status';
-  on_complete_status: string | null;
-}
-
-// Add constant for dropdown options
-export const COMPLETION_ACTION_OPTIONS = [
-  { value: 'do_nothing', label: 'Do Nothing' },
-  { value: 'change_status', label: 'Change Client Status' },
-] as const;
-```
-
-### 2. `src/pages/crm/CampaignEditor.tsx`
-
-Add a "Completion Settings" card in the left column (after Schedule Settings):
-
-**State changes:**
-- Initialize `on_complete_action: 'do_nothing'` and `on_complete_status: null` in `formData`
-- Load existing values from campaign when editing
-
-**UI additions:**
-- New Card with title "Completion Settings"
-- Select dropdown for action type (Do Nothing / Change Client Status)
-- Conditional: When "Change Client Status" is selected, show a second dropdown with all PatStatus values from `ALL_STATUSES`
-- Helper text explaining when the action triggers
-
-### 3. `src/hooks/crm/useCampaigns.ts`
-
-Update mutations to include new fields:
-
-**`useCreateCampaign`:**
-```typescript
-.insert({
-  // ... existing fields ...
-  on_complete_action: formData.on_complete_action,
-  on_complete_status: formData.on_complete_status,
-})
-```
-
-**`useUpdateCampaign`:**
-```typescript
-.update({
-  // ... existing fields ...
-  on_complete_action: formData.on_complete_action,
-  on_complete_status: formData.on_complete_status,
-})
-```
-
-### 4. `supabase/functions/campaign-scheduler/index.ts`
-
-Modify the `scheduleNextStep` function to apply status changes on completion:
-
-**Update Campaign interface (line 57-65):**
-```typescript
-interface Campaign {
-  id: string;
-  name: string;
-  is_active: boolean;
-  weekdays_only: boolean;
-  send_window_start: string;
-  send_window_end: string;
-  default_timezone: string;
-  on_complete_action: string | null;
-  on_complete_status: string | null;
-}
-```
-
-**Modify completion logic (after line 712):**
-```typescript
-if (!nextStep) {
-  // No more steps - mark enrollment as completed
-  console.log(`Enrollment ${enrollment.id} completed all steps`);
-  await supabase
-    .from('crm_campaign_enrollments')
-    .update({
-      status: 'completed',
-      completed_at: new Date().toISOString(),
-      current_step: currentStep.step_order,
-    })
-    .eq('id', enrollment.id);
-
-  // Apply completion action if configured
-  if (campaign.on_complete_action === 'change_status' && campaign.on_complete_status) {
-    // Get current client status for activity log
-    const { data: clientData } = await supabase
-      .from('clients')
-      .select('pat_status')
-      .eq('id', enrollment.client_id)
-      .single();
-
-    const oldStatus = clientData?.pat_status || null;
-    const newStatus = campaign.on_complete_status;
-
-    // Only update if status is actually different
-    if (oldStatus !== newStatus) {
-      // Update client status
-      const { error: updateError } = await supabase
-        .from('clients')
-        .update({ pat_status: newStatus })
-        .eq('id', enrollment.client_id);
-
-      if (updateError) {
-        console.error(`Failed to update client status on campaign completion:`, updateError);
-      } else {
-        // Log activity event for audit trail
-        await supabase
-          .from('crm_activity_events')
-          .insert({
-            tenant_id: tenantId,
-            client_id: enrollment.client_id,
-            event_type: 'status_change',
-            old_value: oldStatus,
-            new_value: newStatus,
-            created_by_profile_id: null, // System-triggered, no user
-            metadata: {
-              triggered_by: 'campaign_completion',
-              campaign_id: campaign.id,
-              campaign_name: campaign.name,
-            },
-          });
-
-        console.log(`Changed client ${enrollment.client_id} status from "${oldStatus}" to "${newStatus}" on campaign "${campaign.name}" completion`);
+  try {
+    // Get raw body for signature validation
+    const rawBody = await req.text();
+    
+    // Validate signature if secret is configured
+    if (webhookSecret) {
+      const signature = req.headers.get("X-HelpScout-Signature");
+      
+      if (!signature) {
+        console.error("Missing X-HelpScout-Signature header");
+        return new Response(JSON.stringify({ error: "Missing signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-    }
-  }
 
-  return;
+      // Compute HMAC-SHA1 of body using secret
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(webhookSecret),
+        { name: "HMAC", hash: "SHA-1" },
+        false,
+        ["sign"]
+      );
+      const signatureBytes = await crypto.subtle.sign(
+        "HMAC",
+        key,
+        encoder.encode(rawBody)
+      );
+      
+      // Convert to Base64 for comparison
+      const computedSignature = btoa(
+        String.fromCharCode(...new Uint8Array(signatureBytes))
+      );
+
+      if (computedSignature !== signature) {
+        console.error("Invalid webhook signature");
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      console.log("Webhook signature validated successfully");
+    } else {
+      console.warn("HELPSCOUT_WEBHOOK_SECRET not configured - skipping signature validation");
+    }
+
+    // Parse the body (we already read it as text, so parse manually)
+    const payload = JSON.parse(rawBody);
+    
+    // ... rest of existing logic unchanged ...
+  }
 }
 ```
 
-**Also update the campaign query in `processCampaignMessages` (line 428-431):**
-Add `on_complete_action, on_complete_status` to the select query for campaigns.
-
 ---
 
-## UI Wireframe
+## Security Considerations
 
-The Campaign Editor will have a new card in the left column:
-
-```
-+-------------------------------------------+
-| Completion Settings                       |
-| What happens when a client finishes       |
-| all campaign steps                        |
-+-------------------------------------------+
-| When campaign completes:                  |
-| [v] Do Nothing                            |
-|     -------------------------             |
-|     | Do Nothing            |             |
-|     | Change Client Status  |             |
-|     -------------------------             |
-|                                           |
-| (If "Change Client Status" selected:)     |
-|                                           |
-| Set status to:                            |
-| [v] Unresponsive - Cold                   |
-|     -------------------------             |
-|     | Interested            |             |
-|     | New                   |             |
-|     | Matching              |             |
-|     | ... (all statuses)    |             |
-|     -------------------------             |
-+-------------------------------------------+
-```
-
----
-
-## Data Flow
-
-```text
-1. User creates/edits campaign in CampaignEditor
-2. Selects "Change Client Status" and picks target status
-3. Campaign saved with on_complete_action + on_complete_status
-
-4. Client enrolls in campaign
-5. Campaign scheduler processes steps over time
-6. Final step completes -> scheduleNextStep() called
-7. No next step found -> enrollment marked "completed"
-8. If on_complete_action === 'change_status':
-   a. Fetch client's current status
-   b. Update clients.pat_status
-   c. Insert crm_activity_events record with campaign metadata
-9. Activity shows in client's timeline as system-triggered status change
-```
+- **Signature validation runs first** before any database operations
+- **If secret is not set**, logs a warning but still processes (graceful degradation during setup)
+- **401 status returned** for invalid/missing signatures (standard for auth failures)
+- Uses Web Crypto API (available in Deno) for secure HMAC computation
 
 ---
 
 ## Summary
 
-| Component | Change |
-|-----------|--------|
-| Database | Add `on_complete_action` and `on_complete_status` columns to `crm_campaigns` |
-| `campaign-types.ts` | Add fields to interfaces + `COMPLETION_ACTION_OPTIONS` constant |
-| `CampaignEditor.tsx` | Add "Completion Settings" card with dropdowns |
-| `useCampaigns.ts` | Include new fields in create/update mutations |
-| `campaign-scheduler` | Apply status change + log activity when campaign completes |
+| Aspect | Change |
+|--------|--------|
+| File | `supabase/functions/helpscout-proxy/index.ts` |
+| Function | `handleWebhook` (lines 809-928) |
+| Addition | HMAC-SHA1 signature validation using `HELPSCOUT_WEBHOOK_SECRET` |
+| Behavior | Rejects requests with invalid/missing signatures (401) |
 
 ---
 
-## Why This Is The Right Approach
+## After Implementation
 
-1. **Follows existing patterns**: Status changes already log to `crm_activity_events` with old/new values. Campaign settings already live on the campaign table. Edge function already handles completion.
-
-2. **Additive-only database change**: Two new columns on a CRM table. No modification to shared production tables.
-
-3. **Auditable**: The activity log captures the trigger source (`campaign_completion`) so it's clear this wasn't a manual change. The campaign ID and name are preserved in metadata.
-
-4. **Backward compatible**: Defaults to `'do_nothing'`, so existing campaigns continue to work unchanged.
-
-5. **Fail-safe**: If the status update fails, the enrollment still completes successfully - we log the error but don't break the flow.
+Once deployed, you can test by:
+1. Sending a test webhook from HelpScout
+2. Checking the Edge Function logs to confirm "Webhook signature validated successfully"
 
