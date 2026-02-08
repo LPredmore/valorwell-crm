@@ -28,7 +28,7 @@ const navItems: NavItem[] = [
     icon: Users,
   },
   {
-    label: 'Inbox',
+    label: 'Communications',
     href: '/crm/inbox',
     icon: Inbox,
   },

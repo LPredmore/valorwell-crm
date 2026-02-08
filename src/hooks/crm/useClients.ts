@@ -53,7 +53,7 @@ export function useClients(options: UseClientsOptions = {}) {
       // Apply search filter
       if (filters?.search && filters.search.trim()) {
         const searchTerm = `%${filters.search.trim()}%`;
-        query = query.or(`pat_name_f.ilike.${searchTerm},pat_name_l.ilike.${searchTerm},pat_name_preferred.ilike.${searchTerm},email.ilike.${searchTerm}`);
+        query = query.or(`pat_name_f.ilike.${searchTerm},pat_name_l.ilike.${searchTerm},pat_name_preferred.ilike.${searchTerm},email.ilike.${searchTerm},phone.ilike.${searchTerm}`);
       }
 
       // Apply tags filter
