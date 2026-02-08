@@ -186,7 +186,8 @@ async function handleBulkSend(
             id,
             email,
             pat_name_f,
-            pat_name_l
+            pat_name_l,
+            pat_name_preferred
           )
         `)
         .eq("bulk_send_id", bulkSendId)
@@ -207,11 +208,12 @@ async function handleBulkSend(
           email: string | null;
           pat_name_f: string | null;
           pat_name_l: string | null;
+          pat_name_preferred: string | null;
         };
         return {
           id: r.id,
           email: clientData?.email ?? null,
-          firstName: clientData?.pat_name_f || '',
+          firstName: clientData?.pat_name_preferred || clientData?.pat_name_f || '',
           lastName: clientData?.pat_name_l || '',
           recipientTable: 'crm_bulk_send_recipients',
         };

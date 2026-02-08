@@ -210,7 +210,8 @@ async function processBulkSms(bulkSmsId: string) {
           id,
           phone,
           pat_name_f,
-          pat_name_l
+          pat_name_l,
+          pat_name_preferred
         )
       `)
       .eq('bulk_sms_id', bulkSmsId)
@@ -219,11 +220,16 @@ async function processBulkSms(bulkSmsId: string) {
     if (clientError) {
       console.error('Failed to fetch client recipients:', clientError);
     } else {
-      recipients = (clientRecipients || []).map(r => ({
-        id: r.id,
-        phone: (r.client as any)?.phone || null,
-        name: `${(r.client as any)?.pat_name_f || ''} ${(r.client as any)?.pat_name_l || ''}`.trim() || 'Unknown',
-      }));
+      recipients = (clientRecipients || []).map(r => {
+        const client = r.client as any;
+        const firstName = client?.pat_name_preferred || client?.pat_name_f || '';
+        const lastName = client?.pat_name_l || '';
+        return {
+          id: r.id,
+          phone: client?.phone || null,
+          name: `${firstName} ${lastName}`.trim() || 'Unknown',
+        };
+      });
     }
   }
 
