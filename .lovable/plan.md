@@ -1,165 +1,183 @@
 
-# SMS Conversations Implementation Plan
+# Fix HelpScout Loading Flash - Implementation Plan
 
-## Current State (Verified Through Database Queries)
+## Problem Statement
 
-### What Actually Exists in the Database
+When the Inbox page loads, users briefly see a "HelpScout not connected" error card before the actual content appears. This happens because of a timing gap between authentication resolution and the HelpScout settings query.
 
-| Table | Records | Purpose |
-|-------|---------|---------|
-| `crm_campaign_step_logs` | **9 SMS records** (8 sent, 1 skipped) | Campaign automation SMS with full message content stored in joined `crm_campaign_steps.sms_body_text` |
-| `crm_bulk_sms_recipients` | **0 records** | Manual bulk SMS to clients (none sent yet) |
-| `crm_bulk_sms_staff_recipients` | 3 records | Staff test SMS (not client communications) |
-| `crm_inbound_sms_logs` | **0 records** | Inbound SMS storage (table created after Carson's test) |
+## Root Cause Analysis
 
-### Root Cause Analysis
-
-The `useSmsConversations.ts` hook currently queries:
-1. `crm_inbound_sms_logs` - Empty (logging was added after the webhook test)
-2. `crm_bulk_sms_recipients` - Empty (no manual bulk SMS to clients yet)
-
-It **does not query** `crm_campaign_step_logs`, which contains all 9 campaign SMS messages including the "New York Start" campaign messages sent to Nathalie DeVore, Joann Murphy, Carson Pritchett, and others.
-
----
-
-## Technical Decision: Unified Outbound SMS Query
-
-### The Right Approach
-
-Create a single, consolidated data source for all outbound SMS by querying **all three tables** that can contain client SMS:
-
-1. **`crm_campaign_step_logs`** - Campaign automation (primary source today)
-2. **`crm_bulk_sms_recipients`** - Manual bulk sends to clients
-3. **`crm_bulk_sms_staff_recipients`** - Excluded (staff messages are internal, not client communications)
-
-### Why This Is Correct
-
-- **Single Source of Truth**: The Communications hub should show all client-facing SMS regardless of origination method
-- **Future-Proof**: As manual bulk SMS is used more, it will automatically appear
-- **Consistent Data Model**: Both sources can be normalized to the same `SmsMessage` interface with direction, phone, message, timestamp, and client info
-- **No Schema Changes**: All required data already exists in these tables
-
----
-
-## Implementation Plan
-
-### Phase 1: Fix Outbound SMS Data Source
-
-**File: `src/hooks/crm/useSmsConversations.ts`**
-
-Add a third query to fetch campaign SMS from `crm_campaign_step_logs`:
+### The State Sequence (Current Behavior)
 
 ```text
-Query: crm_campaign_step_logs
-  WHERE channel = 'sms' 
-    AND status = 'sent'
-    AND tenant_id = currentTenant
-  JOIN crm_campaign_steps for sms_body_text
-  JOIN clients for phone and name
+Timeline:
+T0: Page mounts
+    - useCrmAuth: { isLoading: true, isAuthenticated: false, tenantId: '' }
+    - useHelpScoutSettings query: DISABLED (enabled = false && false)
+    - React Query returns: { isLoading: false, data: undefined }
+    - settingsLoading = false (query is idle, not loading)
+    - isConnected = false (settings is undefined)
+    
+T1: Auth check completes (~100-200ms)
+    - useCrmAuth: { isLoading: false, isAuthenticated: true, tenantId: 'xxx' }
+    - useHelpScoutSettings query: NOW ENABLED
+    - React Query starts fetch: { isLoading: true, data: undefined }
+    
+T2: Settings fetch completes (~50-100ms)
+    - settings = { connection_status: 'connected', ... }
+    - isConnected = true
+    - UI shows correct email view
 ```
 
-Normalize campaign SMS into the existing `SmsMessage` format:
-- `direction`: 'outbound'
-- `phone`: from joined client record
-- `message`: from `crm_campaign_steps.sms_body_text`
-- `timestamp`: from `sent_at`
-- `client_id` / `client_name`: from joined client
+### The Bug Location
 
-### Phase 2: Fix Inbound SMS Logging
-
-**File: `supabase/functions/ringcentral-sms/index.ts`**
-
-The current logic only logs inbound SMS when a client match is found (lines 437-462). This is problematic because:
-- Messages from unknown numbers are lost
-- Historical context is incomplete
-
-**Change**: Always log to `crm_inbound_sms_logs`, with `client_id = null` and a default tenant when no client match exists. This ensures:
-- Complete message history
-- Ability to manually associate messages later
-- Audit trail for compliance
-
-### Phase 3: Add Read/Unread State
-
-**Database Migration**: Add `is_read` column to `crm_inbound_sms_logs`
-
-```sql
-ALTER TABLE crm_inbound_sms_logs 
-ADD COLUMN is_read BOOLEAN NOT NULL DEFAULT false;
+**File: `src/pages/crm/Inbox.tsx` (lines 66-72)**
+```typescript
+if (settingsLoading) {
+  return <Loader2 ... />;
+}
 ```
 
-**UI Changes**:
-- Add toggle in SMS tab header: "New" | "All" (default to "New")
-- "New" filter shows threads with at least one unread inbound message
-- Clicking a thread marks all its inbound messages as read
-- Outbound-only threads always appear (they represent sent campaigns awaiting response)
+This check fails because `settingsLoading` is `false` when the query is disabled (before auth completes). The UI proceeds to render, and since `isConnected` is `false`, it shows the error card.
 
-### Phase 4: Update UI Components
+### Why React Query Behaves This Way
 
-**File: `src/pages/crm/Inbox.tsx`**
-- Add filter state: `smsFilter: 'new' | 'all'`
-- Default to 'new'
-- Pass filter to `useSmsConversations`
+React Query distinguishes between:
+- `isLoading: true` = "I am actively fetching data"
+- `isLoading: false` + `data: undefined` = "I haven't fetched yet / I'm disabled"
 
-**File: `src/hooks/crm/useSmsConversations.ts`**
-- Accept optional `filter` parameter
-- When `filter === 'new'`: only include threads where any inbound message has `is_read = false`
-- When `filter === 'all'`: include all threads
+The `enabled` option prevents the query from running, but React Query reports this as "not loading" rather than "waiting to load."
 
-**File: `src/components/crm/inbox/SmsConversationList.tsx`**
-- Add visual indicator for threads with unread messages (bold text, dot badge)
+## Technical Decision
 
-**New Hook: `src/hooks/crm/useMarkSmsRead.ts`**
-- Mutation to set `is_read = true` for all inbound messages in a thread
-- Called when user selects a thread
+**Add a composite loading state that accounts for auth resolution.**
 
----
+The fix is to ensure the loading spinner shows until we have **both**:
+1. Auth resolution completed (`useCrmAuth.isLoading === false`)
+2. HelpScout settings query completed (if auth succeeded)
+
+This is the correct approach because:
+- It's semantically accurate: we're still "loading" the information needed to render
+- It's minimal: no new hooks, no complex state machines
+- It's explicit: the condition clearly states what we're waiting for
+- It follows React Query best practices for dependent queries
+
+## Implementation
+
+### File: `src/hooks/crm/useHelpScoutSettings.ts`
+
+**Change**: Expose the auth loading state so consumers can check if the query is pending due to auth.
+
+```typescript
+export function useHelpScoutSettings() {
+  const { tenantId, isAuthenticated, isLoading: authLoading } = useCrmAuth();
+  // ... existing code ...
+
+  return {
+    settings,
+    isLoading,
+    error,
+    testConnection,
+    updateSettings,
+    isConnected: settings?.connection_status === 'connected',
+    // NEW: True when we're waiting for auth OR waiting for settings
+    isPending: authLoading || (isAuthenticated && !!tenantId && isLoading),
+  };
+}
+```
+
+**Why `isPending`?**
+- `authLoading` = waiting for user/role/tenant check
+- `isAuthenticated && !!tenantId && isLoading` = auth succeeded, now waiting for settings query
+- Together, this covers the entire initialization window
+
+### File: `src/pages/crm/Inbox.tsx`
+
+**Change**: Use the new `isPending` flag instead of `isLoading`.
+
+```typescript
+export default function Inbox() {
+  const { isPending, isConnected } = useHelpScoutSettings();
+  
+  // ... existing state declarations ...
+
+  if (isPending) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Now we can trust isConnected because:
+  // - Auth has completed
+  // - Settings query has completed (or we're not authenticated)
+  const showHelpScoutSetup = !isConnected && channelTab === 'email';
+  
+  // ... rest of component unchanged ...
+}
+```
+
+## Alternative Approaches Considered
+
+### Option A: Check auth state directly in Inbox.tsx
+```typescript
+const { isLoading: authLoading } = useCrmAuth();
+const { isLoading: settingsLoading, isConnected } = useHelpScoutSettings();
+
+if (authLoading || settingsLoading) {
+  return <Loader2 />;
+}
+```
+
+**Rejected because**: This duplicates the `useCrmAuth` hook call (it's already called inside `useHelpScoutSettings`), causing redundant auth checks and potential state sync issues.
+
+### Option B: Use `fetchStatus` from React Query
+```typescript
+const { fetchStatus } = useQuery({ ... });
+// fetchStatus === 'idle' when disabled
+```
+
+**Rejected because**: This requires understanding React Query internals and doesn't account for the auth loading state. The `isPending` abstraction is cleaner for consumers.
+
+### Option C: Default the email tab to show a skeleton
+```typescript
+if (settingsLoading || !settings) {
+  return <EmailSkeleton />;
+}
+```
+
+**Rejected because**: This would show a skeleton even when auth fails (user not logged in), which is misleading. The correct behavior is to wait for the full state to resolve.
 
 ## File Changes Summary
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/hooks/crm/useSmsConversations.ts` | Modify | Add `crm_campaign_step_logs` query, accept filter param |
-| `supabase/functions/ringcentral-sms/index.ts` | Modify | Log all inbound SMS regardless of client match |
-| `src/pages/crm/Inbox.tsx` | Modify | Add New/All toggle for SMS tab |
-| `src/components/crm/inbox/SmsConversationList.tsx` | Modify | Add unread visual indicators |
-| `src/hooks/crm/useMarkSmsRead.ts` | Create | Mutation to mark messages as read |
+| File | Action | Lines Changed |
+|------|--------|---------------|
+| `src/hooks/crm/useHelpScoutSettings.ts` | Modify | ~3 lines |
+| `src/pages/crm/Inbox.tsx` | Modify | ~2 lines |
 
-### Database Migration
+## Expected Behavior After Fix
 
-```sql
--- Add read status to inbound SMS
-ALTER TABLE crm_inbound_sms_logs 
-ADD COLUMN is_read BOOLEAN NOT NULL DEFAULT false;
-
--- Index for efficient filtering
-CREATE INDEX idx_crm_inbound_sms_is_read 
-ON crm_inbound_sms_logs(tenant_id, is_read) 
-WHERE is_read = false;
+```text
+Timeline:
+T0: Page mounts
+    - isPending = true (authLoading = true)
+    - UI shows spinner
+    
+T1: Auth completes
+    - isPending = true (authLoading = false, but settings isLoading = true)
+    - UI still shows spinner
+    
+T2: Settings fetch completes
+    - isPending = false
+    - isConnected = true
+    - UI shows email view immediately (no flash)
 ```
 
----
+## Testing
 
-## Implementation Order
-
-1. **Immediate Fix** (makes SMS appear):
-   - Update `useSmsConversations.ts` to query `crm_campaign_step_logs`
-   
-2. **Inbound Logging** (captures future messages):
-   - Update edge function to log all inbound SMS
-   
-3. **Read State** (enables New/All filter):
-   - Database migration for `is_read`
-   - Create `useMarkSmsRead` hook
-   - Add filter toggle to UI
-   - Add visual indicators for unread
-
----
-
-## Expected Outcome
-
-After implementation:
-- SMS tab shows all 8+ sent campaign messages from "New York Start"
-- Messages are grouped by client phone number into threads
-- New inbound messages (from webhook) appear immediately
-- "New" filter (default) highlights threads needing attention
-- "All" shows complete SMS history
+1. Hard refresh the Inbox page while logged in
+2. Verify spinner appears immediately
+3. Verify no "HelpScout not connected" flash occurs
+4. Verify email conversations load correctly after spinner
+5. Switch to SMS tab and back to Email - should work without flash
