@@ -4049,6 +4049,7 @@ export type Database = {
           created_at: string
           from_phone: string
           id: string
+          is_read: boolean
           message_body: string | null
           received_at: string
           ringcentral_message_id: string | null
@@ -4060,6 +4061,7 @@ export type Database = {
           created_at?: string
           from_phone: string
           id?: string
+          is_read?: boolean
           message_body?: string | null
           received_at?: string
           ringcentral_message_id?: string | null
@@ -4071,6 +4073,7 @@ export type Database = {
           created_at?: string
           from_phone?: string
           id?: string
+          is_read?: boolean
           message_body?: string | null
           received_at?: string
           ringcentral_message_id?: string | null

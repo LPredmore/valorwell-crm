@@ -11,6 +11,8 @@ export interface SmsMessage {
   client_id: string | null;
   client_name: string | null;
   status?: string;
+  is_read?: boolean;
+  source?: 'campaign' | 'bulk' | 'inbound';
 }
 
 export interface SmsThread {
@@ -19,13 +21,16 @@ export interface SmsThread {
   client_name: string | null;
   messages: SmsMessage[];
   lastMessageAt: string;
+  hasUnread: boolean;
 }
 
-export function useSmsConversations() {
+export type SmsFilter = 'new' | 'all';
+
+export function useSmsConversations(filter: SmsFilter = 'all') {
   const { tenantId, isAuthenticated } = useCrmAuth();
 
   return useQuery({
-    queryKey: ['crm-sms-conversations', tenantId],
+    queryKey: ['crm-sms-conversations', tenantId, filter],
     queryFn: async (): Promise<SmsThread[]> => {
       // Fetch inbound SMS
       const { data: inboundData, error: inboundError } = await supabase
@@ -36,6 +41,7 @@ export function useSmsConversations() {
           message_body,
           received_at,
           client_id,
+          is_read,
           client:client_id (
             pat_name_f,
             pat_name_l,
@@ -77,9 +83,46 @@ export function useSmsConversations() {
         console.error('Error fetching outbound SMS:', outboundError);
       }
 
+      // Fetch campaign SMS from crm_campaign_step_logs
+      const { data: campaignLogs, error: campaignError } = await supabase
+        .from('crm_campaign_step_logs')
+        .select(`
+          id,
+          status,
+          sent_at,
+          client_id,
+          step:step_id (
+            sms_body_text
+          ),
+          enrollment:enrollment_id (
+            tenant_id
+          ),
+          client:client_id (
+            id,
+            phone,
+            pat_name_f,
+            pat_name_l,
+            pat_name_preferred
+          )
+        `)
+        .eq('channel', 'sms')
+        .eq('status', 'sent')
+        .not('sent_at', 'is', null)
+        .order('sent_at', { ascending: false })
+        .limit(200);
+
+      if (campaignError) {
+        console.error('Error fetching campaign SMS:', campaignError);
+      }
+
       // Filter outbound to current tenant
       const filteredOutbound = (outboundRecipients || []).filter(
         (r: any) => r.bulk_sms?.tenant_id === tenantId
+      );
+
+      // Filter campaign SMS to current tenant
+      const filteredCampaign = (campaignLogs || []).filter(
+        (r: any) => r.enrollment?.tenant_id === tenantId
       );
 
       // Build messages list
@@ -98,10 +141,12 @@ export function useSmsConversations() {
           client_name: client
             ? [client.pat_name_preferred || client.pat_name_f, client.pat_name_l].filter(Boolean).join(' ')
             : null,
+          is_read: sms.is_read ?? false,
+          source: 'inbound',
         });
       }
 
-      // Add outbound messages
+      // Add bulk outbound messages
       for (const recipient of filteredOutbound) {
         const client = recipient.client as any;
         if (!client?.phone) continue;
@@ -115,6 +160,25 @@ export function useSmsConversations() {
           client_id: client.id,
           client_name: [client.pat_name_preferred || client.pat_name_f, client.pat_name_l].filter(Boolean).join(' '),
           status: recipient.status,
+          source: 'bulk',
+        });
+      }
+
+      // Add campaign outbound messages
+      for (const log of filteredCampaign) {
+        const client = log.client as any;
+        if (!client?.phone) continue;
+
+        messages.push({
+          id: log.id,
+          direction: 'outbound',
+          phone: client.phone,
+          message: (log.step as any)?.sms_body_text || null,
+          timestamp: log.sent_at!,
+          client_id: client.id,
+          client_name: [client.pat_name_preferred || client.pat_name_f, client.pat_name_l].filter(Boolean).join(' '),
+          status: log.status,
+          source: 'campaign',
         });
       }
 
@@ -132,11 +196,17 @@ export function useSmsConversations() {
             client_name: msg.client_name,
             messages: [],
             lastMessageAt: msg.timestamp,
+            hasUnread: false,
           });
         }
 
         const thread = threadMap.get(normalizedPhone)!;
         thread.messages.push(msg);
+
+        // Track if any inbound message is unread
+        if (msg.direction === 'inbound' && msg.is_read === false) {
+          thread.hasUnread = true;
+        }
 
         // Update client info if we have it
         if (msg.client_id && !thread.client_id) {
@@ -151,9 +221,20 @@ export function useSmsConversations() {
       }
 
       // Sort threads by last message time
-      const threads = Array.from(threadMap.values()).sort(
+      let threads = Array.from(threadMap.values()).sort(
         (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
       );
+
+      // Apply filter
+      if (filter === 'new') {
+        // Show threads with unread inbound messages OR outbound-only threads (awaiting response)
+        threads = threads.filter(thread => {
+          const hasInbound = thread.messages.some(m => m.direction === 'inbound');
+          // If no inbound, show it (outbound awaiting response)
+          // If has inbound, only show if has unread
+          return !hasInbound || thread.hasUnread;
+        });
+      }
 
       // Sort messages within each thread chronologically
       for (const thread of threads) {
