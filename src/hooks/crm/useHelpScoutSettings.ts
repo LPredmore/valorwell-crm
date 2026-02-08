@@ -22,7 +22,7 @@ interface TestConnectionResult {
 }
 
 export function useHelpScoutSettings() {
-  const { tenantId, isAuthenticated } = useCrmAuth();
+  const { tenantId, isAuthenticated, isLoading: authLoading } = useCrmAuth();
   const queryClient = useQueryClient();
 
   const { data: settings, isLoading, error } = useQuery({
@@ -109,5 +109,6 @@ export function useHelpScoutSettings() {
     testConnection,
     updateSettings,
     isConnected: settings?.connection_status === 'connected',
+    isPending: authLoading || (isAuthenticated && !!tenantId && isLoading),
   };
 }
