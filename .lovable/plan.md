@@ -1,123 +1,82 @@
 
-# Plan: Add HelpScout Webhook Signature Validation
+# Plan: Add RingCentral Webhook Validation Handshake
 
-## Overview
+## The Problem
 
-Now that you've added the `HELPSCOUT_WEBHOOK_SECRET` to Supabase, I need to update the `handleWebhook` function to validate incoming requests using HelpScout's signature verification.
+When you create a webhook subscription in RingCentral, it sends a **validation request** to your endpoint. This request:
+- Contains a `Validation-Token` header
+- Has **no JSON body** (or minimal body)
+- Expects you to echo back the same token in the response header
+
+The current code tries to parse JSON immediately, which fails during validation.
 
 ---
 
-## How HelpScout Webhook Signatures Work
+## How RingCentral Validation Works
 
-HelpScout sends a signature in the `X-HelpScout-Signature` header. This signature is:
-1. A Base64-encoded HMAC-SHA1 hash of the raw request body
-2. Using your secret key as the HMAC key
-
-To validate, we compute the same hash and compare.
+```text
+RingCentral                          Your Edge Function
+    |                                        |
+    |  POST with Validation-Token header     |
+    |--------------------------------------->|
+    |                                        |
+    |  Response with same Validation-Token   |
+    |<---------------------------------------|
+    |                                        |
+    |  Subscription created successfully!    |
+```
 
 ---
 
 ## Changes Required
 
-### File: `supabase/functions/helpscout-proxy/index.ts`
+### File: `supabase/functions/ringcentral-sms/index.ts`
 
-Update the `handleWebhook` function (lines 809-928) to:
+Update the `handleInboundSms` function (lines 323-459) to check for the validation token **first**, before attempting to parse JSON.
 
-1. **Read the raw request body first** (before parsing JSON)
-2. **Get the signature header** from `X-HelpScout-Signature`
-3. **Compute HMAC-SHA1** of the raw body using the secret
-4. **Compare signatures** - reject if they don't match
-5. **Then parse the JSON** and continue with existing logic
-
+**Current flow (lines 328-329):**
 ```typescript
-async function handleWebhook(req: Request): Promise<Response> {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const webhookSecret = Deno.env.get("HELPSCOUT_WEBHOOK_SECRET");
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-  try {
-    // Get raw body for signature validation
-    const rawBody = await req.text();
-    
-    // Validate signature if secret is configured
-    if (webhookSecret) {
-      const signature = req.headers.get("X-HelpScout-Signature");
-      
-      if (!signature) {
-        console.error("Missing X-HelpScout-Signature header");
-        return new Response(JSON.stringify({ error: "Missing signature" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Compute HMAC-SHA1 of body using secret
-      const encoder = new TextEncoder();
-      const key = await crypto.subtle.importKey(
-        "raw",
-        encoder.encode(webhookSecret),
-        { name: "HMAC", hash: "SHA-1" },
-        false,
-        ["sign"]
-      );
-      const signatureBytes = await crypto.subtle.sign(
-        "HMAC",
-        key,
-        encoder.encode(rawBody)
-      );
-      
-      // Convert to Base64 for comparison
-      const computedSignature = btoa(
-        String.fromCharCode(...new Uint8Array(signatureBytes))
-      );
-
-      if (computedSignature !== signature) {
-        console.error("Invalid webhook signature");
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      
-      console.log("Webhook signature validated successfully");
-    } else {
-      console.warn("HELPSCOUT_WEBHOOK_SECRET not configured - skipping signature validation");
-    }
-
-    // Parse the body (we already read it as text, so parse manually)
-    const payload = JSON.parse(rawBody);
-    
-    // ... rest of existing logic unchanged ...
-  }
-}
+try {
+  const payload = await req.json();  // ❌ Fails if no JSON body
 ```
 
----
+**New flow:**
+```typescript
+try {
+  // Check for RingCentral webhook validation request FIRST
+  const validationToken = req.headers.get('Validation-Token');
+  
+  if (validationToken) {
+    console.log('RingCentral webhook validation - echoing token');
+    return new Response('', {
+      status: 200,
+      headers: { 
+        ...corsHeaders, 
+        'Validation-Token': validationToken 
+      },
+    });
+  }
 
-## Security Considerations
-
-- **Signature validation runs first** before any database operations
-- **If secret is not set**, logs a warning but still processes (graceful degradation during setup)
-- **401 status returned** for invalid/missing signatures (standard for auth failures)
-- Uses Web Crypto API (available in Deno) for secure HMAC computation
+  // Now safe to parse JSON for actual webhook events
+  const payload = await req.json();
+```
 
 ---
 
 ## Summary
 
-| Aspect | Change |
-|--------|--------|
-| File | `supabase/functions/helpscout-proxy/index.ts` |
-| Function | `handleWebhook` (lines 809-928) |
-| Addition | HMAC-SHA1 signature validation using `HELPSCOUT_WEBHOOK_SECRET` |
-| Behavior | Rejects requests with invalid/missing signatures (401) |
+| Aspect | Details |
+|--------|---------|
+| File | `supabase/functions/ringcentral-sms/index.ts` |
+| Function | `handleInboundSms` (lines 323-459) |
+| Change | Add validation token check before JSON parsing |
+| Result | RingCentral can successfully create the webhook subscription |
 
 ---
 
-## After Implementation
+## After This Change
 
-Once deployed, you can test by:
-1. Sending a test webhook from HelpScout
-2. Checking the Edge Function logs to confirm "Webhook signature validated successfully"
-
+Once deployed, you can:
+1. Go back to the RingCentral API Explorer
+2. Navigate to **Events and Notifications** → **Subscriptions** → **Create Subscription**
+3. Create the subscription - it will now succeed because the validation handshake works
