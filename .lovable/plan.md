@@ -1,263 +1,165 @@
 
-# Communications Hub Implementation Plan
+# SMS Conversations Implementation Plan
 
-## Executive Summary
+## Current State (Verified Through Database Queries)
 
-This plan transforms the current email-only Inbox into a unified **Communications** page that supports both Email (HelpScout) and SMS (RingCentral), adds phone number to the client table, expands search functionality, and implements the missing email reply capability.
+### What Actually Exists in the Database
 
-## Current State Analysis
+| Table | Records | Purpose |
+|-------|---------|---------|
+| `crm_campaign_step_logs` | **9 SMS records** (8 sent, 1 skipped) | Campaign automation SMS with full message content stored in joined `crm_campaign_steps.sms_body_text` |
+| `crm_bulk_sms_recipients` | **0 records** | Manual bulk SMS to clients (none sent yet) |
+| `crm_bulk_sms_staff_recipients` | 3 records | Staff test SMS (not client communications) |
+| `crm_inbound_sms_logs` | **0 records** | Inbound SMS storage (table created after Carson's test) |
 
-**What exists today:**
-- Email integration via HelpScout with read-only thread viewing (no reply capability)
-- SMS integration via RingCentral for outbound bulk messaging only
-- Client table shows: Name, Email, Status, State, Therapist, Last Updated
-- Search only queries: `pat_name_f`, `pat_name_l`, `pat_name_preferred`, `email`
-- Inbound SMS webhook pauses campaign enrollments but has no UI visibility
+### Root Cause Analysis
 
-**Key gaps:**
-1. Cannot reply to emails from within the CRM
-2. No SMS conversation visibility
-3. Phone number not displayed in client table
-4. Search excludes phone number field
-5. No unified communication view
+The `useSmsConversations.ts` hook currently queries:
+1. `crm_inbound_sms_logs` - Empty (logging was added after the webhook test)
+2. `crm_bulk_sms_recipients` - Empty (no manual bulk SMS to clients yet)
 
----
-
-## Implementation Strategy
-
-### Phase 1: Client Table & Search Enhancements
-
-**1.1 Add Phone Column to Client Table**
-
-Update `ClientTable.tsx` to add a "Phone" column after Email. This requires no database changes since `phone` is already fetched in the `useClients` hook.
-
-Table column order will become:
-| Checkbox | Name | Email | Phone | Status | State | Therapist | Quick View | Last Updated |
-
-**1.2 Expand Search to Include Phone**
-
-Modify the search filter in `useClients.ts` to include `phone` in the OR clause:
-```sql
-pat_name_f.ilike.%term%,
-pat_name_l.ilike.%term%,
-pat_name_preferred.ilike.%term%,
-email.ilike.%term%,
-phone.ilike.%term%
-```
-
-This is a single-line change to the existing query builder.
+It **does not query** `crm_campaign_step_logs`, which contains all 9 campaign SMS messages including the "New York Start" campaign messages sent to Nathalie DeVore, Joann Murphy, Carson Pritchett, and others.
 
 ---
 
-### Phase 2: Email Reply Capability
+## Technical Decision: Unified Outbound SMS Query
 
-**2.1 Reply Composer Component**
+### The Right Approach
 
-Create `src/components/crm/inbox/ReplyComposer.tsx`:
-- Fixed-position form at bottom of ConversationThread
-- Textarea for message body
-- Send button with loading state
-- Status selector (keep active, set to pending, set to closed)
+Create a single, consolidated data source for all outbound SMS by querying **all three tables** that can contain client SMS:
 
-**2.2 Reply Hook**
+1. **`crm_campaign_step_logs`** - Campaign automation (primary source today)
+2. **`crm_bulk_sms_recipients`** - Manual bulk sends to clients
+3. **`crm_bulk_sms_staff_recipients`** - Excluded (staff messages are internal, not client communications)
 
-Create `src/hooks/crm/useReplyToConversation.ts`:
-- Uses the existing `helpscoutApi('reply', ...)` action
-- Invalidates conversation detail cache on success
-- Returns mutation state for UI feedback
+### Why This Is Correct
 
-**2.3 Integrate into ConversationThread**
-
-Add the ReplyComposer to the bottom of `ConversationThread.tsx`. After successful send:
-- Refetch thread messages
-- Show success toast
-- Clear the composer
-
-The edge function already has `case "reply"` implemented - no backend changes needed.
+- **Single Source of Truth**: The Communications hub should show all client-facing SMS regardless of origination method
+- **Future-Proof**: As manual bulk SMS is used more, it will automatically appear
+- **Consistent Data Model**: Both sources can be normalized to the same `SmsMessage` interface with direction, phone, message, timestamp, and client info
+- **No Schema Changes**: All required data already exists in these tables
 
 ---
 
-### Phase 3: Unified Communications Page
+## Implementation Plan
 
-**3.1 Rename and Restructure /inbox**
+### Phase 1: Fix Outbound SMS Data Source
 
-Transform `Inbox.tsx` into `Communications.tsx` with three-tab architecture:
+**File: `src/hooks/crm/useSmsConversations.ts`**
+
+Add a third query to fetch campaign SMS from `crm_campaign_step_logs`:
 
 ```text
-[All Communications] [Email] [SMS]
+Query: crm_campaign_step_logs
+  WHERE channel = 'sms' 
+    AND status = 'sent'
+    AND tenant_id = currentTenant
+  JOIN crm_campaign_steps for sms_body_text
+  JOIN clients for phone and name
 ```
 
-**All Communications**: Merged timeline of recent emails and SMS (from webhook logs)
-**Email Tab**: Current email functionality (Inbox/Sent + status filters + reply)  
-**SMS Tab**: View of outbound SMS logs and inbound responses
+Normalize campaign SMS into the existing `SmsMessage` format:
+- `direction`: 'outbound'
+- `phone`: from joined client record
+- `message`: from `crm_campaign_steps.sms_body_text`
+- `timestamp`: from `sent_at`
+- `client_id` / `client_name`: from joined client
 
-**3.2 Sidebar Navigation Update**
+### Phase 2: Fix Inbound SMS Logging
 
-Change the nav item in `CrmSidebar.tsx`:
-- Label: "Inbox" → "Communications"
-- Icon: Keep Inbox icon (or use MessageSquare for multi-channel feel)
-- Route: `/crm/inbox` remains unchanged (no URL breakage)
+**File: `supabase/functions/ringcentral-sms/index.ts`**
 
-**3.3 SMS Tab Implementation**
+The current logic only logs inbound SMS when a client match is found (lines 437-462). This is problematic because:
+- Messages from unknown numbers are lost
+- Historical context is incomplete
 
-Create new components:
-- `SmsConversationList.tsx` - List of SMS threads grouped by client phone
-- `SmsThread.tsx` - Display outbound messages and any inbound responses
+**Change**: Always log to `crm_inbound_sms_logs`, with `client_id = null` and a default tenant when no client match exists. This ensures:
+- Complete message history
+- Ability to manually associate messages later
+- Audit trail for compliance
 
-Data sources:
-- Outbound: Query `crm_bulk_sms_recipients` joined with `crm_bulk_sms_logs` for message history
-- Inbound: Currently logged in edge function console only; need new table
+### Phase 3: Add Read/Unread State
 
-**3.4 New Database Table for Inbound SMS Log**
+**Database Migration**: Add `is_read` column to `crm_inbound_sms_logs`
 
-Create `crm_inbound_sms_logs` to persist inbound SMS webhooks:
 ```sql
-CREATE TABLE crm_inbound_sms_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES tenants(id),
-  client_id UUID REFERENCES clients(id),
-  from_phone TEXT NOT NULL,
-  to_phone TEXT NOT NULL,
-  message_body TEXT,
-  received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  ringcentral_message_id TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+ALTER TABLE crm_inbound_sms_logs 
+ADD COLUMN is_read BOOLEAN NOT NULL DEFAULT false;
 ```
 
-Update `ringcentral-sms/index.ts` inbound handler to insert into this table.
+**UI Changes**:
+- Add toggle in SMS tab header: "New" | "All" (default to "New")
+- "New" filter shows threads with at least one unread inbound message
+- Clicking a thread marks all its inbound messages as read
+- Outbound-only threads always appear (they represent sent campaigns awaiting response)
 
----
+### Phase 4: Update UI Components
 
-### Phase 4: SMS Viewing Experience
+**File: `src/pages/crm/Inbox.tsx`**
+- Add filter state: `smsFilter: 'new' | 'all'`
+- Default to 'new'
+- Pass filter to `useSmsConversations`
 
-**4.1 SMS Conversation Model**
+**File: `src/hooks/crm/useSmsConversations.ts`**
+- Accept optional `filter` parameter
+- When `filter === 'new'`: only include threads where any inbound message has `is_read = false`
+- When `filter === 'all'`: include all threads
 
-SMS conversations will be grouped by client phone number:
-- Each "thread" shows all messages to/from a specific client
-- Outbound messages: from `crm_bulk_sms_logs` via recipient tables
-- Inbound messages: from new `crm_inbound_sms_logs` table
+**File: `src/components/crm/inbox/SmsConversationList.tsx`**
+- Add visual indicator for threads with unread messages (bold text, dot badge)
 
-**4.2 Individual SMS Sending (Future Enhancement)**
-
-Note: This plan focuses on viewing. Individual SMS compose from Communications page is a logical next step but out of scope for this implementation.
-
----
-
-## Technical Decisions & Rationale
-
-**Decision 1: Keep /crm/inbox route**
-- Renaming the page without changing the URL prevents bookmark/link breakage
-- The page component name changes, route stays stable
-
-**Decision 2: Store inbound SMS in new table**
-- Required for SMS tab to show inbound messages
-- Enables future features: SMS reply, full conversation threading
-- Maintains clear separation (CRM-only table with `crm_` prefix)
-
-**Decision 3: Three-tab architecture (All/Email/SMS) over two-panel**
-- "All Communications" provides unified chronological view
-- Dedicated tabs allow channel-specific workflows
-- Mirrors Gmail/Outlook approach users are familiar with
-
-**Decision 4: Reply composer at bottom of thread (not floating modal)**
-- Matches email client UX expectations
-- Keeps conversation context visible while composing
-- Reduces modal fatigue in the application
+**New Hook: `src/hooks/crm/useMarkSmsRead.ts`**
+- Mutation to set `is_read = true` for all inbound messages in a thread
+- Called when user selects a thread
 
 ---
 
 ## File Changes Summary
 
-### New Files
-| File | Purpose |
-|------|---------|
-| `src/components/crm/inbox/ReplyComposer.tsx` | Email reply form component |
-| `src/hooks/crm/useReplyToConversation.ts` | Reply mutation hook |
-| `src/components/crm/inbox/SmsConversationList.tsx` | SMS thread list |
-| `src/components/crm/inbox/SmsThread.tsx` | SMS thread viewer |
-| `src/hooks/crm/useSmsConversations.ts` | Fetch SMS history |
-| `src/hooks/crm/useInboundSms.ts` | Fetch inbound SMS logs |
-
-### Modified Files
-| File | Changes |
-|------|---------|
-| `src/components/crm/clients/ClientTable.tsx` | Add Phone column |
-| `src/hooks/crm/useClients.ts` | Add phone to search filter |
-| `src/pages/crm/Inbox.tsx` | Restructure as Communications with tabs |
-| `src/components/crm/inbox/ConversationThread.tsx` | Add ReplyComposer |
-| `src/components/crm/layout/CrmSidebar.tsx` | Update label to "Communications" |
-| `supabase/functions/ringcentral-sms/index.ts` | Log inbound SMS to database |
+| File | Action | Description |
+|------|--------|-------------|
+| `src/hooks/crm/useSmsConversations.ts` | Modify | Add `crm_campaign_step_logs` query, accept filter param |
+| `supabase/functions/ringcentral-sms/index.ts` | Modify | Log all inbound SMS regardless of client match |
+| `src/pages/crm/Inbox.tsx` | Modify | Add New/All toggle for SMS tab |
+| `src/components/crm/inbox/SmsConversationList.tsx` | Modify | Add unread visual indicators |
+| `src/hooks/crm/useMarkSmsRead.ts` | Create | Mutation to mark messages as read |
 
 ### Database Migration
-- Create `crm_inbound_sms_logs` table with RLS policies
+
+```sql
+-- Add read status to inbound SMS
+ALTER TABLE crm_inbound_sms_logs 
+ADD COLUMN is_read BOOLEAN NOT NULL DEFAULT false;
+
+-- Index for efficient filtering
+CREATE INDEX idx_crm_inbound_sms_is_read 
+ON crm_inbound_sms_logs(tenant_id, is_read) 
+WHERE is_read = false;
+```
 
 ---
 
 ## Implementation Order
 
-1. **Phase 1** (Quick wins)
-   - Add phone column to table
-   - Expand search to include phone
-
-2. **Phase 2** (Email reply)
-   - Create ReplyComposer component
-   - Create useReplyToConversation hook
-   - Integrate into ConversationThread
-
-3. **Phase 3** (Communications restructure)
-   - Create inbound SMS log table
-   - Update edge function to log inbound SMS
-   - Create SMS viewing components
-   - Restructure Inbox page with tabs
-   - Update sidebar label
-
-4. **Phase 4** (Testing & Polish)
-   - End-to-end testing of all flows
-   - Loading states and error handling
-   - Mobile responsiveness
+1. **Immediate Fix** (makes SMS appear):
+   - Update `useSmsConversations.ts` to query `crm_campaign_step_logs`
+   
+2. **Inbound Logging** (captures future messages):
+   - Update edge function to log all inbound SMS
+   
+3. **Read State** (enables New/All filter):
+   - Database migration for `is_read`
+   - Create `useMarkSmsRead` hook
+   - Add filter toggle to UI
+   - Add visual indicators for unread
 
 ---
 
-## Database Migration (Required)
+## Expected Outcome
 
-```sql
--- Create inbound SMS log table for SMS tab visibility
-CREATE TABLE crm_inbound_sms_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES tenants(id),
-  client_id UUID REFERENCES clients(id),
-  from_phone TEXT NOT NULL,
-  to_phone TEXT NOT NULL,
-  message_body TEXT,
-  received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  ringcentral_message_id TEXT UNIQUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Index for efficient client lookups
-CREATE INDEX idx_crm_inbound_sms_client ON crm_inbound_sms_logs(client_id);
-CREATE INDEX idx_crm_inbound_sms_tenant ON crm_inbound_sms_logs(tenant_id);
-
--- RLS policies
-ALTER TABLE crm_inbound_sms_logs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view inbound SMS for their tenant"
-ON crm_inbound_sms_logs FOR SELECT
-USING (
-  tenant_id IN (
-    SELECT tenant_id FROM tenant_memberships WHERE profile_id = auth.uid()
-  )
-);
-```
-
----
-
-## Success Criteria
-
-- Phone number visible in client table view
-- Search returns results when querying by phone number
-- Users can reply to emails directly from conversation thread
-- Communications page shows unified Email and SMS tabs
-- Inbound SMS visible in SMS tab with client association
-- All existing Inbox functionality preserved
+After implementation:
+- SMS tab shows all 8+ sent campaign messages from "New York Start"
+- Messages are grouped by client phone number into threads
+- New inbound messages (from webhook) appear immediately
+- "New" filter (default) highlights threads needing attention
+- "All" shows complete SMS history
