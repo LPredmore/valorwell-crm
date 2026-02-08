@@ -62,6 +62,8 @@ interface Campaign {
   send_window_start: string;
   send_window_end: string;
   default_timezone: string;
+  on_complete_action: string | null;
+  on_complete_status: string | null;
 }
 
 interface ClientData {
@@ -427,7 +429,8 @@ async function processCampaignMessages() {
           id, campaign_id, client_id, current_step, status,
           campaign:crm_campaigns (
             id, name, is_active, weekdays_only, 
-            send_window_start, send_window_end, default_timezone
+            send_window_start, send_window_end, default_timezone,
+            on_complete_action, on_complete_status
           )
         `)
         .eq('id', stepLog.enrollment_id)
@@ -710,6 +713,52 @@ async function scheduleNextStep(
         current_step: currentStep.step_order,
       })
       .eq('id', enrollment.id);
+
+    // Apply completion action if configured
+    if (campaign.on_complete_action === 'change_status' && campaign.on_complete_status) {
+      // Get current client status for activity log
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('pat_status')
+        .eq('id', enrollment.client_id)
+        .single();
+
+      const oldStatus = clientData?.pat_status || null;
+      const newStatus = campaign.on_complete_status;
+
+      // Only update if status is actually different
+      if (oldStatus !== newStatus) {
+        // Update client status
+        const { error: updateError } = await supabase
+          .from('clients')
+          .update({ pat_status: newStatus })
+          .eq('id', enrollment.client_id);
+
+        if (updateError) {
+          console.error(`Failed to update client status on campaign completion:`, updateError);
+        } else {
+          // Log activity event for audit trail
+          await supabase
+            .from('crm_activity_events')
+            .insert({
+              tenant_id: tenantId,
+              client_id: enrollment.client_id,
+              event_type: 'status_change',
+              old_value: oldStatus,
+              new_value: newStatus,
+              created_by_profile_id: null, // System-triggered, no user
+              metadata: {
+                triggered_by: 'campaign_completion',
+                campaign_id: campaign.id,
+                campaign_name: campaign.name,
+              },
+            });
+
+          console.log(`Changed client ${enrollment.client_id} status from "${oldStatus}" to "${newStatus}" on campaign "${campaign.name}" completion`);
+        }
+      }
+    }
+
     return;
   }
 

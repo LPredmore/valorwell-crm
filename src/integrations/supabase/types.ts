@@ -3786,6 +3786,8 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          on_complete_action: string
+          on_complete_status: string | null
           send_window_end: string
           send_window_start: string
           tenant_id: string
@@ -3800,6 +3802,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          on_complete_action?: string
+          on_complete_status?: string | null
           send_window_end?: string
           send_window_start?: string
           tenant_id: string
@@ -3814,6 +3818,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          on_complete_action?: string
+          on_complete_status?: string | null
           send_window_end?: string
           send_window_start?: string
           tenant_id?: string

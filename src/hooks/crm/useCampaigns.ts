@@ -50,6 +50,7 @@ export function useCampaigns() {
 
       return campaigns.map(c => ({
         ...c,
+        on_complete_action: (c.on_complete_action || 'do_nothing') as 'do_nothing' | 'change_status',
         steps_count: stepsCountMap.get(c.id) || 0,
         active_enrollments_count: enrollmentsCountMap.get(c.id) || 0,
       }));
@@ -81,7 +82,10 @@ export function useCampaign(campaignId: string | undefined) {
         throw error;
       }
 
-      return data;
+      return {
+        ...data,
+        on_complete_action: (data.on_complete_action || 'do_nothing') as 'do_nothing' | 'change_status',
+      };
     },
     enabled: !!tenantId && !!campaignId,
   });
@@ -107,13 +111,18 @@ export function useCreateCampaign() {
           send_window_start: formData.send_window_start,
           send_window_end: formData.send_window_end,
           default_timezone: formData.default_timezone,
+          on_complete_action: formData.on_complete_action,
+          on_complete_status: formData.on_complete_status,
           created_by_profile_id: userId,
         })
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        on_complete_action: (data.on_complete_action || 'do_nothing') as 'do_nothing' | 'change_status',
+      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crm-campaigns'] });
@@ -157,6 +166,8 @@ export function useUpdateCampaign() {
           send_window_start: formData.send_window_start,
           send_window_end: formData.send_window_end,
           default_timezone: formData.default_timezone,
+          on_complete_action: formData.on_complete_action,
+          on_complete_status: formData.on_complete_status,
         })
         .eq('id', campaignId)
         .eq('tenant_id', tenantId)
@@ -164,7 +175,10 @@ export function useUpdateCampaign() {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        on_complete_action: (data.on_complete_action || 'do_nothing') as 'do_nothing' | 'change_status',
+      };
     },
     onSuccess: (_, { campaignId }) => {
       queryClient.invalidateQueries({ queryKey: ['crm-campaigns'] });

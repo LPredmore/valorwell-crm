@@ -22,7 +22,8 @@ import { useCampaign, useCreateCampaign, useUpdateCampaign } from '@/hooks/crm/u
 import { useCampaignSteps, useSaveCampaignSteps } from '@/hooks/crm/useCampaignSteps';
 import { CampaignStepEditor } from '@/components/crm/campaigns/CampaignStepEditor';
 import type { CampaignFormData, CampaignStepFormData } from '@/lib/crm/campaign-types';
-import { TIMEZONE_OPTIONS, PERSONALIZATION_VARIABLES } from '@/lib/crm/campaign-types';
+import { TIMEZONE_OPTIONS, PERSONALIZATION_VARIABLES, COMPLETION_ACTION_OPTIONS } from '@/lib/crm/campaign-types';
+import { ALL_STATUSES } from '@/lib/crm/status-config';
 
 // Generate time options for select
 const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => {
@@ -84,6 +85,8 @@ export default function CampaignEditor() {
     send_window_start: '09:00:00',
     send_window_end: '17:00:00',
     default_timezone: 'America/Chicago',
+    on_complete_action: 'do_nothing',
+    on_complete_status: null,
   });
 
   const [steps, setSteps] = useState<CampaignStepFormData[]>([]);
@@ -100,6 +103,8 @@ export default function CampaignEditor() {
         send_window_start: campaign.send_window_start,
         send_window_end: campaign.send_window_end,
         default_timezone: campaign.default_timezone,
+        on_complete_action: campaign.on_complete_action || 'do_nothing',
+        on_complete_status: campaign.on_complete_status,
       });
     }
   }, [campaign]);
@@ -336,6 +341,61 @@ export default function CampaignEditor() {
                     </SelectContent>
                   </Select>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Completion Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Completion Settings</CardTitle>
+                <CardDescription>What happens when a client finishes all steps</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>When campaign completes</Label>
+                  <Select
+                    value={formData.on_complete_action}
+                    onValueChange={(value: 'do_nothing' | 'change_status') => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        on_complete_action: value,
+                        on_complete_status: value === 'do_nothing' ? null : prev.on_complete_status,
+                      }));
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COMPLETION_ACTION_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.on_complete_action === 'change_status' && (
+                  <div className="space-y-2">
+                    <Label>Set status to</Label>
+                    <Select
+                      value={formData.on_complete_status || ''}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, on_complete_status: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a status..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ALL_STATUSES.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
