@@ -319,6 +319,7 @@ async function processBulkSms(bulkSmsId: string) {
 
 // ============ INBOUND SMS WEBHOOK HANDLER ============
 // Handles incoming SMS messages from RingCentral to auto-pause campaigns
+// and log them to crm_inbound_sms_logs for visibility in the Communications UI
 
 async function handleInboundSms(req: Request): Promise<Response> {
   // Check for RingCentral webhook validation request FIRST (before parsing JSON)
@@ -353,13 +354,34 @@ async function handleInboundSms(req: Request): Promise<Response> {
       });
     }
 
-    // Extract the from phone number from the webhook payload
+    // Extract SMS details from the webhook payload
     // RingCentral webhook structure for SMS varies
     const fromNumber = 
       payload.body?.from?.phoneNumber ||
       payload.from?.phoneNumber ||
       payload.body?.message?.from?.phoneNumber ||
       payload.message?.from?.phoneNumber;
+
+    const toNumber = 
+      payload.body?.to?.[0]?.phoneNumber ||
+      payload.to?.[0]?.phoneNumber ||
+      payload.body?.message?.to?.[0]?.phoneNumber ||
+      payload.message?.to?.[0]?.phoneNumber ||
+      Deno.env.get('RINGCENTRAL_FROM_NUMBER');
+
+    const messageBody = 
+      payload.body?.subject ||
+      payload.subject ||
+      payload.body?.message?.subject ||
+      payload.message?.subject ||
+      null;
+
+    const messageId = 
+      payload.body?.id?.toString() ||
+      payload.id?.toString() ||
+      payload.body?.message?.id?.toString() ||
+      payload.message?.id?.toString() ||
+      null;
 
     if (!fromNumber) {
       console.log('No from phone number in webhook payload');
@@ -408,12 +430,35 @@ async function handleInboundSms(req: Request): Promise<Response> {
       return clientLast10 === last10Digits;
     });
 
-    if (matchingClients.length === 0) {
-      console.log('No client found for phone number');
-      return new Response(JSON.stringify({ received: true, noClient: true }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Log the inbound SMS to the database for visibility in Communications UI
+    let loggedSmsId: string | null = null;
+    const matchedClient = matchingClients.length > 0 ? matchingClients[0] : null;
+
+    if (matchedClient) {
+      // Log with client association
+      const { data: insertedLog, error: logError } = await supabase
+        .from('crm_inbound_sms_logs')
+        .insert({
+          tenant_id: matchedClient.tenant_id,
+          client_id: matchedClient.id,
+          from_phone: phoneResult.normalized!,
+          to_phone: toNumber || '',
+          message_body: messageBody,
+          ringcentral_message_id: messageId,
+          received_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single();
+
+      if (logError) {
+        // Don't fail the webhook, just log the error
+        console.error('Failed to log inbound SMS:', logError);
+      } else {
+        loggedSmsId = insertedLog?.id || null;
+        console.log(`Logged inbound SMS with id: ${loggedSmsId}`);
+      }
+    } else {
+      console.log('No client found for phone number, SMS not logged to database');
     }
 
     // Check for active campaign enrollments for any matching client
@@ -455,7 +500,12 @@ async function handleInboundSms(req: Request): Promise<Response> {
     }
 
     return new Response(
-      JSON.stringify({ received: true, enrollmentsPaused: pausedCount }),
+      JSON.stringify({ 
+        received: true, 
+        enrollmentsPaused: pausedCount,
+        logged: !!loggedSmsId,
+        clientFound: matchingClients.length > 0,
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

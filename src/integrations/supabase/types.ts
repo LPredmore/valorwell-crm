@@ -4043,6 +4043,57 @@ export type Database = {
           },
         ]
       }
+      crm_inbound_sms_logs: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          from_phone: string
+          id: string
+          message_body: string | null
+          received_at: string
+          ringcentral_message_id: string | null
+          tenant_id: string
+          to_phone: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          from_phone: string
+          id?: string
+          message_body?: string | null
+          received_at?: string
+          ringcentral_message_id?: string | null
+          tenant_id: string
+          to_phone: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          from_phone?: string
+          id?: string
+          message_body?: string | null
+          received_at?: string
+          ringcentral_message_id?: string | null
+          tenant_id?: string
+          to_phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_inbound_sms_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_inbound_sms_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_kanban_config: {
         Row: {
           created_at: string

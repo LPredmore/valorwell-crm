@@ -1,9 +1,10 @@
 import { useConversationDetail } from '@/hooks/crm/useConversationDetail';
 import { HelpScoutConversation } from '@/lib/crm/types';
 import { ThreadMessage } from './ThreadMessage';
+import { ReplyComposer } from './ReplyComposer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ExternalLink, User } from 'lucide-react';
+import { Loader2, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface ConversationThreadProps {
@@ -73,6 +74,9 @@ export function ConversationThread({ conversation }: ConversationThreadProps) {
           </div>
         )}
       </div>
+
+      {/* Reply Composer */}
+      <ReplyComposer conversationId={conversation.id} onSuccess={() => refetch()} />
     </div>
   );
 }

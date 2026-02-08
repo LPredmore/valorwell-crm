@@ -84,6 +84,7 @@ export function ClientTable({
             )}
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
+            <TableHead>Phone</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>State</TableHead>
             <TableHead>Therapist</TableHead>
@@ -116,6 +117,9 @@ export function ClientTable({
               </TableCell>
               <TableCell className="text-muted-foreground">
                 {client.email || '—'}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {client.phone || '—'}
               </TableCell>
               <TableCell>
                 <StatusBadge status={client.pat_status} size="sm" />
