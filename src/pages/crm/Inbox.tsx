@@ -17,7 +17,7 @@ import { SmsThread as SmsThreadView } from '@/components/crm/inbox/SmsThread';
 import { HelpScoutConversation } from '@/lib/crm/types';
 
 export default function Inbox() {
-  const { isLoading: settingsLoading, isConnected } = useHelpScoutSettings();
+  const { isPending, isConnected } = useHelpScoutSettings();
   
   // Top-level channel tab
   const [channelTab, setChannelTab] = useState<'email' | 'sms'>('email');
@@ -63,7 +63,7 @@ export default function Inbox() {
     }
   };
 
-  if (settingsLoading) {
+  if (isPending) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
