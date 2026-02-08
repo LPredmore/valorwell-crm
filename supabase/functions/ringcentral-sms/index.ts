@@ -321,6 +321,20 @@ async function processBulkSms(bulkSmsId: string) {
 // Handles incoming SMS messages from RingCentral to auto-pause campaigns
 
 async function handleInboundSms(req: Request): Promise<Response> {
+  // Check for RingCentral webhook validation request FIRST (before parsing JSON)
+  const validationToken = req.headers.get('Validation-Token');
+  
+  if (validationToken) {
+    console.log('RingCentral webhook validation - echoing token');
+    return new Response('', {
+      status: 200,
+      headers: { 
+        ...corsHeaders, 
+        'Validation-Token': validationToken 
+      },
+    });
+  }
+
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
