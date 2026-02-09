@@ -1,4 +1,5 @@
-import { Loader2, Eye } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Loader2, Eye, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -10,10 +11,14 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
-import { getClientDisplayName, getTherapistDisplayName } from '@/lib/crm/status-config';
-import type { CrmClient } from '@/lib/crm/types';
+import { getClientDisplayName, getTherapistDisplayName, STATUS_CONFIG } from '@/lib/crm/status-config';
+import type { CrmClient, PatStatus } from '@/lib/crm/types';
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+
+type SortColumn = 'name' | 'email' | 'phone' | 'status' | 'state' | 'therapist' | 'updated_at';
+type SortDirection = 'asc' | 'desc';
 
 interface ClientTableProps {
   clients: CrmClient[];
@@ -25,6 +30,27 @@ interface ClientTableProps {
   onSelectAll?: (selected: boolean) => void;
 }
 
+function getSortValue(client: CrmClient, column: SortColumn): string | number {
+  switch (column) {
+    case 'name':
+      return getClientDisplayName(client).toLowerCase();
+    case 'email':
+      return (client.email || '').toLowerCase();
+    case 'phone':
+      return (client.phone || '').toLowerCase();
+    case 'status':
+      return STATUS_CONFIG[client.pat_status as PatStatus]?.order ?? 999;
+    case 'state':
+      return (client.pat_state || '').toLowerCase();
+    case 'therapist':
+      return getTherapistDisplayName(client.primary_staff).toLowerCase();
+    case 'updated_at':
+      return new Date(client.updated_at).getTime();
+    default:
+      return '';
+  }
+}
+
 export function ClientTable({
   clients,
   isLoading,
@@ -34,9 +60,31 @@ export function ClientTable({
   onSelectionChange,
   onSelectAll,
 }: ClientTableProps) {
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
   const selectionEnabled = !!onSelectionChange && !!onSelectAll;
   const allSelected = clients.length > 0 && clients.every(c => selectedClientIds.has(c.id));
   const someSelected = clients.some(c => selectedClientIds.has(c.id)) && !allSelected;
+
+  const sortedClients = useMemo(() => {
+    if (!sortColumn) return clients;
+    return [...clients].sort((a, b) => {
+      const aVal = getSortValue(a, sortColumn);
+      const bVal = getSortValue(b, sortColumn);
+      const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+  }, [clients, sortColumn, sortDirection]);
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortColumn(column);
+      setSortDirection(column === 'updated_at' ? 'desc' : 'asc');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -55,17 +103,28 @@ export function ClientTable({
   }
 
   const handleRowClick = (clientId: string, e: React.MouseEvent) => {
-    // Don't navigate if clicking on checkbox
-    if ((e.target as HTMLElement).closest('[data-checkbox]')) {
-      return;
-    }
+    if ((e.target as HTMLElement).closest('[data-checkbox]')) return;
     onClientClick(clientId);
   };
 
-  const handleCheckboxClick = (clientId: string, checked: boolean, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSelectionChange?.(clientId, checked);
+  const SortIcon = ({ column }: { column: SortColumn }) => {
+    if (sortColumn !== column) return <ChevronsUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortDirection === 'asc'
+      ? <ChevronUp className="h-3 w-3 ml-1" />
+      : <ChevronDown className="h-3 w-3 ml-1" />;
   };
+
+  const SortableHead = ({ column, children, className }: { column: SortColumn; children: React.ReactNode; className?: string }) => (
+    <TableHead
+      className={cn('cursor-pointer select-none hover:bg-muted/50', className)}
+      onClick={() => handleSort(column)}
+    >
+      <div className="flex items-center">
+        {children}
+        <SortIcon column={column} />
+      </div>
+    </TableHead>
+  );
 
   return (
     <ScrollArea className="h-full">
@@ -82,18 +141,18 @@ export function ClientTable({
                 />
               </TableHead>
             )}
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Phone</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>State</TableHead>
-            <TableHead>Therapist</TableHead>
+            <SortableHead column="name">Name</SortableHead>
+            <SortableHead column="email">Email</SortableHead>
+            <SortableHead column="phone">Phone</SortableHead>
+            <SortableHead column="status">Status</SortableHead>
+            <SortableHead column="state">State</SortableHead>
+            <SortableHead column="therapist">Therapist</SortableHead>
             <TableHead className="w-[50px]"></TableHead>
-            <TableHead>Last Updated</TableHead>
+            <SortableHead column="updated_at">Last Updated</SortableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {clients.map((client) => (
+          {sortedClients.map((client) => (
             <TableRow
               key={client.id}
               className="cursor-pointer hover:bg-muted/50"
