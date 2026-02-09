@@ -1,53 +1,90 @@
 
 
-# Plan: Bulk Status Change + Sortable Table Columns
+# Plan: Auto-Cancel Campaign on Client Status Change
 
-## Feature 1: Bulk Status Change
+## The Decision: Database Trigger (Not Frontend, Not Edge Function)
 
-### How It Works
-When you select multiple clients in the table view, a "Change Status" button will appear in the bulk action bar (alongside the existing Send Email, Send Text, and Enroll in Campaign buttons). Clicking it opens a dropdown/dialog where you pick the new status, and all selected clients are updated at once with activity log entries for each.
+The right solution is a **PostgreSQL trigger on the `clients` table** that fires whenever `pat_status` changes and automatically cancels any active campaign enrollment for that client.
 
-### Implementation Details
+Here's why this is the only correct approach:
 
-**New hook: `src/hooks/crm/useBulkUpdateStatus.ts`**
-- Accepts an array of client IDs, a new status, and optionally each client's old status (for audit logging)
-- Loops through each client, updating `pat_status` and inserting `crm_activity_events` rows
-- Shows a toast on completion with success/failure counts
-- Invalidates the `crm-clients` query to refresh the list
+**Why not frontend hooks (useUpdateClientStatus, useBulkUpdateStatus)?**
+Status changes happen from the Client Portal, from the appointment trigger (`transition_client_status_on_appointment`), and potentially from other apps sharing this database. The CRM frontend isn't running during those events. A frontend-only solution would miss the majority of status changes.
 
-**Update `src/components/crm/clients/BulkActionBar.tsx`**
-- Add a "Change Status" button with a Popover or DropdownMenu containing all available statuses from `ALL_STATUSES`
-- Statuses displayed with their colored badges for easy identification
-- When a status is selected, calls the new bulk update handler
+**Why not an Edge Function on a schedule?**
+The campaign-scheduler already runs every 15 minutes. Adding a "check for status changes" sweep would mean up to 15 minutes of delay where a client who already re-engaged could still receive an outreach message. That defeats the purpose.
 
-**Update `src/pages/crm/Clients.tsx`**
-- Wire up the new bulk status change: pass selected client IDs and their current statuses to the handler
-- Add state for the bulk status operation
-- Clear selection after completion
+**Why a database trigger?**
+It fires instantly, on every `UPDATE` to `clients` where `pat_status` changes, regardless of what caused the change -- CRM UI, Client Portal, appointment trigger, direct SQL, any other connected app. Zero delay. Zero gaps. It respects the architecture constraint that this database serves multiple applications.
 
 ---
 
-## Feature 2: Sortable Table Columns
+## What the Trigger Does
 
-### How It Works
-Each column header in the client table becomes clickable. Clicking a header sorts by that column; clicking again toggles between ascending and descending. A small arrow icon indicates the current sort direction.
+When `pat_status` changes on a client row:
 
-### Implementation Details
+1. Find any `crm_campaign_enrollments` row where `client_id` matches and `status = 'active'`
+2. Set that enrollment's `status` to `'responded'` and `completed_at` to `NOW()`
+3. Mark any pending `crm_campaign_step_logs` (status = `'scheduled'`) for that enrollment as `'skipped'` with reason `'client_status_changed'`
+4. Insert an audit entry into `crm_activity_events` recording that a campaign was auto-cancelled due to the status change
 
-**Update `src/components/crm/clients/ClientTable.tsx`**
-- Add local state for `sortColumn` and `sortDirection` (asc/desc)
-- Sortable columns: Name, Email, Phone, Status, State, Therapist, Last Updated
-- Column headers get a click handler and a sort indicator icon (ChevronUp/ChevronDown from lucide-react)
-- Sort the `clients` array in-memory before rendering based on current sort state
-- Status sorting uses the `order` value from `STATUS_CONFIG` so statuses sort in their logical pipeline order, not alphabetically
-- "Last Updated" defaults to descending (newest first) on initial click
+The existing campaign-scheduler already checks `enrollment.status !== 'active'` before sending (line 450 of campaign-scheduler/index.ts), so even if the scheduler runs between the trigger firing and the step log cleanup, it will skip the enrollment.
+
+Using `'responded'` as the enrollment status (rather than `'cancelled'`) is intentional -- it distinguishes "the client took action and we stopped" from "an admin manually cancelled the campaign." This is already defined in the `EnrollmentStatus` type.
 
 ---
 
-## Technical Notes
+## What Changes
 
-- **No database changes** -- all sorting is client-side on the already-fetched data
-- **No table schema changes** -- bulk status update uses the existing `clients.pat_status` column and `crm_activity_events` table
-- Activity events are logged individually per client for proper audit trail
-- The existing `useUpdateClientStatus` hook handles single updates; the new bulk hook handles multiple in parallel for speed
+### 1. New Database Migration
+
+A single migration that creates:
+
+- **Function**: `cancel_campaign_on_status_change()` -- the trigger function
+- **Trigger**: `trg_cancel_campaign_on_status_change` on `clients`, firing `AFTER UPDATE` when `OLD.pat_status IS DISTINCT FROM NEW.pat_status`
+
+The function uses `SECURITY DEFINER` with `search_path = 'public'` (matching existing patterns like `transition_client_status_on_appointment`) so it has the permissions to update CRM tables regardless of which role triggered the status change.
+
+```text
+Technical detail -- the trigger function logic:
+
+1. IF OLD.pat_status IS NOT DISTINCT FROM NEW.pat_status THEN RETURN  (no-op if status didn't change)
+2. SELECT id, tenant_id, campaign_id INTO enrollment FROM crm_campaign_enrollments
+   WHERE client_id = NEW.id AND status = 'active' LIMIT 1
+3. If no active enrollment found, RETURN (nothing to do)
+4. UPDATE crm_campaign_enrollments SET status = 'responded', completed_at = NOW()
+   WHERE id = enrollment.id
+5. UPDATE crm_campaign_step_logs SET status = 'skipped', skip_reason = 'client_status_changed'
+   WHERE enrollment_id = enrollment.id AND status = 'scheduled'
+6. INSERT INTO crm_activity_events (tenant_id, client_id, event_type, metadata)
+   with triggered_by = 'status_change_campaign_cancel', old_status, new_status, campaign_id
+```
+
+### 2. No Frontend Code Changes Required
+
+The campaign-scheduler already respects enrollment status. The CRM UI already queries enrollment status for display. No hooks, no components, no edge functions need to change. The trigger handles everything at the data layer where it belongs.
+
+### 3. No Table Schema Changes
+
+No columns added, no tables modified. This only adds a function and a trigger -- fully additive, which respects the constraint that tables are shared across apps.
+
+---
+
+## Edge Cases Handled
+
+| Scenario | What Happens |
+|----------|-------------|
+| Client Portal changes status | Trigger fires, enrollment cancelled instantly |
+| CRM admin changes status manually | Trigger fires, enrollment cancelled instantly |
+| Bulk status change from CRM | Trigger fires once per client row updated |
+| Appointment trigger changes status | That trigger runs first (updates status), then this trigger fires on the resulting change |
+| Campaign completion changes status | Campaign-scheduler sets enrollment to 'completed' first, then updates client status. Trigger fires but finds no 'active' enrollment -- no-op |
+| Status changed to same value | `IS DISTINCT FROM` check prevents trigger from firing |
+| Client has no active enrollment | Trigger fires but finds nothing to cancel -- no-op |
+
+---
+
+## Why This Matters for Your Use Case
+
+You described wanting to send re-engagement campaigns that feel personalized. If a client logs in through the portal and their status changes from "Unresponsive" to "Active," the trigger immediately stops the campaign. They won't get a "Hey, we miss you!" email 15 minutes after they just booked an appointment. The system reacts in milliseconds, not minutes.
 
