@@ -63,7 +63,7 @@ export interface CrmActivityEvent {
   id: string;
   tenant_id: string;
   client_id: string;
-  event_type: 'status_change' | 'note_added' | 'email_sent' | 'email_received' | 'conversation_linked' | 'bulk_send';
+  event_type: 'status_change' | 'note_added' | 'email_sent' | 'email_received' | 'conversation_linked' | 'bulk_send' | 'campaign_auto_cancelled' | 'sms_sent' | 'sms_received';
   old_value: string | null;
   new_value: string | null;
   metadata: Record<string, unknown>;
