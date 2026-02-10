@@ -1,82 +1,70 @@
 
 
-# Fix: HelpScout Webhook Not Cancelling Campaign Enrollments
+# Fix: Bulk Status Change Fails for Clients with Active Campaign Enrollments
 
-## What's Actually Happening
+## Root Cause
 
-The webhook pipeline is working up to a point, then failing at one specific line of code. Here's the proven sequence from the logs:
+The error is NOT in the CRM application code. Both `useBulkUpdateStatus` and `useUpdateClientStatus` are written correctly. The bug is in the database.
 
-1. HelpScout sends a webhook to the edge function -- it arrives successfully
-2. The routing logic (`?action=webhook`) correctly bypasses JWT auth and calls `handleWebhook`
-3. Signature validation passes (the logs say "Webhook signature validated successfully")
-4. The payload is parsed and logged
-5. **Line 872 kills the process**: `const eventType = payload.type || payload.event;` reads `payload.type`, which HelpScout populates with the conversation format (`"email"`), not the event name
-6. The filter on line 875 checks if `eventType` contains `"customer.reply"` -- it doesn't, because `eventType` is `"email"`
-7. The function logs `"Ignoring event type: email"` and returns 200 without doing anything
+When you change a client's status, a database trigger (`trg_cancel_campaign_on_status_change`) fires to automatically cancel any active campaign enrollment for that client. As part of that trigger, it tries to log an audit event with `event_type = 'campaign_auto_cancelled'`. But the `crm_activity_events` table has a CHECK constraint that only allows these event types:
 
-Nicole Russell (njrussell101@gmail.com) is still `active` in enrollment `3de9b6b7-552e-4c49-8bb5-de60c069db6f` because the code never reaches the enrollment cancellation logic on lines 883-968.
+- status_change
+- note_added
+- email_sent
+- email_received
+- conversation_linked
+- bulk_send
 
-## Why This Is Happening
+`campaign_auto_cancelled` is not in that list. The constraint rejects the insert, the trigger fails, and the entire transaction (including the original status update) rolls back. PostgREST reports this as a 400 error.
 
-HelpScout sends the event name in the **HTTP header** `X-HelpScout-Event`, not in the JSON body. This is documented behavior. The `payload.type` field in the body is the conversation type (email, chat, phone), which is a completely different concept. The code was written to read from the body, so it never sees the actual event name.
+This affects ANY status change (bulk or single) on ANY client that has an active campaign enrollment. The profile page appeared to work only because that particular client had no active enrollment at the time.
 
-## The Fix (2 changes, 1 file)
+## The Fix
 
-**File**: `supabase/functions/helpscout-proxy/index.ts`
+One database migration that adds `campaign_auto_cancelled` to the check constraint on `crm_activity_events.event_type`. While we are at it, we should also add `sms_sent` and `sms_received` since the SMS features exist and will likely need audit logging too.
 
-### Change 1: Read event type from the HTTP header (lines 870-881)
+No application code changes are needed. No table structure changes (columns stay the same). This only widens the set of allowed string values in an existing constraint.
 
-Replace the body-based event type detection with header-based detection:
+### Migration SQL
 
-- Read `X-HelpScout-Event` from `req.headers` (this must happen before `req.text()` consumes the body, but since headers are independent of the body stream, the current code order works -- `rawBody` is already captured on line 819, and `req.headers` remains accessible)
-- However, there is a subtlety: `req.headers` is accessible after `req.text()`, so the fix is straightforward -- just read the header instead of the body field
-- Filter for `convo.customer.reply.created` (the exact event name from HelpScout's documented event list)
-- Continue ignoring all other events (agent replies, status changes, tags, etc.)
+```sql
+ALTER TABLE crm_activity_events
+  DROP CONSTRAINT crm_activity_events_event_type_check;
 
-### Change 2: Use HELPSCOUT_APP_SECRET instead of HELPSCOUT_WEBHOOK_SECRET (line 814)
-
-HelpScout uses one secret for everything. The App Secret shown in HelpScout's webhook configuration page is the same secret used for HMAC-SHA1 signature validation. The current code references `HELPSCOUT_WEBHOOK_SECRET`, which doesn't exist in the environment. The signature validation only passes today because the code treats a missing secret as "skip validation" (line 862-864), which is a security gap.
-
-Changing to `HELPSCOUT_APP_SECRET` means:
-- Signature validation will actually run using the real secret
-- No new secret needs to be added
-- The warning log about missing secret on line 863 becomes unnecessary and should be removed
-
-### What Does NOT Change
-
-- The enrollment cancellation logic (lines 883-968) is correct and tested by the database trigger migration you already deployed. It properly looks up clients by email, finds active enrollments, and sets them to `responded`. It just never gets reached today.
-- No database changes needed.
-- No new secrets needed.
-- The RingCentral SMS inbound handler is a separate flow and is not affected by this fix.
-
-## Technical Detail
-
-```text
-Current broken flow:
-  HelpScout fires convo.customer.reply.created
-    --> Header: X-HelpScout-Event = "convo.customer.reply.created"
-    --> Body:   { "type": "email", ... }
-    --> Code reads payload.type --> gets "email"
-    --> "email" does not contain "customer.reply"
-    --> "Ignoring event type: email"
-    --> Return 200, do nothing
-
-Fixed flow:
-  HelpScout fires convo.customer.reply.created
-    --> Header: X-HelpScout-Event = "convo.customer.reply.created"
-    --> Code reads X-HelpScout-Event header --> gets "convo.customer.reply.created"
-    --> Matches "customer.reply" filter
-    --> Extracts customer email from payload
-    --> Looks up client in database
-    --> Finds active enrollment --> sets status to "responded"
-    --> Skips scheduled steps
-    --> Done
+ALTER TABLE crm_activity_events
+  ADD CONSTRAINT crm_activity_events_event_type_check
+  CHECK (event_type = ANY (ARRAY[
+    'status_change',
+    'note_added',
+    'email_sent',
+    'email_received',
+    'conversation_linked',
+    'bulk_send',
+    'campaign_auto_cancelled',
+    'sms_sent',
+    'sms_received'
+  ]));
 ```
 
-## After Deployment
+### TypeScript Type Update
 
-Nicole Russell's enrollment should be manually updated to `responded` status since her reply already came and went. Future replies will be handled automatically.
+Update the `CrmActivityEvent` interface in `src/lib/crm/types.ts` to include the new event types so the frontend type system stays in sync:
+
+```typescript
+event_type: 'status_change' | 'note_added' | 'email_sent' | 'email_received'
+  | 'conversation_linked' | 'bulk_send' | 'campaign_auto_cancelled'
+  | 'sms_sent' | 'sms_received';
+```
+
+## What This Does NOT Change
+
+- No columns are added, removed, or modified on any table
+- No existing data is affected
+- No application logic changes
+- No new tables
+- The trigger function itself is correct and does not need modification
 
 ## Risk Assessment
 
-Low risk. The change is isolated to 2 lines of logic in one function. The downstream enrollment cancellation code is already proven correct (it's the same pattern used by the database trigger). The only behavioral change is that customer reply events will now actually be processed instead of silently discarded.
+Minimal. Dropping and re-adding a CHECK constraint is a metadata-only operation in Postgres -- it does not lock the table or rewrite data. The only behavioral change is that the trigger will now succeed instead of crashing, which is the intended behavior.
+
