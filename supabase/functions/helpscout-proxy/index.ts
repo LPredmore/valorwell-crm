@@ -811,7 +811,7 @@ Deno.serve(async (req) => {
 async function handleWebhook(req: Request): Promise<Response> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const webhookSecret = Deno.env.get("HELPSCOUT_WEBHOOK_SECRET");
+  const webhookSecret = Deno.env.get("HELPSCOUT_APP_SECRET");
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
@@ -860,16 +860,17 @@ async function handleWebhook(req: Request): Promise<Response> {
       
       console.log("Webhook signature validated successfully");
     } else {
-      console.warn("HELPSCOUT_WEBHOOK_SECRET not configured - skipping signature validation");
+      console.warn("HELPSCOUT_APP_SECRET not configured - skipping signature validation");
     }
 
     // Parse the body (we already read it as text, so parse manually)
     const payload = JSON.parse(rawBody);
     console.log("HelpScout webhook received:", JSON.stringify(payload).substring(0, 500));
 
-    // HelpScout sends different event types - we care about customer replies
-    // Event types: convo.created, convo.customer.reply.created, convo.agent.reply.created, etc.
-    const eventType = payload.type || payload.event;
+    // HelpScout sends the event type in the X-HelpScout-Event HTTP header, NOT in the JSON body.
+    // The body's "type" field is the conversation format (email, chat, phone) — a different concept.
+    const eventType = req.headers.get("X-HelpScout-Event");
+    console.log(`Webhook event type from header: ${eventType}`);
     
     // We only care about customer replies
     if (!eventType?.includes("customer.reply") && !eventType?.includes("convo.created")) {
