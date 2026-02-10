@@ -476,6 +476,7 @@ export type Database = {
           client_id: string
           created_at: string
           created_by_profile_id: string
+          documented_at: string | null
           employment_related: boolean | null
           end_at: string
           from_date_1: string | null
@@ -512,6 +513,7 @@ export type Database = {
           client_id: string
           created_at?: string
           created_by_profile_id: string
+          documented_at?: string | null
           employment_related?: boolean | null
           end_at: string
           from_date_1?: string | null
@@ -537,7 +539,7 @@ export type Database = {
           thru_date_1?: string | null
           time_zone: Database["public"]["Enums"]["time_zones"]
           units_1?: number | null
-          updated_at?: string
+          updated_at: string
           videoroom_url?: string | null
         }
         Update: {
@@ -548,6 +550,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           created_by_profile_id?: string
+          documented_at?: string | null
           employment_related?: boolean | null
           end_at?: string
           from_date_1?: string | null
@@ -5184,6 +5187,64 @@ export type Database = {
           updated?: string | null
         }
         Relationships: []
+      }
+      messages: {
+        Row: {
+          body: string
+          client_id: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_id: string
+          sender_type: string
+          staff_id: string
+          tenant_id: string
+        }
+        Insert: {
+          body: string
+          client_id: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id: string
+          sender_type: string
+          staff_id: string
+          tenant_id: string
+        }
+        Update: {
+          body?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string
+          sender_type?: string
+          staff_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       missive_conversation_links: {
         Row: {
