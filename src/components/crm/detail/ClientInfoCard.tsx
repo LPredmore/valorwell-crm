@@ -1,8 +1,17 @@
+import { useState } from 'react';
 import { Mail, Phone, MapPin, User, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getTherapistDisplayName, STATUS_CONFIG, ALL_STATUSES, getStatusConfig } from '@/lib/crm/status-config';
 import { useUpdateClientStatus } from '@/hooks/crm/useUpdateClientStatus';
+import { useBulkSend } from '@/hooks/crm/useBulkSend';
+import { useBulkSms } from '@/hooks/crm/useBulkSms';
+import { useBulkSendStatus } from '@/hooks/crm/useBulkSendStatus';
+import { useBulkSmsStatus } from '@/hooks/crm/useBulkSmsStatus';
+import { BulkComposeDialog } from '@/components/crm/bulk/BulkComposeDialog';
+import { SmsComposeDialog } from '@/components/crm/bulk/SmsComposeDialog';
+import { BulkProgressModal } from '@/components/crm/bulk/BulkProgressModal';
+import { SmsProgressModal } from '@/components/crm/bulk/SmsProgressModal';
 import type { CrmClient, PatStatus } from '@/lib/crm/types';
 import { format } from 'date-fns';
 
@@ -12,6 +21,28 @@ interface ClientInfoCardProps {
 
 export function ClientInfoCard({ client }: ClientInfoCardProps) {
   const updateStatus = useUpdateClientStatus();
+  const { createBulkSend } = useBulkSend();
+  const { createBulkSms } = useBulkSms();
+
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [smsOpen, setSmsOpen] = useState(false);
+  const [bulkSendId, setBulkSendId] = useState<string | null>(null);
+  const [bulkSmsId, setBulkSmsId] = useState<string | null>(null);
+
+  const emailStatus = useBulkSendStatus(bulkSendId);
+  const smsStatus = useBulkSmsStatus(bulkSmsId);
+
+  const handleSendEmail = async (subject: string, bodyHtml: string) => {
+    const result = await createBulkSend.mutateAsync({ clientIds: [client.id], subject, bodyHtml });
+    setEmailOpen(false);
+    setBulkSendId(result.bulkSendId);
+  };
+
+  const handleSendSms = async (bodyText: string) => {
+    const result = await createBulkSms.mutateAsync({ clientIds: [client.id], bodyText });
+    setSmsOpen(false);
+    setBulkSmsId(result.bulkSmsId);
+  };
 
   const handleStatusChange = (newStatus: string) => {
     if (newStatus === client.pat_status) return;
@@ -83,12 +114,13 @@ export function ClientInfoCard({ client }: ClientInfoCardProps) {
             <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
             <div>
               <p className="text-sm font-medium">Email</p>
-              <a 
-                href={`mailto:${client.email}`}
-                className="text-sm text-muted-foreground hover:text-primary"
+              <button
+                type="button"
+                onClick={() => setEmailOpen(true)}
+                className="text-sm text-muted-foreground hover:text-primary hover:underline text-left"
               >
                 {client.email}
-              </a>
+              </button>
             </div>
           </div>
         )}
@@ -98,12 +130,13 @@ export function ClientInfoCard({ client }: ClientInfoCardProps) {
             <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
             <div>
               <p className="text-sm font-medium">Phone</p>
-              <a 
-                href={`tel:${client.phone}`}
-                className="text-sm text-muted-foreground hover:text-primary"
+              <button
+                type="button"
+                onClick={() => setSmsOpen(true)}
+                className="text-sm text-muted-foreground hover:text-primary hover:underline text-left"
               >
                 {client.phone}
-              </a>
+              </button>
             </div>
           </div>
         )}
@@ -138,6 +171,40 @@ export function ClientInfoCard({ client }: ClientInfoCardProps) {
           </div>
         </div>
       </CardContent>
+
+      {/* Compose Dialogs */}
+      <BulkComposeDialog
+        open={emailOpen}
+        onOpenChange={setEmailOpen}
+        recipientCount={1}
+        onSend={handleSendEmail}
+        isSending={createBulkSend.isPending}
+      />
+      <SmsComposeDialog
+        open={smsOpen}
+        onOpenChange={setSmsOpen}
+        recipientCount={1}
+        onSend={handleSendSms}
+        isSending={createBulkSms.isPending}
+      />
+
+      {/* Progress Modals */}
+      <BulkProgressModal
+        open={!!bulkSendId}
+        onOpenChange={(open) => { if (!open) setBulkSendId(null); }}
+        status={emailStatus.data?.status ?? 'pending'}
+        recipientCount={emailStatus.data?.recipientCount ?? 1}
+        sentCount={emailStatus.data?.sentCount ?? 0}
+        failedCount={emailStatus.data?.failedCount ?? 0}
+      />
+      <SmsProgressModal
+        open={!!bulkSmsId}
+        onOpenChange={(open) => { if (!open) setBulkSmsId(null); }}
+        status={smsStatus.data?.status ?? 'pending'}
+        recipientCount={smsStatus.data?.recipientCount ?? 1}
+        sentCount={smsStatus.data?.sentCount ?? 0}
+        failedCount={smsStatus.data?.failedCount ?? 0}
+      />
     </Card>
   );
 }
