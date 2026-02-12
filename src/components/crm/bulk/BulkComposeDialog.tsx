@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RichTextEditor } from '@/components/crm/shared/RichTextEditor';
 import { Loader2, Send } from 'lucide-react';
+import { SignatureSelect, useDefaultSignatureId } from '@/components/crm/shared/SignatureSelect';
+import { useEmailSignatures, getSignatureHtml } from '@/hooks/crm/useEmailSignatures';
 
 interface BulkComposeDialogProps {
   open: boolean;
@@ -32,10 +34,22 @@ export function BulkComposeDialog({
 }: BulkComposeDialogProps) {
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const defaultSigId = useDefaultSignatureId();
+  const [signatureId, setSignatureId] = useState<string>(defaultSigId);
+  const { data: signatures } = useEmailSignatures();
 
   const handleSend = async () => {
     if (!subject.trim() || !body.trim()) return;
-    await onSend(subject, body);
+
+    let finalBody = body;
+    if (signatureId && signatureId !== 'none') {
+      const sig = signatures?.find((s) => s.id === signatureId);
+      if (sig) {
+        finalBody += '<br><br>' + getSignatureHtml(sig);
+      }
+    }
+
+    await onSend(subject, finalBody);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -43,6 +57,7 @@ export function BulkComposeDialog({
       if (!newOpen) {
         setSubject('');
         setBody('');
+        setSignatureId(defaultSigId);
       }
       onOpenChange(newOpen);
     }
@@ -83,6 +98,8 @@ export function BulkComposeDialog({
               minHeight="200px"
             />
           </div>
+
+          <SignatureSelect value={signatureId} onChange={setSignatureId} />
         </div>
 
         <DialogFooter>

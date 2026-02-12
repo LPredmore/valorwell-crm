@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/crm/shared/RichTextEditor';
+import { SignatureSelect } from '@/components/crm/shared/SignatureSelect';
 import { Switch } from '@/components/ui/switch';
 import {
   Select,
@@ -172,6 +173,10 @@ export function CampaignStepEditor({
                     minHeight="140px"
                   />
                 </div>
+                <SignatureSelect
+                  value={step.signature_id || 'none'}
+                  onChange={(id) => onChange({ signature_id: id === 'none' ? null : id })}
+                />
               </div>
             )}
 

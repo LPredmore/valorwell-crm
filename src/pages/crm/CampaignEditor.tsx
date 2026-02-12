@@ -123,6 +123,7 @@ export default function CampaignEditor() {
           email_body_html: s.email_body_html || '',
           sms_body_text: s.sms_body_text || '',
           is_active: s.is_active,
+          signature_id: s.signature_id || null,
         }))
       );
     }
@@ -163,6 +164,7 @@ export default function CampaignEditor() {
         email_body_html: '',
         sms_body_text: '',
         is_active: true,
+        signature_id: null,
       },
     ]);
   };

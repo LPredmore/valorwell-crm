@@ -32,6 +32,7 @@ export interface CrmCampaignStep {
   email_body_html: string | null;
   sms_body_text: string | null;
   is_active: boolean;
+  signature_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -108,6 +109,7 @@ export interface CampaignStepFormData {
   email_body_html: string;
   sms_body_text: string;
   is_active: boolean;
+  signature_id: string | null;
 }
 
 // Common US timezones for the dropdown

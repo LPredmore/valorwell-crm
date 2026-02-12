@@ -44,6 +44,7 @@ interface CampaignStep {
   email_body_html: string | null;
   sms_body_text: string | null;
   is_active: boolean;
+  signature_id: string | null;
 }
 
 interface CampaignEnrollment {
@@ -588,7 +589,29 @@ async function processCampaignMessages() {
         }
 
         const subject = personalizeContent(typedStep.email_subject || 'Message from your care team', typedClient);
-        const body = personalizeContent(typedStep.email_body_html || '', typedClient);
+        let body = personalizeContent(typedStep.email_body_html || '', typedClient);
+
+        // Append signature if configured
+        if (typedStep.signature_id) {
+          const { data: sigData } = await supabase
+            .from('crm_email_signatures')
+            .select('signature_type, body_html, image_url')
+            .eq('id', typedStep.signature_id)
+            .single();
+
+          if (sigData) {
+            let sigHtml = '';
+            if (sigData.signature_type === 'image' && sigData.image_url) {
+              sigHtml = `<img src="${sigData.image_url}" alt="Signature" style="max-width:600px">`;
+            } else if (sigData.body_html) {
+              sigHtml = sigData.body_html;
+            }
+            if (sigHtml) {
+              body += '<br><br>' + sigHtml;
+            }
+          }
+        }
+
         const firstName = typedClient.pat_name_preferred || typedClient.pat_name_f || '';
         const lastName = typedClient.pat_name_l || '';
 
