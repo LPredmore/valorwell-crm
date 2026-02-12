@@ -232,6 +232,86 @@ export function useDeleteCampaign() {
   });
 }
 
+export function useDuplicateCampaign() {
+  const queryClient = useQueryClient();
+  const { tenantId, userId } = useCrmAuth();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (sourceCampaign: CrmCampaign): Promise<string> => {
+      if (!tenantId || !userId) throw new Error('Not authenticated');
+
+      // Insert duplicated campaign
+      const { data: newCampaign, error: campaignError } = await supabase
+        .from('crm_campaigns')
+        .insert({
+          tenant_id: tenantId,
+          name: `Copy of ${sourceCampaign.name}`,
+          description: sourceCampaign.description,
+          is_active: false,
+          weekdays_only: sourceCampaign.weekdays_only,
+          send_window_start: sourceCampaign.send_window_start,
+          send_window_end: sourceCampaign.send_window_end,
+          default_timezone: sourceCampaign.default_timezone,
+          on_complete_action: sourceCampaign.on_complete_action,
+          on_complete_status: sourceCampaign.on_complete_status,
+          created_by_profile_id: userId,
+        })
+        .select()
+        .single();
+
+      if (campaignError) throw campaignError;
+
+      // Fetch source steps
+      const { data: steps, error: stepsError } = await supabase
+        .from('crm_campaign_steps')
+        .select('*')
+        .eq('campaign_id', sourceCampaign.id)
+        .order('step_order', { ascending: true });
+
+      if (stepsError) throw stepsError;
+
+      // Copy steps to new campaign
+      if (steps && steps.length > 0) {
+        const newSteps = steps.map(s => ({
+          campaign_id: newCampaign.id,
+          tenant_id: tenantId,
+          step_order: s.step_order,
+          delay_days: s.delay_days,
+          delay_hours: s.delay_hours,
+          channel: s.channel,
+          email_subject: s.email_subject,
+          email_body_html: s.email_body_html,
+          sms_body_text: s.sms_body_text,
+          is_active: s.is_active,
+        }));
+
+        const { error: insertError } = await supabase
+          .from('crm_campaign_steps')
+          .insert(newSteps);
+
+        if (insertError) throw insertError;
+      }
+
+      return newCampaign.id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crm-campaigns'] });
+      toast({
+        title: 'Campaign duplicated',
+        description: 'A paused copy has been created. You can now edit it.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error duplicating campaign',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
 export function useToggleCampaignActive() {
   const queryClient = useQueryClient();
   const { tenantId } = useCrmAuth();

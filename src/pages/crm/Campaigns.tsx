@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MoreHorizontal, Pencil, Trash2, Users, Play, Pause } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, Users, Play, Pause, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCampaigns, useDeleteCampaign, useToggleCampaignActive } from '@/hooks/crm/useCampaigns';
+import { useCampaigns, useDeleteCampaign, useToggleCampaignActive, useDuplicateCampaign } from '@/hooks/crm/useCampaigns';
 import type { CrmCampaign } from '@/lib/crm/campaign-types';
 
 export default function Campaigns() {
@@ -37,6 +37,7 @@ export default function Campaigns() {
   const { data: campaigns, isLoading } = useCampaigns();
   const deleteCampaign = useDeleteCampaign();
   const toggleActive = useToggleCampaignActive();
+  const duplicateCampaign = useDuplicateCampaign();
   const [deleteTarget, setDeleteTarget] = useState<CrmCampaign | null>(null);
 
   const handleDelete = () => {
@@ -149,6 +150,16 @@ export default function Campaigns() {
                         >
                           <Users className="h-4 w-4 mr-2" />
                           View Enrollments
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            duplicateCampaign.mutate(campaign, {
+                              onSuccess: (newId) => navigate(`/crm/campaigns/${newId}`),
+                            })
+                          }
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Duplicate
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() =>
