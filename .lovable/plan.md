@@ -1,40 +1,72 @@
 
 
-# Duplicate Campaign Feature
+# Rich Text Email Editor
 
-## What It Does
+## What Changes
 
-Adds a "Duplicate" option to each campaign's action menu on the Campaigns list page. Clicking it copies the campaign settings and all its steps into a new campaign named "Copy of [original name]", set to paused (is_active = false). You're then navigated to the editor to customize it.
+Replace the plain text `<Textarea>` with a rich text toolbar editor in all three email composition surfaces. This gives you bold, italic, underline, hyperlinks, and bulleted/numbered lists -- the formatting that matters for professional email.
 
-## How It Works
+## The Editor: Tiptap
 
-### 1. New hook: `useDuplicateCampaign` in `src/hooks/crm/useCampaigns.ts`
+Tiptap is the right choice here. It's the most widely used rich text editor in the React ecosystem, outputs clean HTML natively (which is exactly what HelpScout expects), and is modular so we only include what we need. No heavyweight WYSIWYG bloat.
 
-A new mutation that:
-- Reads the source campaign's settings from the existing query cache (already loaded on the list page)
-- Inserts a new `crm_campaigns` row with identical settings except: name becomes `"Copy of [name]"`, `is_active` set to `false`
-- Fetches all steps from `crm_campaign_steps` for the source campaign
-- Inserts copies of every step (same channel, delays, subject, body, order) under the new campaign ID, with no `id` field so Postgres generates fresh UUIDs
-- Returns the new campaign's ID
-- On success, invalidates the campaigns query cache and navigates to the editor
+### Why not other options:
+- **react-quill**: Abandoned, React 18 compatibility issues
+- **Slate.js**: Lower-level framework, requires building everything yourself -- overkill for a formatting toolbar
+- **Draft.js**: Deprecated by Meta
+- **Raw contentEditable**: Unreliable cross-browser HTML output
 
-No enrollments or step logs are copied -- the duplicate is a clean template.
+## Implementation
 
-### 2. UI change: `src/pages/crm/Campaigns.tsx`
+### 1. Install Tiptap (3 packages)
 
-Add a "Duplicate" menu item in the existing `DropdownMenu` for each campaign row, between "View Enrollments" and the Pause/Activate toggle. Uses the `Copy` icon from lucide-react. On click, calls the new mutation and navigates to `"/crm/campaigns/{newId}"` on success.
+- `@tiptap/react` -- React bindings
+- `@tiptap/starter-kit` -- bold, italic, lists, headings, etc.
+- `@tiptap/extension-link` -- clickable hyperlinks with URL input
 
-## Technical Decisions
+### 2. Create a shared `RichTextEditor` component
 
-- **Client-side orchestration, not a database function**: The operation is two simple inserts (one campaign row + a handful of step rows). There's no concurrency concern or atomicity requirement beyond what already exists. A database function would add maintenance overhead for no benefit. The existing `useSaveCampaignSteps` pattern already does multi-row step inserts from the client.
+**New file: `src/components/crm/shared/RichTextEditor.tsx`**
 
-- **Starts paused**: A duplicate should never auto-send messages to anyone. Setting `is_active = false` is a safety default. You activate it deliberately after reviewing the steps.
+A reusable component that wraps Tiptap with a formatting toolbar. Features:
 
-- **Navigate to editor after duplication**: Rather than staying on the list page and making you find the new campaign, it takes you straight to editing. This matches the stated workflow: "duplicate, then edit the steps."
+- **Toolbar buttons**: Bold, Italic, Underline, Link, Bullet List, Ordered List
+- **Link dialog**: Small popover to enter/edit a URL when the Link button is clicked
+- **Props**: `value` (HTML string), `onChange` (returns HTML string), `placeholder`, `disabled`, `minHeight`
+- **Styling**: Matches the existing input/textarea design (border, ring focus, background) using the project's Tailwind tokens so it looks native
+
+The component manages Tiptap internally and exposes a simple string-in/string-out interface so the parent components don't need to know anything about Tiptap.
+
+### 3. Update BulkComposeDialog
+
+Replace the `<Textarea>` for the message body with `<RichTextEditor>`. Remove the manual plain-text-to-HTML conversion in `handleSend` since the editor already outputs HTML. The `body` state becomes an HTML string directly.
+
+### 4. Update ReplyComposer
+
+Replace the `<Textarea>` with `<RichTextEditor>`. The `text` field sent to the reply hook is already passed as the body to HelpScout -- it just becomes HTML instead of plain text. HelpScout's API accepts HTML in thread bodies natively.
+
+### 5. Update CampaignStepEditor
+
+Replace the email body `<Textarea>` (the one labeled "Body (HTML supported)") with `<RichTextEditor>`. The value is already stored as `email_body_html`, so this is a direct swap. The SMS textarea stays as plain text (SMS doesn't support formatting).
+
+## What Stays the Same
+
+- All database columns unchanged (they already store HTML strings)
+- Edge function processing unchanged (already sends HTML to HelpScout)
+- SMS composition stays as plain textarea (SMS is plain text by nature)
+- Subject lines stay as plain `<Input>` (email subjects don't support HTML)
+- The `onSend` / `onChange` callback signatures don't change -- they already expect HTML strings
 
 ## Files Changed
 
-- `src/hooks/crm/useCampaigns.ts` -- add `useDuplicateCampaign` mutation
-- `src/pages/crm/Campaigns.tsx` -- add "Duplicate" dropdown menu item wired to the new hook
+- **New**: `src/components/crm/shared/RichTextEditor.tsx`
+- **Modified**: `src/components/crm/bulk/BulkComposeDialog.tsx`
+- **Modified**: `src/components/crm/inbox/ReplyComposer.tsx`
+- **Modified**: `src/components/crm/campaigns/CampaignStepEditor.tsx`
 
-No database changes. No new tables or columns.
+## New Dependencies
+
+- `@tiptap/react`
+- `@tiptap/starter-kit`
+- `@tiptap/extension-link`
+
