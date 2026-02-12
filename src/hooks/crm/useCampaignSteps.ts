@@ -85,6 +85,7 @@ export function useSaveCampaignSteps() {
               email_body_html: step.channel === 'email' ? step.email_body_html : null,
               sms_body_text: step.channel === 'sms' ? step.sms_body_text : null,
               is_active: step.is_active,
+              signature_id: step.channel === 'email' ? step.signature_id : null,
             })
             .eq('id', step.id)
             .eq('tenant_id', tenantId);
@@ -103,6 +104,7 @@ export function useSaveCampaignSteps() {
             email_body_html: step.channel === 'email' ? step.email_body_html : null,
             sms_body_text: step.channel === 'sms' ? step.sms_body_text : null,
             is_active: step.is_active,
+            signature_id: step.channel === 'email' ? step.signature_id : null,
           });
 
           if (error) throw error;

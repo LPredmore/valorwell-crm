@@ -3728,6 +3728,7 @@ export type Database = {
           email_subject: string | null
           id: string
           is_active: boolean
+          signature_id: string | null
           sms_body_text: string | null
           step_order: number
           tenant_id: string
@@ -3743,6 +3744,7 @@ export type Database = {
           email_subject?: string | null
           id?: string
           is_active?: boolean
+          signature_id?: string | null
           sms_body_text?: string | null
           step_order?: number
           tenant_id: string
@@ -3758,6 +3760,7 @@ export type Database = {
           email_subject?: string | null
           id?: string
           is_active?: boolean
+          signature_id?: string | null
           sms_body_text?: string | null
           step_order?: number
           tenant_id?: string
@@ -3769,6 +3772,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "crm_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campaign_steps_signature_id_fkey"
+            columns: ["signature_id"]
+            isOneToOne: false
+            referencedRelation: "crm_email_signatures"
             referencedColumns: ["id"]
           },
           {
@@ -3944,6 +3954,60 @@ export type Database = {
           },
           {
             foreignKeyName: "crm_conversation_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_email_signatures: {
+        Row: {
+          body_html: string | null
+          created_at: string
+          created_by_profile_id: string | null
+          id: string
+          image_url: string | null
+          is_default: boolean
+          name: string
+          signature_type: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          body_html?: string | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          id?: string
+          image_url?: string | null
+          is_default?: boolean
+          name: string
+          signature_type: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          body_html?: string | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          id?: string
+          image_url?: string | null
+          is_default?: boolean
+          name?: string
+          signature_type?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_email_signatures_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_email_signatures_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

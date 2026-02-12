@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { KanbanConfigPanel } from '@/components/crm/settings/KanbanConfigPanel';
 import { HelpScoutConfigPanel } from '@/components/crm/settings/HelpScoutConfigPanel';
+import { EmailSignaturesPanel } from '@/components/crm/settings/EmailSignaturesPanel';
 
 export default function CrmSettings() {
   return (
@@ -14,20 +14,8 @@ export default function CrmSettings() {
         {/* Kanban Configuration */}
         <KanbanConfigPanel />
 
-        {/* Future settings cards */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Email Templates</CardTitle>
-            <CardDescription>
-              Manage email templates for client communications.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground text-sm">
-              Email template management will be available in Phase 4.
-            </p>
-          </CardContent>
-        </Card>
+        {/* Email Signatures */}
+        <EmailSignaturesPanel />
       </div>
     </div>
   );
