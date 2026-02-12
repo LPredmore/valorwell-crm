@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/crm/shared/RichTextEditor';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Loader2, Send } from 'lucide-react';
@@ -34,13 +34,12 @@ export function ReplyComposer({ conversationId, onSuccess }: ReplyComposerProps)
   return (
     <form onSubmit={handleSubmit} className="border-t bg-card p-4 space-y-3">
       <div>
-        <Textarea
-          placeholder="Type your reply..."
+        <RichTextEditor
           value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={4}
-          className="resize-none"
+          onChange={setText}
+          placeholder="Type your reply..."
           disabled={isPending}
+          minHeight="100px"
         />
       </div>
       <div className="flex items-center justify-between gap-4">
