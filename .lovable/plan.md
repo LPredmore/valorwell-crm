@@ -1,70 +1,40 @@
 
 
-# Fix: Bulk Status Change Fails for Clients with Active Campaign Enrollments
+# Duplicate Campaign Feature
 
-## Root Cause
+## What It Does
 
-The error is NOT in the CRM application code. Both `useBulkUpdateStatus` and `useUpdateClientStatus` are written correctly. The bug is in the database.
+Adds a "Duplicate" option to each campaign's action menu on the Campaigns list page. Clicking it copies the campaign settings and all its steps into a new campaign named "Copy of [original name]", set to paused (is_active = false). You're then navigated to the editor to customize it.
 
-When you change a client's status, a database trigger (`trg_cancel_campaign_on_status_change`) fires to automatically cancel any active campaign enrollment for that client. As part of that trigger, it tries to log an audit event with `event_type = 'campaign_auto_cancelled'`. But the `crm_activity_events` table has a CHECK constraint that only allows these event types:
+## How It Works
 
-- status_change
-- note_added
-- email_sent
-- email_received
-- conversation_linked
-- bulk_send
+### 1. New hook: `useDuplicateCampaign` in `src/hooks/crm/useCampaigns.ts`
 
-`campaign_auto_cancelled` is not in that list. The constraint rejects the insert, the trigger fails, and the entire transaction (including the original status update) rolls back. PostgREST reports this as a 400 error.
+A new mutation that:
+- Reads the source campaign's settings from the existing query cache (already loaded on the list page)
+- Inserts a new `crm_campaigns` row with identical settings except: name becomes `"Copy of [name]"`, `is_active` set to `false`
+- Fetches all steps from `crm_campaign_steps` for the source campaign
+- Inserts copies of every step (same channel, delays, subject, body, order) under the new campaign ID, with no `id` field so Postgres generates fresh UUIDs
+- Returns the new campaign's ID
+- On success, invalidates the campaigns query cache and navigates to the editor
 
-This affects ANY status change (bulk or single) on ANY client that has an active campaign enrollment. The profile page appeared to work only because that particular client had no active enrollment at the time.
+No enrollments or step logs are copied -- the duplicate is a clean template.
 
-## The Fix
+### 2. UI change: `src/pages/crm/Campaigns.tsx`
 
-One database migration that adds `campaign_auto_cancelled` to the check constraint on `crm_activity_events.event_type`. While we are at it, we should also add `sms_sent` and `sms_received` since the SMS features exist and will likely need audit logging too.
+Add a "Duplicate" menu item in the existing `DropdownMenu` for each campaign row, between "View Enrollments" and the Pause/Activate toggle. Uses the `Copy` icon from lucide-react. On click, calls the new mutation and navigates to `"/crm/campaigns/{newId}"` on success.
 
-No application code changes are needed. No table structure changes (columns stay the same). This only widens the set of allowed string values in an existing constraint.
+## Technical Decisions
 
-### Migration SQL
+- **Client-side orchestration, not a database function**: The operation is two simple inserts (one campaign row + a handful of step rows). There's no concurrency concern or atomicity requirement beyond what already exists. A database function would add maintenance overhead for no benefit. The existing `useSaveCampaignSteps` pattern already does multi-row step inserts from the client.
 
-```sql
-ALTER TABLE crm_activity_events
-  DROP CONSTRAINT crm_activity_events_event_type_check;
+- **Starts paused**: A duplicate should never auto-send messages to anyone. Setting `is_active = false` is a safety default. You activate it deliberately after reviewing the steps.
 
-ALTER TABLE crm_activity_events
-  ADD CONSTRAINT crm_activity_events_event_type_check
-  CHECK (event_type = ANY (ARRAY[
-    'status_change',
-    'note_added',
-    'email_sent',
-    'email_received',
-    'conversation_linked',
-    'bulk_send',
-    'campaign_auto_cancelled',
-    'sms_sent',
-    'sms_received'
-  ]));
-```
+- **Navigate to editor after duplication**: Rather than staying on the list page and making you find the new campaign, it takes you straight to editing. This matches the stated workflow: "duplicate, then edit the steps."
 
-### TypeScript Type Update
+## Files Changed
 
-Update the `CrmActivityEvent` interface in `src/lib/crm/types.ts` to include the new event types so the frontend type system stays in sync:
+- `src/hooks/crm/useCampaigns.ts` -- add `useDuplicateCampaign` mutation
+- `src/pages/crm/Campaigns.tsx` -- add "Duplicate" dropdown menu item wired to the new hook
 
-```typescript
-event_type: 'status_change' | 'note_added' | 'email_sent' | 'email_received'
-  | 'conversation_linked' | 'bulk_send' | 'campaign_auto_cancelled'
-  | 'sms_sent' | 'sms_received';
-```
-
-## What This Does NOT Change
-
-- No columns are added, removed, or modified on any table
-- No existing data is affected
-- No application logic changes
-- No new tables
-- The trigger function itself is correct and does not need modification
-
-## Risk Assessment
-
-Minimal. Dropping and re-adding a CHECK constraint is a metadata-only operation in Postgres -- it does not lock the table or rewrite data. The only behavioral change is that the trigger will now succeed instead of crashing, which is the intended behavior.
-
+No database changes. No new tables or columns.
