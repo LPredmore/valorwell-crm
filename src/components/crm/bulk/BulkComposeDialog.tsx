@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/crm/shared/RichTextEditor';
 import { Loader2, Send } from 'lucide-react';
 
 interface BulkComposeDialogProps {
@@ -35,14 +35,7 @@ export function BulkComposeDialog({
 
   const handleSend = async () => {
     if (!subject.trim() || !body.trim()) return;
-    
-    // Convert plain text to simple HTML (preserve line breaks)
-    const bodyHtml = body
-      .split('\n')
-      .map(line => `<p>${line || '&nbsp;'}</p>`)
-      .join('');
-    
-    await onSend(subject, bodyHtml);
+    await onSend(subject, body);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -81,15 +74,13 @@ export function BulkComposeDialog({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="body">Message</Label>
-            <Textarea
-              id="body"
-              placeholder="Write your message here..."
+            <Label>Message</Label>
+            <RichTextEditor
               value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={10}
+              onChange={setBody}
+              placeholder="Write your message here..."
               disabled={isSending}
-              className="resize-none"
+              minHeight="200px"
             />
           </div>
         </div>

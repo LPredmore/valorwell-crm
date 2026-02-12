@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/crm/shared/RichTextEditor';
 import { Switch } from '@/components/ui/switch';
 import {
   Select,
@@ -163,12 +164,12 @@ export function CampaignStepEditor({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Body (HTML supported)</Label>
-                  <Textarea
+                  <Label>Body</Label>
+                  <RichTextEditor
                     value={step.email_body_html}
-                    onChange={(e) => onChange({ email_body_html: e.target.value })}
+                    onChange={(html) => onChange({ email_body_html: html })}
                     placeholder="Enter email body..."
-                    rows={6}
+                    minHeight="140px"
                   />
                 </div>
               </div>
