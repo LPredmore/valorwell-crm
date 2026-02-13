@@ -28,6 +28,7 @@ export function useClients(options: UseClientsOptions = {}) {
           phone,
           pat_state,
           pat_status,
+          tags,
           created_at,
           updated_at,
           primary_staff:staff!clients_primary_staff_id_fkey (

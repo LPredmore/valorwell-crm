@@ -1,9 +1,15 @@
 import { useState } from 'react';
-import { Mail, Phone, MapPin, User, Calendar } from 'lucide-react';
+import { Mail, Phone, MapPin, User, Calendar, Tag, X, Check, ChevronsUpDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { getTherapistDisplayName, STATUS_CONFIG, ALL_STATUSES, getStatusConfig } from '@/lib/crm/status-config';
 import { useUpdateClientStatus } from '@/hooks/crm/useUpdateClientStatus';
+import { useUpdateClientTag } from '@/hooks/crm/useUpdateClientTag';
+import { useTagOptions } from '@/hooks/crm/useTagOptions';
 import { useBulkSend } from '@/hooks/crm/useBulkSend';
 import { useBulkSms } from '@/hooks/crm/useBulkSms';
 import { useBulkSendStatus } from '@/hooks/crm/useBulkSendStatus';
@@ -12,6 +18,7 @@ import { BulkComposeDialog } from '@/components/crm/bulk/BulkComposeDialog';
 import { SmsComposeDialog } from '@/components/crm/bulk/SmsComposeDialog';
 import { BulkProgressModal } from '@/components/crm/bulk/BulkProgressModal';
 import { SmsProgressModal } from '@/components/crm/bulk/SmsProgressModal';
+import { cn } from '@/lib/utils';
 import type { CrmClient, PatStatus } from '@/lib/crm/types';
 import { format } from 'date-fns';
 
@@ -21,8 +28,12 @@ interface ClientInfoCardProps {
 
 export function ClientInfoCard({ client }: ClientInfoCardProps) {
   const updateStatus = useUpdateClientStatus();
+  const updateTag = useUpdateClientTag();
+  const { data: tagOptions = [] } = useTagOptions();
   const { createBulkSend } = useBulkSend();
   const { createBulkSms } = useBulkSms();
+  const [tagOpen, setTagOpen] = useState(false);
+  const [tagSearch, setTagSearch] = useState('');
 
   const [emailOpen, setEmailOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
@@ -107,6 +118,79 @@ export function ClientInfoCard({ client }: ClientInfoCardProps) {
               })}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Tag Selector */}
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium">Tag</p>
+          <div className="flex items-center gap-2">
+            {client.tags ? (
+              <Badge variant="secondary" className="gap-1">
+                {client.tags}
+                <button
+                  type="button"
+                  onClick={() => updateTag.mutate({ clientId: client.id, tag: null })}
+                  className="ml-1 rounded-full hover:bg-muted-foreground/20"
+                  disabled={updateTag.isPending}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ) : null}
+            <Popover open={tagOpen} onOpenChange={setTagOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 gap-1 text-xs">
+                  <Tag className="h-3 w-3" />
+                  {client.tags ? 'Change' : 'Add Tag'}
+                  <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-52 p-0" align="start">
+                <Command>
+                  <CommandInput
+                    placeholder="Search or create..."
+                    value={tagSearch}
+                    onValueChange={setTagSearch}
+                  />
+                  <CommandList>
+                    <CommandEmpty>
+                      {tagSearch.trim() ? (
+                        <button
+                          type="button"
+                          className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent rounded"
+                          onClick={() => {
+                            updateTag.mutate({ clientId: client.id, tag: tagSearch.trim() });
+                            setTagOpen(false);
+                            setTagSearch('');
+                          }}
+                        >
+                          Create "<span className="font-medium">{tagSearch.trim()}</span>"
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">No tags found</span>
+                      )}
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {tagOptions.map((tag) => (
+                        <CommandItem
+                          key={tag}
+                          value={tag}
+                          onSelect={() => {
+                            updateTag.mutate({ clientId: client.id, tag });
+                            setTagOpen(false);
+                            setTagSearch('');
+                          }}
+                        >
+                          <Check className={cn('h-4 w-4 mr-2', client.tags === tag ? 'opacity-100' : 'opacity-0')} />
+                          {tag}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
         {client.email && (

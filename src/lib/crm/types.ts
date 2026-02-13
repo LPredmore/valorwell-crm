@@ -33,6 +33,7 @@ export interface CrmClient {
   phone: string | null;
   pat_state: string | null;
   pat_status: PatStatus | null;
+  tags: string | null;
   created_at: string;
   updated_at: string;
   primary_staff?: {

@@ -19,6 +19,7 @@ import { useBulkSendStatus } from '@/hooks/crm/useBulkSendStatus';
 import { useBulkSms } from '@/hooks/crm/useBulkSms';
 import { useBulkSmsStatus } from '@/hooks/crm/useBulkSmsStatus';
 import { useBulkUpdateStatus } from '@/hooks/crm/useBulkUpdateStatus';
+import { useBulkUpdateTag } from '@/hooks/crm/useBulkUpdateTag';
 import type { ClientFilters as ClientFiltersType, CrmClient, PatStatus } from '@/lib/crm/types';
 
 export default function CrmClients() {
@@ -60,6 +61,7 @@ export default function CrmClients() {
   const { createBulkSms } = useBulkSms();
   const { data: bulkSmsStatus } = useBulkSmsStatus(activeBulkSmsId);
   const bulkUpdateStatus = useBulkUpdateStatus();
+  const bulkUpdateTag = useBulkUpdateTag();
 
   const handleClientClick = (clientId: string) => {
     navigate(`/crm/clients/${clientId}`);
@@ -172,6 +174,13 @@ export default function CrmClients() {
     });
   }, [clients, selectedClientIds, bulkUpdateStatus]);
 
+  // Bulk tag change handler
+  const handleBulkTagChange = useCallback((tag: string | null) => {
+    bulkUpdateTag.mutate({ clientIds: Array.from(selectedClientIds), tag }, {
+      onSuccess: () => setSelectedClientIds(new Set()),
+    });
+  }, [selectedClientIds, bulkUpdateTag]);
+
   // Campaign enrollment handlers
   const handleOpenEnrollDialog = () => {
     setEnrollDialogOpen(true);
@@ -247,6 +256,7 @@ export default function CrmClients() {
           onSendSms={handleOpenSmsCompose}
           onEnrollCampaign={handleOpenEnrollDialog}
           onChangeStatus={handleBulkStatusChange}
+          onSetTag={handleBulkTagChange}
           onClear={handleClearSelection}
         />
       )}
