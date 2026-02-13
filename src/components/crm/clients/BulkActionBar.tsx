@@ -1,13 +1,15 @@
-import { Mail, MessageSquare, Megaphone, ArrowRightLeft, X } from 'lucide-react';
+import { Mail, MessageSquare, Megaphone, ArrowRightLeft, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { StatusBadge } from './StatusBadge';
 import { ALL_STATUSES } from '@/lib/crm/status-config';
+import { useTagOptions } from '@/hooks/crm/useTagOptions';
 import type { PatStatus } from '@/lib/crm/types';
 
 interface BulkActionBarProps {
@@ -16,6 +18,7 @@ interface BulkActionBarProps {
   onSendSms?: () => void;
   onEnrollCampaign?: () => void;
   onChangeStatus?: (newStatus: PatStatus) => void;
+  onSetTag?: (tag: string | null) => void;
   onClear: () => void;
   entityLabel?: 'client' | 'staff';
 }
@@ -26,9 +29,11 @@ export function BulkActionBar({
   onSendSms, 
   onEnrollCampaign,
   onChangeStatus,
+  onSetTag,
   onClear, 
   entityLabel = 'client' 
 }: BulkActionBarProps) {
+  const { data: tagOptions = [] } = useTagOptions();
   if (selectedCount === 0) return null;
 
   const label = entityLabel === 'staff' 
@@ -75,6 +80,30 @@ export function BulkActionBar({
                     <StatusBadge status={status} size="sm" />
                   </DropdownMenuItem>
                 ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {onSetTag && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="secondary" className="gap-2">
+                  <Tag className="h-4 w-4" />
+                  Set Tag
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="max-h-72 overflow-y-auto">
+                {tagOptions.map((tag) => (
+                  <DropdownMenuItem
+                    key={tag}
+                    onClick={() => onSetTag(tag)}
+                  >
+                    {tag}
+                  </DropdownMenuItem>
+                ))}
+                {tagOptions.length > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem onClick={() => onSetTag(null)} className="text-destructive">
+                  Remove Tag
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}

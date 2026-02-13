@@ -624,6 +624,76 @@ export type Database = {
           },
         ]
       }
+      calendar_sync_log: {
+        Row: {
+          appointment_id: string
+          created_at: string
+          error_message: string | null
+          google_calendar_id: string | null
+          google_event_id: string | null
+          id: string
+          last_synced_at: string | null
+          retry_count: number
+          staff_id: string
+          sync_direction: string
+          sync_status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string
+          error_message?: string | null
+          google_calendar_id?: string | null
+          google_event_id?: string | null
+          id?: string
+          last_synced_at?: string | null
+          retry_count?: number
+          staff_id: string
+          sync_direction?: string
+          sync_status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string
+          error_message?: string | null
+          google_calendar_id?: string | null
+          google_event_id?: string | null
+          id?: string
+          last_synced_at?: string | null
+          retry_count?: number
+          staff_id?: string
+          sync_direction?: string
+          sync_status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_sync_log_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_sync_log_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_sync_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       claim_appeals: {
         Row: {
           appeal_date: string
@@ -6243,6 +6313,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          intl: boolean
           profile_id: string
           prov_accepting_new_clients: boolean
           prov_addr_1: string | null
@@ -6279,6 +6350,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          intl?: boolean
           profile_id: string
           prov_accepting_new_clients?: boolean
           prov_addr_1?: string | null
@@ -6315,6 +6387,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          intl?: boolean
           profile_id?: string
           prov_accepting_new_clients?: boolean
           prov_addr_1?: string | null
@@ -6358,6 +6431,69 @@ export type Database = {
           },
           {
             foreignKeyName: "staff_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_calendar_connections: {
+        Row: {
+          access_token_encrypted: string | null
+          connection_status: string
+          created_at: string
+          id: string
+          last_error: string | null
+          last_sync_at: string | null
+          provider: string
+          refresh_token_encrypted: string | null
+          selected_calendar_id: string | null
+          staff_id: string
+          tenant_id: string
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token_encrypted?: string | null
+          connection_status?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          provider?: string
+          refresh_token_encrypted?: string | null
+          selected_calendar_id?: string | null
+          staff_id: string
+          tenant_id: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token_encrypted?: string | null
+          connection_status?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          provider?: string
+          refresh_token_encrypted?: string | null
+          selected_calendar_id?: string | null
+          staff_id?: string
+          tenant_id?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_calendar_connections_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_calendar_connections_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
