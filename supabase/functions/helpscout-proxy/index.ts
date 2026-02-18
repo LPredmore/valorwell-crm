@@ -859,7 +859,7 @@ Deno.serve(async (req) => {
 async function handleWebhook(req: Request): Promise<Response> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const webhookSecret = Deno.env.get("HELPSCOUT_APP_SECRET");
+  const webhookSecret = Deno.env.get("HELPSCOUT_WEBHOOK_SECRET");
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
@@ -908,7 +908,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       
       console.log("Webhook signature validated successfully");
     } else {
-      console.warn("HELPSCOUT_APP_SECRET not configured - skipping signature validation");
+      console.warn("HELPSCOUT_WEBHOOK_SECRET not configured - skipping signature validation");
     }
 
     // Parse the body (we already read it as text, so parse manually)
