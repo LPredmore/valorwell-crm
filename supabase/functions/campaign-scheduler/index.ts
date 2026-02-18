@@ -636,6 +636,23 @@ async function processCampaignMessages() {
             })
             .eq('id', stepLog.id);
           sent++;
+
+          // Log activity event
+          await supabase
+            .from('crm_activity_events')
+            .insert({
+              tenant_id: stepLog.tenant_id,
+              client_id: stepLog.client_id,
+              event_type: 'email_sent',
+              created_by_profile_id: null,
+              metadata: {
+                source: 'campaign',
+                subject,
+                campaign_id: campaign.id,
+                campaign_name: campaign.name,
+                step_order: typedStep.step_order,
+              },
+            });
         } else {
           console.error(`Failed to send email: ${result.error}`);
           await supabase
@@ -670,6 +687,22 @@ async function processCampaignMessages() {
             .update({ status: 'sent', sent_at: new Date().toISOString() })
             .eq('id', stepLog.id);
           sent++;
+
+          // Log activity event
+          await supabase
+            .from('crm_activity_events')
+            .insert({
+              tenant_id: stepLog.tenant_id,
+              client_id: stepLog.client_id,
+              event_type: 'sms_sent',
+              created_by_profile_id: null,
+              metadata: {
+                source: 'campaign',
+                campaign_id: campaign.id,
+                campaign_name: campaign.name,
+                step_order: typedStep.step_order,
+              },
+            });
         } else {
           console.error(`Failed to send SMS: ${result.error}`);
           await supabase

@@ -282,6 +282,31 @@ async function processBulkSms(bulkSmsId: string) {
         })
         .eq('id', recipient.id);
       sentCount++;
+
+      // Log activity event for client recipients only
+      if (smsLog.recipient_type !== 'staff' && recipient.id) {
+        // Get client_id from the recipient record
+        const { data: recipientRecord } = await supabase
+          .from('crm_bulk_sms_recipients')
+          .select('client_id')
+          .eq('id', recipient.id)
+          .single();
+
+        if (recipientRecord?.client_id) {
+          await supabase
+            .from('crm_activity_events')
+            .insert({
+              tenant_id: smsLog.tenant_id,
+              client_id: recipientRecord.client_id,
+              event_type: 'sms_sent',
+              created_by_profile_id: null,
+              metadata: {
+                source: 'bulk',
+                to_phone: phoneResult.normalized,
+              },
+            });
+        }
+      }
     } else {
       console.error(`Failed to send to ${recipient.name}: ${result.error}`);
       await supabase
@@ -466,6 +491,22 @@ async function handleInboundSms(req: Request): Promise<Response> {
     } else {
       loggedSmsId = insertedLog?.id || null;
       console.log(`Logged inbound SMS with id: ${loggedSmsId}, client_id: ${matchedClient?.id || 'null'}`);
+    }
+
+    // Log sms_received activity event for matched client
+    if (matchedClient) {
+      await supabase
+        .from('crm_activity_events')
+        .insert({
+          tenant_id: matchedClient.tenant_id,
+          client_id: matchedClient.id,
+          event_type: 'sms_received',
+          created_by_profile_id: null,
+          metadata: {
+            source: 'webhook',
+            from_phone: phoneResult.normalized,
+          },
+        });
     }
 
     // Check for active campaign enrollments for any matching client

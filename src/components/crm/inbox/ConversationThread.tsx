@@ -76,7 +76,7 @@ export function ConversationThread({ conversation }: ConversationThreadProps) {
       </div>
 
       {/* Reply Composer */}
-      <ReplyComposer conversationId={conversation.id} onSuccess={() => refetch()} />
+      <ReplyComposer conversationId={conversation.id} clientId={conversation.client_id} onSuccess={() => refetch()} />
     </div>
   );
 }
