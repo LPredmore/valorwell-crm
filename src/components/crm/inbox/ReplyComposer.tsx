@@ -10,10 +10,11 @@ import { useEmailSignatures, getSignatureHtml } from '@/hooks/crm/useEmailSignat
 
 interface ReplyComposerProps {
   conversationId: number;
+  clientId?: string;
   onSuccess?: () => void;
 }
 
-export function ReplyComposer({ conversationId, onSuccess }: ReplyComposerProps) {
+export function ReplyComposer({ conversationId, clientId, onSuccess }: ReplyComposerProps) {
   const [text, setText] = useState('');
   const [status, setStatus] = useState<'active' | 'pending' | 'closed'>('pending');
   const defaultSigId = useDefaultSignatureId();
@@ -41,7 +42,7 @@ export function ReplyComposer({ conversationId, onSuccess }: ReplyComposerProps)
     }
 
     sendReply(
-      { conversationId, text: finalBody, status },
+      { conversationId, text: finalBody, status, clientId },
       {
         onSuccess: () => {
           setText('');

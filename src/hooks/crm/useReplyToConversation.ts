@@ -6,18 +6,20 @@ interface ReplyParams {
   conversationId: number;
   text: string;
   status: 'active' | 'pending' | 'closed';
+  clientId?: string;
 }
 
 export function useReplyToConversation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ conversationId, text, status }: ReplyParams) => {
+    mutationFn: async ({ conversationId, text, status, clientId }: ReplyParams) => {
       return helpscoutApi('reply', {
+        params: { id: String(conversationId) },
         body: {
-          conversationId,
           text,
           status,
+          clientId,
         },
       });
     },

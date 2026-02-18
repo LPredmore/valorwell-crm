@@ -126,6 +126,7 @@ async function handleBulkSend(
       firstName: string;
       lastName: string;
       recipientTable: string;
+      clientId?: string;
     }
 
     let recipientsToProcess: RecipientData[] = [];
@@ -216,6 +217,7 @@ async function handleBulkSend(
           firstName: clientData?.pat_name_preferred || clientData?.pat_name_f || '',
           lastName: clientData?.pat_name_l || '',
           recipientTable: 'crm_bulk_send_recipients',
+          clientId: clientData?.id,
         };
       });
     }
@@ -301,6 +303,23 @@ async function handleBulkSend(
           })
           .eq("id", recipient.id);
         sentCount++;
+
+        // Log activity event for client recipients
+        if (recipient.clientId) {
+          await supabase
+            .from('crm_activity_events')
+            .insert({
+              tenant_id: bulkSendLog.tenant_id,
+              client_id: recipient.clientId,
+              event_type: 'email_sent',
+              created_by_profile_id: null,
+              metadata: {
+                source: 'bulk',
+                subject: bulkSendLog.subject,
+                helpscout_conversation_id: conversationId || null,
+              },
+            });
+        }
 
         // Rate limiting: wait 150ms between requests
         await new Promise((resolve) => setTimeout(resolve, 150));
@@ -630,7 +649,7 @@ Deno.serve(async (req) => {
         }
 
         const body = await req.json();
-        const { text, status } = body;
+        const { text, status, clientId } = body;
 
         if (!text) {
           return new Response(JSON.stringify({ error: "Text is required" }), {
@@ -654,6 +673,35 @@ Deno.serve(async (req) => {
           const error = await response.text();
           console.error("HelpScout reply error:", error);
           throw new Error(`HelpScout API error: ${response.status}`);
+        }
+
+        // Log activity event for manual reply if clientId provided
+        if (clientId) {
+          const serviceSupabase = createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+          );
+          // Look up tenant from client
+          const { data: clientData } = await serviceSupabase
+            .from('clients')
+            .select('tenant_id')
+            .eq('id', clientId)
+            .single();
+
+          if (clientData) {
+            await serviceSupabase
+              .from('crm_activity_events')
+              .insert({
+                tenant_id: clientData.tenant_id,
+                client_id: clientId,
+                event_type: 'email_sent',
+                created_by_profile_id: userId,
+                metadata: {
+                  source: 'reply',
+                  helpscout_conversation_id: conversationId,
+                },
+              });
+          }
         }
 
         result = { success: true, conversationId };
@@ -921,6 +969,22 @@ async function handleWebhook(req: Request): Promise<Response> {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Log email_received activity event for each matched client
+    for (const client of clients) {
+      await supabase
+        .from('crm_activity_events')
+        .insert({
+          tenant_id: client.tenant_id,
+          client_id: client.id,
+          event_type: 'email_received',
+          created_by_profile_id: null,
+          metadata: {
+            source: 'webhook',
+            helpscout_event: eventType,
+          },
+        });
     }
 
     // Check for active campaign enrollments for any matching client
