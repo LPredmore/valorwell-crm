@@ -30,6 +30,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCampaigns, useDeleteCampaign, useToggleCampaignActive, useDuplicateCampaign } from '@/hooks/crm/useCampaigns';
+import { useAllCampaignTriggers } from '@/hooks/crm/useCampaignTriggers';
 import type { CrmCampaign } from '@/lib/crm/campaign-types';
 
 export default function Campaigns() {
