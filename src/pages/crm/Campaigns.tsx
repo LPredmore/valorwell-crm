@@ -30,15 +30,20 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCampaigns, useDeleteCampaign, useToggleCampaignActive, useDuplicateCampaign } from '@/hooks/crm/useCampaigns';
+import { useAllCampaignTriggers } from '@/hooks/crm/useCampaignTriggers';
 import type { CrmCampaign } from '@/lib/crm/campaign-types';
 
 export default function Campaigns() {
   const navigate = useNavigate();
   const { data: campaigns, isLoading } = useCampaigns();
+  const { data: allTriggers } = useAllCampaignTriggers();
   const deleteCampaign = useDeleteCampaign();
   const toggleActive = useToggleCampaignActive();
   const duplicateCampaign = useDuplicateCampaign();
   const [deleteTarget, setDeleteTarget] = useState<CrmCampaign | null>(null);
+
+  const getTriggerForCampaign = (campaignId: string) =>
+    allTriggers?.find((t) => t.campaign_id === campaignId);
 
   const handleDelete = () => {
     if (deleteTarget) {
@@ -110,6 +115,11 @@ export default function Campaigns() {
                         <p className="text-sm text-muted-foreground truncate max-w-xs">
                           {campaign.description}
                         </p>
+                      )}
+                      {getTriggerForCampaign(campaign.id) && (
+                        <Badge variant="outline" className="mt-1 text-xs">
+                          Auto: {getTriggerForCampaign(campaign.id)!.trigger_on_status}
+                        </Badge>
                       )}
                     </div>
                   </TableCell>

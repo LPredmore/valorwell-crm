@@ -3979,6 +3979,41 @@ export type Database = {
           },
         ]
       }
+      crm_campaign_triggers: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          tenant_id: string
+          trigger_on_status: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          tenant_id: string
+          trigger_on_status: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          tenant_id?: string
+          trigger_on_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_campaign_triggers_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "crm_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_campaigns: {
         Row: {
           created_at: string

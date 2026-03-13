@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Loader2, AlertTriangle } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -18,11 +18,13 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCampaign, useCreateCampaign, useUpdateCampaign } from '@/hooks/crm/useCampaigns';
 import { useCampaignSteps, useSaveCampaignSteps } from '@/hooks/crm/useCampaignSteps';
+import { useCampaignTrigger, useAllCampaignTriggers, useSaveCampaignTrigger } from '@/hooks/crm/useCampaignTriggers';
 import { CampaignStepEditor } from '@/components/crm/campaigns/CampaignStepEditor';
 import type { CampaignFormData, CampaignStepFormData } from '@/lib/crm/campaign-types';
-import { TIMEZONE_OPTIONS, PERSONALIZATION_VARIABLES, COMPLETION_ACTION_OPTIONS } from '@/lib/crm/campaign-types';
+import { TIMEZONE_OPTIONS, PERSONALIZATION_VARIABLES, COMPLETION_ACTION_OPTIONS, SYSTEM_MANAGED_STATUSES } from '@/lib/crm/campaign-types';
 import { ALL_STATUSES } from '@/lib/crm/status-config';
 
 // Generate time options for select
@@ -72,10 +74,13 @@ export default function CampaignEditor() {
 
   const { data: campaign, isLoading: campaignLoading } = useCampaign(isNew ? undefined : id);
   const { data: existingSteps, isLoading: stepsLoading } = useCampaignSteps(isNew ? undefined : id);
+  const { data: existingTrigger, isLoading: triggerLoading } = useCampaignTrigger(isNew ? undefined : id);
+  const { data: allTriggers } = useAllCampaignTriggers();
 
   const createCampaign = useCreateCampaign();
   const updateCampaign = useUpdateCampaign();
   const saveSteps = useSaveCampaignSteps();
+  const saveTrigger = useSaveCampaignTrigger();
 
   const [formData, setFormData] = useState<CampaignFormData>({
     name: '',
@@ -89,6 +94,7 @@ export default function CampaignEditor() {
     on_complete_status: null,
   });
 
+  const [triggerStatus, setTriggerStatus] = useState<string | null>(null);
   const [steps, setSteps] = useState<CampaignStepFormData[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -129,6 +135,22 @@ export default function CampaignEditor() {
     }
   }, [existingSteps]);
 
+  // Load existing trigger
+  useEffect(() => {
+    if (existingTrigger) {
+      setTriggerStatus(existingTrigger.trigger_on_status);
+    }
+  }, [existingTrigger]);
+
+  // Check if a status is already taken by another campaign's trigger
+  const getStatusTriggerConflict = (status: string): string | null => {
+    if (!allTriggers) return null;
+    const conflict = allTriggers.find(
+      (t) => t.trigger_on_status === status && t.campaign_id !== id
+    );
+    return conflict ? conflict.campaign_id : null;
+  };
+
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -146,7 +168,6 @@ export default function CampaignEditor() {
         const oldIndex = items.findIndex((i) => (i.id || `new-${items.indexOf(i)}`) === activeId);
         const newIndex = items.findIndex((i) => (i.id || `new-${items.indexOf(i)}`) === overId);
         const reordered = arrayMove(items, oldIndex, newIndex);
-        // Update step_order after reorder
         return reordered.map((s, idx) => ({ ...s, step_order: idx + 1 }));
       });
     }
@@ -178,7 +199,6 @@ export default function CampaignEditor() {
   const removeStep = (index: number) => {
     setSteps((prev) => {
       const newSteps = prev.filter((_, i) => i !== index);
-      // Re-order remaining steps
       return newSteps.map((s, idx) => ({ ...s, step_order: idx + 1 }));
     });
   };
@@ -193,10 +213,12 @@ export default function CampaignEditor() {
         if (steps.length > 0) {
           await saveSteps.mutateAsync({ campaignId: created.id, steps });
         }
+        await saveTrigger.mutateAsync({ campaignId: created.id, triggerStatus });
         navigate('/crm/campaigns');
       } else if (id) {
         await updateCampaign.mutateAsync({ campaignId: id, formData });
         await saveSteps.mutateAsync({ campaignId: id, steps });
+        await saveTrigger.mutateAsync({ campaignId: id, triggerStatus });
         navigate('/crm/campaigns');
       }
     } finally {
@@ -204,7 +226,7 @@ export default function CampaignEditor() {
     }
   };
 
-  const isLoading = !isNew && (campaignLoading || stepsLoading);
+  const isLoading = !isNew && (campaignLoading || stepsLoading || triggerLoading);
 
   return (
     <div className="space-y-6">
@@ -397,6 +419,53 @@ export default function CampaignEditor() {
                       </SelectContent>
                     </Select>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Auto-Enroll Trigger */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Auto-Enroll Trigger</CardTitle>
+                <CardDescription>
+                  Optionally auto-enroll clients when their status changes
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>When client status changes to</Label>
+                  <Select
+                    value={triggerStatus || 'none'}
+                    onValueChange={(value) => setTriggerStatus(value === 'none' ? null : value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="No auto-enroll" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No auto-enroll</SelectItem>
+                      {ALL_STATUSES.map((status) => {
+                        const conflict = getStatusTriggerConflict(status);
+                        return (
+                          <SelectItem
+                            key={status}
+                            value={status}
+                            disabled={!!conflict}
+                          >
+                            {status}{conflict ? ' (used by another campaign)' : ''}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {triggerStatus && SYSTEM_MANAGED_STATUSES.includes(triggerStatus as any) && (
+                  <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs">
+                      "{triggerStatus}" is set automatically by the system (e.g., when appointments are booked or documented). Clients will be auto-enrolled without manual action.
+                    </AlertDescription>
+                  </Alert>
                 )}
               </CardContent>
             </Card>
