@@ -135,6 +135,22 @@ export default function CampaignEditor() {
     }
   }, [existingSteps]);
 
+  // Load existing trigger
+  useEffect(() => {
+    if (existingTrigger) {
+      setTriggerStatus(existingTrigger.trigger_on_status);
+    }
+  }, [existingTrigger]);
+
+  // Check if a status is already taken by another campaign's trigger
+  const getStatusTriggerConflict = (status: string): string | null => {
+    if (!allTriggers) return null;
+    const conflict = allTriggers.find(
+      (t) => t.trigger_on_status === status && t.campaign_id !== id
+    );
+    return conflict ? conflict.campaign_id : null;
+  };
+
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -152,7 +168,6 @@ export default function CampaignEditor() {
         const oldIndex = items.findIndex((i) => (i.id || `new-${items.indexOf(i)}`) === activeId);
         const newIndex = items.findIndex((i) => (i.id || `new-${items.indexOf(i)}`) === overId);
         const reordered = arrayMove(items, oldIndex, newIndex);
-        // Update step_order after reorder
         return reordered.map((s, idx) => ({ ...s, step_order: idx + 1 }));
       });
     }
@@ -184,7 +199,6 @@ export default function CampaignEditor() {
   const removeStep = (index: number) => {
     setSteps((prev) => {
       const newSteps = prev.filter((_, i) => i !== index);
-      // Re-order remaining steps
       return newSteps.map((s, idx) => ({ ...s, step_order: idx + 1 }));
     });
   };
@@ -199,10 +213,12 @@ export default function CampaignEditor() {
         if (steps.length > 0) {
           await saveSteps.mutateAsync({ campaignId: created.id, steps });
         }
+        await saveTrigger.mutateAsync({ campaignId: created.id, triggerStatus });
         navigate('/crm/campaigns');
       } else if (id) {
         await updateCampaign.mutateAsync({ campaignId: id, formData });
         await saveSteps.mutateAsync({ campaignId: id, steps });
+        await saveTrigger.mutateAsync({ campaignId: id, triggerStatus });
         navigate('/crm/campaigns');
       }
     } finally {
@@ -210,7 +226,7 @@ export default function CampaignEditor() {
     }
   };
 
-  const isLoading = !isNew && (campaignLoading || stepsLoading);
+  const isLoading = !isNew && (campaignLoading || stepsLoading || triggerLoading);
 
   return (
     <div className="space-y-6">
