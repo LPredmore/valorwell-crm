@@ -74,10 +74,13 @@ export default function CampaignEditor() {
 
   const { data: campaign, isLoading: campaignLoading } = useCampaign(isNew ? undefined : id);
   const { data: existingSteps, isLoading: stepsLoading } = useCampaignSteps(isNew ? undefined : id);
+  const { data: existingTrigger, isLoading: triggerLoading } = useCampaignTrigger(isNew ? undefined : id);
+  const { data: allTriggers } = useAllCampaignTriggers();
 
   const createCampaign = useCreateCampaign();
   const updateCampaign = useUpdateCampaign();
   const saveSteps = useSaveCampaignSteps();
+  const saveTrigger = useSaveCampaignTrigger();
 
   const [formData, setFormData] = useState<CampaignFormData>({
     name: '',
@@ -91,6 +94,7 @@ export default function CampaignEditor() {
     on_complete_status: null,
   });
 
+  const [triggerStatus, setTriggerStatus] = useState<string | null>(null);
   const [steps, setSteps] = useState<CampaignStepFormData[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
