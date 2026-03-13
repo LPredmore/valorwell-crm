@@ -116,6 +116,11 @@ export default function Campaigns() {
                           {campaign.description}
                         </p>
                       )}
+                      {getTriggerForCampaign(campaign.id) && (
+                        <Badge variant="outline" className="mt-1 text-xs">
+                          Auto: {getTriggerForCampaign(campaign.id)!.trigger_on_status}
+                        </Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
