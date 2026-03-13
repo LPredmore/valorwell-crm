@@ -86,6 +86,16 @@ export interface CrmCampaignStepLog {
   created_at: string;
 }
 
+// Campaign trigger type
+export interface CrmCampaignTrigger {
+  id: string;
+  campaign_id: string;
+  tenant_id: string;
+  trigger_on_status: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 // Form types for creating/editing
 export interface CampaignFormData {
   name: string;
@@ -98,6 +108,14 @@ export interface CampaignFormData {
   on_complete_action: 'do_nothing' | 'change_status';
   on_complete_status: string | null;
 }
+
+// Statuses that are set automatically by the system (appointment triggers, cron jobs)
+export const SYSTEM_MANAGED_STATUSES = [
+  'Scheduled',
+  'Early Sessions',
+  'Established',
+  'At Risk',
+] as const;
 
 export interface CampaignStepFormData {
   id?: string; // For existing steps
