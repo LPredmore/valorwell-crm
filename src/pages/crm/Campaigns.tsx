@@ -36,10 +36,14 @@ import type { CrmCampaign } from '@/lib/crm/campaign-types';
 export default function Campaigns() {
   const navigate = useNavigate();
   const { data: campaigns, isLoading } = useCampaigns();
+  const { data: allTriggers } = useAllCampaignTriggers();
   const deleteCampaign = useDeleteCampaign();
   const toggleActive = useToggleCampaignActive();
   const duplicateCampaign = useDuplicateCampaign();
   const [deleteTarget, setDeleteTarget] = useState<CrmCampaign | null>(null);
+
+  const getTriggerForCampaign = (campaignId: string) =>
+    allTriggers?.find((t) => t.campaign_id === campaignId);
 
   const handleDelete = () => {
     if (deleteTarget) {
