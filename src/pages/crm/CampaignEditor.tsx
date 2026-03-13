@@ -423,6 +423,53 @@ export default function CampaignEditor() {
               </CardContent>
             </Card>
 
+            {/* Auto-Enroll Trigger */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Auto-Enroll Trigger</CardTitle>
+                <CardDescription>
+                  Optionally auto-enroll clients when their status changes
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>When client status changes to</Label>
+                  <Select
+                    value={triggerStatus || 'none'}
+                    onValueChange={(value) => setTriggerStatus(value === 'none' ? null : value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="No auto-enroll" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No auto-enroll</SelectItem>
+                      {ALL_STATUSES.map((status) => {
+                        const conflict = getStatusTriggerConflict(status);
+                        return (
+                          <SelectItem
+                            key={status}
+                            value={status}
+                            disabled={!!conflict}
+                          >
+                            {status}{conflict ? ' (used by another campaign)' : ''}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {triggerStatus && SYSTEM_MANAGED_STATUSES.includes(triggerStatus as any) && (
+                  <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs">
+                      "{triggerStatus}" is set automatically by the system (e.g., when appointments are booked or documented). Clients will be auto-enrolled without manual action.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Variables Reference */}
             <Card>
               <CardHeader className="pb-3">
