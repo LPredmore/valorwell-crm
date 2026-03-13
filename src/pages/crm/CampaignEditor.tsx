@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Loader2, AlertTriangle } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -18,11 +18,13 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCampaign, useCreateCampaign, useUpdateCampaign } from '@/hooks/crm/useCampaigns';
 import { useCampaignSteps, useSaveCampaignSteps } from '@/hooks/crm/useCampaignSteps';
+import { useCampaignTrigger, useAllCampaignTriggers, useSaveCampaignTrigger } from '@/hooks/crm/useCampaignTriggers';
 import { CampaignStepEditor } from '@/components/crm/campaigns/CampaignStepEditor';
 import type { CampaignFormData, CampaignStepFormData } from '@/lib/crm/campaign-types';
-import { TIMEZONE_OPTIONS, PERSONALIZATION_VARIABLES, COMPLETION_ACTION_OPTIONS } from '@/lib/crm/campaign-types';
+import { TIMEZONE_OPTIONS, PERSONALIZATION_VARIABLES, COMPLETION_ACTION_OPTIONS, SYSTEM_MANAGED_STATUSES } from '@/lib/crm/campaign-types';
 import { ALL_STATUSES } from '@/lib/crm/status-config';
 
 // Generate time options for select
