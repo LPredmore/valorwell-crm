@@ -63,6 +63,11 @@ export type Database = {
           client_treatmentplan_startdate: string | null
           created_at: string
           id: string
+          note_status: Database["public"]["Enums"]["appointment_note_status_enum"]
+          note_type:
+            | Database["public"]["Enums"]["appointment_note_type_enum"]
+            | null
+          signed_at: string | null
           staff_id: string
           tenant_id: string
           updated_at: string
@@ -115,6 +120,11 @@ export type Database = {
           client_treatmentplan_startdate?: string | null
           created_at?: string
           id?: string
+          note_status?: Database["public"]["Enums"]["appointment_note_status_enum"]
+          note_type?:
+            | Database["public"]["Enums"]["appointment_note_type_enum"]
+            | null
+          signed_at?: string | null
           staff_id: string
           tenant_id: string
           updated_at?: string
@@ -167,6 +177,11 @@ export type Database = {
           client_treatmentplan_startdate?: string | null
           created_at?: string
           id?: string
+          note_status?: Database["public"]["Enums"]["appointment_note_status_enum"]
+          note_type?:
+            | Database["public"]["Enums"]["appointment_note_type_enum"]
+            | null
+          signed_at?: string | null
           staff_id?: string
           tenant_id?: string
           updated_at?: string
@@ -687,6 +702,57 @@ export type Database = {
           },
           {
             foreignKeyName: "calendar_sync_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_watch_channels: {
+        Row: {
+          calendar_id: string
+          channel_id: string
+          created_at: string
+          expiration: string
+          id: string
+          resource_id: string
+          staff_id: string
+          sync_token: string | null
+          tenant_id: string
+        }
+        Insert: {
+          calendar_id: string
+          channel_id: string
+          created_at?: string
+          expiration: string
+          id?: string
+          resource_id: string
+          staff_id: string
+          sync_token?: string | null
+          tenant_id: string
+        }
+        Update: {
+          calendar_id?: string
+          channel_id?: string
+          created_at?: string
+          expiration?: string
+          id?: string
+          resource_id?: string
+          staff_id?: string
+          sync_token?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_watch_channels_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_watch_channels_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1529,6 +1595,7 @@ export type Database = {
         Row: {
           administered_at: string
           appointment_id: string | null
+          assessment_date: string | null
           client_id: string
           clinician_name_snapshot: string | null
           created_at: string
@@ -1549,6 +1616,7 @@ export type Database = {
         Insert: {
           administered_at?: string
           appointment_id?: string | null
+          assessment_date?: string | null
           client_id: string
           clinician_name_snapshot?: string | null
           created_at?: string
@@ -1569,6 +1637,7 @@ export type Database = {
         Update: {
           administered_at?: string
           appointment_id?: string | null
+          assessment_date?: string | null
           client_id?: string
           clinician_name_snapshot?: string | null
           created_at?: string
@@ -2800,6 +2869,53 @@ export type Database = {
           },
         ]
       }
+      client_status_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          client_id: string
+          created_at: string
+          id: string
+          new_status: Database["public"]["Enums"]["pat_status_enum"]
+          old_status: Database["public"]["Enums"]["pat_status_enum"] | null
+          reason: string | null
+          source: string
+          tenant_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          new_status: Database["public"]["Enums"]["pat_status_enum"]
+          old_status?: Database["public"]["Enums"]["pat_status_enum"] | null
+          reason?: string | null
+          source?: string
+          tenant_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          new_status?: Database["public"]["Enums"]["pat_status_enum"]
+          old_status?: Database["public"]["Enums"]["pat_status_enum"] | null
+          reason?: string | null
+          source?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_status_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_telehealth_consents: {
         Row: {
           client_id: string
@@ -3029,6 +3145,7 @@ export type Database = {
           primary_staff_id: string | null
           profile_id: string
           referral_source: string | null
+          status_changed_at: string | null
           tags: string | null
           tenant_id: string
           updated_at: string
@@ -3062,6 +3179,7 @@ export type Database = {
           primary_staff_id?: string | null
           profile_id: string
           referral_source?: string | null
+          status_changed_at?: string | null
           tags?: string | null
           tenant_id: string
           updated_at?: string
@@ -3095,6 +3213,7 @@ export type Database = {
           primary_staff_id?: string | null
           profile_id?: string
           referral_source?: string | null
+          status_changed_at?: string | null
           tags?: string | null
           tenant_id?: string
           updated_at?: string
@@ -5322,6 +5441,75 @@ export type Database = {
         }
         Relationships: []
       }
+      jarvis_approvals: {
+        Row: {
+          approval_type: string
+          id: string
+          payload: Json
+          requested_at: string
+          requested_by: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          task_id: string | null
+        }
+        Insert: {
+          approval_type?: string
+          id?: string
+          payload?: Json
+          requested_at?: string
+          requested_by?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          task_id?: string | null
+        }
+        Update: {
+          approval_type?: string
+          id?: string
+          payload?: Json
+          requested_at?: string
+          requested_by?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          task_id?: string | null
+        }
+        Relationships: []
+      }
+      jarvis_events: {
+        Row: {
+          actor: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          severity: string
+          task_id: string | null
+        }
+        Insert: {
+          actor: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          severity?: string
+          task_id?: string | null
+        }
+        Update: {
+          actor?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          severity?: string
+          task_id?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           body: string
@@ -5686,6 +5874,9 @@ export type Database = {
       }
       payroll_line_items: {
         Row: {
+          admin_approval_status: string
+          admin_approved_at: string | null
+          admin_approved_by: string | null
           created_at: string
           documented_amount: number
           documented_count: number
@@ -5702,12 +5893,18 @@ export type Database = {
           noshow_rate: number
           payroll_run_id: string
           recipient_id: string | null
+          staff_approval_status: string
+          staff_approved_at: string | null
+          staff_dispute_reason: string | null
           staff_id: string
           tenant_id: string
           total_amount: number
           updated_at: string
         }
         Insert: {
+          admin_approval_status?: string
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
           created_at?: string
           documented_amount?: number
           documented_count?: number
@@ -5724,12 +5921,18 @@ export type Database = {
           noshow_rate?: number
           payroll_run_id: string
           recipient_id?: string | null
+          staff_approval_status?: string
+          staff_approved_at?: string | null
+          staff_dispute_reason?: string | null
           staff_id: string
           tenant_id: string
           total_amount?: number
           updated_at?: string
         }
         Update: {
+          admin_approval_status?: string
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
           created_at?: string
           documented_amount?: number
           documented_count?: number
@@ -5746,6 +5949,9 @@ export type Database = {
           noshow_rate?: number
           payroll_run_id?: string
           recipient_id?: string | null
+          staff_approval_status?: string
+          staff_approved_at?: string | null
+          staff_dispute_reason?: string | null
           staff_id?: string
           tenant_id?: string
           total_amount?: number
@@ -5912,6 +6118,7 @@ export type Database = {
           period_end: string
           period_start: string
           processed_at: string | null
+          staff_approval_deadline: string | null
           staff_paid_count: number
           staff_skipped_count: number
           status: string
@@ -5929,6 +6136,7 @@ export type Database = {
           period_end: string
           period_start: string
           processed_at?: string | null
+          staff_approval_deadline?: string | null
           staff_paid_count?: number
           staff_skipped_count?: number
           status?: string
@@ -5946,6 +6154,7 @@ export type Database = {
           period_end?: string
           period_start?: string
           processed_at?: string | null
+          staff_approval_deadline?: string | null
           staff_paid_count?: number
           staff_skipped_count?: number
           status?: string
@@ -5961,6 +6170,50 @@ export type Database = {
             foreignKeyName: "payroll_runs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_settings: {
+        Row: {
+          auto_approve_enabled: boolean
+          created_at: string
+          id: string
+          pay_period_anchor_day: number
+          pay_period_start_date: string | null
+          pay_period_type: string
+          staff_approval_deadline_days: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_approve_enabled?: boolean
+          created_at?: string
+          id?: string
+          pay_period_anchor_day?: number
+          pay_period_start_date?: string | null
+          pay_period_type?: string
+          staff_approval_deadline_days?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_approve_enabled?: boolean
+          created_at?: string
+          id?: string
+          pay_period_anchor_day?: number
+          pay_period_start_date?: string | null
+          pay_period_type?: string
+          staff_approval_deadline_days?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -6069,17 +6322,31 @@ export type Database = {
       }
       practice_locations: {
         Row: {
+          accept_medicaid: boolean | null
+          accept_medicare: boolean | null
+          accept_new_patients: boolean | null
+          ada_accessible: boolean | null
           addr_1: string | null
           addr_2: string | null
           city: string | null
           created_at: string
+          credentialing_contact_email: string | null
+          credentialing_contact_name: string | null
+          credentialing_contact_phone: string | null
           email: string | null
           fax: string | null
+          handicap_parking: boolean | null
+          handicap_restroom: boolean | null
           id: string
           is_default: boolean
           is_telehealth_only: boolean
           name: string
+          office_hours: Json | null
+          office_manager_name: string | null
+          office_manager_phone: string | null
           phone: string | null
+          practice_type: string | null
+          public_transportation: boolean | null
           state: Database["public"]["Enums"]["state_code_enum"] | null
           svc_npi: string | null
           svc_taxid: string | null
@@ -6090,17 +6357,31 @@ export type Database = {
           zip: string | null
         }
         Insert: {
+          accept_medicaid?: boolean | null
+          accept_medicare?: boolean | null
+          accept_new_patients?: boolean | null
+          ada_accessible?: boolean | null
           addr_1?: string | null
           addr_2?: string | null
           city?: string | null
           created_at?: string
+          credentialing_contact_email?: string | null
+          credentialing_contact_name?: string | null
+          credentialing_contact_phone?: string | null
           email?: string | null
           fax?: string | null
+          handicap_parking?: boolean | null
+          handicap_restroom?: boolean | null
           id?: string
           is_default?: boolean
           is_telehealth_only?: boolean
           name: string
+          office_hours?: Json | null
+          office_manager_name?: string | null
+          office_manager_phone?: string | null
           phone?: string | null
+          practice_type?: string | null
+          public_transportation?: boolean | null
           state?: Database["public"]["Enums"]["state_code_enum"] | null
           svc_npi?: string | null
           svc_taxid?: string | null
@@ -6111,17 +6392,31 @@ export type Database = {
           zip?: string | null
         }
         Update: {
+          accept_medicaid?: boolean | null
+          accept_medicare?: boolean | null
+          accept_new_patients?: boolean | null
+          ada_accessible?: boolean | null
           addr_1?: string | null
           addr_2?: string | null
           city?: string | null
           created_at?: string
+          credentialing_contact_email?: string | null
+          credentialing_contact_name?: string | null
+          credentialing_contact_phone?: string | null
           email?: string | null
           fax?: string | null
+          handicap_parking?: boolean | null
+          handicap_restroom?: boolean | null
           id?: string
           is_default?: boolean
           is_telehealth_only?: boolean
           name?: string
+          office_hours?: Json | null
+          office_manager_name?: string | null
+          office_manager_phone?: string | null
           phone?: string | null
+          practice_type?: string | null
+          public_transportation?: boolean | null
           state?: Database["public"]["Enums"]["state_code_enum"] | null
           svc_npi?: string | null
           svc_taxid?: string | null
@@ -6334,6 +6629,8 @@ export type Database = {
           prov_npi: string | null
           prov_phone: string | null
           prov_qualifier: string | null
+          prov_scheduling_interval_minutes: number
+          prov_self_scheduling_enabled: boolean
           prov_state: Database["public"]["Enums"]["state_code_enum"] | null
           prov_status:
             | Database["public"]["Enums"]["clinician_status_enum"]
@@ -6371,6 +6668,8 @@ export type Database = {
           prov_npi?: string | null
           prov_phone?: string | null
           prov_qualifier?: string | null
+          prov_scheduling_interval_minutes?: number
+          prov_self_scheduling_enabled?: boolean
           prov_state?: Database["public"]["Enums"]["state_code_enum"] | null
           prov_status?:
             | Database["public"]["Enums"]["clinician_status_enum"]
@@ -6408,6 +6707,8 @@ export type Database = {
           prov_npi?: string | null
           prov_phone?: string | null
           prov_qualifier?: string | null
+          prov_scheduling_interval_minutes?: number
+          prov_self_scheduling_enabled?: boolean
           prov_state?: Database["public"]["Enums"]["state_code_enum"] | null
           prov_status?:
             | Database["public"]["Enums"]["clinician_status_enum"]
@@ -6431,6 +6732,201 @@ export type Database = {
           },
           {
             foreignKeyName: "staff_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_affiliations: {
+        Row: {
+          addr_1: string | null
+          addr_2: string | null
+          admission_percentage: number | null
+          admitting_arrangement: string | null
+          city: string | null
+          created_at: string
+          department: string | null
+          end_date: string | null
+          hospital_name: string
+          id: string
+          is_temporary: boolean | null
+          is_unrestricted: boolean | null
+          phone: string | null
+          privilege_status: string | null
+          privilege_type: string | null
+          sort_order: number | null
+          staff_id: string
+          start_date: string | null
+          state: string | null
+          tenant_id: string
+          updated_at: string
+          zip: string | null
+        }
+        Insert: {
+          addr_1?: string | null
+          addr_2?: string | null
+          admission_percentage?: number | null
+          admitting_arrangement?: string | null
+          city?: string | null
+          created_at?: string
+          department?: string | null
+          end_date?: string | null
+          hospital_name: string
+          id?: string
+          is_temporary?: boolean | null
+          is_unrestricted?: boolean | null
+          phone?: string | null
+          privilege_status?: string | null
+          privilege_type?: string | null
+          sort_order?: number | null
+          staff_id: string
+          start_date?: string | null
+          state?: string | null
+          tenant_id: string
+          updated_at?: string
+          zip?: string | null
+        }
+        Update: {
+          addr_1?: string | null
+          addr_2?: string | null
+          admission_percentage?: number | null
+          admitting_arrangement?: string | null
+          city?: string | null
+          created_at?: string
+          department?: string | null
+          end_date?: string | null
+          hospital_name?: string
+          id?: string
+          is_temporary?: boolean | null
+          is_unrestricted?: boolean | null
+          phone?: string | null
+          privilege_status?: string | null
+          privilege_type?: string | null
+          sort_order?: number | null
+          staff_id?: string
+          start_date?: string | null
+          state?: string | null
+          tenant_id?: string
+          updated_at?: string
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_affiliations_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_affiliations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_availability_schedules: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean
+          staff_id: string
+          start_time: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean
+          staff_id: string
+          start_time: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          staff_id?: string
+          start_time?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_availability_schedules_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_availability_schedules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_calendar_blocks: {
+        Row: {
+          created_at: string
+          end_at: string
+          external_event_id: string | null
+          id: string
+          source: string
+          staff_id: string
+          start_at: string
+          summary: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_at: string
+          external_event_id?: string | null
+          id?: string
+          source?: string
+          staff_id: string
+          start_at: string
+          summary?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_at?: string
+          external_event_id?: string | null
+          id?: string
+          source?: string
+          staff_id?: string
+          start_at?: string
+          summary?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_calendar_blocks_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_calendar_blocks_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -6501,6 +6997,333 @@ export type Database = {
           },
         ]
       }
+      staff_caqh_demographics: {
+        Row: {
+          birth_city: string | null
+          birth_country: string | null
+          birth_state: string | null
+          caqh_id: string | null
+          created_at: string
+          gender: string | null
+          home_addr_1: string | null
+          home_addr_2: string | null
+          home_city: string | null
+          home_email: string | null
+          home_state: string | null
+          home_zip: string | null
+          id: string
+          is_rendering_tricare: boolean | null
+          languages_spoken: string[] | null
+          medicaid_number: string | null
+          medicaid_provider: boolean | null
+          medicare_number: string | null
+          medicare_provider: boolean | null
+          other_names: Json | null
+          race_ethnicity: string | null
+          ssn: string | null
+          staff_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          birth_city?: string | null
+          birth_country?: string | null
+          birth_state?: string | null
+          caqh_id?: string | null
+          created_at?: string
+          gender?: string | null
+          home_addr_1?: string | null
+          home_addr_2?: string | null
+          home_city?: string | null
+          home_email?: string | null
+          home_state?: string | null
+          home_zip?: string | null
+          id?: string
+          is_rendering_tricare?: boolean | null
+          languages_spoken?: string[] | null
+          medicaid_number?: string | null
+          medicaid_provider?: boolean | null
+          medicare_number?: string | null
+          medicare_provider?: boolean | null
+          other_names?: Json | null
+          race_ethnicity?: string | null
+          ssn?: string | null
+          staff_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          birth_city?: string | null
+          birth_country?: string | null
+          birth_state?: string | null
+          caqh_id?: string | null
+          created_at?: string
+          gender?: string | null
+          home_addr_1?: string | null
+          home_addr_2?: string | null
+          home_city?: string | null
+          home_email?: string | null
+          home_state?: string | null
+          home_zip?: string | null
+          id?: string
+          is_rendering_tricare?: boolean | null
+          languages_spoken?: string[] | null
+          medicaid_number?: string | null
+          medicaid_provider?: boolean | null
+          medicare_number?: string | null
+          medicare_provider?: boolean | null
+          other_names?: Json | null
+          race_ethnicity?: string | null
+          ssn?: string | null
+          staff_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_caqh_demographics_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_caqh_demographics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_certifications: {
+        Row: {
+          certification_date: string | null
+          certification_number: string | null
+          certifying_board_code: string | null
+          certifying_board_name: string
+          created_at: string
+          directory_listing_hmo: boolean | null
+          directory_listing_pos: boolean | null
+          directory_listing_ppo: boolean | null
+          expiration_date: string | null
+          id: string
+          intended_exam_date: string | null
+          is_board_certified: boolean | null
+          not_certified_reason: string | null
+          ranking: string | null
+          recertification_date: string | null
+          sort_order: number | null
+          specialty: string
+          specialty_code: string | null
+          staff_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          certification_date?: string | null
+          certification_number?: string | null
+          certifying_board_code?: string | null
+          certifying_board_name: string
+          created_at?: string
+          directory_listing_hmo?: boolean | null
+          directory_listing_pos?: boolean | null
+          directory_listing_ppo?: boolean | null
+          expiration_date?: string | null
+          id?: string
+          intended_exam_date?: string | null
+          is_board_certified?: boolean | null
+          not_certified_reason?: string | null
+          ranking?: string | null
+          recertification_date?: string | null
+          sort_order?: number | null
+          specialty: string
+          specialty_code?: string | null
+          staff_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          certification_date?: string | null
+          certification_number?: string | null
+          certifying_board_code?: string | null
+          certifying_board_name?: string
+          created_at?: string
+          directory_listing_hmo?: boolean | null
+          directory_listing_pos?: boolean | null
+          directory_listing_ppo?: boolean | null
+          expiration_date?: string | null
+          id?: string
+          intended_exam_date?: string | null
+          is_board_certified?: boolean | null
+          not_certified_reason?: string | null
+          ranking?: string | null
+          recertification_date?: string | null
+          sort_order?: number | null
+          specialty?: string
+          specialty_code?: string | null
+          staff_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_certifications_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_certifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_disclosures: {
+        Row: {
+          answer: boolean
+          category: string
+          created_at: string
+          explanation: string | null
+          explanation_date: string | null
+          id: string
+          question_number: number
+          question_text: string
+          staff_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          answer: boolean
+          category: string
+          created_at?: string
+          explanation?: string | null
+          explanation_date?: string | null
+          id?: string
+          question_number: number
+          question_text: string
+          staff_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: boolean
+          category?: string
+          created_at?: string
+          explanation?: string | null
+          explanation_date?: string | null
+          id?: string
+          question_number?: number
+          question_text?: string
+          staff_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_disclosures_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_disclosures_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_education_training: {
+        Row: {
+          addr_1: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          degree_awarded: string | null
+          department_specialty: string | null
+          end_date: string | null
+          entry_type: string
+          graduate_type: string | null
+          id: string
+          institution_name: string
+          is_completed: boolean | null
+          program_director_name: string | null
+          school_code: string | null
+          sort_order: number | null
+          staff_id: string
+          start_date: string | null
+          state: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          addr_1?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          degree_awarded?: string | null
+          department_specialty?: string | null
+          end_date?: string | null
+          entry_type: string
+          graduate_type?: string | null
+          id?: string
+          institution_name: string
+          is_completed?: boolean | null
+          program_director_name?: string | null
+          school_code?: string | null
+          sort_order?: number | null
+          staff_id: string
+          start_date?: string | null
+          state?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          addr_1?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          degree_awarded?: string | null
+          department_specialty?: string | null
+          end_date?: string | null
+          entry_type?: string
+          graduate_type?: string | null
+          id?: string
+          institution_name?: string
+          is_completed?: boolean | null
+          program_director_name?: string | null
+          school_code?: string | null
+          sort_order?: number | null
+          staff_id?: string
+          start_date?: string | null
+          state?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_education_training_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_education_training_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_licenses: {
         Row: {
           created_at: string
@@ -6554,6 +7377,137 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_malpractice: {
+        Row: {
+          carrier_addr_1: string | null
+          carrier_city: string | null
+          carrier_name: string | null
+          carrier_state: string | null
+          carrier_zip: string | null
+          claim_date_of_incident: string | null
+          claim_description: string | null
+          claim_settlement_amount: number | null
+          claim_status: string | null
+          coverage_aggregate: number | null
+          coverage_per_occurrence: number | null
+          coverage_type: string | null
+          created_at: string
+          effective_date: string | null
+          entry_type: string
+          expiration_date: string | null
+          has_unlimited_coverage: boolean | null
+          id: string
+          is_self_insured: boolean | null
+          original_effective_date: string | null
+          policy_number: string | null
+          sort_order: number | null
+          staff_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          carrier_addr_1?: string | null
+          carrier_city?: string | null
+          carrier_name?: string | null
+          carrier_state?: string | null
+          carrier_zip?: string | null
+          claim_date_of_incident?: string | null
+          claim_description?: string | null
+          claim_settlement_amount?: number | null
+          claim_status?: string | null
+          coverage_aggregate?: number | null
+          coverage_per_occurrence?: number | null
+          coverage_type?: string | null
+          created_at?: string
+          effective_date?: string | null
+          entry_type: string
+          expiration_date?: string | null
+          has_unlimited_coverage?: boolean | null
+          id?: string
+          is_self_insured?: boolean | null
+          original_effective_date?: string | null
+          policy_number?: string | null
+          sort_order?: number | null
+          staff_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          carrier_addr_1?: string | null
+          carrier_city?: string | null
+          carrier_name?: string | null
+          carrier_state?: string | null
+          carrier_zip?: string | null
+          claim_date_of_incident?: string | null
+          claim_description?: string | null
+          claim_settlement_amount?: number | null
+          claim_status?: string | null
+          coverage_aggregate?: number | null
+          coverage_per_occurrence?: number | null
+          coverage_type?: string | null
+          created_at?: string
+          effective_date?: string | null
+          entry_type?: string
+          expiration_date?: string | null
+          has_unlimited_coverage?: boolean | null
+          id?: string
+          is_self_insured?: boolean | null
+          original_effective_date?: string | null
+          policy_number?: string | null
+          sort_order?: number | null
+          staff_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_malpractice_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_malpractice_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_note_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          staff_id: string
+          style_instructions: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          staff_id: string
+          style_instructions: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          staff_id?: string
+          style_instructions?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_note_preferences_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: true
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -6636,6 +7590,87 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      staff_work_history: {
+        Row: {
+          addr_1: string | null
+          addr_2: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          employer_name: string
+          end_date: string | null
+          gap_explanation: string | null
+          id: string
+          is_current: boolean | null
+          is_gap: boolean | null
+          position_title: string | null
+          sort_order: number | null
+          staff_id: string
+          start_date: string
+          state: string | null
+          tenant_id: string
+          updated_at: string
+          zip: string | null
+        }
+        Insert: {
+          addr_1?: string | null
+          addr_2?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          employer_name: string
+          end_date?: string | null
+          gap_explanation?: string | null
+          id?: string
+          is_current?: boolean | null
+          is_gap?: boolean | null
+          position_title?: string | null
+          sort_order?: number | null
+          staff_id: string
+          start_date: string
+          state?: string | null
+          tenant_id: string
+          updated_at?: string
+          zip?: string | null
+        }
+        Update: {
+          addr_1?: string | null
+          addr_2?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          employer_name?: string
+          end_date?: string | null
+          gap_explanation?: string | null
+          id?: string
+          is_current?: boolean | null
+          is_gap?: boolean | null
+          position_title?: string | null
+          sort_order?: number | null
+          staff_id?: string
+          start_date?: string
+          state?: string | null
+          tenant_id?: string
+          updated_at?: string
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_work_history_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_work_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tenant_cpt_codes: {
         Row: {
@@ -6726,11 +7761,13 @@ export type Database = {
       }
       tenants: {
         Row: {
+          at_risk_days: number
           brand_accent_color: string | null
           brand_primary_color: string | null
           brand_secondary_color: string | null
           created_at: string
           display_name: string | null
+          established_session_threshold: number
           id: string
           is_active: boolean
           logo_url: string | null
@@ -6740,11 +7777,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          at_risk_days?: number
           brand_accent_color?: string | null
           brand_primary_color?: string | null
           brand_secondary_color?: string | null
           created_at?: string
           display_name?: string | null
+          established_session_threshold?: number
           id?: string
           is_active?: boolean
           logo_url?: string | null
@@ -6754,11 +7793,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          at_risk_days?: number
           brand_accent_color?: string | null
           brand_primary_color?: string | null
           brand_secondary_color?: string | null
           created_at?: string
           display_name?: string | null
+          established_session_threshold?: number
           id?: string
           is_active?: boolean
           logo_url?: string | null
@@ -6940,8 +7981,144 @@ export type Database = {
           },
         ]
       }
+      clinician_client_status_movement_v: {
+        Row: {
+          changed_at: string | null
+          client_id: string | null
+          history_id: string | null
+          new_status: Database["public"]["Enums"]["pat_status_enum"] | null
+          old_status: Database["public"]["Enums"]["pat_status_enum"] | null
+          primary_staff_id: string | null
+          reason: string | null
+          source: string | null
+          tenant_id: string | null
+          time_in_previous_status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_status_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_primary_staff_id_fkey"
+            columns: ["primary_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinician_note_compliance_v: {
+        Row: {
+          appointment_id: string | null
+          appointment_start_at: string | null
+          appointment_status:
+            | Database["public"]["Enums"]["appointment_status_enum"]
+            | null
+          client_id: string | null
+          documented_at: string | null
+          is_late: boolean | null
+          note_id: string | null
+          note_status:
+            | Database["public"]["Enums"]["appointment_note_status_enum"]
+            | null
+          note_type:
+            | Database["public"]["Enums"]["appointment_note_type_enum"]
+            | null
+          signed_at: string | null
+          staff_id: string | null
+          tenant_id: string | null
+          time_to_sign: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_clinical_notes_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_clinical_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_clinical_notes_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_clinical_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gad7_assessment_reporting_v: {
+        Row: {
+          administered_at: string | null
+          assessment_date: string | null
+          assessment_id: string | null
+          assessment_number: number | null
+          client_id: string | null
+          score_change: number | null
+          severity: Database["public"]["Enums"]["gad7_severity_enum"] | null
+          staff_id: string | null
+          tenant_id: string | null
+          total_score: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_gad7_assessments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_gad7_assessments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_gad7_assessments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      approve_payroll_line_item: {
+        Args: {
+          p_dispute_reason?: string
+          p_line_item_id: string
+          p_status: string
+        }
+        Returns: Json
+      }
+      check_staff_availability: {
+        Args: { p_end: string; p_staff_id: string; p_start: string }
+        Returns: boolean
+      }
+      convert_local_to_utc: {
+        Args: { p_date: string; p_time: string; p_timezone?: string }
+        Returns: string
+      }
       find_clients_by_emails_insensitive: {
         Args: { p_emails: string[]; p_tenant_id: string }
         Returns: {
@@ -6952,6 +8129,21 @@ export type Database = {
       format_timestamp_in_timezone: {
         Args: { p_format?: string; p_timestamp: string; p_timezone: string }
         Returns: string
+      }
+      get_available_appointment_slots: {
+        Args: {
+          p_client_timezone: string
+          p_duration_minutes?: number
+          p_staff_id: string
+          p_target_date: string
+        }
+        Returns: {
+          display_date: string
+          display_end_time: string
+          display_time: string
+          slot_end_utc: string
+          slot_start_utc: string
+        }[]
       }
       get_client_appointments_display:
         | {
@@ -7019,6 +8211,29 @@ export type Database = {
           total_responsibility: number
         }[]
       }
+      get_now_in_timezone: {
+        Args: { p_timezone?: string }
+        Returns: {
+          now_day: number
+          now_hour: number
+          now_minute: number
+          now_month: number
+          now_year: number
+          today_date: string
+        }[]
+      }
+      get_revenue_report: {
+        Args: {
+          p_cpt_code?: string
+          p_end_date?: string
+          p_payor?: string
+          p_staff_id?: string
+          p_start_date?: string
+          p_taxonomy?: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       get_staff_calendar_appointments: {
         Args: { p_from_date?: string; p_staff_id: string; p_to_date?: string }
         Returns: {
@@ -7054,6 +8269,28 @@ export type Database = {
           videoroom_url: string
         }[]
       }
+      get_staff_calendar_blocks: {
+        Args: { p_from_date?: string; p_staff_id: string }
+        Returns: {
+          end_at: string
+          end_day: number
+          end_hour: number
+          end_minute: number
+          end_month: number
+          end_year: number
+          id: string
+          source: string
+          staff_id: string
+          start_at: string
+          start_day: number
+          start_hour: number
+          start_minute: number
+          start_month: number
+          start_year: number
+          summary: string
+        }[]
+      }
+      get_staff_id_for_user: { Args: { p_user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -7061,6 +8298,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      mark_at_risk_clients: { Args: { p_tenant_id: string }; Returns: number }
       setup_admin_user: {
         Args: {
           _first_name?: string
@@ -7085,6 +8323,7 @@ export type Database = {
         | "documented"
         | "cancelled"
         | "late_cancel/noshow"
+        | "draft"
       client_history_family_context_enum:
         | "family_of_origin"
         | "current_household"
@@ -7128,6 +8367,7 @@ export type Database = {
         | "Manual Check"
         | "No Insurance"
         | "DNC"
+        | "At Risk"
       phq9_severity_enum:
         | "minimal"
         | "mild"
@@ -7343,6 +8583,7 @@ export const Constants = {
         "documented",
         "cancelled",
         "late_cancel/noshow",
+        "draft",
       ],
       client_history_family_context_enum: [
         "family_of_origin",
@@ -7390,6 +8631,7 @@ export const Constants = {
         "Manual Check",
         "No Insurance",
         "DNC",
+        "At Risk",
       ],
       phq9_severity_enum: [
         "minimal",
