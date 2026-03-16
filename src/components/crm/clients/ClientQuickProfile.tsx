@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Mail, Phone, MapPin, User, ExternalLink, Megaphone, Pause, Play, X } from 'lucide-react';
