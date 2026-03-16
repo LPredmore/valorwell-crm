@@ -193,6 +193,33 @@ export const STATUS_CONFIG: Record<PatStatus, StatusConfig> = {
     category: 'closed',
     showInKanban: false,
   },
+  'At Risk': {
+    label: 'At Risk',
+    color: 'hsl(25, 95%, 53%)',
+    bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+    textColor: 'text-orange-700 dark:text-orange-300',
+    order: 21,
+    category: 'inactive',
+    showInKanban: false,
+  },
+  'Legacy - Has Therapist Available': {
+    label: 'Legacy – Has Therapist',
+    color: 'hsl(220, 9%, 46%)',
+    bgColor: 'bg-gray-100 dark:bg-gray-800/50',
+    textColor: 'text-gray-500 dark:text-gray-400',
+    order: 22,
+    category: 'closed',
+    showInKanban: false,
+  },
+  'Legacy - No Therapist Available': {
+    label: 'Legacy – No Therapist',
+    color: 'hsl(220, 9%, 46%)',
+    bgColor: 'bg-gray-100 dark:bg-gray-800/50',
+    textColor: 'text-gray-500 dark:text-gray-400',
+    order: 23,
+    category: 'closed',
+    showInKanban: false,
+  },
 };
 
 export const KANBAN_STATUSES = Object.entries(STATUS_CONFIG)
