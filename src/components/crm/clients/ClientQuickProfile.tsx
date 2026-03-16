@@ -314,7 +314,12 @@ export function ClientQuickProfile({
                 variant="outline"
                 size="sm"
                 className="w-full gap-2"
-                onClick={() => setEnrollDialogOpen(true)}
+                onClick={() => {
+                  if (client && onEnrollInCampaign) {
+                    onOpenChange(false);
+                    onEnrollInCampaign(client.id);
+                  }
+                }}
               >
                 <Megaphone className="h-4 w-4" />
                 Enroll in Campaign
