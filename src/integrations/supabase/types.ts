@@ -6656,6 +6656,7 @@ export type Database = {
           prov_image_url: string | null
           prov_license_number: string | null
           prov_license_type: string | null
+          prov_max_clients: number | null
           prov_min_client_age: number
           prov_name_f: string | null
           prov_name_for_clients: string | null
@@ -6695,6 +6696,7 @@ export type Database = {
           prov_image_url?: string | null
           prov_license_number?: string | null
           prov_license_type?: string | null
+          prov_max_clients?: number | null
           prov_min_client_age?: number
           prov_name_f?: string | null
           prov_name_for_clients?: string | null
@@ -6734,6 +6736,7 @@ export type Database = {
           prov_image_url?: string | null
           prov_license_number?: string | null
           prov_license_type?: string | null
+          prov_max_clients?: number | null
           prov_min_client_age?: number
           prov_name_f?: string | null
           prov_name_for_clients?: string | null
@@ -8403,6 +8406,8 @@ export type Database = {
         | "No Insurance"
         | "DNC"
         | "At Risk"
+        | "Legacy - Has Therapist Available"
+        | "Legacy - No Therapist Available"
       phq9_severity_enum:
         | "minimal"
         | "mild"
@@ -8667,6 +8672,8 @@ export const Constants = {
         "No Insurance",
         "DNC",
         "At Risk",
+        "Legacy - Has Therapist Available",
+        "Legacy - No Therapist Available",
       ],
       phq9_severity_enum: [
         "minimal",

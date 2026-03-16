@@ -20,7 +20,10 @@ export type PatStatus =
   | 'Unresponsive - Warm'
   | 'Unscheduled'
   | 'Waitlist'
-  | 'Went Dark (Previously Seen)';
+  | 'Went Dark (Previously Seen)'
+  | 'At Risk'
+  | 'Legacy - Has Therapist Available'
+  | 'Legacy - No Therapist Available';
 
 export interface CrmClient {
   id: string;

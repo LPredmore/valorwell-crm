@@ -1,27 +1,38 @@
 
 
-# Sync Status Filters with `pat_status_enum`
+# Fix HelpScout Webhook 401 Unauthorized
 
-## Problem
-The database `pat_status_enum` has 23 values, but the TypeScript code (`PatStatus` type and `STATUS_CONFIG`) only defines 20. Three statuses are missing from the code:
+## The Problem
 
-| Missing Status | Notes |
-|---|---|
-| `At Risk` | Set by `mark_at_risk_clients()` DB function — actively used |
-| `Legacy - Has Therapist Available` | Legacy status, likely for historical data |
-| `Legacy - No Therapist Available` | Legacy status, likely for historical data |
+Line 862 of `helpscout-proxy/index.ts` reads the wrong secret (`HELPSCOUT_APP_SECRET`) for webhook signature validation. It should read `HELPSCOUT_WEBHOOK_SECRET`.
 
 ## Changes
 
-### 1. `src/lib/crm/types.ts` — Add 3 missing values to `PatStatus` union type
+**File:** `supabase/functions/helpscout-proxy/index.ts`
 
-### 2. `src/lib/crm/status-config.ts` — Add 3 entries to `STATUS_CONFIG`
-- **At Risk**: category `inactive`, orange/amber color, `showInKanban: false`
-- **Legacy - Has Therapist Available**: category `closed`, gray color, `showInKanban: false`
-- **Legacy - No Therapist Available**: category `closed`, gray color, `showInKanban: false`
+**Line 862** -- change:
+```
+const webhookSecret = Deno.env.get("HELPSCOUT_APP_SECRET");
+```
+to:
+```
+const webhookSecret = Deno.env.get("HELPSCOUT_WEBHOOK_SECRET");
+```
 
-### 3. `src/lib/crm/campaign-types.ts` — Add `At Risk` to `SYSTEM_MANAGED_STATUSES`
-Since `mark_at_risk_clients()` sets this status automatically, it should show the warning in the campaign trigger UI.
+**Line 911** -- change:
+```
+console.warn("HELPSCOUT_APP_SECRET not configured - skipping signature validation");
+```
+to:
+```
+console.warn("HELPSCOUT_WEBHOOK_SECRET not configured - skipping signature validation");
+```
 
-No other files need changes — `ClientFilters.tsx` already uses `ALL_STATUSES` from `status-config.ts`, so it will automatically pick up the new values.
+## After Deploy
+
+You need to manually re-enable the webhook in HelpScout since they disabled it:
+
+1. Go to **HelpScout > Manage > Apps > Webhooks**
+2. Confirm the callback URL and secret key are correct
+3. Click **Save** to re-activate
 
