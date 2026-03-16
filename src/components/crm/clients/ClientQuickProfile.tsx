@@ -59,10 +59,10 @@ export function ClientQuickProfile({
   client,
   open,
   onOpenChange,
+  onEnrollInCampaign,
 }: ClientQuickProfileProps) {
   const navigate = useNavigate();
   const updateStatus = useUpdateClientStatus();
-  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   
   // Fetch active enrollment for this client
   const { data: activeEnrollment, isLoading: loadingEnrollment } = useClientActiveEnrollment(client?.id);
