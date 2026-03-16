@@ -309,7 +309,7 @@ export default function CrmClients() {
       <EnrollInCampaignDialog
         open={enrollDialogOpen}
         onOpenChange={setEnrollDialogOpen}
-        clientIds={Array.from(selectedClientIds)}
+        clientIds={enrollClientIds}
         onSuccess={handleEnrollSuccess}
       />
 
