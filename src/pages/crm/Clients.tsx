@@ -48,8 +48,8 @@ export default function CrmClients() {
   const [smsProgressModalOpen, setSmsProgressModalOpen] = useState(false);
   const [activeBulkSmsId, setActiveBulkSmsId] = useState<string | null>(null);
 
-  // Campaign enrollment dialog state
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
+  const [enrollClientIds, setEnrollClientIds] = useState<string[]>([]);
 
   // Quick profile sheet state
   const [quickProfileClient, setQuickProfileClient] = useState<CrmClient | null>(null);
