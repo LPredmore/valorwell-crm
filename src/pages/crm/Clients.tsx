@@ -183,8 +183,14 @@ export default function CrmClients() {
 
   // Campaign enrollment handlers
   const handleOpenEnrollDialog = () => {
+    setEnrollClientIds(Array.from(selectedClientIds));
     setEnrollDialogOpen(true);
   };
+
+  const handleQuickProfileEnroll = useCallback((clientId: string) => {
+    setEnrollClientIds([clientId]);
+    setEnrollDialogOpen(true);
+  }, []);
 
   const handleEnrollSuccess = () => {
     setSelectedClientIds(new Set());
