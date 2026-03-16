@@ -48,8 +48,8 @@ export default function CrmClients() {
   const [smsProgressModalOpen, setSmsProgressModalOpen] = useState(false);
   const [activeBulkSmsId, setActiveBulkSmsId] = useState<string | null>(null);
 
-  // Campaign enrollment dialog state
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
+  const [enrollClientIds, setEnrollClientIds] = useState<string[]>([]);
 
   // Quick profile sheet state
   const [quickProfileClient, setQuickProfileClient] = useState<CrmClient | null>(null);
@@ -183,8 +183,14 @@ export default function CrmClients() {
 
   // Campaign enrollment handlers
   const handleOpenEnrollDialog = () => {
+    setEnrollClientIds(Array.from(selectedClientIds));
     setEnrollDialogOpen(true);
   };
+
+  const handleQuickProfileEnroll = useCallback((clientId: string) => {
+    setEnrollClientIds([clientId]);
+    setEnrollDialogOpen(true);
+  }, []);
 
   const handleEnrollSuccess = () => {
     setSelectedClientIds(new Set());
@@ -303,7 +309,7 @@ export default function CrmClients() {
       <EnrollInCampaignDialog
         open={enrollDialogOpen}
         onOpenChange={setEnrollDialogOpen}
-        clientIds={Array.from(selectedClientIds)}
+        clientIds={enrollClientIds}
         onSuccess={handleEnrollSuccess}
       />
 
@@ -312,6 +318,7 @@ export default function CrmClients() {
         client={quickProfileClient}
         open={quickProfileOpen}
         onOpenChange={setQuickProfileOpen}
+        onEnrollInCampaign={handleQuickProfileEnroll}
       />
     </div>
   );

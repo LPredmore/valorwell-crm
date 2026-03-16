@@ -1,10 +1,10 @@
 import { Outlet, Navigate } from 'react-router-dom';
 import { CrmSidebar } from './CrmSidebar';
 import { CrmHeader } from './CrmHeader';
-import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { CrmAuthProvider, useCrmAuth } from '@/contexts/CrmAuthContext';
 import { Loader2 } from 'lucide-react';
 
-export function CrmLayout() {
+function CrmLayoutInner() {
   const { isLoading, isAuthenticated } = useCrmAuth();
 
   if (isLoading) {
@@ -29,5 +29,13 @@ export function CrmLayout() {
         </main>
       </div>
     </div>
+  );
+}
+
+export function CrmLayout() {
+  return (
+    <CrmAuthProvider>
+      <CrmLayoutInner />
+    </CrmAuthProvider>
   );
 }

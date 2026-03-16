@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Mail, Phone, MapPin, User, ExternalLink, Megaphone, Pause, Play, X } from 'lucide-react';
@@ -26,7 +25,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from './StatusBadge';
 import { useUpdateClientStatus } from '@/hooks/crm/useUpdateClientStatus';
 import { useClientActiveEnrollment, useUpdateEnrollmentStatus } from '@/hooks/crm/useCampaignEnrollments';
-import { EnrollInCampaignDialog } from '@/components/crm/campaigns/EnrollInCampaignDialog';
 import {
   getClientDisplayName,
   getTherapistDisplayName,
@@ -40,6 +38,7 @@ interface ClientQuickProfileProps {
   client: CrmClient | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEnrollInCampaign?: (clientId: string) => void;
 }
 
 // Group statuses by category for the select
@@ -60,10 +59,10 @@ export function ClientQuickProfile({
   client,
   open,
   onOpenChange,
+  onEnrollInCampaign,
 }: ClientQuickProfileProps) {
   const navigate = useNavigate();
   const updateStatus = useUpdateClientStatus();
-  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   
   // Fetch active enrollment for this client
   const { data: activeEnrollment, isLoading: loadingEnrollment } = useClientActiveEnrollment(client?.id);
@@ -315,7 +314,12 @@ export function ClientQuickProfile({
                 variant="outline"
                 size="sm"
                 className="w-full gap-2"
-                onClick={() => setEnrollDialogOpen(true)}
+                onClick={() => {
+                  if (client && onEnrollInCampaign) {
+                    onOpenChange(false);
+                    onEnrollInCampaign(client.id);
+                  }
+                }}
               >
                 <Megaphone className="h-4 w-4" />
                 Enroll in Campaign
@@ -336,12 +340,6 @@ export function ClientQuickProfile({
         </SheetFooter>
       </SheetContent>
 
-      {/* Enrollment Dialog */}
-      <EnrollInCampaignDialog
-        open={enrollDialogOpen}
-        onOpenChange={setEnrollDialogOpen}
-        clientIds={client ? [client.id] : []}
-      />
     </Sheet>
   );
 }
