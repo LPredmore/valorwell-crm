@@ -340,12 +340,6 @@ export function ClientQuickProfile({
         </SheetFooter>
       </SheetContent>
 
-      {/* Enrollment Dialog */}
-      <EnrollInCampaignDialog
-        open={enrollDialogOpen}
-        onOpenChange={setEnrollDialogOpen}
-        clientIds={client ? [client.id] : []}
-      />
     </Sheet>
   );
 }
