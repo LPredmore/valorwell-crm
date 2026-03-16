@@ -38,6 +38,7 @@ interface ClientQuickProfileProps {
   client: CrmClient | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEnrollInCampaign?: (clientId: string) => void;
 }
 
 // Group statuses by category for the select
