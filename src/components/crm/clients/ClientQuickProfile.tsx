@@ -25,7 +25,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from './StatusBadge';
 import { useUpdateClientStatus } from '@/hooks/crm/useUpdateClientStatus';
 import { useClientActiveEnrollment, useUpdateEnrollmentStatus } from '@/hooks/crm/useCampaignEnrollments';
-import { EnrollInCampaignDialog } from '@/components/crm/campaigns/EnrollInCampaignDialog';
 import {
   getClientDisplayName,
   getTherapistDisplayName,
