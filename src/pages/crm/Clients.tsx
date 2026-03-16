@@ -318,6 +318,7 @@ export default function CrmClients() {
         client={quickProfileClient}
         open={quickProfileOpen}
         onOpenChange={setQuickProfileOpen}
+        onEnrollInCampaign={handleQuickProfileEnroll}
       />
     </div>
   );
