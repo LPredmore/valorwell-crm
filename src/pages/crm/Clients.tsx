@@ -24,7 +24,7 @@ import type { ClientFilters as ClientFiltersType, CrmClient, PatStatus } from '@
 
 export default function CrmClients() {
   const navigate = useNavigate();
-  const [view, setView] = useState<'kanban' | 'table'>('kanban');
+  const [view, setView] = useState<'kanban' | 'table'>('table');
   const [filters, setFilters] = useState<ClientFiltersType>({
     statuses: [],
     states: [],
