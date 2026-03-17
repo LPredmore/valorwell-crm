@@ -218,6 +218,10 @@ export default function CrmClients() {
             />
           </div>
           <ClientFilters filters={filters} onChange={handleFiltersChange} />
+          <CommunicationReceivedFilter
+            value={filters.communicationReceivedDays}
+            onChange={(days) => handleFiltersChange({ communicationReceivedDays: days })}
+          />
         </div>
 
         <Tabs value={view} onValueChange={handleViewChange}>
