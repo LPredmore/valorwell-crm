@@ -921,7 +921,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     console.log(`Webhook event type from header: ${eventType}`);
     
     // We only care about customer replies
-    if (!eventType?.includes("customer.reply") && !eventType?.includes("convo.created")) {
+    if (!eventType?.includes("customer.reply")) {
       console.log(`Ignoring event type: ${eventType}`);
       return new Response(JSON.stringify({ received: true, ignored: true }), {
         status: 200,
