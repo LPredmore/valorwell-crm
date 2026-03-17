@@ -108,6 +108,22 @@ export function useClients(options: UseClientsOptions = {}) {
         }
       }
 
+      // Apply communication received filter client-side
+      if (filters?.communicationReceivedDays) {
+        const since = new Date();
+        since.setDate(since.getDate() - filters.communicationReceivedDays);
+        
+        const { data: recentComms } = await supabase
+          .from('crm_activity_events')
+          .select('client_id')
+          .eq('tenant_id', tenantId)
+          .in('event_type', ['email_received', 'sms_received'])
+          .gte('created_at', since.toISOString());
+        
+        const commClientIds = new Set(recentComms?.map(e => e.client_id) || []);
+        clientsData = clientsData.filter(client => commClientIds.has(client.id));
+      }
+
       return clientsData;
     },
     enabled: enabled && isAuthenticated && !!tenantId,

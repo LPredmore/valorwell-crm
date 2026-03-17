@@ -7,6 +7,7 @@ import { useClientsByStatus } from '@/hooks/crm/useClients';
 import { ClientKanban } from '@/components/crm/clients/ClientKanban';
 import { ClientTable } from '@/components/crm/clients/ClientTable';
 import { ClientFilters } from '@/components/crm/clients/ClientFilters';
+import { CommunicationReceivedFilter } from '@/components/crm/clients/CommunicationReceivedFilter';
 import { ClientQuickProfile } from '@/components/crm/clients/ClientQuickProfile';
 import { BulkActionBar } from '@/components/crm/clients/BulkActionBar';
 import { BulkComposeDialog } from '@/components/crm/bulk/BulkComposeDialog';
@@ -24,7 +25,7 @@ import type { ClientFilters as ClientFiltersType, CrmClient, PatStatus } from '@
 
 export default function CrmClients() {
   const navigate = useNavigate();
-  const [view, setView] = useState<'kanban' | 'table'>('kanban');
+  const [view, setView] = useState<'kanban' | 'table'>('table');
   const [filters, setFilters] = useState<ClientFiltersType>({
     statuses: [],
     states: [],
@@ -217,6 +218,10 @@ export default function CrmClients() {
             />
           </div>
           <ClientFilters filters={filters} onChange={handleFiltersChange} />
+          <CommunicationReceivedFilter
+            value={filters.communicationReceivedDays}
+            onChange={(days) => handleFiltersChange({ communicationReceivedDays: days })}
+          />
         </div>
 
         <Tabs value={view} onValueChange={handleViewChange}>
