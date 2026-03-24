@@ -1,38 +1,43 @@
 
 
-# Fix HelpScout Webhook 401 Unauthorized
+# Fix HelpScout Reply: Add Required `customer` Field
 
-## The Problem
+## Problem
 
-Line 862 of `helpscout-proxy/index.ts` reads the wrong secret (`HELPSCOUT_APP_SECRET`) for webhook signature validation. It should read `HELPSCOUT_WEBHOOK_SECRET`.
+The HelpScout Mailbox API v2 requires a `customer` object in every reply thread payload. The edge function at line 661-664 sends only `text` and `status`, causing a `400 Bad Request` with `"customer": "must not be null"`.
+
+## Technical Decision
+
+**Resolve the customer on the server side using the conversation's existing data**, rather than passing it from the frontend.
+
+Why this is the right approach:
+- The edge function already has the `conversationId`. It can fetch the conversation from HelpScout to get the `primaryCustomer.id` before posting the reply. This is one extra API call but guarantees correctness.
+- The alternative -- passing `customer.id` from the frontend -- is fragile. The frontend has the `primaryCustomer` object from its cached conversation list, but that data could be stale. The server should be the source of truth for outbound API calls.
+- HelpScout's reply endpoint accepts `customer.id` (numeric HelpScout customer ID). The conversation detail response always includes this.
 
 ## Changes
 
-**File:** `supabase/functions/helpscout-proxy/index.ts`
+### 1. Edge function: `supabase/functions/helpscout-proxy/index.ts`
 
-**Line 862** -- change:
-```
-const webhookSecret = Deno.env.get("HELPSCOUT_APP_SECRET");
-```
-to:
-```
-const webhookSecret = Deno.env.get("HELPSCOUT_WEBHOOK_SECRET");
-```
+In the `reply` case (around line 660), before constructing `replyBody`:
 
-**Line 911** -- change:
-```
-console.warn("HELPSCOUT_APP_SECRET not configured - skipping signature validation");
-```
-to:
-```
-console.warn("HELPSCOUT_WEBHOOK_SECRET not configured - skipping signature validation");
-```
+1. Fetch the conversation from HelpScout to get the primary customer ID:
+   ```
+   GET /conversations/{conversationId}?fields=primaryCustomer
+   ```
+2. Extract `primaryCustomer.id` from the response.
+3. Include it in the reply payload:
+   ```typescript
+   const replyBody = {
+     customer: { id: primaryCustomer.id },
+     text,
+     status: status || "active",
+   };
+   ```
 
-## After Deploy
+This is a single change to the edge function. No frontend changes needed -- `ReplyComposer.tsx`, `useReplyToConversation.ts`, and `ConversationThread.tsx` all remain untouched.
 
-You need to manually re-enable the webhook in HelpScout since they disabled it:
+### 2. Deploy and verify
 
-1. Go to **HelpScout > Manage > Apps > Webhooks**
-2. Confirm the callback URL and secret key are correct
-3. Click **Save** to re-activate
+Deploy the updated edge function, then test by sending a reply through the CRM inbox.
 
