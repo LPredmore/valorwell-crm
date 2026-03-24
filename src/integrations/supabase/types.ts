@@ -6023,6 +6023,92 @@ export type Database = {
           },
         ]
       }
+      payroll_payment_attempts: {
+        Row: {
+          attempt_ended_at: string | null
+          attempt_started_at: string
+          body_preview: string | null
+          created_at: string
+          duration_ms: number | null
+          error_class: string | null
+          error_message: string | null
+          execution_log_id: string | null
+          id: string
+          idempotency_key: string
+          line_item_id: string
+          mercury_transaction_id: string | null
+          payroll_run_id: string
+          proxy_content_type: string | null
+          proxy_http_status: number | null
+          tenant_id: string
+        }
+        Insert: {
+          attempt_ended_at?: string | null
+          attempt_started_at?: string
+          body_preview?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_class?: string | null
+          error_message?: string | null
+          execution_log_id?: string | null
+          id?: string
+          idempotency_key: string
+          line_item_id: string
+          mercury_transaction_id?: string | null
+          payroll_run_id: string
+          proxy_content_type?: string | null
+          proxy_http_status?: number | null
+          tenant_id: string
+        }
+        Update: {
+          attempt_ended_at?: string | null
+          attempt_started_at?: string
+          body_preview?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_class?: string | null
+          error_message?: string | null
+          execution_log_id?: string | null
+          id?: string
+          idempotency_key?: string
+          line_item_id?: string
+          mercury_transaction_id?: string | null
+          payroll_run_id?: string
+          proxy_content_type?: string | null
+          proxy_http_status?: number | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_payment_attempts_execution_log_id_fkey"
+            columns: ["execution_log_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_execution_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_payment_attempts_line_item_id_fkey"
+            columns: ["line_item_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_payment_attempts_payroll_run_id_fkey"
+            columns: ["payroll_run_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_payment_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payroll_rate_configs: {
         Row: {
           created_at: string
@@ -8408,6 +8494,7 @@ export type Database = {
         | "At Risk"
         | "Legacy - Has Therapist Available"
         | "Legacy - No Therapist Available"
+        | "No Longer Eligible"
       phq9_severity_enum:
         | "minimal"
         | "mild"
@@ -8674,6 +8761,7 @@ export const Constants = {
         "At Risk",
         "Legacy - Has Therapist Available",
         "Legacy - No Therapist Available",
+        "No Longer Eligible",
       ],
       phq9_severity_enum: [
         "minimal",
