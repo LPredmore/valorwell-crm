@@ -658,7 +658,24 @@ Deno.serve(async (req) => {
           });
         }
 
-        const replyBody = {
+        // Fetch conversation to get the primary customer ID (required by HelpScout API)
+        const convoResponse = await helpscoutRequest(
+          "GET",
+          `/conversations/${conversationId}?fields=primaryCustomer`
+        );
+        if (!convoResponse.ok) {
+          const convoError = await convoResponse.text();
+          console.error("Failed to fetch conversation for customer ID:", convoError);
+          throw new Error(`Failed to fetch conversation: ${convoResponse.status}`);
+        }
+        const convoData = await convoResponse.json();
+        const primaryCustomerId = convoData?.primaryCustomer?.id;
+        if (!primaryCustomerId) {
+          throw new Error("Could not resolve primary customer for this conversation");
+        }
+
+        const replyBody: Record<string, unknown> = {
+          customer: { id: primaryCustomerId },
           text,
           status: status || "active",
         };
