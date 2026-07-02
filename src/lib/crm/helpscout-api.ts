@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 
-const HELPSCOUT_PROXY_URL = 'https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/helpscout-proxy';
+const HELPSCOUT_PROXY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/helpscout-proxy`;
 
 export type HelpScoutAction =
   | 'test-connection'

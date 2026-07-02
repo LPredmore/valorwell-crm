@@ -1,132 +1,104 @@
+## CRM Follow-Up Audit — Implementation Plan
 
-# Security & Reliability Hardening: Critical + High Findings
+The prior Critical/High security pass is holding. A follow-up audit surfaced 15 remaining items across correctness, tenant isolation, performance, and code quality. This plan sequences the fixes so each phase is independently shippable, keeps shared EHR tables untouched, and avoids any change that could ripple into the other apps sharing this database.
 
-Address the 8 red/orange findings from the audit. Grouped by system layer so related changes ship together and share test surface.
-
----
-
-## 1. XSS in Rendered Email Bodies (Critical)
-
-**Problem:** `ThreadMessage.tsx` renders HelpScout email HTML via `dangerouslySetInnerHTML` with no sanitization. A malicious inbound email can execute arbitrary JS in the CRM's origin — session hijack, tenant data theft.
-
-**Decision: Sanitize with DOMPurify on the client, at render time, using a strict allowlist.**
-
-Why this over alternatives:
-- **Server-side sanitize on ingest:** rejected. We'd have to rewrite stored HTML, and any past-stored payloads remain dangerous. Client-side sanitize covers historical data automatically and defends even if a new ingest path is added later.
-- **iframe sandbox:** rejected. Breaks inline images/signatures, complicates height sizing, and still needs sanitization for `srcdoc`. Not worth the UX cost.
-- **Strip to text:** rejected. Users need formatted email.
-
-DOMPurify is the industry standard, actively maintained, ~20KB, and battle-tested. Apply the same sanitizer to any other `dangerouslySetInnerHTML` sites (signature preview, campaign step preview) via a shared `sanitizeEmailHtml()` util so we have one policy.
+Every DB change proposed here is **additive-only** on tables the CRM owns (`crm_*`) or on `public.clients` in the form of a new **index** (no column changes). Nothing in this plan alters, drops, or renames an existing column.
 
 ---
 
-## 2. RingCentral Webhook Signature Verification (Critical)
+### Phase 1 — Critical fixes (no schema changes)
 
-**Problem:** `ringcentral-sms` accepts inbound webhook posts with no signature check. Anyone with the URL can forge inbound SMS → fake "received" events, auto-pause campaigns, poison `last_contact_at`, spoof client replies.
+**1. Remove the hardcoded Supabase URL** — `src/lib/crm/helpscout-api.ts:3`
+`HELPSCOUT_PROXY_URL` is a literal `https://ahqauomkgflopxgnlndd.supabase.co/…`. Any env swap silently breaks Inbox and replies.
+**Fix:** `` `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/helpscout-proxy` ``. Same pattern already used elsewhere.
+**Why this over `supabase.functions.invoke`:** the proxy relies on query-string action routing and streaming JSON; `invoke` forces a POST body shape that would require rewriting every call site. Env-driven URL is the minimum, correct change.
 
-**Decision: Validate the `Verification-Token` header against a stored `RINGCENTRAL_WEBHOOK_VERIFICATION_TOKEN` secret on every inbound POST.**
-
-RingCentral's webhook model uses a per-subscription verification token (set when the subscription is created and echoed on the handshake). We already handle the handshake echo; we just don't check the token on subsequent deliveries. Reject with 401 if missing/mismatched. Fail closed — no "skip if secret absent" fallback (that's what bit us with HelpScout).
-
----
-
-## 3. HelpScout Webhook Secret Must Be Required (Critical)
-
-**Problem:** Current code logs a warning and continues if `HELPSCOUT_WEBHOOK_SECRET` is unset. Signature validation silently skipped → identical forgery risk as #2.
-
-**Decision: Fail closed. If the secret is missing, return 500 and refuse to process. Never accept unsigned webhooks.**
-
-Convert the warning-and-continue branch to a hard error. The secret is already configured in prod, so no operational impact; this only closes the "someone deletes the secret" foot-gun.
+**2. Cache the HelpScout OAuth token in `helpscout-proxy`**
+`getAccessToken()` runs on every HelpScout call — up to 10 token exchanges per `list-conversations` request. Wastes rate-limit budget and adds latency inside the 10s edge-function ceiling.
+**Fix:** Module-scoped `{ token, expiresAt }` cache; refetch only when `Date.now() > expiresAt - 60_000`. Concurrent-safe with a shared in-flight promise so parallel requests share one refresh.
+**Why not Deno KV or DB-backed cache:** HelpScout tokens are per-function-instance cheap to mint; module scope survives warm invocations, which is exactly the hot path we care about. KV adds latency and cost with no correctness gain.
 
 ---
 
-## 4. Campaign Scheduler Public Endpoint (Critical)
+### Phase 2 — Correctness & tenant isolation (1 additive migration)
 
-**Problem:** `campaign-scheduler` deploys with `verify_jwt = false` and has no auth check. Anyone can hit the URL and force immediate campaign dispatch — duplicate sends, denial-of-wallet, timing manipulation.
+**3. Prevent duplicate `scheduled` step logs** — `crm_campaign_step_logs`
+`SKIP LOCKED` prevents double-*claim*, not double-*insertion*. If the scheduler retries after a partial commit, two `scheduled` rows for the same `(enrollment_id, step_id)` can be created and both later claimed.
+**Migration (additive index):**
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS crm_campaign_step_logs_one_scheduled
+  ON public.crm_campaign_step_logs (enrollment_id, step_id)
+  WHERE status = 'scheduled';
+```
+Then switch `scheduleNextStep` in `campaign-scheduler/index.ts` to `.upsert(..., { onConflict: 'enrollment_id,step_id', ignoreDuplicates: true })` — only effective while `status='scheduled'` because of the partial index.
+**Why a partial unique index over a full unique constraint:** completed/failed rows must remain multiple (retries, historical audit). Partial index gives exactly-once *scheduling* without corrupting history.
 
-**Decision: Require a shared secret in the `Authorization` header, validated in-code. Use a dedicated `CRON_SECRET` used by pg_cron; reject everything else.**
+**4. Add explicit `tenant_id` filter to outbound SMS queries** — `src/hooks/crm/useSmsConversations.ts`
+Currently relies purely on RLS. Add `.eq('tenant_id', tenantId)` to the `crm_bulk_sms_recipients` and `crm_campaign_step_logs` queries as defense-in-depth. Remove the JS-side post-filter `r.bulk_sms?.tenant_id === tenantId` once the server-side filter is in place.
 
-Why not `verify_jwt = true`:
-- pg_cron doesn't mint user JWTs; it can only send a static header. `verify_jwt = true` would require embedding a service-role JWT in cron SQL (worse — full DB access if leaked).
-- A dedicated cron secret is minimum-privilege: leak only lets you trigger scheduler runs, not read data.
+**5. Fix inbound SMS tenant fallback** — `ringcentral-sms/index.ts:495`
+Currently assigns a hardcoded `DEFAULT_TENANT_ID = '00000000-...-0001'` when no client match is found. This either FK-fails silently or (worse) mis-attributes messages if that UUID happens to match a real tenant.
+**Fix:** Look up the RingCentral extension → tenant mapping from `crm_helpscout_settings`/an equivalent RC config row. If still unresolved, insert with `tenant_id = NULL` **conditional on the column being nullable** (see below).
+**Schema question (needs your approval):** `crm_inbound_sms_logs.tenant_id` is currently `NOT NULL`. The safest additive change is:
+```sql
+ALTER TABLE public.crm_inbound_sms_logs ALTER COLUMN tenant_id DROP NOT NULL;
+```
+This is CRM-owned and not touched by the other apps — but I will confirm with you before running it. If you'd rather not relax the column, the fallback is to **drop** unmatched inbound messages with a warning log; that's strictly worse for auditability but requires zero schema change.
 
-Update the existing pg_cron job to send `Authorization: Bearer $CRON_SECRET`. Same pattern applies to any other cron-triggered function (audit while we're in there).
+**6. Add tenant ownership check to `create-conversation`** — `helpscout-proxy/index.ts`
+Unlike `reply` (which validates `callerBelongsToTenant`), `create-conversation` accepts any `customerEmail` and writes no activity event. Fix:
+- Resolve the client via `find_clients_by_emails_insensitive` scoped to the caller's tenant memberships; reject 403 on miss.
+- Log an `email_sent` activity event mirroring the `reply` action.
 
----
-
-## 5. Missing `service_role` Grants on New Tables (High)
-
-**Problem:** Recent migrations created public-schema tables without `GRANT ALL ... TO service_role`. Edge functions using the service-role key fail with permission errors on those tables (or will, next time they're touched).
-
-**Decision: Sweep migration to add the missing grants across all `crm_*` tables added in the last ~30 days.**
-
-Query `information_schema.role_table_grants` to identify gaps, then emit a single idempotent migration. Also add the standard `authenticated` grants where policies expect them. This is mechanical — no policy changes.
-
----
-
-## 6. N+1 Query in Client Table Render (High)
-
-**Problem:** Client table triggers a per-row query for tag/last-contact enrichment when the base query already has the columns. Wastes a request per visible row (~50) on every filter change.
-
-**Decision: Consolidate into the existing `useClients` select. Drop the per-row hooks; add the columns to the base query's `select()` string.**
-
-The data is already on `clients` (post last-contact migration). This is pure code deletion — remove the child hooks and let the parent query return everything.
-
----
-
-## 7. Campaign Scheduler Race Condition (High)
-
-**Problem:** Two overlapping scheduler invocations (e.g., cron overlap after a slow run) can both select the same pending step and send it twice. No row-level lock.
-
-**Decision: Use `SELECT ... FOR UPDATE SKIP LOCKED` inside a transaction, wrapped in an RPC.**
-
-Why this over alternatives:
-- **Advisory lock on the whole function:** rejected. Serializes all tenants; slow tenant blocks fast ones.
-- **`processing` status flag with timestamp:** rejected. Requires stuck-row recovery logic; `SKIP LOCKED` is atomic and standard for job queues.
-- **Unique constraint on (enrollment_id, step_order) in `crm_campaign_step_logs`:** keep as belt-and-suspenders — insert log row *before* send, and let the unique constraint be the last line of defense.
-
-Create `claim_pending_campaign_steps(limit int)` RPC that atomically selects + marks. Scheduler calls the RPC instead of raw select.
+**7. Fix `list-conversations` fan-out** — `helpscout-proxy/index.ts`
+Currently: up to 10 HelpScout page fetches × 1 RPC each = 20 sequential round-trips per request. Risk of 504.
+**Fix:** Fetch pages in a loop, accumulate emails into a `Set`, then call `find_clients_by_emails_insensitive` **once** with the deduplicated email set before filtering. Reduces N×2 round-trips to N+1.
+**Why not parallelize page fetches:** HelpScout paginates with cursor semantics; the next page depends on the previous page's cursor. Sequential is required; the win is collapsing the RPC calls.
 
 ---
 
-## 8. Bulk Send Stuck in `'sending'` on Crash (High)
+### Phase 3 — Performance & UX consistency (no schema changes)
 
-**Problem:** If `helpscout-proxy` or `ringcentral-sms` crashes mid bulk-send, `crm_bulk_send_logs.status` stays `'sending'` forever. UI shows perpetual progress bar; no retry path.
+**8. Batch `useBulkUpdateStatus`** — replace the per-client `Promise.all` of `UPDATE` + `INSERT` (2×N round-trips) with:
+- One `UPDATE clients SET pat_status=$1 WHERE id = ANY($2) AND tenant_id=$3`.
+- One `INSERT INTO crm_activity_events` with an array of rows.
+Wrap both in a single Postgres RPC `crm_bulk_update_client_status(ids uuid[], new_status text, tenant_id uuid)` so the two writes are transactional — if the audit insert fails, the status update rolls back.
 
-**Decision: Add a `heartbeat_at` timestamp updated per recipient, plus a reconciliation cron that marks `sending` rows with stale heartbeats (>10 min) as `'failed'`.**
+**9. Fix `useSaveCampaignSteps` partial-failure hole** — sequential update loop that silently leaves campaigns half-saved on any error. Wrap the delete/insert/update batch in a single RPC `crm_save_campaign_steps(campaign_id uuid, steps jsonb)` so partial saves are impossible. Client-side, drop the client-generated step IDs and use whatever the RPC returns.
 
-Why not just wrap in try/finally:
-- Deno edge functions can be killed by wall-clock timeout (150s) without running finally blocks reliably.
-- Heartbeat + reconciler works even for hard kills, OOMs, and deploys mid-flight.
+**10. Surface `useSmsConversations` errors** — currently swallows all three sub-query errors and returns `[]`, which react-query treats as success. Rethrow when the inbound query (the primary data source) fails; log-and-continue for the two outbound sources (secondary enrichment). This preserves partial rendering when only enrichment fails but surfaces true outages.
 
-Reconciler is a small edge function on a 5-minute cron, uses same `CRON_SECRET` pattern from #4.
+**11. Move `useClients` filters server-side** — `activeCampaign` and `communicationReceivedDays` are currently applied in JS after fetching the full client list. For large tenants this fetches thousands of rows to discard most of them.
+**Fix:** Add `EXISTS` subquery filters via a `crm_search_clients` RPC that accepts the filter payload and returns matching rows. Keep the existing hook signature; only the query body changes.
 
 ---
 
-## Technical Details
+### Phase 4 — Cleanup (no schema changes)
 
-### Files touched
-- `src/components/crm/inbox/ThreadMessage.tsx` — sanitize
-- `src/lib/sanitize.ts` (new) — shared DOMPurify config
-- `src/components/crm/settings/SignaturePreview.tsx`, `src/components/crm/campaigns/CampaignStepPreview.tsx` — use shared sanitizer
-- `supabase/functions/ringcentral-sms/index.ts` — verification token check
-- `supabase/functions/helpscout-proxy/index.ts` — remove warning-fallback
-- `supabase/functions/campaign-scheduler/index.ts` — CRON_SECRET check, use claim RPC
-- `supabase/functions/reconcile-bulk-sends/index.ts` (new)
-- `src/hooks/crm/useClients.ts` + `src/components/crm/clients/ClientTable.tsx` — merge queries
-- Migration: grants sweep, `claim_pending_campaign_steps` RPC, `heartbeat_at` column, update pg_cron jobs
+**12. Tag filter correctness** — `useClients.ts:65` uses `ilike %VIP%` which matches `"Non-VIP"`. Per project memory, tags live in a single TEXT column `clients.tags` and I cannot alter that column.
+**Fix (no schema change):** Change the filter from `ilike.%${tag}%` to an exact-match against the delimited value: `.or('tags.eq.<tag>,tags.ilike.<tag>,%,tags.ilike.%,<tag>,tags.ilike.%,<tag>,%')` — i.e., match the tag when it is the whole value or a token bounded by commas. Not indexable, but correct. If you later approve migrating `clients.tags` to `text[]`, we can add a GIN index; but that column is on the shared `clients` table and per your rules is off-limits.
 
-### Secrets required (user must add)
-- `RINGCENTRAL_WEBHOOK_VERIFICATION_TOKEN` — from RingCentral subscription
-- `CRON_SECRET` — auto-generated
+**13. `useCampaigns` sequential queries** — wrap the step-count and enrollment-count queries in `Promise.all` (already correctly batched pattern used elsewhere).
+
+**14. Remove CORS from `campaign-scheduler`** — it's cron-only via `X-Cron-Secret`. Delete `corsHeaders` and the OPTIONS handler.
+
+**15. `create-conversation` activity log** — folded into item 6.
+
+---
 
 ### Rollout order
-1. Grants sweep (#5) — unblocks anything else that touches new tables
-2. Sanitizer (#1) — pure frontend, zero risk
-3. Webhook validation (#2, #3) — coordinated with re-registering webhooks
-4. Scheduler auth + race fix (#4, #7) — deploy together, update cron in same migration
-5. Bulk send reconciliation (#8)
-6. Client table N+1 (#6) — last, isolated cleanup
 
-### Out of scope (deferred to next batch)
-Findings 9–15 (medium): CORS wildcard tightening, signature URL sanitization at storage time, waterfall query on focus, index audits, etc.
+1. **Phase 1** (items 1–2) — safest, zero-schema, high impact. Ship immediately.
+2. **Phase 2** (items 3–7) — one additive migration (partial unique index) + a **decision point** on `crm_inbound_sms_logs.tenant_id` nullability. Deploy `helpscout-proxy`, `ringcentral-sms`, `campaign-scheduler` together.
+3. **Phase 3** (items 8–11) — two new RPCs (`crm_bulk_update_client_status`, `crm_save_campaign_steps`, `crm_search_clients`). All CRM-scoped, additive.
+4. **Phase 4** (items 12–14) — pure code cleanup.
+
+### Decision I need from you before Phase 2
+
+- **Item 5:** Approve `ALTER TABLE public.crm_inbound_sms_logs ALTER COLUMN tenant_id DROP NOT NULL`? This is a CRM-owned table so no cross-app risk, but it is technically a column change. If you'd prefer to keep the NOT NULL constraint, I will implement the "drop unmatched inbound with warning" fallback instead — worse for audit, but zero schema movement.
+
+### Out of scope
+
+- Anything touching shared EHR tables (`clients`, `appointments`, `staff`, etc.). Per project rules.
+- The `SECURITY DEFINER` view warnings from the linter — intentional for tenant-scoped aggregates.
+- Missing RLS on shared tables — owned by the other apps.
