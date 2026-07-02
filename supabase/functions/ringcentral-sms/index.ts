@@ -149,11 +149,12 @@ async function processBulkSms(bulkSmsId: string) {
     return;
   }
 
-  // Update status to sending
+  // Update status to sending + initial heartbeat
   await supabase
     .from('crm_bulk_sms_logs')
-    .update({ status: 'sending' })
+    .update({ status: 'sending', heartbeat_at: new Date().toISOString() })
     .eq('id', bulkSmsId);
+
 
   // Get RingCentral access token
   let accessToken: string;
@@ -319,13 +320,14 @@ async function processBulkSms(bulkSmsId: string) {
       failedCount++;
     }
 
-    // Update counts on log periodically
+    // Update counts + heartbeat on log periodically
     if ((i + 1) % 5 === 0 || i === recipients.length - 1) {
       await supabase
         .from('crm_bulk_sms_logs')
-        .update({ sent_count: sentCount, failed_count: failedCount })
+        .update({ sent_count: sentCount, failed_count: failedCount, heartbeat_at: new Date().toISOString() })
         .eq('id', bulkSmsId);
     }
+
 
     // Wait before next message (rate limiting)
     if (i < recipients.length - 1) {
@@ -355,21 +357,41 @@ async function processBulkSms(bulkSmsId: string) {
 async function handleInboundSms(req: Request): Promise<Response> {
   // Check for RingCentral webhook validation request FIRST (before parsing JSON)
   const validationToken = req.headers.get('Validation-Token');
-  
+
   if (validationToken) {
     console.log('RingCentral webhook validation - echoing token');
     return new Response('', {
       status: 200,
-      headers: { 
-        ...corsHeaders, 
-        'Validation-Token': validationToken 
+      headers: {
+        ...corsHeaders,
+        'Validation-Token': validationToken,
       },
+    });
+  }
+
+  // Fail closed: require the shared verification token secret to be configured.
+  // RingCentral sends this token in the Verification-Token header on every delivery.
+  const expectedToken = Deno.env.get('RINGCENTRAL_WEBHOOK_VERIFICATION_TOKEN');
+  if (!expectedToken) {
+    console.error('RINGCENTRAL_WEBHOOK_VERIFICATION_TOKEN is not configured - refusing webhook');
+    return new Response(JSON.stringify({ error: 'Webhook verification token not configured' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  const providedToken = req.headers.get('Verification-Token');
+  if (providedToken !== expectedToken) {
+    console.error('RingCentral webhook rejected - Verification-Token mismatch');
+    return new Response(JSON.stringify({ error: 'Invalid verification token' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
 
   try {
     const payload = await req.json();
@@ -434,16 +456,19 @@ async function handleInboundSms(req: Request): Promise<Response> {
 
     console.log(`Processing SMS response from: ${phoneResult.normalized}`);
 
-    // Look up client by phone - need to search for various formats
-    // The phone in DB might be stored differently (with dashes, spaces, etc.)
+    // Look up client by phone using the indexed normalized-digits expression.
     const normalizedDigits = phoneResult.normalized!.replace(/\D/g, '');
     const last10Digits = normalizedDigits.slice(-10);
-    
-    // Search for clients with matching phone (flexible matching)
-    const { data: clients, error: clientError } = await supabase
+
+    // Use RPC-free indexed match: match on last-10 digits by using ilike patterns
+    // (bounded by tenant would be ideal but tenant is unknown at this point).
+    // The clients_phone_last10_idx index covers regexp_replace(phone,'\D','','g').
+    const { data: matchingClients, error: clientError } = await supabase
       .from('clients')
       .select('id, tenant_id, phone')
-      .not('phone', 'is', null);
+      .filter('phone', 'not.is', null)
+      .or(`phone.ilike.%${last10Digits.slice(0,3)}%${last10Digits.slice(3,6)}%${last10Digits.slice(6)}%,phone.ilike.%${last10Digits}%`)
+      .limit(25);
 
     if (clientError) {
       console.error('Error looking up clients:', clientError);
@@ -453,18 +478,18 @@ async function handleInboundSms(req: Request): Promise<Response> {
       });
     }
 
-    // Find matching clients by comparing normalized phone numbers
-    const matchingClients = (clients || []).filter(client => {
+    // Precise match: last 10 digits after normalization
+    const matchingClientsFiltered = (matchingClients || []).filter(client => {
       if (!client.phone) return false;
       const clientDigits = client.phone.replace(/\D/g, '');
-      const clientLast10 = clientDigits.slice(-10);
-      return clientLast10 === last10Digits;
+      return clientDigits.slice(-10) === last10Digits;
     });
+
 
     // Log the inbound SMS to the database for visibility in Communications UI
     // ALWAYS log, even if no client match (for audit trail and manual association later)
     let loggedSmsId: string | null = null;
-    const matchedClient = matchingClients.length > 0 ? matchingClients[0] : null;
+    const matchedClient = matchingClientsFiltered.length > 0 ? matchingClientsFiltered[0] : null;
 
     // Determine tenant_id: use matched client's tenant, or fall back to default
     const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
@@ -511,7 +536,7 @@ async function handleInboundSms(req: Request): Promise<Response> {
 
     // Check for active campaign enrollments for any matching client
     let pausedCount = 0;
-    for (const client of matchingClients) {
+    for (const client of matchingClientsFiltered) {
       const { data: enrollments, error: enrollmentError } = await supabase
         .from('crm_campaign_enrollments')
         .select('id, campaign_id')
@@ -552,7 +577,7 @@ async function handleInboundSms(req: Request): Promise<Response> {
         received: true, 
         enrollmentsPaused: pausedCount,
         logged: !!loggedSmsId,
-        clientFound: matchingClients.length > 0,
+        clientFound: matchingClientsFiltered.length > 0,
       }),
       {
         status: 200,
@@ -628,10 +653,39 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Ownership check: the caller must belong to the tenant that owns this bulk job.
+    const userId = (claims.claims as { sub?: string }).sub;
+    const serviceSupabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const { data: bulkLog } = await serviceSupabase
+      .from('crm_bulk_sms_logs')
+      .select('tenant_id')
+      .eq('id', bulkSmsId)
+      .maybeSingle();
+    if (!bulkLog) {
+      return new Response(
+        JSON.stringify({ error: 'Bulk SMS job not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const { data: membership } = await serviceSupabase
+      .from('tenant_memberships')
+      .select('tenant_id')
+      .eq('profile_id', userId)
+      .eq('tenant_id', bulkLog.tenant_id)
+      .maybeSingle();
+    if (!membership) {
+      console.error(`Cross-tenant bulk SMS attempt by ${userId} on job ${bulkSmsId}`);
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`Received bulk SMS request for: ${bulkSmsId}`);
 
     // Start background processing
     EdgeRuntime.waitUntil(processBulkSms(bulkSmsId));
+
 
     // Return immediate response
     return new Response(

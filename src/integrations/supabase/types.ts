@@ -3581,6 +3581,7 @@ export type Database = {
           created_at: string
           created_by_profile_id: string
           failed_count: number
+          heartbeat_at: string | null
           id: string
           recipient_count: number
           recipient_type: string
@@ -3596,6 +3597,7 @@ export type Database = {
           created_at?: string
           created_by_profile_id: string
           failed_count?: number
+          heartbeat_at?: string | null
           id?: string
           recipient_count?: number
           recipient_type?: string
@@ -3611,6 +3613,7 @@ export type Database = {
           created_at?: string
           created_by_profile_id?: string
           failed_count?: number
+          heartbeat_at?: string | null
           id?: string
           recipient_count?: number
           recipient_type?: string
@@ -3758,6 +3761,7 @@ export type Database = {
           created_at: string
           created_by_profile_id: string
           failed_count: number
+          heartbeat_at: string | null
           id: string
           recipient_count: number
           recipient_type: string
@@ -3771,6 +3775,7 @@ export type Database = {
           created_at?: string
           created_by_profile_id: string
           failed_count?: number
+          heartbeat_at?: string | null
           id?: string
           recipient_count?: number
           recipient_type?: string
@@ -3784,6 +3789,7 @@ export type Database = {
           created_at?: string
           created_by_profile_id?: string
           failed_count?: number
+          heartbeat_at?: string | null
           id?: string
           recipient_count?: number
           recipient_type?: string
@@ -8772,6 +8778,18 @@ export type Database = {
         Args: { p_end: string; p_staff_id: string; p_start: string }
         Returns: boolean
       }
+      claim_pending_campaign_steps: {
+        Args: { p_limit?: number }
+        Returns: {
+          channel: string
+          client_id: string
+          enrollment_id: string
+          id: string
+          scheduled_for: string
+          step_id: string
+          tenant_id: string
+        }[]
+      }
       convert_local_to_utc: {
         Args: { p_date: string; p_time: string; p_timezone?: string }
         Returns: string
@@ -9071,6 +9089,7 @@ export type Database = {
         Returns: boolean
       }
       mark_at_risk_clients: { Args: { p_tenant_id: string }; Returns: number }
+      reconcile_stalled_bulk_jobs: { Args: never; Returns: undefined }
       refresh_client_ages: { Args: never; Returns: number }
       setup_admin_user: {
         Args: {

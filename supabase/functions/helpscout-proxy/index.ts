@@ -110,11 +110,12 @@ async function handleBulkSend(
       return;
     }
 
-    // Update status to 'sending'
+    // Update status to 'sending' and stamp initial heartbeat
     await supabase
       .from("crm_bulk_send_logs")
-      .update({ status: "sending" })
+      .update({ status: "sending", heartbeat_at: new Date().toISOString() })
       .eq("id", bulkSendId);
+
 
     const recipientType = bulkSendLog.recipient_type || 'client';
     console.log(`Processing bulk send for recipient type: ${recipientType}`);
@@ -228,7 +229,18 @@ async function handleBulkSend(
     let failedCount = 0;
 
     // Process each recipient
+    let processedSinceHeartbeat = 0;
     for (const recipient of recipientsToProcess) {
+      // Heartbeat every 5 recipients so a stalled/crashed run can be reconciled.
+      if (processedSinceHeartbeat >= 5) {
+        await supabase
+          .from("crm_bulk_send_logs")
+          .update({ heartbeat_at: new Date().toISOString(), sent_count: sentCount, failed_count: failedCount })
+          .eq("id", bulkSendId);
+        processedSinceHeartbeat = 0;
+      }
+      processedSinceHeartbeat++;
+
       // Skip if no email
       if (!recipient.email) {
         console.log(`Skipping recipient ${recipient.id}: no email`);
@@ -405,9 +417,25 @@ Deno.serve(async (req) => {
     const userId = claimsData.claims.sub;
     console.log("Authenticated user:", userId);
 
+    // Service client used for cross-tenant ownership checks
+    const serviceSupabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    async function callerBelongsToTenant(tenantId: string): Promise<boolean> {
+      const { data } = await serviceSupabase
+        .from("tenant_memberships")
+        .select("tenant_id")
+        .eq("profile_id", userId)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      return !!data;
+    }
+
     const mailboxId = Deno.env.get("HELPSCOUT_MAILBOX_ID");
 
     let result: unknown;
+
 
     switch (action) {
       case "list-conversations": {
@@ -694,18 +722,14 @@ Deno.serve(async (req) => {
 
         // Log activity event for manual reply if clientId provided
         if (clientId) {
-          const serviceSupabase = createClient(
-            Deno.env.get("SUPABASE_URL")!,
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-          );
-          // Look up tenant from client
+          // Look up tenant from client and enforce caller belongs to it
           const { data: clientData } = await serviceSupabase
             .from('clients')
             .select('tenant_id')
             .eq('id', clientId)
             .single();
 
-          if (clientData) {
+          if (clientData && await callerBelongsToTenant(clientData.tenant_id)) {
             await serviceSupabase
               .from('crm_activity_events')
               .insert({
@@ -718,8 +742,11 @@ Deno.serve(async (req) => {
                   helpscout_conversation_id: conversationId,
                 },
               });
+          } else {
+            console.warn(`Reply activity log skipped - caller ${userId} is not in tenant for client ${clientId}`);
           }
         }
+
 
         result = { success: true, conversationId };
         break;
@@ -816,6 +843,27 @@ Deno.serve(async (req) => {
           );
         }
 
+        // Ownership check: caller must belong to the tenant that owns the job
+        const { data: bulkLog } = await serviceSupabase
+          .from("crm_bulk_send_logs")
+          .select("tenant_id")
+          .eq("id", bulkSendId)
+          .maybeSingle();
+        if (!bulkLog) {
+          return new Response(
+            JSON.stringify({ error: "Bulk send job not found" }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (!(await callerBelongsToTenant(bulkLog.tenant_id))) {
+          console.error(`Cross-tenant bulk-send attempt by ${userId} on job ${bulkSendId}`);
+          return new Response(
+            JSON.stringify({ error: "Forbidden" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+
         // Use background task for bulk sending
         const bulkSendPromise = handleBulkSend(bulkSendId, supabase, mailboxId || "");
         
@@ -880,53 +928,55 @@ async function handleWebhook(req: Request): Promise<Response> {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
+    // Fail closed: webhook secret is required. Never accept unsigned webhooks.
+    if (!webhookSecret) {
+      console.error("HELPSCOUT_WEBHOOK_SECRET is not configured - refusing webhook");
+      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Get raw body for signature validation
     const rawBody = await req.text();
-    
-    // Validate signature if secret is configured
-    if (webhookSecret) {
-      const signature = req.headers.get("X-HelpScout-Signature");
-      
-      if (!signature) {
-        console.error("Missing X-HelpScout-Signature header");
-        return new Response(JSON.stringify({ error: "Missing signature" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
 
-      // Compute HMAC-SHA1 of body using secret
-      const encoder = new TextEncoder();
-      const key = await crypto.subtle.importKey(
-        "raw",
-        encoder.encode(webhookSecret),
-        { name: "HMAC", hash: "SHA-1" },
-        false,
-        ["sign"]
-      );
-      const signatureBytes = await crypto.subtle.sign(
-        "HMAC",
-        key,
-        encoder.encode(rawBody)
-      );
-      
-      // Convert to Base64 for comparison
-      const computedSignature = btoa(
-        String.fromCharCode(...new Uint8Array(signatureBytes))
-      );
-
-      if (computedSignature !== signature) {
-        console.error("Invalid webhook signature");
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      
-      console.log("Webhook signature validated successfully");
-    } else {
-      console.warn("HELPSCOUT_WEBHOOK_SECRET not configured - skipping signature validation");
+    const signature = req.headers.get("X-HelpScout-Signature");
+    if (!signature) {
+      console.error("Missing X-HelpScout-Signature header");
+      return new Response(JSON.stringify({ error: "Missing signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+
+    // Compute HMAC-SHA1 of body using secret
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(webhookSecret),
+      { name: "HMAC", hash: "SHA-1" },
+      false,
+      ["sign"]
+    );
+    const signatureBytes = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      encoder.encode(rawBody)
+    );
+    const computedSignature = btoa(
+      String.fromCharCode(...new Uint8Array(signatureBytes))
+    );
+
+    if (computedSignature !== signature) {
+      console.error("Invalid webhook signature");
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log("Webhook signature validated successfully");
+
 
     // Parse the body (we already read it as text, so parse manually)
     const payload = JSON.parse(rawBody);

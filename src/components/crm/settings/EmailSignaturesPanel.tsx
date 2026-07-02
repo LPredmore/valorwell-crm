@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { RichTextEditor } from '@/components/crm/shared/RichTextEditor';
+import { sanitizeHtml } from '@/lib/sanitize';
 import {
   Dialog,
   DialogContent,
@@ -187,7 +188,7 @@ export function EmailSignaturesPanel() {
                       ) : (
                         <div
                           className="line-clamp-1"
-                          dangerouslySetInnerHTML={{ __html: sig.body_html || '' }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(sig.body_html) }}
                         />
                       )}
                     </div>
