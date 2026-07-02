@@ -60,11 +60,12 @@ export function useClients(options: UseClientsOptions = {}) {
         query = query.or(`pat_name_f.ilike.${searchTerm},pat_name_l.ilike.${searchTerm},pat_name_preferred.ilike.${searchTerm},email.ilike.${searchTerm},phone.ilike.${searchTerm}`);
       }
 
-      // Apply tags filter
+      // Apply tags filter.
+      // `clients.tags` is stored as a single-value string (not a delimited list),
+      // so use exact match via .in() to avoid substring collisions like the previous
+      // ILIKE %tag% approach matching "VIP" inside "Non-VIP".
       if (filters?.tags && filters.tags.length > 0) {
-        // Filter clients whose tags field contains any of the selected tags
-        const tagFilters = filters.tags.map(tag => `tags.ilike.%${tag}%`).join(',');
-        query = query.or(tagFilters);
+        query = query.in('tags', filters.tags);
       }
 
       // Apply joined date range filter
