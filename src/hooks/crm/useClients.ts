@@ -86,11 +86,13 @@ export function useClients(options: UseClientsOptions = {}) {
       }
 
       // Transform the data to match CrmClient type
-      let clientsData = (data || []).map(client => ({
+      let clientsData: CrmClient[] = (data || []).map(client => ({
         ...client,
         pat_status: client.pat_status as PatStatus | null,
-        primary_staff: Array.isArray(client.primary_staff) 
-          ? client.primary_staff[0] || null 
+        last_contact_direction: client.last_contact_direction as 'sent' | 'received' | null,
+        last_contact_channel: client.last_contact_channel as 'email' | 'sms' | null,
+        primary_staff: Array.isArray(client.primary_staff)
+          ? client.primary_staff[0] || null
           : client.primary_staff,
       }));
 

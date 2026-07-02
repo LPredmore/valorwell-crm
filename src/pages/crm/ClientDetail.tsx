@@ -60,8 +60,10 @@ export default function ClientDetail() {
       return {
         ...data,
         pat_status: data.pat_status as PatStatus | null,
-        primary_staff: Array.isArray(data.primary_staff) 
-          ? data.primary_staff[0] || null 
+        last_contact_direction: data.last_contact_direction as 'sent' | 'received' | null,
+        last_contact_channel: data.last_contact_channel as 'email' | 'sms' | null,
+        primary_staff: Array.isArray(data.primary_staff)
+          ? data.primary_staff[0] || null
           : data.primary_staff,
       };
     },
