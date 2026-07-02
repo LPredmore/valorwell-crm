@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/crm/clients/StatusBadge';
 import { ActivityTimeline } from '@/components/crm/detail/ActivityTimeline';
 import { NoteForm } from '@/components/crm/detail/NoteForm';
 import { ClientInfoCard } from '@/components/crm/detail/ClientInfoCard';
+import { CampaignHistoryCard } from '@/components/crm/detail/CampaignHistoryCard';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { getClientDisplayName, getTherapistDisplayName } from '@/lib/crm/status-config';
 import type { CrmClient, PatStatus } from '@/lib/crm/types';
@@ -127,6 +128,7 @@ export default function ClientDetail() {
         {/* Left: Client Info */}
         <div className="space-y-6">
           <ClientInfoCard client={client} />
+          <CampaignHistoryCard clientId={client.id} />
         </div>
 
         {/* Right: Activity Timeline */}
