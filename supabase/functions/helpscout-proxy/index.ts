@@ -788,6 +788,44 @@ Deno.serve(async (req) => {
           );
         }
 
+        // Resolve caller's tenant and require the target email to belong to a client
+        // in that tenant. Prevents authenticated users from sending to arbitrary emails.
+        const { data: callerMembership } = await serviceSupabase
+          .from("tenant_memberships")
+          .select("tenant_id")
+          .eq("profile_id", userId)
+          .maybeSingle();
+
+        if (!callerMembership) {
+          return new Response(
+            JSON.stringify({ error: "No tenant membership" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const normalizedTarget = normalizeEmail(customerEmail);
+        const { data: matchedClients, error: matchErr } = await serviceSupabase
+          .rpc("find_clients_by_emails_insensitive", {
+            p_tenant_id: callerMembership.tenant_id,
+            p_emails: [normalizedTarget],
+          });
+
+        if (matchErr) {
+          console.error("create-conversation client lookup error:", matchErr);
+          return new Response(
+            JSON.stringify({ error: "Client lookup failed" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const matchedClient = (matchedClients || [])[0] as { id: string; email: string | null } | undefined;
+        if (!matchedClient) {
+          return new Response(
+            JSON.stringify({ error: "Recipient email is not a client in your tenant" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         const conversationBody = {
           subject,
           customer: {
@@ -824,6 +862,23 @@ Deno.serve(async (req) => {
         // Get the conversation ID from the Location header
         const location = response.headers.get("Location");
         const newConversationId = location?.split("/").pop();
+
+        // Log outbound email activity (mirrors reply action)
+        try {
+          await serviceSupabase.from("crm_activity_events").insert({
+            tenant_id: callerMembership.tenant_id,
+            client_id: matchedClient.id,
+            event_type: "email_sent",
+            created_by_profile_id: userId,
+            metadata: {
+              triggered_by: "create-conversation",
+              conversation_id: newConversationId,
+              subject,
+            },
+          });
+        } catch (logErr) {
+          console.error("Failed to log email_sent activity:", logErr);
+        }
 
         result = { success: true, conversationId: newConversationId };
         break;
