@@ -20,35 +20,59 @@ interface HelpScoutTokenResponse {
   expires_in: number;
 }
 
-// Get HelpScout access token using client credentials
+// Cached HelpScout access token (module-scope; survives warm invocations)
+let cachedToken: { token: string; expiresAt: number } | null = null;
+let inflightTokenRequest: Promise<string> | null = null;
+
+// Get HelpScout access token using client credentials (cached with 60s safety margin)
 async function getAccessToken(): Promise<string> {
-  const appId = Deno.env.get("HELPSCOUT_APP_ID");
-  const appSecret = Deno.env.get("HELPSCOUT_APP_SECRET");
-
-  if (!appId || !appSecret) {
-    throw new Error("HelpScout credentials not configured");
+  const now = Date.now();
+  if (cachedToken && now < cachedToken.expiresAt - 60_000) {
+    return cachedToken.token;
+  }
+  if (inflightTokenRequest) {
+    return inflightTokenRequest;
   }
 
-  const response = await fetch("https://api.helpscout.net/v2/oauth2/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: appId,
-      client_secret: appSecret,
-    }),
-  });
+  inflightTokenRequest = (async () => {
+    const appId = Deno.env.get("HELPSCOUT_APP_ID");
+    const appSecret = Deno.env.get("HELPSCOUT_APP_SECRET");
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error("HelpScout token error:", error);
-    throw new Error(`Failed to get HelpScout token: ${response.status}`);
+    if (!appId || !appSecret) {
+      throw new Error("HelpScout credentials not configured");
+    }
+
+    const response = await fetch("https://api.helpscout.net/v2/oauth2/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: appId,
+        client_secret: appSecret,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("HelpScout token error:", error);
+      throw new Error(`Failed to get HelpScout token: ${response.status}`);
+    }
+
+    const data: HelpScoutTokenResponse = await response.json();
+    cachedToken = {
+      token: data.access_token,
+      expiresAt: Date.now() + data.expires_in * 1000,
+    };
+    return data.access_token;
+  })();
+
+  try {
+    return await inflightTokenRequest;
+  } finally {
+    inflightTokenRequest = null;
   }
-
-  const data: HelpScoutTokenResponse = await response.json();
-  return data.access_token;
 }
 
 // Make authenticated request to HelpScout API
