@@ -1371,6 +1371,160 @@ export type Database = {
           },
         ]
       }
+      client_assessment_assignments: {
+        Row: {
+          assessment_type: string
+          assigned_by_staff_id: string | null
+          client_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_completed_at: string | null
+          next_due_at: string | null
+          recurrence_days: number
+          source: string
+          source_diagnosis_code: string | null
+          tenant_id: string
+          treatment_plan_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          assessment_type: string
+          assigned_by_staff_id?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_completed_at?: string | null
+          next_due_at?: string | null
+          recurrence_days?: number
+          source: string
+          source_diagnosis_code?: string | null
+          tenant_id: string
+          treatment_plan_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assessment_type?: string
+          assigned_by_staff_id?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_completed_at?: string | null
+          next_due_at?: string | null
+          recurrence_days?: number
+          source?: string
+          source_diagnosis_code?: string | null
+          tenant_id?: string
+          treatment_plan_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_assessment_assignments_assigned_by_staff_id_fkey"
+            columns: ["assigned_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_assessment_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_assessment_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_assessment_assignments_treatment_plan_id_fkey"
+            columns: ["treatment_plan_id"]
+            isOneToOne: false
+            referencedRelation: "client_treatment_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_charges: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          charge_type: string
+          client_id: string
+          created_at: string
+          description: string | null
+          id: string
+          paid_amount: number
+          staff_id: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          charge_type: string
+          client_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          paid_amount?: number
+          staff_id?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          charge_type?: string
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          paid_amount?: number
+          staff_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_charges_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_charges_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_charges_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_charges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_diagnoses: {
         Row: {
           added_at: string
@@ -2268,6 +2422,7 @@ export type Database = {
         Row: {
           amount_cents: number
           claim_line_ids: string[] | null
+          client_charge_ids: string[] | null
           client_id: string
           created_at: string
           currency: string
@@ -2286,6 +2441,7 @@ export type Database = {
         Insert: {
           amount_cents: number
           claim_line_ids?: string[] | null
+          client_charge_ids?: string[] | null
           client_id: string
           created_at?: string
           currency?: string
@@ -2304,6 +2460,7 @@ export type Database = {
         Update: {
           amount_cents?: number
           claim_line_ids?: string[] | null
+          client_charge_ids?: string[] | null
           client_id?: string
           created_at?: string
           currency?: string
@@ -4868,6 +5025,73 @@ export type Database = {
           },
         ]
       }
+      era_service_line_copay_reconciliation: {
+        Row: {
+          auto_created_charge: boolean
+          charge_amount: number | null
+          copay_reconciled: boolean
+          copay_variance_amount: number | null
+          created_at: string
+          era_service_line_id: string
+          id: string
+          matched_client_charge_id: string | null
+          notes: string | null
+          pr3_amount: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_created_charge?: boolean
+          charge_amount?: number | null
+          copay_reconciled?: boolean
+          copay_variance_amount?: number | null
+          created_at?: string
+          era_service_line_id: string
+          id?: string
+          matched_client_charge_id?: string | null
+          notes?: string | null
+          pr3_amount?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_created_charge?: boolean
+          charge_amount?: number | null
+          copay_reconciled?: boolean
+          copay_variance_amount?: number | null
+          created_at?: string
+          era_service_line_id?: string
+          id?: string
+          matched_client_charge_id?: string | null
+          notes?: string | null
+          pr3_amount?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "era_service_line_copay_reconcilia_matched_client_charge_id_fkey"
+            columns: ["matched_client_charge_id"]
+            isOneToOne: false
+            referencedRelation: "client_charge_balances"
+            referencedColumns: ["charge_id"]
+          },
+          {
+            foreignKeyName: "era_service_line_copay_reconcilia_matched_client_charge_id_fkey"
+            columns: ["matched_client_charge_id"]
+            isOneToOne: false
+            referencedRelation: "client_charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "era_service_line_copay_reconciliation_era_service_line_id_fkey"
+            columns: ["era_service_line_id"]
+            isOneToOne: true
+            referencedRelation: "era_service_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       era_service_lines: {
         Row: {
           allowed_amount: number | null
@@ -6735,6 +6959,7 @@ export type Database = {
           prov_addr_1: string | null
           prov_addr_2: string | null
           prov_bio: string | null
+          prov_buffer_minutes: number
           prov_city: string | null
           prov_degree: string | null
           prov_dob: string | null
@@ -6742,6 +6967,8 @@ export type Database = {
           prov_image_url: string | null
           prov_license_number: string | null
           prov_license_type: string | null
+          prov_max_appointments_per_day: number | null
+          prov_max_appointments_per_week: number | null
           prov_max_clients: number | null
           prov_min_client_age: number
           prov_name_f: string | null
@@ -6775,6 +7002,7 @@ export type Database = {
           prov_addr_1?: string | null
           prov_addr_2?: string | null
           prov_bio?: string | null
+          prov_buffer_minutes?: number
           prov_city?: string | null
           prov_degree?: string | null
           prov_dob?: string | null
@@ -6782,6 +7010,8 @@ export type Database = {
           prov_image_url?: string | null
           prov_license_number?: string | null
           prov_license_type?: string | null
+          prov_max_appointments_per_day?: number | null
+          prov_max_appointments_per_week?: number | null
           prov_max_clients?: number | null
           prov_min_client_age?: number
           prov_name_f?: string | null
@@ -6815,6 +7045,7 @@ export type Database = {
           prov_addr_1?: string | null
           prov_addr_2?: string | null
           prov_bio?: string | null
+          prov_buffer_minutes?: number
           prov_city?: string | null
           prov_degree?: string | null
           prov_dob?: string | null
@@ -6822,6 +7053,8 @@ export type Database = {
           prov_image_url?: string | null
           prov_license_number?: string | null
           prov_license_type?: string | null
+          prov_max_appointments_per_day?: number | null
+          prov_max_appointments_per_week?: number | null
           prov_max_clients?: number | null
           prov_min_client_age?: number
           prov_name_f?: string | null
@@ -7636,6 +7869,114 @@ export type Database = {
           },
         ]
       }
+      staff_payer_enrollments: {
+        Row: {
+          claim_md_response: Json | null
+          created_at: string
+          enroll_type: string
+          enrollment_link: string | null
+          error_message: string | null
+          id: string
+          last_attempted_at: string
+          payer_id: string
+          payer_name: string | null
+          staff_id: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          claim_md_response?: Json | null
+          created_at?: string
+          enroll_type: string
+          enrollment_link?: string | null
+          error_message?: string | null
+          id?: string
+          last_attempted_at?: string
+          payer_id: string
+          payer_name?: string | null
+          staff_id: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          claim_md_response?: Json | null
+          created_at?: string
+          enroll_type?: string
+          enrollment_link?: string | null
+          error_message?: string | null
+          id?: string
+          last_attempted_at?: string
+          payer_id?: string
+          payer_name?: string | null
+          staff_id?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_payer_enrollments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_payer_enrollments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_rate_overrides: {
+        Row: {
+          created_at: string
+          id: string
+          rate_amount: number
+          staff_id: string
+          status_code: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          rate_amount: number
+          staff_id: string
+          status_code: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          rate_amount?: number
+          staff_id?: string
+          status_code?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_rate_overrides_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_rate_overrides_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_role_assignments: {
         Row: {
           created_at: string
@@ -7839,6 +8180,41 @@ export type Database = {
             foreignKeyName: "tenant_cpt_codes_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_financial_settings: {
+        Row: {
+          auto_charge_copay_on_booking: boolean
+          auto_void_copay_on_cancel: boolean
+          created_at: string
+          max_patient_coinsurance_per_line: number | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_charge_copay_on_booking?: boolean
+          auto_void_copay_on_cancel?: boolean
+          created_at?: string
+          max_patient_coinsurance_per_line?: number | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_charge_copay_on_booking?: boolean
+          auto_void_copay_on_cancel?: boolean
+          created_at?: string
+          max_patient_coinsurance_per_line?: number | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_financial_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -8067,6 +8443,45 @@ export type Database = {
         }
         Relationships: []
       }
+      valorwell_credits: {
+        Row: {
+          applied_at: string
+          capped_coinsurance: number
+          claim_line_id: string
+          client_id: string
+          credit_amount: number
+          era_adjustment_id: string
+          id: string
+          original_coinsurance: number
+          reason: string
+          tenant_id: string
+        }
+        Insert: {
+          applied_at?: string
+          capped_coinsurance: number
+          claim_line_id: string
+          client_id: string
+          credit_amount: number
+          era_adjustment_id: string
+          id?: string
+          original_coinsurance: number
+          reason?: string
+          tenant_id: string
+        }
+        Update: {
+          applied_at?: string
+          capped_coinsurance?: number
+          claim_line_id?: string
+          client_id?: string
+          credit_amount?: number
+          era_adjustment_id?: string
+          id?: string
+          original_coinsurance?: number
+          reason?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       claim_line_balances: {
@@ -8104,6 +8519,95 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      client_charge_balances: {
+        Row: {
+          amount: number | null
+          appointment_id: string | null
+          charge_id: string | null
+          charge_type: string | null
+          client_id: string | null
+          created_at: string | null
+          description: string | null
+          paid_amount: number | null
+          remaining_balance: number | null
+          staff_id: string | null
+          status: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          appointment_id?: string | null
+          charge_id?: string | null
+          charge_type?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          paid_amount?: never
+          remaining_balance?: never
+          staff_id?: string | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          appointment_id?: string | null
+          charge_id?: string | null
+          charge_type?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          paid_amount?: never
+          remaining_balance?: never
+          staff_id?: string | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_charges_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_charges_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_charges_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_charges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_outstanding_charges: {
+        Row: {
+          amount: number | null
+          appointment_id: string | null
+          client_id: string | null
+          description: string | null
+          paid_amount: number | null
+          remaining_balance: number | null
+          service_date: string | null
+          source_id: string | null
+          source_type: string | null
+          tenant_id: string | null
+        }
+        Relationships: []
       }
       clinician_client_status_movement_v: {
         Row: {
@@ -8235,6 +8739,26 @@ export type Database = {
         }
         Returns: Json
       }
+      autocreate_copay_for_appointment: {
+        Args: { p_appointment_id: string }
+        Returns: undefined
+      }
+      backfill_coinsurance_cap: { Args: { p_tenant_id: string }; Returns: Json }
+      backfill_copay_charges: {
+        Args: { p_tenant_id?: string }
+        Returns: number
+      }
+      check_assessments_due: {
+        Args: { p_client_id: string }
+        Returns: {
+          assessment_type: string
+          days_since_last: number
+          is_due: boolean
+          last_completed_at: string
+          next_due_at: string
+          recurrence_days: number
+        }[]
+      }
       check_staff_availability: {
         Args: { p_end: string; p_staff_id: string; p_start: string }
         Returns: boolean
@@ -8242,6 +8766,10 @@ export type Database = {
       convert_local_to_utc: {
         Args: { p_date: string; p_time: string; p_timezone?: string }
         Returns: string
+      }
+      evaluate_intake_screening: {
+        Args: { p_client_id: string }
+        Returns: undefined
       }
       find_clients_by_emails_insensitive: {
         Args: { p_emails: string[]; p_tenant_id: string }
@@ -8268,6 +8796,10 @@ export type Database = {
           slot_end_utc: string
           slot_start_utc: string
         }[]
+      }
+      get_claim_line_pr_breakdown: {
+        Args: { p_claim_line_id: string }
+        Returns: Json
       }
       get_client_appointments_display:
         | {
@@ -8335,6 +8867,23 @@ export type Database = {
           total_responsibility: number
         }[]
       }
+      get_client_claim_line_breakdown: {
+        Args: { p_claim_line_id: string }
+        Returns: Json
+      }
+      get_client_outstanding_items: {
+        Args: { p_client_id: string }
+        Returns: {
+          amount: number
+          description: string
+          item_id: string
+          item_type: string
+          paid: number
+          remaining: number
+          service_date: string
+          tenant_id: string
+        }[]
+      }
       get_now_in_timezone: {
         Args: { p_timezone?: string }
         Returns: {
@@ -8346,18 +8895,108 @@ export type Database = {
           today_date: string
         }[]
       }
-      get_revenue_report: {
-        Args: {
-          p_cpt_code?: string
-          p_end_date?: string
-          p_payor?: string
-          p_staff_id?: string
-          p_start_date?: string
-          p_taxonomy?: string
-          p_tenant_id: string
-        }
-        Returns: Json
-      }
+      get_revenue_report:
+        | {
+            Args: {
+              p_cpt_code?: string
+              p_end_date?: string
+              p_payor?: string
+              p_staff_id?: string
+              p_start_date?: string
+              p_taxonomy?: string
+              p_tenant_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_cpt_code?: string
+              p_end_date?: string
+              p_paid_by?: string
+              p_payor?: string
+              p_revenue_type?: string
+              p_staff_id?: string
+              p_start_date?: string
+              p_taxonomy?: string
+              p_tenant_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_cpt_code?: string
+              p_end_date?: string
+              p_paid_by?: string
+              p_patient_id?: string
+              p_payor?: string
+              p_revenue_type?: string
+              p_staff_id?: string
+              p_start_date?: string
+              p_taxonomy?: string
+              p_tenant_id: string
+            }
+            Returns: Json
+          }
+      get_revenue_report_lines:
+        | {
+            Args: {
+              p_cpt_code?: string
+              p_end_date?: string
+              p_paid_by?: string
+              p_payor?: string
+              p_revenue_type?: string
+              p_staff_id?: string
+              p_start_date?: string
+              p_taxonomy?: string
+              p_tenant_id: string
+            }
+            Returns: {
+              allowed_amount: number
+              charge_amount: number
+              claim_id: string
+              claim_line_id: string
+              claim_status: string
+              client_name: string
+              paid_amount: number
+              patient_responsibility: number
+              payment_date: string
+              payor_name: string
+              procedure_code: string
+              service_date: string
+              source: string
+              staff_name: string
+            }[]
+          }
+        | {
+            Args: {
+              p_cpt_code?: string
+              p_end_date?: string
+              p_paid_by?: string
+              p_patient_id?: string
+              p_payor?: string
+              p_revenue_type?: string
+              p_staff_id?: string
+              p_start_date?: string
+              p_taxonomy?: string
+              p_tenant_id: string
+            }
+            Returns: {
+              allowed_amount: number
+              charge_amount: number
+              claim_id: string
+              claim_line_id: string
+              claim_status: string
+              client_name: string
+              paid_amount: number
+              patient_responsibility: number
+              payment_date: string
+              payor_name: string
+              procedure_code: string
+              service_date: string
+              source: string
+              staff_name: string
+            }[]
+          }
       get_staff_calendar_appointments: {
         Args: { p_from_date?: string; p_staff_id: string; p_to_date?: string }
         Returns: {
@@ -8423,6 +9062,7 @@ export type Database = {
         Returns: boolean
       }
       mark_at_risk_clients: { Args: { p_tenant_id: string }; Returns: number }
+      refresh_client_ages: { Args: never; Returns: number }
       setup_admin_user: {
         Args: {
           _first_name?: string
