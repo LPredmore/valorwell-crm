@@ -4516,7 +4516,7 @@ export type Database = {
           message_body: string | null
           received_at: string
           ringcentral_message_id: string | null
-          tenant_id: string
+          tenant_id: string | null
           to_phone: string
         }
         Insert: {
@@ -4528,7 +4528,7 @@ export type Database = {
           message_body?: string | null
           received_at?: string
           ringcentral_message_id?: string | null
-          tenant_id: string
+          tenant_id?: string | null
           to_phone: string
         }
         Update: {
@@ -4540,7 +4540,7 @@ export type Database = {
           message_body?: string | null
           received_at?: string
           ringcentral_message_id?: string | null
-          tenant_id?: string
+          tenant_id?: string | null
           to_phone?: string
         }
         Relationships: [

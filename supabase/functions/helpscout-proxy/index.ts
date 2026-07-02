@@ -20,35 +20,59 @@ interface HelpScoutTokenResponse {
   expires_in: number;
 }
 
-// Get HelpScout access token using client credentials
+// Cached HelpScout access token (module-scope; survives warm invocations)
+let cachedToken: { token: string; expiresAt: number } | null = null;
+let inflightTokenRequest: Promise<string> | null = null;
+
+// Get HelpScout access token using client credentials (cached with 60s safety margin)
 async function getAccessToken(): Promise<string> {
-  const appId = Deno.env.get("HELPSCOUT_APP_ID");
-  const appSecret = Deno.env.get("HELPSCOUT_APP_SECRET");
-
-  if (!appId || !appSecret) {
-    throw new Error("HelpScout credentials not configured");
+  const now = Date.now();
+  if (cachedToken && now < cachedToken.expiresAt - 60_000) {
+    return cachedToken.token;
+  }
+  if (inflightTokenRequest) {
+    return inflightTokenRequest;
   }
 
-  const response = await fetch("https://api.helpscout.net/v2/oauth2/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: appId,
-      client_secret: appSecret,
-    }),
-  });
+  inflightTokenRequest = (async () => {
+    const appId = Deno.env.get("HELPSCOUT_APP_ID");
+    const appSecret = Deno.env.get("HELPSCOUT_APP_SECRET");
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error("HelpScout token error:", error);
-    throw new Error(`Failed to get HelpScout token: ${response.status}`);
+    if (!appId || !appSecret) {
+      throw new Error("HelpScout credentials not configured");
+    }
+
+    const response = await fetch("https://api.helpscout.net/v2/oauth2/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: appId,
+        client_secret: appSecret,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("HelpScout token error:", error);
+      throw new Error(`Failed to get HelpScout token: ${response.status}`);
+    }
+
+    const data: HelpScoutTokenResponse = await response.json();
+    cachedToken = {
+      token: data.access_token,
+      expiresAt: Date.now() + data.expires_in * 1000,
+    };
+    return data.access_token;
+  })();
+
+  try {
+    return await inflightTokenRequest;
+  } finally {
+    inflightTokenRequest = null;
   }
-
-  const data: HelpScoutTokenResponse = await response.json();
-  return data.access_token;
 }
 
 // Make authenticated request to HelpScout API
@@ -485,130 +509,126 @@ Deno.serve(async (req) => {
         let totalHelpScoutPages = 1;
         let totalHelpScoutElements = 0;
         let pagesScanned = 0;
-        
+
+        // Cache of resolved email -> client_id across pages (avoids re-calling the
+        // client lookup RPC for emails we've already seen on earlier pages).
+        const emailToClientId = new Map<string, string>();
+        const resolvedEmails = new Set<string>(); // includes negative lookups
+        const pendingConversationsByPage: HelpScoutConversationRaw[][] = [];
+
         console.log(`Starting multi-page scan for direction=${direction}, status=${status}`);
-        
-        // Scan HelpScout pages until we have enough matching conversations
+
         while (allMatchingConversations.length < targetCount && hsPage <= maxHelpScoutPages) {
           let endpoint = `/conversations?mailbox=${mailboxId}&page=${hsPage}&embed=threads`;
           if (status !== "all") {
             endpoint += `&status=${status}`;
           }
-          
+
           console.log(`Fetching HelpScout page ${hsPage}: ${endpoint}`);
           const response = await helpscoutRequest("GET", endpoint);
-          
+
           if (!response.ok) {
             const error = await response.text();
             console.error("HelpScout list error:", error);
             throw new Error(`HelpScout API error: ${response.status}`);
           }
-          
+
           const hsData = await response.json();
           const conversations: HelpScoutConversationRaw[] = hsData._embedded?.conversations || [];
           pagesScanned++;
-          
-          // Track pagination info from first page
+
           if (hsPage === 1) {
             totalHelpScoutPages = hsData.page?.totalPages || 1;
             totalHelpScoutElements = hsData.page?.totalElements || 0;
           }
-          
+
           console.log(`Page ${hsPage}: got ${conversations.length} conversations`);
-          
+
           if (conversations.length === 0) {
             break;
           }
-          
-          // Extract customer emails from this page
-          const customerEmails = Array.from(
+
+          // Only look up emails we haven't resolved yet
+          const pageEmails = Array.from(
             new Set(
               conversations
                 .map((c) => {
                   const raw = c.primaryCustomer?.email;
                   return raw ? normalizeEmail(raw) : null;
                 })
-                .filter(Boolean) as string[]
+                .filter((e): e is string => Boolean(e))
             )
           );
-          
-          if (customerEmails.length > 0) {
-            // Find matching clients for this batch
+          const unresolvedEmails = pageEmails.filter((e) => !resolvedEmails.has(e));
+
+          if (unresolvedEmails.length > 0) {
             const { data: clients, error: clientsError } = await supabase
               .rpc("find_clients_by_emails_insensitive", {
                 p_tenant_id: membership.tenant_id,
-                p_emails: customerEmails,
+                p_emails: unresolvedEmails,
               });
-            
+
             if (clientsError) {
               console.error("Clients lookup error:", clientsError);
               throw new Error("Could not fetch clients");
             }
-            
-            // Create email -> client_id lookup
-            const emailToClientId = new Map<string, string>(
-              (clients || [])
-                .filter((c: { id: string; email: string | null }) => Boolean(c.email))
-                .map((c: { id: string; email: string | null }) => [normalizeEmail(c.email as string), c.id])
-            );
-            
-            console.log(`Page ${hsPage}: ${customerEmails.length} unique emails, ${emailToClientId.size} matched clients`);
-            
-            // Filter to client-matching conversations and enrich
-            for (const c of conversations) {
-              const email = c.primaryCustomer?.email ? normalizeEmail(c.primaryCustomer.email) : undefined;
-              
-              if (!email || !emailToClientId.has(email)) {
-                continue;
+
+            for (const c of (clients || []) as { id: string; email: string | null }[]) {
+              if (c.email) {
+                emailToClientId.set(normalizeEmail(c.email), c.id);
               }
-              
-              // Determine lastMessageBy from embedded threads
-              const threads = c._embedded?.threads || [];
-              const lastRelevantThread = threads.find((t) => 
-                t.type === 'customer' || t.type === 'reply' || t.type === 'message'
-              );
-              
-              let lastMessageBy: 'customer' | 'staff' = 'customer';
-              if (lastRelevantThread) {
-                lastMessageBy = lastRelevantThread.type === 'customer' ? 'customer' : 'staff';
-              }
-              
-              const needsReply = c.status === 'active' && lastMessageBy === 'customer';
-              
-              // Apply direction filter during accumulation
-              if (direction === "received" || direction === "inbox") {
-                if (lastMessageBy !== "customer") continue;
-              } else if (direction === "sent") {
-                if (lastMessageBy !== "staff") continue;
-              }
-              
-              // Create enriched conversation without embedded threads
-              const { _embedded: _, ...conversationWithoutEmbedded } = c;
-              const enriched: EnrichedConversation = {
-                ...conversationWithoutEmbedded,
-                client_id: emailToClientId.get(email),
-                lastMessageBy,
-                needsReply,
-              };
-              
-              allMatchingConversations.push(enriched);
             }
+            // Mark all queried emails resolved (positive and negative) to avoid re-querying
+            for (const e of unresolvedEmails) resolvedEmails.add(e);
           }
-          
+
+          console.log(`Page ${hsPage}: ${pageEmails.length} unique emails, ${unresolvedEmails.length} newly resolved, ${emailToClientId.size} cached matches total`);
+
+          for (const c of conversations) {
+            const email = c.primaryCustomer?.email ? normalizeEmail(c.primaryCustomer.email) : undefined;
+
+            if (!email || !emailToClientId.has(email)) {
+              continue;
+            }
+
+            const threads = c._embedded?.threads || [];
+            const lastRelevantThread = threads.find((t) =>
+              t.type === 'customer' || t.type === 'reply' || t.type === 'message'
+            );
+
+            let lastMessageBy: 'customer' | 'staff' = 'customer';
+            if (lastRelevantThread) {
+              lastMessageBy = lastRelevantThread.type === 'customer' ? 'customer' : 'staff';
+            }
+
+            const needsReply = c.status === 'active' && lastMessageBy === 'customer';
+
+            if (direction === "received" || direction === "inbox") {
+              if (lastMessageBy !== "customer") continue;
+            } else if (direction === "sent") {
+              if (lastMessageBy !== "staff") continue;
+            }
+
+            const { _embedded: _, ...conversationWithoutEmbedded } = c;
+            allMatchingConversations.push({
+              ...conversationWithoutEmbedded,
+              client_id: emailToClientId.get(email),
+              lastMessageBy,
+              needsReply,
+            });
+          }
+
           console.log(`After page ${hsPage}: ${allMatchingConversations.length} matching conversations accumulated`);
-          
-          // Check if we've exhausted HelpScout pages
+
           if (hsPage >= totalHelpScoutPages) {
             console.log(`Reached last HelpScout page (${hsPage}/${totalHelpScoutPages})`);
             break;
           }
-          
+
           hsPage++;
-          
-          // Small delay to respect rate limits
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
-        
+
         console.log(`Multi-page scan complete: scanned ${pagesScanned} pages, found ${allMatchingConversations.length} matching conversations`);
         
         // Virtual pagination: slice results based on requested page
@@ -768,6 +788,44 @@ Deno.serve(async (req) => {
           );
         }
 
+        // Resolve caller's tenant and require the target email to belong to a client
+        // in that tenant. Prevents authenticated users from sending to arbitrary emails.
+        const { data: callerMembership } = await serviceSupabase
+          .from("tenant_memberships")
+          .select("tenant_id")
+          .eq("profile_id", userId)
+          .maybeSingle();
+
+        if (!callerMembership) {
+          return new Response(
+            JSON.stringify({ error: "No tenant membership" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const normalizedTarget = normalizeEmail(customerEmail);
+        const { data: matchedClients, error: matchErr } = await serviceSupabase
+          .rpc("find_clients_by_emails_insensitive", {
+            p_tenant_id: callerMembership.tenant_id,
+            p_emails: [normalizedTarget],
+          });
+
+        if (matchErr) {
+          console.error("create-conversation client lookup error:", matchErr);
+          return new Response(
+            JSON.stringify({ error: "Client lookup failed" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const matchedClient = (matchedClients || [])[0] as { id: string; email: string | null } | undefined;
+        if (!matchedClient) {
+          return new Response(
+            JSON.stringify({ error: "Recipient email is not a client in your tenant" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         const conversationBody = {
           subject,
           customer: {
@@ -804,6 +862,23 @@ Deno.serve(async (req) => {
         // Get the conversation ID from the Location header
         const location = response.headers.get("Location");
         const newConversationId = location?.split("/").pop();
+
+        // Log outbound email activity (mirrors reply action)
+        try {
+          await serviceSupabase.from("crm_activity_events").insert({
+            tenant_id: callerMembership.tenant_id,
+            client_id: matchedClient.id,
+            event_type: "email_sent",
+            created_by_profile_id: userId,
+            metadata: {
+              triggered_by: "create-conversation",
+              conversation_id: newConversationId,
+              subject,
+            },
+          });
+        } catch (logErr) {
+          console.error("Failed to log email_sent activity:", logErr);
+        }
 
         result = { success: true, conversationId: newConversationId };
         break;
