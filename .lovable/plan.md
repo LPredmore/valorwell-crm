@@ -1,74 +1,83 @@
 ## Goal
 
-Make `crm_campaign_enrollments.current_step` mean one consistent thing everywhere, and display it correctly to the user.
+Make two facts that the database already knows visible and reliably queryable:
 
-## Definitive decision
+1. **Last Contact** — the most recent time email or SMS was sent to or received from the client.
+2. **Campaign History** — every campaign the client has ever been enrolled in.
 
-**`current_step` = the `step_order` of the last step that was actually sent. `0` means "enrolled, nothing sent yet."**
+## Definitive technical decisions
 
-Then the UI simply renders that number (with special-case labels for `0` and for terminal statuses). No `+1` math anywhere.
+### 1. Add `last_contact_at TIMESTAMPTZ NULL` to `clients` and maintain it with a trigger on `crm_activity_events`
 
-### Why this definition (and not the alternatives)
+Now that `clients` may be extended additively, storing the value denormalized wins over deriving it. Reasons:
 
-Three options were on the table:
+- **Read cost dominates.** This value gets rendered on the client profile, the quick-profile sheet, and (as a sortable/filterable column) the clients table. A denormalized column is one field read; a view aggregating `crm_activity_events` (~thousands of rows already, growing daily) is a `GROUP BY` scan every time. At CRM list scale (hundreds of visible rows per page, snappy sort/filter) the difference is felt.
+- **Write path is already funneled.** Per the activity-logging memory, all four event types are written exclusively by three edge functions. A single **`AFTER INSERT` trigger on `crm_activity_events`** filtered to those four types is the *only* writer of `last_contact_at`. Edge functions stay untouched, no application code needs to remember to update anything, and there is no drift risk.
+- **Sorting/filtering by "last contact" becomes trivial.** A future "clients I haven't touched in 30 days" filter is `WHERE last_contact_at < now() - '30 days'::interval` — index-friendly and identical to how the existing `status_changed_at` column is used.
 
-1. **"Next step to send"** — what the enrollment insert currently writes (`1` on enroll).
-2. **"Last step sent"** — what this plan picks (`0` on enroll).
-3. **"Zero-based index of last sent step"** — what the UI currently assumes.
+Rejected alternatives:
+- **View / materialized view** — either slow at read (regular view) or needs a refresh strategy (materialized view) for no benefit given the trigger option exists.
+- **Client-side aggregation** — N+1 or bulk-pulls the activity table into the browser; unacceptable on the table page.
 
-Option 2 wins for concrete reasons:
+Also add `last_contact_direction TEXT` (`'sent'` | `'received'`) and `last_contact_channel TEXT` (`'email'` | `'sms'`) written by the same trigger, so the profile can render "2 days ago · Email received" without a second query.
 
-- **It matches what the scheduler already writes.** After a step sends, the scheduler sets `current_step = nextStep.step_order` from inside `scheduleNextStep`, and on completion it sets `current_step = currentStep.step_order` (the last step sent). The scheduler is the code that runs most often and touches the most rows — aligning the definition to it means we only fix the two outliers (initial insert + UI), not the hot path.
-- **It survives campaign edits.** "Next step to send" breaks the moment someone reorders, deactivates, or inserts a step between sends — the stored number no longer points at a real next step. "Last step sent" is a historical fact and stays valid forever.
-- **It makes "completed" self-consistent.** A finished 3-step campaign stores `3`, which is literally the last step that ran. No off-by-one, no "step 4 of 3" nonsense in exports or reports.
-- **`0` is a clean sentinel for "not started yet"** and lets the UI show "Not started" instead of a misleading step number during the delay before step 1 fires.
+### 2. Show Campaign History by querying `crm_campaign_enrollments` directly
 
-Storing "next step" (option 1) was rejected because it requires the scheduler to look ahead on every write and produces invalid values whenever the campaign definition changes. Storing a zero-based index (option 3) was rejected because `step_order` in `crm_campaign_steps` is 1-based, so a separate 0-based counter would create a second coordinate system for no benefit.
+No new column or table needed — history is already there. A new `CampaignHistoryCard` on the client profile lists every enrollment (all statuses), ordered by `enrolled_at DESC`, joined to `crm_campaigns` for the name. A single hook, no denormalization.
+
+### 3. Close the manual-enrollment audit gap
+
+The auto-enroll trigger writes `campaign_auto_enrolled` to `crm_activity_events`; the manual enroll mutation writes nothing. Add a `campaign_enrolled` event insert (source: `'manual'`) inside `useCampaignEnrollments.ts` after a successful insert. Requires extending the `crm_activity_events_event_type_check` constraint to include `'campaign_enrolled'`. This makes the timeline symmetric and answers "why is this client in this campaign?" from the timeline alone.
 
 ## Changes
 
-### 1. Database — backfill existing rows to the new definition
+### Database (migration)
 
-Existing data was written under mixed semantics. Normalize it in one pass using `crm_campaign_step_logs` as the source of truth (it records what actually sent):
+1. `ALTER TABLE public.clients ADD COLUMN last_contact_at TIMESTAMPTZ, ADD COLUMN last_contact_direction TEXT, ADD COLUMN last_contact_channel TEXT;`
+2. `CREATE INDEX clients_last_contact_at_idx ON public.clients (tenant_id, last_contact_at DESC NULLS LAST);`
+3. Trigger function `sync_client_last_contact()` (SECURITY DEFINER, fixed `search_path`):
+   - Fires `AFTER INSERT` on `crm_activity_events` when `NEW.event_type IN ('email_sent','email_received','sms_sent','sms_received')` and `NEW.client_id IS NOT NULL`.
+   - Updates `clients` **only if** `NEW.created_at > clients.last_contact_at` (or existing is NULL). Sets direction from the `_sent`/`_received` suffix and channel from the `email_`/`sms_` prefix.
+4. Extend `crm_activity_events_event_type_check` to allow `'campaign_enrolled'`.
+5. **Backfill** existing rows in a single statement:
+   ```sql
+   WITH latest AS (
+     SELECT DISTINCT ON (client_id)
+            client_id, created_at, event_type
+     FROM crm_activity_events
+     WHERE event_type IN ('email_sent','email_received','sms_sent','sms_received')
+       AND client_id IS NOT NULL
+     ORDER BY client_id, created_at DESC
+   )
+   UPDATE public.clients c
+   SET last_contact_at = l.created_at,
+       last_contact_direction = CASE WHEN l.event_type LIKE '%_received' THEN 'received' ELSE 'sent' END,
+       last_contact_channel   = CASE WHEN l.event_type LIKE 'email_%'    THEN 'email'    ELSE 'sms'  END
+   FROM latest l WHERE l.client_id = c.id;
+   ```
 
-- For each enrollment, set `current_step` = max `step_order` of its step logs where `status = 'sent'`.
-- If no sent logs exist, set `current_step = 0`.
-- Enrollments with `status = 'completed'` get `current_step` = max `step_order` of the campaign's active steps (guarantees the "last step" invariant even if a log row is missing).
+### Frontend
 
-This is a one-time data update via the insert tool (not a schema migration).
-
-### 2. Manual enrollment hook — `src/hooks/crm/useCampaignEnrollments.ts:140`
-
-Change the initial insert from `current_step: 1` to `current_step: 0`.
-
-### 3. Auto-enroll trigger — `enroll_campaign_on_status_change()`
-
-Change the `INSERT INTO crm_campaign_enrollments (... current_step ...) VALUES (..., 1, ...)` to `VALUES (..., 0, ...)`. Migration tool, function replacement only — no table changes.
-
-### 4. Scheduler — `supabase/functions/campaign-scheduler/index.ts`
-
-Replace the current post-send update (line ~845) that writes `nextStep.step_order` with a write of `currentStep.step_order` (the step that was just sent). The completion branch at line 769 already writes `currentStep.step_order` and stays as-is. Net effect: `current_step` monotonically advances 0 → 1 → 2 → … → final, matching reality.
-
-### 5. UI — `src/pages/crm/CampaignEnrollments.tsx:193`
-
-Replace `Step {enrollment.current_step + 1}` with a small helper:
-
-- `status === 'completed'` → "Completed"
-- `status === 'cancelled'` → "Cancelled"
-- `current_step === 0` → "Not started"
-- otherwise → `Step {current_step} of {totalSteps}` (total pulled from the already-joined campaign steps; falls back to just `Step {current_step}` if not available)
-
-This is the only place in the app that renders the step number, so no other UI needs to change.
-
-### 6. Verification
-
-- Query enrollments grouped by `(status, current_step)` before and after backfill to confirm the distribution matches expectations (e.g., no more `current_step = 2` for freshly-responded clients who only received step 1).
-- Enroll a test client manually, confirm UI shows "Not started" until the first send, then "Step 1 of N", then advances correctly.
-- Trigger an auto-enrollment via status change, confirm same progression.
-- Let a short test campaign complete and confirm the row shows "Completed" and stores `current_step = <final step_order>`.
+6. **`src/lib/crm/types.ts`** — add the three new fields to `CrmClient`. Add `'campaign_enrolled'` to the event-type union.
+7. **`src/hooks/crm/useClients.ts`** and **`src/hooks/crm/useClientQuickProfile.ts`** — include the three new columns in `.select(...)`. `useClients` gets an optional sort key `'last_contact_at'`.
+8. **`src/pages/crm/ClientDetail.tsx`** — extend the `.select(...)` to pull the three new fields.
+9. **`src/components/crm/detail/ClientInfoCard.tsx`** — render a "Last Contact" row under status/tags: `formatDistanceToNow(last_contact_at) + ' ago · ' + capitalize(channel) + ' ' + direction`. Empty state: "No contact yet."
+10. **`src/components/crm/ClientQuickProfile.tsx`** — same "Last Contact" line in the sheet header area.
+11. **`src/pages/crm/Clients.tsx`** (table view) — add a sortable "Last Contact" column between "Status" and existing right-side columns, rendering relative time (or muted "Never"). Kanban/grid views unchanged.
+12. **`src/hooks/crm/useClientCampaigns.ts`** (new) — `useQuery` reading `crm_campaign_enrollments` for a client, joined to `crm_campaigns(id, name)`, ordered by `enrolled_at DESC`.
+13. **`src/components/crm/detail/CampaignHistoryCard.tsx`** (new) — card rendered on the profile below `ClientInfoCard`. One row per enrollment: campaign name (link to `/crm/campaigns/:id`), status badge, enrolled date, and step progress via the existing `renderStepLabel` helper. Empty state: "Never enrolled in a campaign."
+14. **`src/pages/crm/ClientDetail.tsx`** — mount `CampaignHistoryCard` in the left column.
+15. **`src/hooks/crm/useCampaignEnrollments.ts`** — inside the manual enroll mutation, after the enrollment insert succeeds, batch-insert `campaign_enrolled` activity events (one per client) with metadata `{ source: 'manual', campaign_id, campaign_name, enrolled_by_profile_id }`.
 
 ## Out of scope
 
-- No schema changes to `crm_campaign_enrollments` (per the hard rule: columns are fixed).
-- No changes to `crm_campaign_step_logs`, `crm_campaigns`, or `crm_campaign_steps`.
-- No changes to the auto-cancel-on-status-change trigger or the "one active campaign" partial unique index.
+- No edits to any existing `clients` column (project rule).
+- No changes to how the three edge functions write activity events — the new trigger is the sole `last_contact_*` writer.
+- No new "last contact" filter on the clients page — the existing "Communication Received" filter already covers the inbound-only case; a broader "any contact" filter can be added later without schema changes now that the column exists.
+
+## Verification
+
+- After migration, `SELECT COUNT(*) FROM clients WHERE last_contact_at IS NOT NULL` matches `SELECT COUNT(DISTINCT client_id) FROM crm_activity_events WHERE event_type IN (…)`.
+- Send a reply through the CRM → within one refetch cycle the profile shows "just now · Email sent" and the same client jumps to the top when the table is sorted by Last Contact.
+- Receive an inbound SMS webhook → profile flips to "just now · SMS received."
+- Manually enroll a client → activity timeline shows a `campaign_enrolled` entry and `CampaignHistoryCard` lists the new active enrollment. Change the client's status to trigger cancellation → the card shows both the cancelled row and any auto-enrolled follow-up.
