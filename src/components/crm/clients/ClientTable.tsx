@@ -17,7 +17,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
-type SortColumn = 'name' | 'email' | 'phone' | 'status' | 'state' | 'therapist' | 'updated_at';
+type SortColumn = 'name' | 'email' | 'phone' | 'status' | 'state' | 'therapist' | 'updated_at' | 'last_contact_at';
 type SortDirection = 'asc' | 'desc';
 
 interface ClientTableProps {
@@ -46,6 +46,8 @@ function getSortValue(client: CrmClient, column: SortColumn): string | number {
       return getTherapistDisplayName(client.primary_staff).toLowerCase();
     case 'updated_at':
       return new Date(client.updated_at).getTime();
+    case 'last_contact_at':
+      return client.last_contact_at ? new Date(client.last_contact_at).getTime() : 0;
     default:
       return '';
   }
@@ -82,7 +84,7 @@ export function ClientTable({
       setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortColumn(column);
-      setSortDirection(column === 'updated_at' ? 'desc' : 'asc');
+      setSortDirection(column === 'updated_at' || column === 'last_contact_at' ? 'desc' : 'asc');
     }
   };
 
@@ -148,6 +150,7 @@ export function ClientTable({
             <SortableHead column="state">State</SortableHead>
             <SortableHead column="therapist">Therapist</SortableHead>
             <TableHead className="w-[50px]"></TableHead>
+            <SortableHead column="last_contact_at">Last Contact</SortableHead>
             <SortableHead column="updated_at">Last Updated</SortableHead>
           </TableRow>
         </TableHeader>
@@ -202,6 +205,13 @@ export function ClientTable({
                     <Eye className="h-4 w-4" />
                   </Button>
                 )}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {client.last_contact_at ? (
+                  <span title={`${client.last_contact_channel ?? ''} ${client.last_contact_direction ?? ''}`.trim()}>
+                    {formatDistanceToNow(new Date(client.last_contact_at), { addSuffix: true })}
+                  </span>
+                ) : '—'}
               </TableCell>
               <TableCell className="text-muted-foreground">
                 {formatDistanceToNow(new Date(client.updated_at), { addSuffix: true })}

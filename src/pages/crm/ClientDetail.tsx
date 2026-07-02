@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/crm/clients/StatusBadge';
 import { ActivityTimeline } from '@/components/crm/detail/ActivityTimeline';
 import { NoteForm } from '@/components/crm/detail/NoteForm';
 import { ClientInfoCard } from '@/components/crm/detail/ClientInfoCard';
+import { CampaignHistoryCard } from '@/components/crm/detail/CampaignHistoryCard';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { getClientDisplayName, getTherapistDisplayName } from '@/lib/crm/status-config';
 import type { CrmClient, PatStatus } from '@/lib/crm/types';
@@ -40,6 +41,9 @@ export default function ClientDetail() {
           tags,
           created_at,
           updated_at,
+          last_contact_at,
+          last_contact_direction,
+          last_contact_channel,
           primary_staff:staff!clients_primary_staff_id_fkey (
             id,
             prov_name_f,
@@ -57,8 +61,10 @@ export default function ClientDetail() {
       return {
         ...data,
         pat_status: data.pat_status as PatStatus | null,
-        primary_staff: Array.isArray(data.primary_staff) 
-          ? data.primary_staff[0] || null 
+        last_contact_direction: data.last_contact_direction as 'sent' | 'received' | null,
+        last_contact_channel: data.last_contact_channel as 'email' | 'sms' | null,
+        primary_staff: Array.isArray(data.primary_staff)
+          ? data.primary_staff[0] || null
           : data.primary_staff,
       };
     },
@@ -122,6 +128,7 @@ export default function ClientDetail() {
         {/* Left: Client Info */}
         <div className="space-y-6">
           <ClientInfoCard client={client} />
+          <CampaignHistoryCard clientId={client.id} />
         </div>
 
         {/* Right: Activity Timeline */}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Phone, MapPin, User, Calendar, Tag, X, Check, ChevronsUpDown } from 'lucide-react';
+import { Mail, Phone, MapPin, User, Calendar, Tag, X, Check, ChevronsUpDown, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,7 @@ import { BulkProgressModal } from '@/components/crm/bulk/BulkProgressModal';
 import { SmsProgressModal } from '@/components/crm/bulk/SmsProgressModal';
 import { cn } from '@/lib/utils';
 import type { CrmClient, PatStatus } from '@/lib/crm/types';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 
 interface ClientInfoCardProps {
   client: CrmClient;
@@ -242,6 +242,26 @@ export function ClientInfoCard({ client }: ClientInfoCardProps) {
             <p className="text-sm text-muted-foreground">
               {getTherapistDisplayName(client.primary_staff)}
             </p>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3">
+          <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
+          <div>
+            <p className="text-sm font-medium">Last Contact</p>
+            {client.last_contact_at ? (
+              <p className="text-sm text-muted-foreground">
+                {formatDistanceToNow(new Date(client.last_contact_at), { addSuffix: true })}
+                {client.last_contact_direction && client.last_contact_channel && (
+                  <span className="ml-1">
+                    · {client.last_contact_channel === 'email' ? 'Email' : 'SMS'}{' '}
+                    {client.last_contact_direction}
+                  </span>
+                )}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">No contact yet</p>
+            )}
           </div>
         </div>
 

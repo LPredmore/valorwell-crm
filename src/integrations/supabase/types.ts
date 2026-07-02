@@ -3277,6 +3277,9 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          last_contact_at: string | null
+          last_contact_channel: string | null
+          last_contact_direction: string | null
           pat_addr_1: string | null
           pat_addr_2: string | null
           pat_age: number | null
@@ -3311,6 +3314,9 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          last_contact_at?: string | null
+          last_contact_channel?: string | null
+          last_contact_direction?: string | null
           pat_addr_1?: string | null
           pat_addr_2?: string | null
           pat_age?: number | null
@@ -3345,6 +3351,9 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          last_contact_at?: string | null
+          last_contact_channel?: string | null
+          last_contact_direction?: string | null
           pat_addr_1?: string | null
           pat_addr_2?: string | null
           pat_age?: number | null
