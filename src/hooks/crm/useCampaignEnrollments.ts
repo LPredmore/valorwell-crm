@@ -91,6 +91,38 @@ export function useClientActiveEnrollment(clientId: string | undefined) {
 }
 
 /**
+ * Fetch full enrollment history for a client (all statuses, newest first)
+ */
+export function useClientEnrollmentHistory(clientId: string | undefined) {
+  const { tenantId } = useCrmAuth();
+
+  return useQuery({
+    queryKey: ['crm-client-enrollment-history', clientId],
+    queryFn: async (): Promise<EnrollmentWithDetails[]> => {
+      if (!tenantId || !clientId) return [];
+
+      const { data, error } = await supabase
+        .from('crm_campaign_enrollments')
+        .select(`
+          *,
+          campaign:crm_campaigns!crm_campaign_enrollments_campaign_id_fkey (
+            id,
+            name
+          )
+        `)
+        .eq('client_id', clientId)
+        .eq('tenant_id', tenantId)
+        .order('enrolled_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as EnrollmentWithDetails[];
+    },
+    enabled: !!tenantId && !!clientId,
+  });
+}
+
+
+/**
  * Enroll one or more clients in a campaign
  */
 export function useEnrollClients() {
