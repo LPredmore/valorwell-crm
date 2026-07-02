@@ -820,18 +820,21 @@ async function scheduleNextStep(
   // Calculate next scheduled time
   const nextScheduledFor = calculateNextScheduledTime(nextStep.delay_days, nextStep.delay_hours);
 
-  // Create step log for next step
+  // Create step log for next step (idempotent via partial unique index on status='scheduled')
   const { error: insertError } = await supabase
     .from('crm_campaign_step_logs')
-    .insert({
-      enrollment_id: enrollment.id,
-      step_id: nextStep.id,
-      tenant_id: tenantId,
-      client_id: enrollment.client_id,
-      scheduled_for: nextScheduledFor.toISOString(),
-      status: 'scheduled',
-      channel: nextStep.channel,
-    });
+    .upsert(
+      {
+        enrollment_id: enrollment.id,
+        step_id: nextStep.id,
+        tenant_id: tenantId,
+        client_id: enrollment.client_id,
+        scheduled_for: nextScheduledFor.toISOString(),
+        status: 'scheduled',
+        channel: nextStep.channel,
+      },
+      { onConflict: 'enrollment_id,step_id', ignoreDuplicates: true }
+    );
 
   if (insertError) {
     console.error('Failed to schedule next step:', insertError);
