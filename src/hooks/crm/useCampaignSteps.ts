@@ -46,70 +46,26 @@ export function useSaveCampaignSteps() {
     }): Promise<void> => {
       if (!tenantId) throw new Error('Not authenticated');
 
-      // Get existing steps
-      const { data: existingSteps } = await supabase
-        .from('crm_campaign_steps')
-        .select('id')
-        .eq('campaign_id', campaignId)
-        .eq('tenant_id', tenantId);
+      const payload = steps.map((s) => ({
+        id: s.id ?? null,
+        step_order: s.step_order,
+        delay_days: s.delay_days,
+        delay_hours: s.delay_hours,
+        channel: s.channel,
+        email_subject: s.channel === 'email' ? s.email_subject ?? null : null,
+        email_body_html: s.channel === 'email' ? s.email_body_html ?? null : null,
+        sms_body_text: s.channel === 'sms' ? s.sms_body_text ?? null : null,
+        is_active: s.is_active,
+        signature_id: s.channel === 'email' ? s.signature_id ?? null : null,
+      }));
 
-      const existingIds = new Set(existingSteps?.map(s => s.id) || []);
-      const newStepIds = new Set(steps.filter(s => s.id).map(s => s.id));
+      const { error } = await supabase.rpc('crm_save_campaign_steps', {
+        p_campaign_id: campaignId,
+        p_tenant_id: tenantId,
+        p_steps: payload,
+      });
 
-      // Find steps to delete (existing but not in new list)
-      const toDelete = [...existingIds].filter(id => !newStepIds.has(id));
-
-      // Delete removed steps
-      if (toDelete.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('crm_campaign_steps')
-          .delete()
-          .in('id', toDelete)
-          .eq('tenant_id', tenantId);
-
-        if (deleteError) throw deleteError;
-      }
-
-      // Upsert all steps
-      for (const step of steps) {
-        if (step.id && existingIds.has(step.id)) {
-          // Update existing
-          const { error } = await supabase
-            .from('crm_campaign_steps')
-            .update({
-              step_order: step.step_order,
-              delay_days: step.delay_days,
-              delay_hours: step.delay_hours,
-              channel: step.channel,
-              email_subject: step.channel === 'email' ? step.email_subject : null,
-              email_body_html: step.channel === 'email' ? step.email_body_html : null,
-              sms_body_text: step.channel === 'sms' ? step.sms_body_text : null,
-              is_active: step.is_active,
-              signature_id: step.channel === 'email' ? step.signature_id : null,
-            })
-            .eq('id', step.id)
-            .eq('tenant_id', tenantId);
-
-          if (error) throw error;
-        } else {
-          // Insert new
-          const { error } = await supabase.from('crm_campaign_steps').insert({
-            campaign_id: campaignId,
-            tenant_id: tenantId,
-            step_order: step.step_order,
-            delay_days: step.delay_days,
-            delay_hours: step.delay_hours,
-            channel: step.channel,
-            email_subject: step.channel === 'email' ? step.email_subject : null,
-            email_body_html: step.channel === 'email' ? step.email_body_html : null,
-            sms_body_text: step.channel === 'sms' ? step.sms_body_text : null,
-            is_active: step.is_active,
-            signature_id: step.channel === 'email' ? step.signature_id : null,
-          });
-
-          if (error) throw error;
-        }
-      }
+      if (error) throw error;
     },
     onSuccess: (_, { campaignId }) => {
       queryClient.invalidateQueries({ queryKey: ['crm-campaign-steps', campaignId] });

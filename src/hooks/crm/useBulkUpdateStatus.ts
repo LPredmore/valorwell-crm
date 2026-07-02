@@ -15,39 +15,23 @@ export function useBulkUpdateStatus() {
 
   return useMutation({
     mutationFn: async ({ clients, newStatus }: BulkUpdateStatusParams) => {
-      let successCount = 0;
-      let failCount = 0;
+      if (!tenantId || !userId) {
+        throw new Error('Not authenticated');
+      }
 
-      await Promise.all(
-        clients.map(async ({ id, oldStatus }) => {
-          try {
-            const { error: updateError } = await supabase
-              .from('clients')
-              .update({ pat_status: newStatus })
-              .eq('id', id);
+      const ids = clients.map((c) => c.id);
 
-            if (updateError) throw updateError;
+      const { data, error } = await supabase.rpc('crm_bulk_update_client_status', {
+        p_client_ids: ids,
+        p_new_status: newStatus,
+        p_tenant_id: tenantId,
+        p_actor_profile_id: userId,
+      });
 
-            if (tenantId && userId) {
-              await supabase.from('crm_activity_events').insert({
-                tenant_id: tenantId,
-                client_id: id,
-                event_type: 'status_change',
-                old_value: oldStatus,
-                new_value: newStatus,
-                created_by_profile_id: userId,
-                metadata: {},
-              });
-            }
+      if (error) throw error;
 
-            successCount++;
-          } catch (err) {
-            console.error(`Failed to update client ${id}:`, err);
-            failCount++;
-          }
-        })
-      );
-
+      const successCount = (data as unknown as { client_id: string }[] | null)?.length ?? 0;
+      const failCount = ids.length - successCount;
       return { successCount, failCount };
     },
     onSuccess: ({ successCount, failCount }) => {
