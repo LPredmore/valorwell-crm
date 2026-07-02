@@ -53,16 +53,19 @@ export function useSmsConversations(filter: SmsFilter = 'all') {
         .limit(200);
 
       if (inboundError) {
+        // Inbound is the primary source; surface failure to react-query
         console.error('Error fetching inbound SMS:', inboundError);
+        throw inboundError;
       }
 
-      // Fetch outbound SMS from bulk logs
+      // Fetch outbound SMS from bulk logs (explicit tenant filter for defense-in-depth)
       const { data: outboundRecipients, error: outboundError } = await supabase
         .from('crm_bulk_sms_recipients')
         .select(`
           id,
           status,
           sent_at,
+          tenant_id,
           client:client_id (
             id,
             phone,
@@ -75,11 +78,13 @@ export function useSmsConversations(filter: SmsFilter = 'all') {
             tenant_id
           )
         `)
+        .eq('tenant_id', tenantId)
         .not('sent_at', 'is', null)
         .order('sent_at', { ascending: false })
         .limit(200);
 
       if (outboundError) {
+        // Secondary source; log-and-continue so inbound still renders
         console.error('Error fetching outbound SMS:', outboundError);
       }
 
@@ -91,11 +96,9 @@ export function useSmsConversations(filter: SmsFilter = 'all') {
           status,
           sent_at,
           client_id,
+          tenant_id,
           step:step_id (
             sms_body_text
-          ),
-          enrollment:enrollment_id (
-            tenant_id
           ),
           client:client_id (
             id,
@@ -105,6 +108,7 @@ export function useSmsConversations(filter: SmsFilter = 'all') {
             pat_name_preferred
           )
         `)
+        .eq('tenant_id', tenantId)
         .eq('channel', 'sms')
         .eq('status', 'sent')
         .not('sent_at', 'is', null)
@@ -115,15 +119,8 @@ export function useSmsConversations(filter: SmsFilter = 'all') {
         console.error('Error fetching campaign SMS:', campaignError);
       }
 
-      // Filter outbound to current tenant
-      const filteredOutbound = (outboundRecipients || []).filter(
-        (r: any) => r.bulk_sms?.tenant_id === tenantId
-      );
-
-      // Filter campaign SMS to current tenant
-      const filteredCampaign = (campaignLogs || []).filter(
-        (r: any) => r.enrollment?.tenant_id === tenantId
-      );
+      const filteredOutbound = outboundRecipients || [];
+      const filteredCampaign = campaignLogs || [];
 
       // Build messages list
       const messages: SmsMessage[] = [];
