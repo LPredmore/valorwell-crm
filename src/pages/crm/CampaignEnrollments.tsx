@@ -190,7 +190,7 @@ export default function CampaignEnrollments() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    Step {enrollment.current_step + 1}
+                    {renderStepLabel(enrollment, campaign?.steps?.length)}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {format(new Date(enrollment.enrolled_at), 'MMM d, yyyy')}

@@ -137,7 +137,7 @@ export function useEnrollClients() {
         campaign_id: campaignId,
         client_id: clientId,
         tenant_id: tenantId,
-        current_step: 1,
+        current_step: 0,
         status: 'active' as const,
         enrolled_at: new Date().toISOString(),
         enrolled_by_profile_id: userId,
