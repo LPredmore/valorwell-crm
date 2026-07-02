@@ -491,9 +491,13 @@ async function handleInboundSms(req: Request): Promise<Response> {
     let loggedSmsId: string | null = null;
     const matchedClient = matchingClientsFiltered.length > 0 ? matchingClientsFiltered[0] : null;
 
-    // Determine tenant_id: use matched client's tenant, or fall back to default
-    const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
-    const tenantIdForLog = matchedClient?.tenant_id || DEFAULT_TENANT_ID;
+    // Determine tenant_id from the matched client. If no client match, log with NULL
+    // tenant_id (nullable column) so unmatched inbound messages remain auditable
+    // without being mis-attributed to an arbitrary default tenant.
+    const tenantIdForLog: string | null = matchedClient?.tenant_id ?? null;
+    if (!matchedClient) {
+      console.warn(`No client match for inbound SMS from ${phoneResult.normalized}; logging with NULL tenant_id`);
+    }
 
     const { data: insertedLog, error: logError } = await supabase
       .from('crm_inbound_sms_logs')
