@@ -1,5 +1,6 @@
 import { HelpScoutThread } from '@/lib/crm/types';
 import { cn } from '@/lib/utils';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { format } from 'date-fns';
 
 interface ThreadMessageProps {
@@ -27,7 +28,7 @@ export function ThreadMessage({ thread }: ThreadMessageProps) {
         </div>
         <div
           className="text-sm prose prose-sm max-w-none dark:prose-invert"
-          dangerouslySetInnerHTML={{ __html: thread.body }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(thread.body) }}
         />
       </div>
     );
@@ -56,7 +57,7 @@ export function ThreadMessage({ thread }: ThreadMessageProps) {
             'text-sm prose prose-sm max-w-none',
             isCustomer ? 'dark:prose-invert' : 'prose-invert'
           )}
-          dangerouslySetInnerHTML={{ __html: thread.body }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(thread.body) }}
         />
       </div>
     </div>

@@ -388,19 +388,18 @@ async function processCampaignMessages() {
 
   console.log('Campaign scheduler starting...');
 
-  // Query step logs that are scheduled to send now or earlier
-  const { data: pendingStepLogs, error: stepLogsError } = await supabase
-    .from('crm_campaign_step_logs')
-    .select('id, enrollment_id, step_id, tenant_id, client_id, scheduled_for, channel')
-    .eq('status', 'scheduled')
-    .lte('scheduled_for', new Date().toISOString())
-    .order('scheduled_for', { ascending: true })
-    .limit(50); // Process in batches
+  // Atomically claim pending step logs using SELECT ... FOR UPDATE SKIP LOCKED.
+  // This prevents duplicate sends if two scheduler invocations overlap.
+  const { data: pendingStepLogs, error: stepLogsError } = await supabase.rpc(
+    'claim_pending_campaign_steps',
+    { p_limit: 50 }
+  );
 
   if (stepLogsError) {
-    console.error('Failed to fetch pending step logs:', stepLogsError);
+    console.error('Failed to claim pending step logs:', stepLogsError);
     return { processed: 0, errors: [stepLogsError.message] };
   }
+
 
   if (!pendingStepLogs || pendingStepLogs.length === 0) {
     console.log('No pending messages to process');
@@ -857,44 +856,52 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // Require CRON_SECRET on every invocation. pg_cron sends it in X-Cron-Secret.
+  const expectedSecret = Deno.env.get('CRON_SECRET');
+  if (!expectedSecret) {
+    console.error('CRON_SECRET is not configured - refusing invocation');
+    return new Response(
+      JSON.stringify({ error: 'Scheduler secret not configured' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+  const providedSecret = req.headers.get('X-Cron-Secret');
+  if (providedSecret !== expectedSecret) {
+    console.error('Campaign scheduler rejected - X-Cron-Secret mismatch');
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     console.log('Campaign scheduler triggered');
-
-    // This is a cron job - no auth required, but we should validate it's coming from cron
-    // For now, we'll allow any request but log it
-    const url = new URL(req.url);
-    const isCron = url.searchParams.get('source') === 'cron' || 
-                   req.headers.get('user-agent')?.includes('Supabase');
-
-    if (!isCron) {
-      console.log('Request may not be from cron, processing anyway');
-    }
-
     const result = await processCampaignMessages();
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         ...result,
         timestamp: new Date().toISOString(),
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   } catch (error) {
     console.error('Campaign scheduler error:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message,
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString(),
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   }
 });
+

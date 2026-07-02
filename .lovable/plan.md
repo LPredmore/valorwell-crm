@@ -1,83 +1,132 @@
-## Goal
 
-Make two facts that the database already knows visible and reliably queryable:
+# Security & Reliability Hardening: Critical + High Findings
 
-1. **Last Contact** — the most recent time email or SMS was sent to or received from the client.
-2. **Campaign History** — every campaign the client has ever been enrolled in.
+Address the 8 red/orange findings from the audit. Grouped by system layer so related changes ship together and share test surface.
 
-## Definitive technical decisions
+---
 
-### 1. Add `last_contact_at TIMESTAMPTZ NULL` to `clients` and maintain it with a trigger on `crm_activity_events`
+## 1. XSS in Rendered Email Bodies (Critical)
 
-Now that `clients` may be extended additively, storing the value denormalized wins over deriving it. Reasons:
+**Problem:** `ThreadMessage.tsx` renders HelpScout email HTML via `dangerouslySetInnerHTML` with no sanitization. A malicious inbound email can execute arbitrary JS in the CRM's origin — session hijack, tenant data theft.
 
-- **Read cost dominates.** This value gets rendered on the client profile, the quick-profile sheet, and (as a sortable/filterable column) the clients table. A denormalized column is one field read; a view aggregating `crm_activity_events` (~thousands of rows already, growing daily) is a `GROUP BY` scan every time. At CRM list scale (hundreds of visible rows per page, snappy sort/filter) the difference is felt.
-- **Write path is already funneled.** Per the activity-logging memory, all four event types are written exclusively by three edge functions. A single **`AFTER INSERT` trigger on `crm_activity_events`** filtered to those four types is the *only* writer of `last_contact_at`. Edge functions stay untouched, no application code needs to remember to update anything, and there is no drift risk.
-- **Sorting/filtering by "last contact" becomes trivial.** A future "clients I haven't touched in 30 days" filter is `WHERE last_contact_at < now() - '30 days'::interval` — index-friendly and identical to how the existing `status_changed_at` column is used.
+**Decision: Sanitize with DOMPurify on the client, at render time, using a strict allowlist.**
 
-Rejected alternatives:
-- **View / materialized view** — either slow at read (regular view) or needs a refresh strategy (materialized view) for no benefit given the trigger option exists.
-- **Client-side aggregation** — N+1 or bulk-pulls the activity table into the browser; unacceptable on the table page.
+Why this over alternatives:
+- **Server-side sanitize on ingest:** rejected. We'd have to rewrite stored HTML, and any past-stored payloads remain dangerous. Client-side sanitize covers historical data automatically and defends even if a new ingest path is added later.
+- **iframe sandbox:** rejected. Breaks inline images/signatures, complicates height sizing, and still needs sanitization for `srcdoc`. Not worth the UX cost.
+- **Strip to text:** rejected. Users need formatted email.
 
-Also add `last_contact_direction TEXT` (`'sent'` | `'received'`) and `last_contact_channel TEXT` (`'email'` | `'sms'`) written by the same trigger, so the profile can render "2 days ago · Email received" without a second query.
+DOMPurify is the industry standard, actively maintained, ~20KB, and battle-tested. Apply the same sanitizer to any other `dangerouslySetInnerHTML` sites (signature preview, campaign step preview) via a shared `sanitizeEmailHtml()` util so we have one policy.
 
-### 2. Show Campaign History by querying `crm_campaign_enrollments` directly
+---
 
-No new column or table needed — history is already there. A new `CampaignHistoryCard` on the client profile lists every enrollment (all statuses), ordered by `enrolled_at DESC`, joined to `crm_campaigns` for the name. A single hook, no denormalization.
+## 2. RingCentral Webhook Signature Verification (Critical)
 
-### 3. Close the manual-enrollment audit gap
+**Problem:** `ringcentral-sms` accepts inbound webhook posts with no signature check. Anyone with the URL can forge inbound SMS → fake "received" events, auto-pause campaigns, poison `last_contact_at`, spoof client replies.
 
-The auto-enroll trigger writes `campaign_auto_enrolled` to `crm_activity_events`; the manual enroll mutation writes nothing. Add a `campaign_enrolled` event insert (source: `'manual'`) inside `useCampaignEnrollments.ts` after a successful insert. Requires extending the `crm_activity_events_event_type_check` constraint to include `'campaign_enrolled'`. This makes the timeline symmetric and answers "why is this client in this campaign?" from the timeline alone.
+**Decision: Validate the `Verification-Token` header against a stored `RINGCENTRAL_WEBHOOK_VERIFICATION_TOKEN` secret on every inbound POST.**
 
-## Changes
+RingCentral's webhook model uses a per-subscription verification token (set when the subscription is created and echoed on the handshake). We already handle the handshake echo; we just don't check the token on subsequent deliveries. Reject with 401 if missing/mismatched. Fail closed — no "skip if secret absent" fallback (that's what bit us with HelpScout).
 
-### Database (migration)
+---
 
-1. `ALTER TABLE public.clients ADD COLUMN last_contact_at TIMESTAMPTZ, ADD COLUMN last_contact_direction TEXT, ADD COLUMN last_contact_channel TEXT;`
-2. `CREATE INDEX clients_last_contact_at_idx ON public.clients (tenant_id, last_contact_at DESC NULLS LAST);`
-3. Trigger function `sync_client_last_contact()` (SECURITY DEFINER, fixed `search_path`):
-   - Fires `AFTER INSERT` on `crm_activity_events` when `NEW.event_type IN ('email_sent','email_received','sms_sent','sms_received')` and `NEW.client_id IS NOT NULL`.
-   - Updates `clients` **only if** `NEW.created_at > clients.last_contact_at` (or existing is NULL). Sets direction from the `_sent`/`_received` suffix and channel from the `email_`/`sms_` prefix.
-4. Extend `crm_activity_events_event_type_check` to allow `'campaign_enrolled'`.
-5. **Backfill** existing rows in a single statement:
-   ```sql
-   WITH latest AS (
-     SELECT DISTINCT ON (client_id)
-            client_id, created_at, event_type
-     FROM crm_activity_events
-     WHERE event_type IN ('email_sent','email_received','sms_sent','sms_received')
-       AND client_id IS NOT NULL
-     ORDER BY client_id, created_at DESC
-   )
-   UPDATE public.clients c
-   SET last_contact_at = l.created_at,
-       last_contact_direction = CASE WHEN l.event_type LIKE '%_received' THEN 'received' ELSE 'sent' END,
-       last_contact_channel   = CASE WHEN l.event_type LIKE 'email_%'    THEN 'email'    ELSE 'sms'  END
-   FROM latest l WHERE l.client_id = c.id;
-   ```
+## 3. HelpScout Webhook Secret Must Be Required (Critical)
 
-### Frontend
+**Problem:** Current code logs a warning and continues if `HELPSCOUT_WEBHOOK_SECRET` is unset. Signature validation silently skipped → identical forgery risk as #2.
 
-6. **`src/lib/crm/types.ts`** — add the three new fields to `CrmClient`. Add `'campaign_enrolled'` to the event-type union.
-7. **`src/hooks/crm/useClients.ts`** and **`src/hooks/crm/useClientQuickProfile.ts`** — include the three new columns in `.select(...)`. `useClients` gets an optional sort key `'last_contact_at'`.
-8. **`src/pages/crm/ClientDetail.tsx`** — extend the `.select(...)` to pull the three new fields.
-9. **`src/components/crm/detail/ClientInfoCard.tsx`** — render a "Last Contact" row under status/tags: `formatDistanceToNow(last_contact_at) + ' ago · ' + capitalize(channel) + ' ' + direction`. Empty state: "No contact yet."
-10. **`src/components/crm/ClientQuickProfile.tsx`** — same "Last Contact" line in the sheet header area.
-11. **`src/pages/crm/Clients.tsx`** (table view) — add a sortable "Last Contact" column between "Status" and existing right-side columns, rendering relative time (or muted "Never"). Kanban/grid views unchanged.
-12. **`src/hooks/crm/useClientCampaigns.ts`** (new) — `useQuery` reading `crm_campaign_enrollments` for a client, joined to `crm_campaigns(id, name)`, ordered by `enrolled_at DESC`.
-13. **`src/components/crm/detail/CampaignHistoryCard.tsx`** (new) — card rendered on the profile below `ClientInfoCard`. One row per enrollment: campaign name (link to `/crm/campaigns/:id`), status badge, enrolled date, and step progress via the existing `renderStepLabel` helper. Empty state: "Never enrolled in a campaign."
-14. **`src/pages/crm/ClientDetail.tsx`** — mount `CampaignHistoryCard` in the left column.
-15. **`src/hooks/crm/useCampaignEnrollments.ts`** — inside the manual enroll mutation, after the enrollment insert succeeds, batch-insert `campaign_enrolled` activity events (one per client) with metadata `{ source: 'manual', campaign_id, campaign_name, enrolled_by_profile_id }`.
+**Decision: Fail closed. If the secret is missing, return 500 and refuse to process. Never accept unsigned webhooks.**
 
-## Out of scope
+Convert the warning-and-continue branch to a hard error. The secret is already configured in prod, so no operational impact; this only closes the "someone deletes the secret" foot-gun.
 
-- No edits to any existing `clients` column (project rule).
-- No changes to how the three edge functions write activity events — the new trigger is the sole `last_contact_*` writer.
-- No new "last contact" filter on the clients page — the existing "Communication Received" filter already covers the inbound-only case; a broader "any contact" filter can be added later without schema changes now that the column exists.
+---
 
-## Verification
+## 4. Campaign Scheduler Public Endpoint (Critical)
 
-- After migration, `SELECT COUNT(*) FROM clients WHERE last_contact_at IS NOT NULL` matches `SELECT COUNT(DISTINCT client_id) FROM crm_activity_events WHERE event_type IN (…)`.
-- Send a reply through the CRM → within one refetch cycle the profile shows "just now · Email sent" and the same client jumps to the top when the table is sorted by Last Contact.
-- Receive an inbound SMS webhook → profile flips to "just now · SMS received."
-- Manually enroll a client → activity timeline shows a `campaign_enrolled` entry and `CampaignHistoryCard` lists the new active enrollment. Change the client's status to trigger cancellation → the card shows both the cancelled row and any auto-enrolled follow-up.
+**Problem:** `campaign-scheduler` deploys with `verify_jwt = false` and has no auth check. Anyone can hit the URL and force immediate campaign dispatch — duplicate sends, denial-of-wallet, timing manipulation.
+
+**Decision: Require a shared secret in the `Authorization` header, validated in-code. Use a dedicated `CRON_SECRET` used by pg_cron; reject everything else.**
+
+Why not `verify_jwt = true`:
+- pg_cron doesn't mint user JWTs; it can only send a static header. `verify_jwt = true` would require embedding a service-role JWT in cron SQL (worse — full DB access if leaked).
+- A dedicated cron secret is minimum-privilege: leak only lets you trigger scheduler runs, not read data.
+
+Update the existing pg_cron job to send `Authorization: Bearer $CRON_SECRET`. Same pattern applies to any other cron-triggered function (audit while we're in there).
+
+---
+
+## 5. Missing `service_role` Grants on New Tables (High)
+
+**Problem:** Recent migrations created public-schema tables without `GRANT ALL ... TO service_role`. Edge functions using the service-role key fail with permission errors on those tables (or will, next time they're touched).
+
+**Decision: Sweep migration to add the missing grants across all `crm_*` tables added in the last ~30 days.**
+
+Query `information_schema.role_table_grants` to identify gaps, then emit a single idempotent migration. Also add the standard `authenticated` grants where policies expect them. This is mechanical — no policy changes.
+
+---
+
+## 6. N+1 Query in Client Table Render (High)
+
+**Problem:** Client table triggers a per-row query for tag/last-contact enrichment when the base query already has the columns. Wastes a request per visible row (~50) on every filter change.
+
+**Decision: Consolidate into the existing `useClients` select. Drop the per-row hooks; add the columns to the base query's `select()` string.**
+
+The data is already on `clients` (post last-contact migration). This is pure code deletion — remove the child hooks and let the parent query return everything.
+
+---
+
+## 7. Campaign Scheduler Race Condition (High)
+
+**Problem:** Two overlapping scheduler invocations (e.g., cron overlap after a slow run) can both select the same pending step and send it twice. No row-level lock.
+
+**Decision: Use `SELECT ... FOR UPDATE SKIP LOCKED` inside a transaction, wrapped in an RPC.**
+
+Why this over alternatives:
+- **Advisory lock on the whole function:** rejected. Serializes all tenants; slow tenant blocks fast ones.
+- **`processing` status flag with timestamp:** rejected. Requires stuck-row recovery logic; `SKIP LOCKED` is atomic and standard for job queues.
+- **Unique constraint on (enrollment_id, step_order) in `crm_campaign_step_logs`:** keep as belt-and-suspenders — insert log row *before* send, and let the unique constraint be the last line of defense.
+
+Create `claim_pending_campaign_steps(limit int)` RPC that atomically selects + marks. Scheduler calls the RPC instead of raw select.
+
+---
+
+## 8. Bulk Send Stuck in `'sending'` on Crash (High)
+
+**Problem:** If `helpscout-proxy` or `ringcentral-sms` crashes mid bulk-send, `crm_bulk_send_logs.status` stays `'sending'` forever. UI shows perpetual progress bar; no retry path.
+
+**Decision: Add a `heartbeat_at` timestamp updated per recipient, plus a reconciliation cron that marks `sending` rows with stale heartbeats (>10 min) as `'failed'`.**
+
+Why not just wrap in try/finally:
+- Deno edge functions can be killed by wall-clock timeout (150s) without running finally blocks reliably.
+- Heartbeat + reconciler works even for hard kills, OOMs, and deploys mid-flight.
+
+Reconciler is a small edge function on a 5-minute cron, uses same `CRON_SECRET` pattern from #4.
+
+---
+
+## Technical Details
+
+### Files touched
+- `src/components/crm/inbox/ThreadMessage.tsx` — sanitize
+- `src/lib/sanitize.ts` (new) — shared DOMPurify config
+- `src/components/crm/settings/SignaturePreview.tsx`, `src/components/crm/campaigns/CampaignStepPreview.tsx` — use shared sanitizer
+- `supabase/functions/ringcentral-sms/index.ts` — verification token check
+- `supabase/functions/helpscout-proxy/index.ts` — remove warning-fallback
+- `supabase/functions/campaign-scheduler/index.ts` — CRON_SECRET check, use claim RPC
+- `supabase/functions/reconcile-bulk-sends/index.ts` (new)
+- `src/hooks/crm/useClients.ts` + `src/components/crm/clients/ClientTable.tsx` — merge queries
+- Migration: grants sweep, `claim_pending_campaign_steps` RPC, `heartbeat_at` column, update pg_cron jobs
+
+### Secrets required (user must add)
+- `RINGCENTRAL_WEBHOOK_VERIFICATION_TOKEN` — from RingCentral subscription
+- `CRON_SECRET` — auto-generated
+
+### Rollout order
+1. Grants sweep (#5) — unblocks anything else that touches new tables
+2. Sanitizer (#1) — pure frontend, zero risk
+3. Webhook validation (#2, #3) — coordinated with re-registering webhooks
+4. Scheduler auth + race fix (#4, #7) — deploy together, update cron in same migration
+5. Bulk send reconciliation (#8)
+6. Client table N+1 (#6) — last, isolated cleanup
+
+### Out of scope (deferred to next batch)
+Findings 9–15 (medium): CORS wildcard tightening, signature URL sanitization at storage time, waterfall query on focus, index audits, etc.
