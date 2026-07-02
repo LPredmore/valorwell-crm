@@ -8794,6 +8794,44 @@ export type Database = {
         Args: { p_date: string; p_time: string; p_timezone?: string }
         Returns: string
       }
+      crm_bulk_update_client_status: {
+        Args: {
+          p_actor_profile_id: string
+          p_client_ids: string[]
+          p_new_status: Database["public"]["Enums"]["pat_status_enum"]
+          p_tenant_id: string
+        }
+        Returns: {
+          client_id: string
+          new_status: Database["public"]["Enums"]["pat_status_enum"]
+          old_status: Database["public"]["Enums"]["pat_status_enum"]
+        }[]
+      }
+      crm_save_campaign_steps: {
+        Args: { p_campaign_id: string; p_steps: Json; p_tenant_id: string }
+        Returns: {
+          campaign_id: string
+          channel: string
+          created_at: string
+          delay_days: number
+          delay_hours: number
+          email_body_html: string | null
+          email_subject: string | null
+          id: string
+          is_active: boolean
+          signature_id: string | null
+          sms_body_text: string | null
+          step_order: number
+          tenant_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "crm_campaign_steps"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       evaluate_intake_screening: {
         Args: { p_client_id: string }
         Returns: undefined
