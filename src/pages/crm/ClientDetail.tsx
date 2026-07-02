@@ -40,6 +40,9 @@ export default function ClientDetail() {
           tags,
           created_at,
           updated_at,
+          last_contact_at,
+          last_contact_direction,
+          last_contact_channel,
           primary_staff:staff!clients_primary_staff_id_fkey (
             id,
             prov_name_f,

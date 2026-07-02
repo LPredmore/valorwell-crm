@@ -39,6 +39,9 @@ export interface CrmClient {
   tags: string | null;
   created_at: string;
   updated_at: string;
+  last_contact_at?: string | null;
+  last_contact_direction?: 'sent' | 'received' | null;
+  last_contact_channel?: 'email' | 'sms' | null;
   primary_staff?: {
     id: string;
     prov_name_f: string | null;
@@ -67,7 +70,7 @@ export interface CrmActivityEvent {
   id: string;
   tenant_id: string;
   client_id: string;
-  event_type: 'status_change' | 'note_added' | 'email_sent' | 'email_received' | 'conversation_linked' | 'bulk_send' | 'campaign_auto_cancelled' | 'sms_sent' | 'sms_received';
+  event_type: 'status_change' | 'note_added' | 'email_sent' | 'email_received' | 'conversation_linked' | 'bulk_send' | 'campaign_auto_cancelled' | 'sms_sent' | 'sms_received' | 'campaign_auto_enrolled' | 'campaign_enrolled';
   old_value: string | null;
   new_value: string | null;
   metadata: Record<string, unknown>;
