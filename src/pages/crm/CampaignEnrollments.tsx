@@ -39,12 +39,25 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { useCampaign } from '@/hooks/crm/useCampaigns';
+import { useCampaignSteps } from '@/hooks/crm/useCampaignSteps';
 import {
   useCampaignEnrollments,
   useUpdateEnrollmentStatus,
   useDeleteEnrollment,
 } from '@/hooks/crm/useCampaignEnrollments';
 import type { EnrollmentStatus } from '@/lib/crm/campaign-types';
+
+function renderStepLabel(
+  enrollment: { status: EnrollmentStatus; current_step: number },
+  totalSteps?: number,
+) {
+  if (enrollment.status === 'completed') return 'Completed';
+  if (enrollment.status === 'cancelled') return 'Cancelled';
+  if (enrollment.current_step === 0) return 'Not started';
+  return totalSteps
+    ? `Step ${enrollment.current_step} of ${totalSteps}`
+    : `Step ${enrollment.current_step}`;
+}
 
 const STATUS_BADGE_VARIANTS: Record<EnrollmentStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   active: 'default',
@@ -58,6 +71,7 @@ export default function CampaignEnrollments() {
   const { id: campaignId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: campaign, isLoading: loadingCampaign } = useCampaign(campaignId);
+  const { data: steps } = useCampaignSteps(campaignId);
   const { data: enrollments, isLoading: loadingEnrollments } = useCampaignEnrollments(campaignId);
   const updateStatus = useUpdateEnrollmentStatus();
   const deleteEnrollment = useDeleteEnrollment();
@@ -190,7 +204,7 @@ export default function CampaignEnrollments() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    Step {enrollment.current_step + 1}
+                    {renderStepLabel(enrollment, steps?.length)}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {format(new Date(enrollment.enrolled_at), 'MMM d, yyyy')}

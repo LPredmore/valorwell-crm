@@ -839,13 +839,14 @@ async function scheduleNextStep(
     return;
   }
 
-  // Update enrollment current step
+  // Update enrollment current_step to reflect the step that was just sent
+  // (current_step = step_order of the last step actually sent; 0 = not started yet)
   await supabase
     .from('crm_campaign_enrollments')
-    .update({ current_step: nextStep.step_order })
+    .update({ current_step: currentStep.step_order })
     .eq('id', enrollment.id);
 
-  console.log(`Scheduled next step ${nextStep.step_order} for enrollment ${enrollment.id} at ${nextScheduledFor.toISOString()}`);
+  console.log(`Marked step ${currentStep.step_order} sent; next step ${nextStep.step_order} scheduled for enrollment ${enrollment.id} at ${nextScheduledFor.toISOString()}`);
 }
 
 // ============ HTTP HANDLER ============
