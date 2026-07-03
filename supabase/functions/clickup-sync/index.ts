@@ -251,6 +251,7 @@ async function createTask(
     } else if (field.type === 'date') {
       if (raw != null) custom_fields.push({ id: field.id, value: Number(raw) });
     } else {
+      if (name === 'Phone' && !raw) continue;
       custom_fields.push({ id: field.id, value: raw == null ? '' : String(raw) });
     }
   }
