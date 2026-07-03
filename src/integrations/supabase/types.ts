@@ -4282,6 +4282,66 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_clickup_sync_runs: {
+        Row: {
+          created_at: string
+          created_count: number
+          failed_count: number
+          finished_at: string | null
+          id: string
+          last_error: string | null
+          options: Json
+          processed: number
+          recreated_count: number
+          skipped_count: number
+          started_at: string
+          status: string
+          tenant_id: string | null
+          total: number
+          triggered_by: string | null
+          updated_at: string
+          updated_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_count?: number
+          failed_count?: number
+          finished_at?: string | null
+          id?: string
+          last_error?: string | null
+          options?: Json
+          processed?: number
+          recreated_count?: number
+          skipped_count?: number
+          started_at?: string
+          status?: string
+          tenant_id?: string | null
+          total?: number
+          triggered_by?: string | null
+          updated_at?: string
+          updated_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_count?: number
+          failed_count?: number
+          finished_at?: string | null
+          id?: string
+          last_error?: string | null
+          options?: Json
+          processed?: number
+          recreated_count?: number
+          skipped_count?: number
+          started_at?: string
+          status?: string
+          tenant_id?: string | null
+          total?: number
+          triggered_by?: string | null
+          updated_at?: string
+          updated_count?: number
+        }
+        Relationships: []
+      }
       crm_conversation_cache: {
         Row: {
           cached_at: string
