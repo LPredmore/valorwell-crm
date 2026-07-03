@@ -1,54 +1,81 @@
-# Capture the real ClickUp error
+## Root cause (diagnosis)
 
-## Why
+The published site is up to date, so the button exists and the fetch does leave the browser. What's happening is exactly what the error string says: **the browser fetch to the Edge Function fails before a response comes back**.
 
-You asked for HTTP status, response body, response headers, and rate-limit headers. I don't have any of that on file. The current `clickup-sync` edge function:
+Two structural reasons, both baked into the current backfill design:
 
-- reads `res.status` but only embeds it in a thrown `Error` string
-- JSON-parses the body but discards everything except what it echoes into the error message
-- never reads response headers at all
-- log retention for the function has already lapsed, so I can't recover the original backfill's traces
+1. **The backfill runs synchronously in one HTTP request.** `runBackfill` in `ClickUpConfigPanel.tsx` calls `supabase.functions.invoke('clickup-sync', { body: { action: 'backfill' } })` with no `limit`. The function then defaults to `limit: 50` and, inside a `for` loop, calls `syncOne` per client — each client is ~10 ClickUp HTTP calls (create/update task + one PUT per custom field). That's ~500 sequential outbound HTTP calls in one invocation.
+2. **ClickUp caps us at 100 requests/minute.** 500 calls at 100/min = ~5 minutes minimum. Supabase Edge Functions and the `supabase-js` invoke fetch both cut off well before that (the CPU/wall budget on Edge Runtime is ~150 s and the browser-side fetch is aborted around the same window). When the function is still running, the fetch is terminated client-side and `supabase-js` surfaces exactly the `FunctionsFetchError: Failed to send a request to the Edge Function` you saw. From the preview earlier this manifested the same way, which is why the panel-driven run "worked" only when I invoked it externally in tiny batches.
 
-So the only correct next step is to instrument the function and make a fresh, minimal call against ClickUp to capture the exact response.
+The diagnose run at 06:30 UTC succeeded because it makes only 3 ClickUp calls and returns in ~4 s. That's why the same function/URL/CORS works for diagnose and fails for backfill — the failure isn't auth, CORS, or deploy freshness. It's request duration.
 
-## Change 1 — Instrument `clickup()` in `supabase/functions/clickup-sync/index.ts`
+## The decision
 
-Update the helper so every ClickUp call records the full response envelope:
+**Convert backfill to a paced background job with a persisted progress row that the UI polls.** Not a client-side batch loop.
 
-- capture `res.status` and `res.statusText`
-- capture **all** response headers via `Object.fromEntries(res.headers.entries())`
-- capture the raw response body as text (before JSON parsing)
-- `console.log` a single structured line per call:
-  ```
-  {
-    "clickup_call": true,
-    "method": "...",
-    "path": "...",
-    "status": 429,
-    "statusText": "...",
-    "headers": { ... },      // full header map, incl. x-ratelimit-*, retry-after, x-trace-id
-    "body_raw": "..."         // first 2 KB
-  }
-  ```
-- return status/headers/body alongside `ok` so callers can propagate them
+Why this over the alternatives:
 
-Also update `createTask` / `updateTask` / `setCustomField` error paths to include `status` and the captured header subset (`x-ratelimit-limit`, `x-ratelimit-remaining`, `x-ratelimit-reset`, `retry-after`) in the thrown `Error` message, so even without log access the caller's JSON response carries the evidence.
+- **Client-side "call backfill with limit=20 in a loop"** works but is fragile. If the user closes the tab, navigates away, or the laptop sleeps, the backfill halts partway through and there's no record of where it stopped. On mobile it will definitely stall. It also hammers the function with N invocations, each subject to the same auth/CORS surface.
+- **A cron-driven drain queue** is the heaviest option and is overkill for a one-off (occasionally re-run) full-list resync of ~641 records.
+- **Background job on the same edge function using `EdgeRuntime.waitUntil`, returning `202` with a `run_id` immediately, writing progress to a `crm_clickup_sync_runs` row, and pacing internally to respect ClickUp's 100/min limit** — this is the pattern Supabase explicitly supports for "long tail after HTTP response" work, matches how the existing scheduler + activity logging are architected (single edge function is the source of truth), and gives the user a real progress bar that survives tab closes. It also naturally rate-limits so we never trip ClickUp's `429` or the `ITEM_246` cap in a burst.
 
-## Change 2 — Add a diagnostic action to the same function
+This is the right choice because the problem isn't "the fetch failed" — it's "we tried to do a 5-minute job inside a single HTTP request." Every band-aid that keeps the work inside the request (bigger timeout, retry, smaller batch) is fighting the wrong wall. Moving the work off the request is the fix.
 
-Add `action: 'diagnose'` that:
+## Implementation plan
 
-1. Calls `GET /list/{list_id}` — cheapest read, confirms auth + list access.
-2. Attempts `POST /list/{list_id}/task` with a throwaway payload (`name: "lovable-diagnostic-<timestamp>"`, no custom fields).
-3. If the create succeeds, immediately `DELETE /task/{id}` to leave no residue.
-4. Returns a JSON envelope containing, for each call: `status`, `statusText`, full `headers` map, and raw `body`.
+### 1. New table: `crm_clickup_sync_runs` (additive, follows `crm_` prefix rule)
 
-This gives us the exact evidence you asked for without touching the 621 unsynced clients and without depending on log retention.
+```text
+id                uuid PK
+tenant_id         uuid null
+status            text  -- queued | running | completed | failed | cancelled
+total             int   default 0
+processed         int   default 0
+created_count     int   default 0
+updated_count     int   default 0
+recreated_count   int   default 0
+skipped_count     int   default 0
+failed_count      int   default 0
+last_error        text  null
+started_at        timestamptz default now()
+finished_at      timestamptz null
+triggered_by     uuid null      -- auth.uid()
+options          jsonb          -- { only_unsynced, tenant_id, limit }
+```
 
-## Change 3 — Deploy and invoke
+Grants: `authenticated` gets `SELECT`; `service_role` gets `ALL`. RLS: authenticated users in a tenant can SELECT their tenant's runs (and rows with `tenant_id IS NULL` triggered by them). Only edge function (service role) writes.
 
-Deploy the updated function, then invoke `{ action: 'diagnose' }` from Settings (or via `curl_edge_functions`). Report back with the raw status/headers/body verbatim — no interpretation until you've seen them.
+### 2. `supabase/functions/clickup-sync/index.ts` changes
 
-## Explicit non-goals
+- Add action `backfill` behavior: insert a `crm_clickup_sync_runs` row with `status='queued'`, resolve the client id list (respect `tenant_id`, `only_unsynced`), set `total`, flip to `running`, then return `{ run_id, total }` with HTTP 202 **immediately**.
+- Kick the loop off via `EdgeRuntime.waitUntil(processRun(run_id, ids, fieldMap))`.
+- Inside `processRun`: iterate clients, call `syncOne`, increment the appropriate counter columns on the run row after each client (single `update` per client, cheap), and **pace** — a small `await sleep(700)` between clients keeps us comfortably under ClickUp's 100/min ceiling and avoids the `ITEM_246` burst risk. On any thrown error inside the loop, increment `failed_count` and record `last_error`; do not abort the whole run.
+- Add action `backfill_status` (`{ run_id }`) that returns the current row; used only as a fallback — normally the UI subscribes via Realtime.
+- Add action `cancel_backfill` (`{ run_id }`) that sets `status='cancelled'`; the loop checks this flag every N clients and exits cleanly.
+- Keep `diagnose` unchanged and still auth-optional.
 
-- No retry logic, no backfill resumption, no ClickUp plan/tier assumptions in this change. Purely diagnostic. Any decisions about upgrading, archiving, or changing item types wait until we have the real HTTP envelope in hand.
+### 3. `ClickUpConfigPanel.tsx` UX
+
+- Click "Sync all clients now" → call `backfill`, receive `run_id`, store it, disable the button while a run is `queued`/`running`.
+- Subscribe to `crm_clickup_sync_runs` for that `run_id` via Supabase Realtime (inside a `useEffect` with `removeChannel` cleanup, per project convention). Fall back to a 3 s poll if the row hasn't changed in 15 s.
+- Show progress bar: `processed / total`, plus a compact line "created X · updated Y · recreated Z · failed F".
+- Add a "Cancel" button while running.
+- On mount, look up the most recent run for this tenant and re-attach if it's still `running` — so refreshing the tab or coming back later shows live progress.
+- Keep the existing "Required custom fields" and `lastResult` panels; render the last completed run summary there instead of raw JSON.
+
+### 4. Realtime enablement
+
+`ALTER PUBLICATION supabase_realtime ADD TABLE public.crm_clickup_sync_runs;` in the same migration.
+
+### 5. Verification
+
+- Deploy function, run backfill from the published site with only 5 unsynced clients (temp `limit: 5`) — expect immediate 202, progress row ticks 1→5, ClickUp task_count rises by 5.
+- Run full 621-client backfill from the published site, close the tab, reopen Settings → progress bar reattaches and continues.
+- Confirm no `ITEM_246` and no `429` in `clickup_call` logs during a full run.
+
+## Technical notes
+
+- We are **not** modifying any existing columns on `clients` or any shared table. `crm_clickup_sync_runs` is a new CRM-prefixed table with its own foreign-keyed `tenant_id`.
+- Pacing at 700 ms/client gives ~85 req/min against the 100/min ClickUp ceiling with headroom for retries.
+- `EdgeRuntime.waitUntil` keeps the isolate alive after the response is sent; this is the documented Supabase pattern for post-response work and is already used elsewhere in the codebase for logging.
+- No frontend business-logic changes outside `ClickUpConfigPanel.tsx`. No changes to `syncOne`, the per-client triggers, or the `clickup_task_id` idempotency contract.
