@@ -387,6 +387,25 @@ Deno.serve(async (req) => {
   const action = body?.action ?? 'upsert';
 
   try {
+    if (action === 'diagnose') {
+      const steps: any[] = [];
+      const getList = await clickup(`/list/${CLICKUP_LIST_ID}`);
+      steps.push({ step: 'GET /list/:id', status: getList.status, statusText: getList.statusText, headers: getList.headers, body_raw: getList.body_raw.slice(0, 2048) });
+
+      const probeName = `lovable-diagnostic-${Date.now()}`;
+      const createRes = await clickup(`/list/${CLICKUP_LIST_ID}/task`, {
+        method: 'POST',
+        body: JSON.stringify({ name: probeName }),
+      });
+      steps.push({ step: 'POST /list/:id/task', status: createRes.status, statusText: createRes.statusText, headers: createRes.headers, body_raw: createRes.body_raw.slice(0, 2048) });
+
+      if (createRes.ok && createRes.data?.id) {
+        const delRes = await clickup(`/task/${createRes.data.id}`, { method: 'DELETE' });
+        steps.push({ step: 'DELETE /task/:id', status: delRes.status, statusText: delRes.statusText, headers: delRes.headers, body_raw: delRes.body_raw.slice(0, 2048) });
+      }
+      return json(200, { action: 'diagnose', list_id: CLICKUP_LIST_ID, steps });
+    }
+
     const { map: fieldMap, missing } = await loadFieldMap();
     if (missing.length === MANAGED_FIELDS.length) {
       return json(500, { error: 'no_managed_fields_found_on_list', missing });
