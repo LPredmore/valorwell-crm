@@ -293,7 +293,7 @@ async function createTask(
       custom_fields,
     }),
   });
-  if (!res.ok) throw new Error(`ClickUp create task failed: ${res.status} ${JSON.stringify(res.data)}`);
+  if (!res.ok) throw new Error(`ClickUp create task failed: ${errDetail(res)}`);
   return res.data.id as string;
 }
 
