@@ -1,6 +1,7 @@
 import { KanbanConfigPanel } from '@/components/crm/settings/KanbanConfigPanel';
 import { HelpScoutConfigPanel } from '@/components/crm/settings/HelpScoutConfigPanel';
 import { EmailSignaturesPanel } from '@/components/crm/settings/EmailSignaturesPanel';
+import { ClickUpConfigPanel } from '@/components/crm/settings/ClickUpConfigPanel';
 
 export default function CrmSettings() {
   return (
@@ -16,6 +17,9 @@ export default function CrmSettings() {
 
         {/* Email Signatures */}
         <EmailSignaturesPanel />
+
+        {/* ClickUp Sync */}
+        <ClickUpConfigPanel />
       </div>
     </div>
   );

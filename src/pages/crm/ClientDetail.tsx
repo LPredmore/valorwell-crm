@@ -44,6 +44,7 @@ export default function ClientDetail() {
           last_contact_at,
           last_contact_direction,
           last_contact_channel,
+          clickup_synced_at,
           primary_staff:staff!clients_primary_staff_id_fkey (
             id,
             prov_name_f,

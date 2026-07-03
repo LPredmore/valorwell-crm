@@ -42,6 +42,7 @@ export interface CrmClient {
   last_contact_at?: string | null;
   last_contact_direction?: 'sent' | 'received' | null;
   last_contact_channel?: 'email' | 'sms' | null;
+  clickup_synced_at?: string | null;
   primary_staff?: {
     id: string;
     prov_name_f: string | null;
