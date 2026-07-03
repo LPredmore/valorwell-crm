@@ -198,6 +198,7 @@ async function setCustomField(
   } else if (field.type === 'date') {
     payload = { value: value == null ? null : Number(value) };
   } else {
+    if (field.name === 'Phone' && (value == null || value === '')) return;
     payload = { value: value == null ? '' : String(value) };
   }
 
