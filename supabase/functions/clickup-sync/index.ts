@@ -362,6 +362,75 @@ async function syncOne(clientId: string, fieldMap: Map<FieldName, ClickUpCustomF
 
   return { status: outcome, taskId };
 }
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// Paced background loop. Writes progress to crm_clickup_sync_runs after every
+// client so the UI can subscribe or poll. Honors cancellation flag.
+async function processBackfill(
+  runId: string,
+  ids: string[],
+  fieldMap: Map<FieldName, ClickUpCustomField>,
+) {
+  // ClickUp is capped at 100 req/min. Each client is ~10 outbound calls, so we
+  // pace ~1 client / 6s => ~10 clients/min => ~100 req/min ceiling with headroom.
+  const PACE_MS = 6000;
+  const CANCEL_CHECK_EVERY = 3;
+
+  let created = 0, updated = 0, recreated = 0, skipped = 0, failed = 0, processed = 0;
+  let lastError: string | null = null;
+
+  for (let i = 0; i < ids.length; i++) {
+    // Cancellation check
+    if (i % CANCEL_CHECK_EVERY === 0) {
+      const { data: cur } = await admin
+        .from('crm_clickup_sync_runs')
+        .select('status')
+        .eq('id', runId)
+        .maybeSingle();
+      if (cur?.status === 'cancelled') {
+        await admin.from('crm_clickup_sync_runs').update({
+          finished_at: new Date().toISOString(),
+          last_error: lastError,
+        }).eq('id', runId);
+        return;
+      }
+    }
+
+    const id = ids[i];
+    try {
+      const r = await syncOne(id, fieldMap);
+      if (r.status === 'created') created++;
+      else if (r.status === 'updated') updated++;
+      else if (r.status === 'recreated') recreated++;
+      else skipped++;
+    } catch (e) {
+      failed++;
+      lastError = String((e as Error)?.message ?? e).slice(0, 500);
+      console.error('backfill sync failed for', id, e);
+    }
+    processed++;
+
+    await admin.from('crm_clickup_sync_runs').update({
+      processed,
+      created_count: created,
+      updated_count: updated,
+      recreated_count: recreated,
+      skipped_count: skipped,
+      failed_count: failed,
+      last_error: lastError,
+    }).eq('id', runId);
+
+    if (i < ids.length - 1) await sleep(PACE_MS);
+  }
+
+  await admin.from('crm_clickup_sync_runs').update({
+    status: 'completed',
+    finished_at: new Date().toISOString(),
+  }).eq('id', runId);
+}
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
