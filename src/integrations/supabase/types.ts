@@ -3274,6 +3274,8 @@ export type Database = {
       }
       clients: {
         Row: {
+          clickup_synced_at: string | null
+          clickup_task_id: string | null
           created_at: string
           email: string | null
           id: string
@@ -3311,6 +3313,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          clickup_synced_at?: string | null
+          clickup_task_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -3348,6 +3352,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          clickup_synced_at?: string | null
+          clickup_task_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -4251,6 +4257,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      crm_clickup_field_map: {
+        Row: {
+          created_at: string
+          field_id: string
+          field_name: string
+          field_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          field_name: string
+          field_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          field_name?: string
+          field_type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       crm_conversation_cache: {
         Row: {
@@ -9140,6 +9170,10 @@ export type Database = {
           _user_email: string
         }
         Returns: string
+      }
+      trg_enqueue_clickup_sync: {
+        Args: { p_client_id: string }
+        Returns: undefined
       }
     }
     Enums: {
