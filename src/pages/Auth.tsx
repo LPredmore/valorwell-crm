@@ -59,6 +59,24 @@ export default function Auth() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setIsLoading(true);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/crm/clients` },
+      });
+      if (oauthError) {
+        setError(oauthError.message);
+        setIsLoading(false);
+      }
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
   if (isCheckingSession) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
