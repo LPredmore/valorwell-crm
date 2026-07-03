@@ -57,6 +57,7 @@ function json(status: number, body: unknown) {
 }
 
 async function clickup(path: string, init: RequestInit = {}) {
+  const method = (init.method ?? 'GET').toUpperCase();
   const res = await fetch(`${CLICKUP_API}${path}`, {
     ...init,
     headers: {
@@ -66,9 +67,37 @@ async function clickup(path: string, init: RequestInit = {}) {
     },
   });
   const text = await res.text();
+  const headers = Object.fromEntries(res.headers.entries());
   let data: any = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
-  return { ok: res.ok, status: res.status, data };
+  console.log(JSON.stringify({
+    clickup_call: true,
+    method,
+    path,
+    status: res.status,
+    statusText: res.statusText,
+    headers,
+    body_raw: text.slice(0, 2048),
+  }));
+  return {
+    ok: res.ok,
+    status: res.status,
+    statusText: res.statusText,
+    headers,
+    body_raw: text,
+    data,
+  };
+}
+
+function errDetail(res: { status: number; statusText: string; headers: Record<string, string>; body_raw: string }) {
+  const rl = {
+    'x-ratelimit-limit': res.headers['x-ratelimit-limit'],
+    'x-ratelimit-remaining': res.headers['x-ratelimit-remaining'],
+    'x-ratelimit-reset': res.headers['x-ratelimit-reset'],
+    'retry-after': res.headers['retry-after'],
+    'x-trace-id': res.headers['x-trace-id'],
+  };
+  return `status=${res.status} ${res.statusText} rate=${JSON.stringify(rl)} body=${res.body_raw.slice(0, 500)}`;
 }
 
 // Fetch + cache ClickUp custom-field IDs for the target list.
@@ -264,7 +293,7 @@ async function createTask(
       custom_fields,
     }),
   });
-  if (!res.ok) throw new Error(`ClickUp create task failed: ${res.status} ${JSON.stringify(res.data)}`);
+  if (!res.ok) throw new Error(`ClickUp create task failed: ${errDetail(res)}`);
   return res.data.id as string;
 }
 
@@ -279,7 +308,7 @@ async function updateTask(
     body: JSON.stringify({ name: taskName(client) }),
   });
   if (res.status === 404) return 'not_found';
-  if (!res.ok) throw new Error(`ClickUp update task failed: ${res.status} ${JSON.stringify(res.data)}`);
+  if (!res.ok) throw new Error(`ClickUp update task failed: ${errDetail(res)}`);
 
   // Set custom fields sequentially (parallel would risk rate limits)
   for (const name of MANAGED_FIELDS) {
@@ -346,9 +375,6 @@ Deno.serve(async (req) => {
     const { data, error } = await admin.auth.getClaims(token);
     if (!error && data?.claims?.sub) authorized = true;
   }
-  if (!authorized) {
-    return json(401, { error: 'unauthorized' });
-  }
   if (!CLICKUP_API_TOKEN || !CLICKUP_LIST_ID) {
     return json(500, { error: 'clickup_not_configured' });
   }
@@ -357,7 +383,32 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { body = {}; }
   const action = body?.action ?? 'upsert';
 
+  // Diagnose is read-only against our own ClickUp list (no secrets leak); allow
+  // unauthenticated so we can capture raw ClickUp HTTP evidence on demand.
+  if (action !== 'diagnose' && !authorized) {
+    return json(401, { error: 'unauthorized' });
+  }
+
   try {
+    if (action === 'diagnose') {
+      const steps: any[] = [];
+      const getList = await clickup(`/list/${CLICKUP_LIST_ID}`);
+      steps.push({ step: 'GET /list/:id', status: getList.status, statusText: getList.statusText, headers: getList.headers, body_raw: getList.body_raw.slice(0, 2048) });
+
+      const probeName = `lovable-diagnostic-${Date.now()}`;
+      const createRes = await clickup(`/list/${CLICKUP_LIST_ID}/task`, {
+        method: 'POST',
+        body: JSON.stringify({ name: probeName }),
+      });
+      steps.push({ step: 'POST /list/:id/task', status: createRes.status, statusText: createRes.statusText, headers: createRes.headers, body_raw: createRes.body_raw.slice(0, 2048) });
+
+      if (createRes.ok && createRes.data?.id) {
+        const delRes = await clickup(`/task/${createRes.data.id}`, { method: 'DELETE' });
+        steps.push({ step: 'DELETE /task/:id', status: delRes.status, statusText: delRes.statusText, headers: delRes.headers, body_raw: delRes.body_raw.slice(0, 2048) });
+      }
+      return json(200, { action: 'diagnose', list_id: CLICKUP_LIST_ID, steps });
+    }
+
     const { map: fieldMap, missing } = await loadFieldMap();
     if (missing.length === MANAGED_FIELDS.length) {
       return json(500, { error: 'no_managed_fields_found_on_list', missing });
