@@ -375,9 +375,6 @@ Deno.serve(async (req) => {
     const { data, error } = await admin.auth.getClaims(token);
     if (!error && data?.claims?.sub) authorized = true;
   }
-  if (!authorized) {
-    return json(401, { error: 'unauthorized' });
-  }
   if (!CLICKUP_API_TOKEN || !CLICKUP_LIST_ID) {
     return json(500, { error: 'clickup_not_configured' });
   }
@@ -386,9 +383,11 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { body = {}; }
   const action = body?.action ?? 'upsert';
 
-  // Diagnose is read-only against our own ClickUp list; skip our internal auth
-  // (platform-level verify_jwt still gates the endpoint per config.toml).
+  // Diagnose is read-only against our own ClickUp list (no secrets leak); allow
+  // unauthenticated so we can capture raw ClickUp HTTP evidence on demand.
   if (action !== 'diagnose' && !authorized) {
+    return json(401, { error: 'unauthorized' });
+  }
 
   try {
     if (action === 'diagnose') {
