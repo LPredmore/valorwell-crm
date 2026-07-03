@@ -220,7 +220,7 @@ function buildFieldValues(
   return {
     'Supabase Client ID': client.id,
     'Email': client.email ?? '',
-    'Phone': client.phone ?? '',
+    'Phone': normalizePhone(client.phone),
     'Client Status - EHR': client.pat_status ?? '',
     'State': client.pat_state ?? '',
     'Assigned Therapist': therapistName,
