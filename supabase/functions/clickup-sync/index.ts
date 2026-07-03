@@ -57,6 +57,7 @@ function json(status: number, body: unknown) {
 }
 
 async function clickup(path: string, init: RequestInit = {}) {
+  const method = (init.method ?? 'GET').toUpperCase();
   const res = await fetch(`${CLICKUP_API}${path}`, {
     ...init,
     headers: {
@@ -66,9 +67,37 @@ async function clickup(path: string, init: RequestInit = {}) {
     },
   });
   const text = await res.text();
+  const headers = Object.fromEntries(res.headers.entries());
   let data: any = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
-  return { ok: res.ok, status: res.status, data };
+  console.log(JSON.stringify({
+    clickup_call: true,
+    method,
+    path,
+    status: res.status,
+    statusText: res.statusText,
+    headers,
+    body_raw: text.slice(0, 2048),
+  }));
+  return {
+    ok: res.ok,
+    status: res.status,
+    statusText: res.statusText,
+    headers,
+    body_raw: text,
+    data,
+  };
+}
+
+function errDetail(res: { status: number; statusText: string; headers: Record<string, string>; body_raw: string }) {
+  const rl = {
+    'x-ratelimit-limit': res.headers['x-ratelimit-limit'],
+    'x-ratelimit-remaining': res.headers['x-ratelimit-remaining'],
+    'x-ratelimit-reset': res.headers['x-ratelimit-reset'],
+    'retry-after': res.headers['retry-after'],
+    'x-trace-id': res.headers['x-trace-id'],
+  };
+  return `status=${res.status} ${res.statusText} rate=${JSON.stringify(rl)} body=${res.body_raw.slice(0, 500)}`;
 }
 
 // Fetch + cache ClickUp custom-field IDs for the target list.
