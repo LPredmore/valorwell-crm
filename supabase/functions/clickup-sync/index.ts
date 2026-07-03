@@ -423,9 +423,15 @@ Deno.serve(async (req) => {
 
     if (action === 'backfill') {
       const tenantId = body?.tenant_id as string | undefined;
-      const limit = Math.min(Number(body?.limit ?? 50), 2000);
+      const limit = Math.min(Number(body?.limit ?? 5000), 5000);
       const offset = Math.max(Number(body?.offset ?? 0), 0);
       const onlyUnsynced = Boolean(body?.only_unsynced ?? false);
+      let triggeredBy: string | null = null;
+      if (authHeader.startsWith('Bearer ')) {
+        const { data } = await admin.auth.getClaims(authHeader.slice(7));
+        triggeredBy = (data?.claims?.sub as string) ?? null;
+      }
+
       let q = admin.from('clients').select('id').order('updated_at', { ascending: false }).range(offset, offset + limit - 1);
       if (tenantId) q = q.eq('tenant_id', tenantId);
       if (onlyUnsynced) q = q.is('clickup_task_id', null);
@@ -433,20 +439,45 @@ Deno.serve(async (req) => {
       if (error) throw error;
       const ids = (data ?? []).map((r: { id: string }) => r.id);
 
-      let created = 0, updated = 0, recreated = 0, skipped = 0, failed = 0;
-      for (const id of ids) {
-        try {
-          const r = await syncOne(id, fieldMap);
-          if (r.status === 'created') created++;
-          else if (r.status === 'updated') updated++;
-          else if (r.status === 'recreated') recreated++;
-          else skipped++;
-        } catch (e) {
-          failed++;
-          console.error('backfill sync failed for', id, e);
-        }
-      }
-      return json(200, { total: ids.length, created, updated, recreated, skipped, failed, missing_fields: missing });
+      const { data: runRow, error: runErr } = await admin
+        .from('crm_clickup_sync_runs')
+        .insert({
+          tenant_id: tenantId ?? null,
+          status: 'running',
+          total: ids.length,
+          triggered_by: triggeredBy,
+          options: { only_unsynced: onlyUnsynced, tenant_id: tenantId ?? null, limit, offset },
+        })
+        .select('id')
+        .single();
+      if (runErr) throw runErr;
+      const runId = runRow.id as string;
+
+      // Fire-and-forget background loop; return immediately.
+      // deno-lint-ignore no-explicit-any
+      const runtime = (globalThis as any).EdgeRuntime;
+      const task = processBackfill(runId, ids, fieldMap);
+      if (runtime?.waitUntil) runtime.waitUntil(task); else task.catch((e) => console.error('bg run error', e));
+
+      return new Response(JSON.stringify({ run_id: runId, total: ids.length, missing_fields: missing }), {
+        status: 202,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'backfill_status') {
+      const runId = body?.run_id as string | undefined;
+      if (!runId) return json(400, { error: 'run_id_required' });
+      const { data, error } = await admin.from('crm_clickup_sync_runs').select('*').eq('id', runId).maybeSingle();
+      if (error) throw error;
+      return json(200, { run: data });
+    }
+
+    if (action === 'cancel_backfill') {
+      const runId = body?.run_id as string | undefined;
+      if (!runId) return json(400, { error: 'run_id_required' });
+      await admin.from('crm_clickup_sync_runs').update({ status: 'cancelled', finished_at: new Date().toISOString() }).eq('id', runId).in('status', ['queued', 'running']);
+      return json(200, { ok: true });
     }
 
     return json(400, { error: 'unknown_action', action });
