@@ -328,7 +328,14 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
 
   const provided = req.headers.get('x-cron-secret') ?? '';
-  if (!CRON_SECRET || provided !== CRON_SECRET) {
+  const authHeader = req.headers.get('Authorization') ?? '';
+  let authorized = !!CRON_SECRET && provided === CRON_SECRET;
+  if (!authorized && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    const { data, error } = await admin.auth.getClaims(token);
+    if (!error && data?.claims?.sub) authorized = true;
+  }
+  if (!authorized) {
     return json(401, { error: 'unauthorized' });
   }
   if (!CLICKUP_API_TOKEN || !CLICKUP_LIST_ID) {
