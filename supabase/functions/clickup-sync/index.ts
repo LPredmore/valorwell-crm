@@ -308,7 +308,7 @@ async function updateTask(
     body: JSON.stringify({ name: taskName(client) }),
   });
   if (res.status === 404) return 'not_found';
-  if (!res.ok) throw new Error(`ClickUp update task failed: ${res.status} ${JSON.stringify(res.data)}`);
+  if (!res.ok) throw new Error(`ClickUp update task failed: ${errDetail(res)}`);
 
   // Set custom fields sequentially (parallel would risk rate limits)
   for (const name of MANAGED_FIELDS) {
