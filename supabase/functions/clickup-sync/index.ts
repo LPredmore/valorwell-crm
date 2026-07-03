@@ -164,6 +164,15 @@ function taskName(c: ClientRow): string {
   return `Client ${c.id.slice(0, 8)}`;
 }
 
+function normalizePhone(raw: string | null | undefined): string {
+  if (!raw) return '';
+  const digits = String(raw).replace(/[^\d]/g, '');
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  if (digits.length >= 8 && digits.length <= 15) return `+${digits}`;
+  return '';
+}
+
 async function setCustomField(
   taskId: string,
   field: ClickUpCustomField,
