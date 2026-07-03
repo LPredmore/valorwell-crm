@@ -386,6 +386,10 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { body = {}; }
   const action = body?.action ?? 'upsert';
 
+  // Diagnose is read-only against our own ClickUp list; skip our internal auth
+  // (platform-level verify_jwt still gates the endpoint per config.toml).
+  if (action !== 'diagnose' && !authorized) {
+
   try {
     if (action === 'diagnose') {
       const steps: any[] = [];
