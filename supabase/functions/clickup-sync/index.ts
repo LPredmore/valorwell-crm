@@ -361,9 +361,12 @@ Deno.serve(async (req) => {
 
     if (action === 'backfill') {
       const tenantId = body?.tenant_id as string | undefined;
-      const limit = Math.min(Number(body?.limit ?? 500), 2000);
-      let q = admin.from('clients').select('id').order('updated_at', { ascending: false }).limit(limit);
+      const limit = Math.min(Number(body?.limit ?? 50), 2000);
+      const offset = Math.max(Number(body?.offset ?? 0), 0);
+      const onlyUnsynced = Boolean(body?.only_unsynced ?? false);
+      let q = admin.from('clients').select('id').order('updated_at', { ascending: false }).range(offset, offset + limit - 1);
       if (tenantId) q = q.eq('tenant_id', tenantId);
+      if (onlyUnsynced) q = q.is('clickup_task_id', null);
       const { data, error } = await q;
       if (error) throw error;
       const ids = (data ?? []).map((r: { id: string }) => r.id);
