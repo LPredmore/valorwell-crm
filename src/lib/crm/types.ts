@@ -1,7 +1,6 @@
 // CRM TypeScript interfaces
 
 export type PatStatus = 
-  | 'Active'
   | 'Blacklisted'
   | 'DNC'
   | 'Early Sessions'
