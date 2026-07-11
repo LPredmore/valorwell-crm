@@ -66,10 +66,18 @@ jobs:
             echo "| Build | ${{ steps.build.outcome }} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "${{ steps.typecheck.outcome }}" != "success" ] || \
-             [ "${{ steps.lint.outcome }}" != "success" ] || \
-             [ "${{ steps.test.outcome }}" != "success" ] || \
-             [ "${{ steps.build.outcome }}" != "success" ]; then
-            echo "One or more required checks failed."
-            exit 1
-          fi
+      - name: Require type-check
+        if: always() && steps.typecheck.outcome != 'success'
+        run: exit 1
+
+      - name: Require lint
+        if: always() && steps.lint.outcome != 'success'
+        run: exit 1
+
+      - name: Require tests
+        if: always() && steps.test.outcome != 'success'
+        run: exit 1
+
+      - name: Require build
+        if: always() && steps.build.outcome != 'success'
+        run: exit 1
