@@ -1,0 +1,41 @@
+name: Repository Policy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pull-request-path:
+    name: Required - pull request path
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Confirm pull request validation path
+        if: github.event_name == 'pull_request'
+        run: echo "This change is being validated through a pull request targeting main."
+
+      - name: Verify main commit came through a merged pull request
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          response="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls")"
+
+          if ! echo "${response}" | jq -e 'any(.[]; .merged_at != null and .base.ref == "main")' >/dev/null; then
+            echo "Commit ${GITHUB_SHA} reached main without an associated merged pull request."
+            echo "Use a branch and pull request for future changes."
+            exit 1
+          fi
+
+          echo "Commit ${GITHUB_SHA} is associated with a merged pull request targeting main."
