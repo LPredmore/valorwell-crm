@@ -1,81 +1,71 @@
-## Root cause (diagnosis)
 
-The published site is up to date, so the button exists and the fetch does leave the browser. What's happening is exactly what the error string says: **the browser fetch to the Edge Function fails before a response comes back**.
+# ValorWell CRM Overhaul — Master Execution Plan (Phases P01–P09)
 
-Two structural reasons, both baked into the current backfill design:
+## Ground rules I will follow
 
-1. **The backfill runs synchronously in one HTTP request.** `runBackfill` in `ClickUpConfigPanel.tsx` calls `supabase.functions.invoke('clickup-sync', { body: { action: 'backfill' } })` with no `limit`. The function then defaults to `limit: 50` and, inside a `for` loop, calls `syncOne` per client — each client is ~10 ClickUp HTTP calls (create/update task + one PUT per custom field). That's ~500 sequential outbound HTTP calls in one invocation.
-2. **ClickUp caps us at 100 requests/minute.** 500 calls at 100/min = ~5 minutes minimum. Supabase Edge Functions and the `supabase-js` invoke fetch both cut off well before that (the CPU/wall budget on Edge Runtime is ~150 s and the browser-side fetch is aborted around the same window). When the function is still running, the fetch is terminated client-side and `supabase-js` surfaces exactly the `FunctionsFetchError: Failed to send a request to the Edge Function` you saw. From the preview earlier this manifested the same way, which is why the panel-driven run "worked" only when I invoked it externally in tiny batches.
+- Treat the uploaded spec (`ValorWell_Overhaul_CRM_AI_IDE_Master_Implementation_Spec.md`) as the controlling brief; the CRM repo (this project) is the only surface I modify.
+- **Supabase is out of scope.** All Phase 14 canonical views, RPCs, event tables, contract package, and role interface are assumed live in project `ahqauomkgflopxgnlndd`. I will not run migrations from this repo. If a contract is missing at runtime I stop that phase and record a blocker in its report — I do not stub around it.
+- Regenerate `src/integrations/supabase/types.ts` from the live DB once at P01 start; re-check after any contract change signal.
+- No changes to existing shared table columns. Any new CRM-only persistence needed (e.g., UI prefs) uses the `crm_` prefix — but I don't expect any in this program.
+- One Phase Completion Report per phase (spec §14 template), delivered inline at the end of each phase's work, before starting the next. I run all 9 phases in one continuous pass.
+- Stop-and-report if a phase's Acceptance Criteria cannot be met with the live contracts.
 
-The diagnose run at 06:30 UTC succeeded because it makes only 3 ClickUp calls and returns in ~4 s. That's why the same function/URL/CORS works for diagnose and fails for backfill — the failure isn't auth, CORS, or deploy freshness. It's request duration.
+## Phase-by-phase execution
 
-## The decision
+### P01 — Repository Baseline and Contract Sync
+- Regenerate Supabase types; wire the versioned contract package + role interface into `src/lib/crm/` as the single source for client-state reads.
+- Audit and remove legacy client-status coupling (`PatStatus` enum, `status-config.ts`, direct `clients.pat_status` reads) — replace with canonical Lifecycle / Engagement / At Risk / Eligibility / Contact Policy / Service Policy / Care Cadence / Disposition reads from the contract package.
+- Harden CI (`.github/workflows/ci.yml`): typecheck, lint, unit tests, contract-version assertion.
+- Deliverable: P01 completion report + green CI.
 
-**Convert backfill to a paced background job with a persisted progress row that the UI polls.** Not a client-side batch loop.
+### P02 — Canonical Client Views and Administrative State Changes
+- Replace `useClients`, `ClientTable`, `ClientKanban`, `ClientFilters`, `ClientDetail`, `ClientQuickProfile`, `StatusBadge` reads with canonical view/RPC calls.
+- Route every admin state mutation through the canonical write RPCs (no direct `clients` UPDATE from the app).
+- Update Kanban config + filters to the new Lifecycle × Engagement model.
 
-Why this over the alternatives:
+### P03 — Campaign Engine Contract Migration
+- Migrate `campaign-scheduler` edge function and `useCampaigns*` hooks to the canonical enrollment/step/trigger contracts and the shared outbox.
+- Replace status-based auto-enroll/auto-cancel triggers with Lifecycle/Engagement/At-Risk driven enrollment.
+- Preserve existing tenant-scoped, single-active-campaign, 15-min pg_cron dispatch semantics.
 
-- **Client-side "call backfill with limit=20 in a loop"** works but is fragile. If the user closes the tab, navigates away, or the laptop sleeps, the backfill halts partway through and there's no record of where it stopped. On mobile it will definitely stall. It also hammers the function with N invocations, each subject to the same auth/CORS surface.
-- **A cron-driven drain queue** is the heaviest option and is overkill for a one-off (occasionally re-run) full-list resync of ~641 records.
-- **Background job on the same edge function using `EdgeRuntime.waitUntil`, returning `202` with a `run_id` immediately, writing progress to a `crm_clickup_sync_runs` row, and pacing internally to respect ClickUp's 100/min limit** — this is the pattern Supabase explicitly supports for "long tail after HTTP response" work, matches how the existing scheduler + activity logging are architected (single edge function is the source of truth), and gives the user a real progress bar that survives tab closes. It also naturally rate-limits so we never trip ClickUp's `429` or the `ITEM_246` cap in a burst.
+### P04 — Contact Policy and Communication Suppression
+- Enforce the Communication + Suppression contract in every send path: `helpscout-proxy`, `ringcentral-sms`, bulk email/SMS, campaign scheduler.
+- Implement REMOVE rule + send-time recheck as a shared guard used by all edge functions before dispatch.
+- Update inbox and bulk composers to reflect suppression state and per-class eligibility.
 
-This is the right choice because the problem isn't "the fetch failed" — it's "we tried to do a 5-minute job inside a single HTTP request." Every band-aid that keeps the work inside the request (bigger timeout, retry, smaller batch) is fighting the wrong wall. Moving the work off the request is the fix.
+### P05 — Existing Lifecycle Campaign Migration
+- Port the current lifecycle campaigns (New/Interested/Scheduled/Early Sessions/Established/etc.) onto canonical triggers and templates.
+- Reconcile personalization variables against the canonical client projection.
 
-## Implementation plan
+### P06 — Waitlist and Capacity-Release Campaigns
+- Implement Waitlist and capacity-release campaign definitions from spec §6 / §12-P06 using the canonical enrollment engine and contact policy guard.
 
-### 1. New table: `crm_clickup_sync_runs` (additive, follows `crm_` prefix rule)
+### P07 — At Risk, Engagement, and Follow-Up Campaigns
+- Implement At-Risk, Engagement recovery, and Follow-Up campaigns; wire the At-Risk signal from the canonical view (not from `clients.pat_status`).
 
-```text
-id                uuid PK
-tenant_id         uuid null
-status            text  -- queued | running | completed | failed | cancelled
-total             int   default 0
-processed         int   default 0
-created_count     int   default 0
-updated_count     int   default 0
-recreated_count   int   default 0
-skipped_count     int   default 0
-failed_count      int   default 0
-last_error        text  null
-started_at        timestamptz default now()
-finished_at      timestamptz null
-triggered_by     uuid null      -- auth.uid()
-options          jsonb          -- { only_unsynced, tenant_id, limit }
-```
+### P08 — ClickUp Operations Mirror and Journey Reporting
+- Convert `clickup-sync` into a strictly one-way mirror driven by the canonical event stream / outbox; no CRM→Supabase writes from ClickUp.
+- Keep the existing background `crm_clickup_sync_runs` pattern for sync observability; add the required health/lag surfacing panel.
+- Build the Journey / Historical / Attribution reporting screens under `/crm/reports` reading canonical reporting views only.
 
-Grants: `authenticated` gets `SELECT`; `service_role` gets `ALL`. RLS: authenticated users in a tenant can SELECT their tenant's runs (and rows with `tenant_id IS NULL` triggered by them). Only edge function (service role) writes.
+### P09 — Legacy Cleanup, Security, and End-to-End Validation
+- Delete every legacy path deprecated by P01–P08 (dead hooks, `status-config`, direct table reads, unused edge branches).
+- Security pass: RLS-consumer sanity checks, error handling (§8.3), logging/analytics (§8.4), prohibited-exposure audit (§8.2).
+- Execute the §12-P09 Workstream D end-to-end scenario matrix via Playwright against the published site.
+- Cross-system regression checklist (§Workstream E), release identity + deployment notes (§Workstream B/F), all required signoffs.
 
-### 2. `supabase/functions/clickup-sync/index.ts` changes
+## Verification per phase
 
-- Add action `backfill` behavior: insert a `crm_clickup_sync_runs` row with `status='queued'`, resolve the client id list (respect `tenant_id`, `only_unsynced`), set `total`, flip to `running`, then return `{ run_id, total }` with HTTP 202 **immediately**.
-- Kick the loop off via `EdgeRuntime.waitUntil(processRun(run_id, ids, fieldMap))`.
-- Inside `processRun`: iterate clients, call `syncOne`, increment the appropriate counter columns on the run row after each client (single `update` per client, cheap), and **pace** — a small `await sleep(700)` between clients keeps us comfortably under ClickUp's 100/min ceiling and avoids the `ITEM_246` burst risk. On any thrown error inside the loop, increment `failed_count` and record `last_error`; do not abort the whole run.
-- Add action `backfill_status` (`{ run_id }`) that returns the current row; used only as a fallback — normally the UI subscribes via Realtime.
-- Add action `cancel_backfill` (`{ run_id }`) that sets `status='cancelled'`; the loop checks this flag every N clients and exits cleanly.
-- Keep `diagnose` unchanged and still auth-optional.
+For each phase I will:
+1. Run `tsgo` + vitest + the phase's targeted Playwright scenarios against `http://localhost:8080` (authenticated with the injected Supabase session).
+2. Verify against the phase's Acceptance Criteria + Release Gate verbatim.
+3. Produce the spec §14 Phase Completion Report (phase id, release identity, contract identity, reconciliation notes, changes, tests, data reconciliation, security/privacy, production validation, blockers, rollback, next-phase readiness).
 
-### 3. `ClickUpConfigPanel.tsx` UX
+## Assumptions I am locking in (call out now if any is wrong)
 
-- Click "Sync all clients now" → call `backfill`, receive `run_id`, store it, disable the button while a run is `queued`/`running`.
-- Subscribe to `crm_clickup_sync_runs` for that `run_id` via Supabase Realtime (inside a `useEffect` with `removeChannel` cleanup, per project convention). Fall back to a 3 s poll if the row hasn't changed in 15 s.
-- Show progress bar: `processed / total`, plus a compact line "created X · updated Y · recreated Z · failed F".
-- Add a "Cancel" button while running.
-- On mount, look up the most recent run for this tenant and re-attach if it's still `running` — so refreshing the tab or coming back later shows live progress.
-- Keep the existing "Required custom fields" and `lastResult` panels; render the last completed run summary there instead of raw JSON.
+1. All canonical Supabase views, RPCs, event tables, outbox, and the versioned contract package + role interface exist and are queryable from the anon/authenticated roles the CRM uses.
+2. `crm.valorwell.org` is the deployment target; publishing happens via Lovable after each phase's green build.
+3. I own only files under this repo. Anything requiring a Supabase migration becomes a blocker on that phase's report, not a stub.
+4. Existing background patterns kept intact where the spec doesn't replace them (ClickUp sync runs, campaign scheduler cadence, bulk send pacing).
 
-### 4. Realtime enablement
-
-`ALTER PUBLICATION supabase_realtime ADD TABLE public.crm_clickup_sync_runs;` in the same migration.
-
-### 5. Verification
-
-- Deploy function, run backfill from the published site with only 5 unsynced clients (temp `limit: 5`) — expect immediate 202, progress row ticks 1→5, ClickUp task_count rises by 5.
-- Run full 621-client backfill from the published site, close the tab, reopen Settings → progress bar reattaches and continues.
-- Confirm no `ITEM_246` and no `429` in `clickup_call` logs during a full run.
-
-## Technical notes
-
-- We are **not** modifying any existing columns on `clients` or any shared table. `crm_clickup_sync_runs` is a new CRM-prefixed table with its own foreign-keyed `tenant_id`.
-- Pacing at 700 ms/client gives ~85 req/min against the 100/min ClickUp ceiling with headroom for retries.
-- `EdgeRuntime.waitUntil` keeps the isolate alive after the response is sent; this is the documented Supabase pattern for post-response work and is already used elsewhere in the codebase for logging.
-- No frontend business-logic changes outside `ClickUpConfigPanel.tsx`. No changes to `syncOne`, the per-client triggers, or the `clickup_task_id` idempotency contract.
+On approval I begin P01 immediately and run straight through to P09, posting each Completion Report inline as I finish that phase.
