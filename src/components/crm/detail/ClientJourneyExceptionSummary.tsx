@@ -92,7 +92,7 @@ export function ClientJourneyExceptionSummary({ clientId, tenantId }: { clientId
         {exceptions.slice(0, 3).map((exception) => (
           <div key={exception.id} className="rounded-md border p-3 space-y-1">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium capitalize">{exception.reason_code.replaceAll('_', ' ')}</span>
+              <span className="text-sm font-medium capitalize">{exception.reason_code.replace(/_/g, ' ')}</span>
               {exception.overdue && <Badge variant="destructive">Overdue</Badge>}
             </div>
             <p className="text-sm text-muted-foreground">{exception.reason_detail}</p>
