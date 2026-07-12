@@ -380,6 +380,13 @@ export type Database = {
             foreignKeyName: "appointment_series_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "appointment_series_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -606,6 +613,13 @@ export type Database = {
             foreignKeyName: "appointments_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "appointments_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -635,6 +649,169 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backend_contract_consumers: {
+        Row: {
+          adopted_application_version: string | null
+          adopted_commit_sha: string | null
+          blocker_detail: string | null
+          consumer_name: string
+          contract_release_id: string
+          created_at: string
+          id: string
+          repository_name: string | null
+          required: boolean
+          retired_legacy_contracts: string[]
+          status: Database["public"]["Enums"]["contract_consumer_status_enum"]
+          updated_at: string
+          validated_at: string | null
+          validated_by_profile_id: string | null
+          validation_evidence: Json
+        }
+        Insert: {
+          adopted_application_version?: string | null
+          adopted_commit_sha?: string | null
+          blocker_detail?: string | null
+          consumer_name: string
+          contract_release_id: string
+          created_at?: string
+          id?: string
+          repository_name?: string | null
+          required?: boolean
+          retired_legacy_contracts?: string[]
+          status?: Database["public"]["Enums"]["contract_consumer_status_enum"]
+          updated_at?: string
+          validated_at?: string | null
+          validated_by_profile_id?: string | null
+          validation_evidence?: Json
+        }
+        Update: {
+          adopted_application_version?: string | null
+          adopted_commit_sha?: string | null
+          blocker_detail?: string | null
+          consumer_name?: string
+          contract_release_id?: string
+          created_at?: string
+          id?: string
+          repository_name?: string | null
+          required?: boolean
+          retired_legacy_contracts?: string[]
+          status?: Database["public"]["Enums"]["contract_consumer_status_enum"]
+          updated_at?: string
+          validated_at?: string | null
+          validated_by_profile_id?: string | null
+          validation_evidence?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backend_contract_consumers_contract_release_id_fkey"
+            columns: ["contract_release_id"]
+            isOneToOne: false
+            referencedRelation: "backend_contract_releases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backend_contract_consumers_validated_by_profile_id_fkey"
+            columns: ["validated_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "backend_contract_consumers_validated_by_profile_id_fkey"
+            columns: ["validated_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backend_contract_releases: {
+        Row: {
+          contract_key: string
+          contract_version: string
+          created_at: string
+          deprecated_at: string | null
+          domain: string
+          enums: Json
+          events: Json
+          generated_types_hash: string | null
+          id: string
+          migration_version: string | null
+          permissions: Json
+          published_at: string | null
+          published_by_profile_id: string | null
+          reason_codes: Json
+          release_notes: string | null
+          retired_at: string | null
+          rpcs: Json
+          schema_objects: Json
+          status: Database["public"]["Enums"]["contract_release_status_enum"]
+          updated_at: string
+          views: Json
+        }
+        Insert: {
+          contract_key: string
+          contract_version: string
+          created_at?: string
+          deprecated_at?: string | null
+          domain: string
+          enums?: Json
+          events?: Json
+          generated_types_hash?: string | null
+          id?: string
+          migration_version?: string | null
+          permissions?: Json
+          published_at?: string | null
+          published_by_profile_id?: string | null
+          reason_codes?: Json
+          release_notes?: string | null
+          retired_at?: string | null
+          rpcs?: Json
+          schema_objects?: Json
+          status?: Database["public"]["Enums"]["contract_release_status_enum"]
+          updated_at?: string
+          views?: Json
+        }
+        Update: {
+          contract_key?: string
+          contract_version?: string
+          created_at?: string
+          deprecated_at?: string | null
+          domain?: string
+          enums?: Json
+          events?: Json
+          generated_types_hash?: string | null
+          id?: string
+          migration_version?: string | null
+          permissions?: Json
+          published_at?: string | null
+          published_by_profile_id?: string | null
+          reason_codes?: Json
+          release_notes?: string | null
+          retired_at?: string | null
+          rpcs?: Json
+          schema_objects?: Json
+          status?: Database["public"]["Enums"]["contract_release_status_enum"]
+          updated_at?: string
+          views?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backend_contract_releases_published_by_profile_id_fkey"
+            columns: ["published_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "backend_contract_releases_published_by_profile_id_fkey"
+            columns: ["published_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1335,6 +1512,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "claims_client_insurance_id_fkey"
+            columns: ["client_insurance_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_operations"
+            referencedColumns: ["current_insurance_id"]
+          },
+          {
             foreignKeyName: "claims_original_claim_id_fkey"
             columns: ["original_claim_id"]
             isOneToOne: false
@@ -1364,6 +1548,76 @@ export type Database = {
           },
           {
             foreignKeyName: "claims_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clickup_client_mirror_state: {
+        Row: {
+          canonical_payload_hash: string | null
+          clickup_task_id: string | null
+          client_id: string
+          consecutive_failure_count: number
+          created_at: string
+          last_attempted_sync_at: string | null
+          last_error_code: string | null
+          last_error_detail: string | null
+          last_outbox_event_id: string | null
+          last_successful_sync_at: string | null
+          remote_deleted_at: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          canonical_payload_hash?: string | null
+          clickup_task_id?: string | null
+          client_id: string
+          consecutive_failure_count?: number
+          created_at?: string
+          last_attempted_sync_at?: string | null
+          last_error_code?: string | null
+          last_error_detail?: string | null
+          last_outbox_event_id?: string | null
+          last_successful_sync_at?: string | null
+          remote_deleted_at?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          canonical_payload_hash?: string | null
+          clickup_task_id?: string | null
+          client_id?: string
+          consecutive_failure_count?: number
+          created_at?: string
+          last_attempted_sync_at?: string | null
+          last_error_code?: string | null
+          last_error_detail?: string | null
+          last_outbox_event_id?: string | null
+          last_successful_sync_at?: string | null
+          remote_deleted_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clickup_client_mirror_state_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clickup_client_mirror_state_last_outbox_event_id_fkey"
+            columns: ["last_outbox_event_id"]
+            isOneToOne: false
+            referencedRelation: "integration_outbox"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clickup_client_mirror_state_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1447,6 +1701,85 @@ export type Database = {
             columns: ["treatment_plan_id"]
             isOneToOne: false
             referencedRelation: "client_treatment_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_at_risk_evaluation_log: {
+        Row: {
+          anchor_at: string | null
+          care_cadence: Database["public"]["Enums"]["client_care_cadence_enum"]
+          client_id: string
+          created_at: string
+          evaluated_at: string
+          evaluation_run_key: string
+          evaluator_version: number
+          evidence: Json
+          id: string
+          lifecycle_stage: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+          next_future_appointment_id: string | null
+          reason_codes: string[]
+          should_be_at_risk: boolean
+          source: string
+          tenant_id: string
+          threshold_days: number
+        }
+        Insert: {
+          anchor_at?: string | null
+          care_cadence: Database["public"]["Enums"]["client_care_cadence_enum"]
+          client_id: string
+          created_at?: string
+          evaluated_at?: string
+          evaluation_run_key: string
+          evaluator_version?: number
+          evidence?: Json
+          id?: string
+          lifecycle_stage: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+          next_future_appointment_id?: string | null
+          reason_codes?: string[]
+          should_be_at_risk: boolean
+          source: string
+          tenant_id: string
+          threshold_days: number
+        }
+        Update: {
+          anchor_at?: string | null
+          care_cadence?: Database["public"]["Enums"]["client_care_cadence_enum"]
+          client_id?: string
+          created_at?: string
+          evaluated_at?: string
+          evaluation_run_key?: string
+          evaluator_version?: number
+          evidence?: Json
+          id?: string
+          lifecycle_stage?: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+          next_future_appointment_id?: string | null
+          reason_codes?: string[]
+          should_be_at_risk?: boolean
+          source?: string
+          tenant_id?: string
+          threshold_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_at_risk_evaluation_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_at_risk_evaluation_log_next_future_appointment_id_fkey"
+            columns: ["next_future_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_at_risk_evaluation_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -1708,6 +2041,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "client_form_assignments_assigned_by_profile_id_fkey"
+            columns: ["assigned_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "client_form_assignments_assigned_by_profile_id_fkey"
             columns: ["assigned_by_profile_id"]
@@ -2067,6 +2407,13 @@ export type Database = {
             foreignKeyName: "client_history_forms_submitted_by_profile_id_fkey"
             columns: ["submitted_by_profile_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_history_forms_submitted_by_profile_id_fkey"
+            columns: ["submitted_by_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2274,6 +2621,7 @@ export type Database = {
           deductible_amount: number | null
           deductible_met: number | null
           effective_date: string | null
+          eligibility_verification_version: number
           has_other_coverage: boolean | null
           id: string
           ins_addr_1: string | null
@@ -2319,6 +2667,7 @@ export type Database = {
           deductible_amount?: number | null
           deductible_met?: number | null
           effective_date?: string | null
+          eligibility_verification_version?: number
           has_other_coverage?: boolean | null
           id?: string
           ins_addr_1?: string | null
@@ -2364,6 +2713,7 @@ export type Database = {
           deductible_amount?: number | null
           deductible_met?: number | null
           effective_date?: string | null
+          eligibility_verification_version?: number
           has_other_coverage?: boolean | null
           id?: string
           ins_addr_1?: string | null
@@ -2417,6 +2767,558 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      client_insurance_deferment_acknowledgements: {
+        Row: {
+          acknowledged_at: string
+          acknowledged_by_profile_id: string
+          acknowledgement_text: string
+          acknowledgement_version: string
+          client_id: string
+          client_insurance_id: string
+          created_at: string
+          eligibility_check_id: string
+          id: string
+          outcome: Database["public"]["Enums"]["insurance_eligibility_outcome_enum"]
+          superseded_at: string | null
+          tenant_id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          acknowledged_by_profile_id: string
+          acknowledgement_text: string
+          acknowledgement_version?: string
+          client_id: string
+          client_insurance_id: string
+          created_at?: string
+          eligibility_check_id: string
+          id?: string
+          outcome: Database["public"]["Enums"]["insurance_eligibility_outcome_enum"]
+          superseded_at?: string | null
+          tenant_id: string
+        }
+        Update: {
+          acknowledged_at?: string
+          acknowledged_by_profile_id?: string
+          acknowledgement_text?: string
+          acknowledgement_version?: string
+          client_id?: string
+          client_insurance_id?: string
+          created_at?: string
+          eligibility_check_id?: string
+          id?: string
+          outcome?: Database["public"]["Enums"]["insurance_eligibility_outcome_enum"]
+          superseded_at?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_insurance_deferment_ackn_acknowledged_by_profile_id_fkey"
+            columns: ["acknowledged_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_insurance_deferment_ackn_acknowledged_by_profile_id_fkey"
+            columns: ["acknowledged_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_insurance_deferment_acknowledg_eligibility_check_id_fkey"
+            columns: ["eligibility_check_id"]
+            isOneToOne: false
+            referencedRelation: "eligibility_checks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_insurance_deferment_acknowledge_client_insurance_id_fkey"
+            columns: ["client_insurance_id"]
+            isOneToOne: false
+            referencedRelation: "client_insurance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_insurance_deferment_acknowledge_client_insurance_id_fkey"
+            columns: ["client_insurance_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_operations"
+            referencedColumns: ["current_insurance_id"]
+          },
+          {
+            foreignKeyName: "client_insurance_deferment_acknowledgements_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_insurance_deferment_acknowledgements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_journey_exception_history: {
+        Row: {
+          action: string
+          change_note: string | null
+          change_source: string
+          changed_by_profile_id: string | null
+          client_id: string
+          created_at: string
+          exception_id: string
+          id: number
+          new_owner_profile_id: string | null
+          new_resolution_state: string
+          previous_owner_profile_id: string | null
+          previous_resolution_state: string | null
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          change_note?: string | null
+          change_source: string
+          changed_by_profile_id?: string | null
+          client_id: string
+          created_at?: string
+          exception_id: string
+          id?: never
+          new_owner_profile_id?: string | null
+          new_resolution_state: string
+          previous_owner_profile_id?: string | null
+          previous_resolution_state?: string | null
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          change_note?: string | null
+          change_source?: string
+          changed_by_profile_id?: string | null
+          client_id?: string
+          created_at?: string
+          exception_id?: string
+          id?: never
+          new_owner_profile_id?: string | null
+          new_resolution_state?: string
+          previous_owner_profile_id?: string | null
+          previous_resolution_state?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_journey_exception_history_changed_by_profile_id_fkey"
+            columns: ["changed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_journey_exception_history_changed_by_profile_id_fkey"
+            columns: ["changed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exception_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exception_history_exception_id_fkey"
+            columns: ["exception_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exception_history_exception_id_fkey"
+            columns: ["exception_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exceptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exception_history_new_owner_profile_id_fkey"
+            columns: ["new_owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_journey_exception_history_new_owner_profile_id_fkey"
+            columns: ["new_owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exception_history_previous_owner_profile_id_fkey"
+            columns: ["previous_owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_journey_exception_history_previous_owner_profile_id_fkey"
+            columns: ["previous_owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_journey_exception_reason_catalog: {
+        Row: {
+          automation_key: string | null
+          category: string
+          created_at: string
+          default_next_action: string
+          default_sla: string
+          is_active: boolean
+          label: string
+          reason_code: string
+          updated_at: string
+        }
+        Insert: {
+          automation_key?: string | null
+          category: string
+          created_at?: string
+          default_next_action: string
+          default_sla: string
+          is_active?: boolean
+          label: string
+          reason_code: string
+          updated_at?: string
+        }
+        Update: {
+          automation_key?: string | null
+          category?: string
+          created_at?: string
+          default_next_action?: string
+          default_sla?: string
+          is_active?: boolean
+          label?: string
+          reason_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_journey_exceptions: {
+        Row: {
+          category: string
+          client_id: string
+          created_at: string
+          created_by_profile_id: string | null
+          evidence: Json
+          exception_type: string
+          id: string
+          next_action: string
+          owner_profile_id: string | null
+          reason_code: string
+          reason_detail: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          resolution_note: string | null
+          resolution_state: string
+          resolved_at: string | null
+          resolved_by_profile_id: string | null
+          review_due_at: string
+          run_key: string | null
+          source: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          client_id: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          evidence?: Json
+          exception_type?: string
+          id?: string
+          next_action: string
+          owner_profile_id?: string | null
+          reason_code: string
+          reason_detail: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          resolution_note?: string | null
+          resolution_state?: string
+          resolved_at?: string | null
+          resolved_by_profile_id?: string | null
+          review_due_at: string
+          run_key?: string | null
+          source?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          client_id?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          evidence?: Json
+          exception_type?: string
+          id?: string
+          next_action?: string
+          owner_profile_id?: string | null
+          reason_code?: string
+          reason_detail?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          resolution_note?: string | null
+          resolution_state?: string
+          resolved_at?: string | null
+          resolved_by_profile_id?: string | null
+          review_due_at?: string
+          run_key?: string | null
+          source?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_journey_exceptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_resolved_by_profile_id_fkey"
+            columns: ["resolved_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_resolved_by_profile_id_fkey"
+            columns: ["resolved_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_run_key_fkey"
+            columns: ["run_key"]
+            isOneToOne: false
+            referencedRelation: "client_journey_phase4_runs"
+            referencedColumns: ["run_key"]
+          },
+        ]
+      }
+      client_journey_phase4_reconciliation: {
+        Row: {
+          application_result: string | null
+          applied_at: string | null
+          assigned_staff: boolean
+          client_id: string
+          conversion_old_status: string | null
+          documented_sessions: number
+          emergency_contact_complete: boolean
+          evaluated_at: string
+          evidence: Json
+          future_scheduled_appointments: number
+          inferred_at_risk: boolean
+          inferred_at_risk_anchor_at: string | null
+          inferred_at_risk_since: string | null
+          inferred_closed_at: string | null
+          inferred_closure_reason:
+            | Database["public"]["Enums"]["client_closure_reason_enum"]
+            | null
+          inferred_contact_policy: Database["public"]["Enums"]["client_contact_policy_enum"]
+          inferred_eligibility_state: Database["public"]["Enums"]["client_eligibility_state_enum"]
+          inferred_engagement_state: Database["public"]["Enums"]["client_engagement_state_enum"]
+          inferred_lifecycle_stage:
+            | Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+            | null
+          inferred_service_policy: Database["public"]["Enums"]["client_service_policy_enum"]
+          latest_eligibility_status: string | null
+          latest_engagement_signal: string | null
+          latest_qualifying_activity_at: string | null
+          latest_scheduled_at: string | null
+          legacy_stage_signal: string | null
+          legacy_status: string | null
+          lifecycle_rationale: string
+          review_reason_codes: string[]
+          run_key: string
+          scheduled_appointments: number
+          state_rationale: string
+          submitted_intake: boolean
+          tenant_id: string
+        }
+        Insert: {
+          application_result?: string | null
+          applied_at?: string | null
+          assigned_staff?: boolean
+          client_id: string
+          conversion_old_status?: string | null
+          documented_sessions?: number
+          emergency_contact_complete?: boolean
+          evaluated_at?: string
+          evidence?: Json
+          future_scheduled_appointments?: number
+          inferred_at_risk: boolean
+          inferred_at_risk_anchor_at?: string | null
+          inferred_at_risk_since?: string | null
+          inferred_closed_at?: string | null
+          inferred_closure_reason?:
+            | Database["public"]["Enums"]["client_closure_reason_enum"]
+            | null
+          inferred_contact_policy: Database["public"]["Enums"]["client_contact_policy_enum"]
+          inferred_eligibility_state: Database["public"]["Enums"]["client_eligibility_state_enum"]
+          inferred_engagement_state: Database["public"]["Enums"]["client_engagement_state_enum"]
+          inferred_lifecycle_stage?:
+            | Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+            | null
+          inferred_service_policy: Database["public"]["Enums"]["client_service_policy_enum"]
+          latest_eligibility_status?: string | null
+          latest_engagement_signal?: string | null
+          latest_qualifying_activity_at?: string | null
+          latest_scheduled_at?: string | null
+          legacy_stage_signal?: string | null
+          legacy_status?: string | null
+          lifecycle_rationale: string
+          review_reason_codes?: string[]
+          run_key: string
+          scheduled_appointments?: number
+          state_rationale: string
+          submitted_intake?: boolean
+          tenant_id: string
+        }
+        Update: {
+          application_result?: string | null
+          applied_at?: string | null
+          assigned_staff?: boolean
+          client_id?: string
+          conversion_old_status?: string | null
+          documented_sessions?: number
+          emergency_contact_complete?: boolean
+          evaluated_at?: string
+          evidence?: Json
+          future_scheduled_appointments?: number
+          inferred_at_risk?: boolean
+          inferred_at_risk_anchor_at?: string | null
+          inferred_at_risk_since?: string | null
+          inferred_closed_at?: string | null
+          inferred_closure_reason?:
+            | Database["public"]["Enums"]["client_closure_reason_enum"]
+            | null
+          inferred_contact_policy?: Database["public"]["Enums"]["client_contact_policy_enum"]
+          inferred_eligibility_state?: Database["public"]["Enums"]["client_eligibility_state_enum"]
+          inferred_engagement_state?: Database["public"]["Enums"]["client_engagement_state_enum"]
+          inferred_lifecycle_stage?:
+            | Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+            | null
+          inferred_service_policy?: Database["public"]["Enums"]["client_service_policy_enum"]
+          latest_eligibility_status?: string | null
+          latest_engagement_signal?: string | null
+          latest_qualifying_activity_at?: string | null
+          latest_scheduled_at?: string | null
+          legacy_stage_signal?: string | null
+          legacy_status?: string | null
+          lifecycle_rationale?: string
+          review_reason_codes?: string[]
+          run_key?: string
+          scheduled_appointments?: number
+          state_rationale?: string
+          submitted_intake?: boolean
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_journey_phase4_reconciliation_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_phase4_reconciliation_run_key_fkey"
+            columns: ["run_key"]
+            isOneToOne: false
+            referencedRelation: "client_journey_phase4_runs"
+            referencedColumns: ["run_key"]
+          },
+        ]
+      }
+      client_journey_phase4_runs: {
+        Row: {
+          clients_requiring_review: number | null
+          completed_at: string | null
+          created_at: string
+          report: Json
+          resolved_lifecycle_clients: number | null
+          run_key: string
+          scope_before: string
+          started_at: string
+          total_clients: number | null
+          unresolved_lifecycle_clients: number | null
+          updated_at: string
+        }
+        Insert: {
+          clients_requiring_review?: number | null
+          completed_at?: string | null
+          created_at?: string
+          report?: Json
+          resolved_lifecycle_clients?: number | null
+          run_key: string
+          scope_before: string
+          started_at?: string
+          total_clients?: number | null
+          unresolved_lifecycle_clients?: number | null
+          updated_at?: string
+        }
+        Update: {
+          clients_requiring_review?: number | null
+          completed_at?: string | null
+          created_at?: string
+          report?: Json
+          resolved_lifecycle_clients?: number | null
+          run_key?: string
+          scope_before?: string
+          started_at?: string
+          total_clients?: number | null
+          unresolved_lifecycle_clients?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       client_payment_links: {
         Row: {
@@ -2879,6 +3781,302 @@ export type Database = {
           },
         ]
       }
+      client_provider_demand: {
+        Row: {
+          client_age: number | null
+          client_id: string
+          client_state: Database["public"]["Enums"]["state_code_enum"] | null
+          created_at: string
+          id: string
+          last_evaluated_at: string
+          last_evaluation_source: string | null
+          last_option_count: number
+          opened_at: string
+          pathway_code: string
+          provider_fit_context: Json
+          reason_code: string
+          release_notification_state: string
+          release_notified_at: string | null
+          resolution_reason: string | null
+          resolved_at: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_age?: number | null
+          client_id: string
+          client_state?: Database["public"]["Enums"]["state_code_enum"] | null
+          created_at?: string
+          id?: string
+          last_evaluated_at?: string
+          last_evaluation_source?: string | null
+          last_option_count?: number
+          opened_at?: string
+          pathway_code: string
+          provider_fit_context?: Json
+          reason_code?: string
+          release_notification_state?: string
+          release_notified_at?: string | null
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_age?: number | null
+          client_id?: string
+          client_state?: Database["public"]["Enums"]["state_code_enum"] | null
+          created_at?: string
+          id?: string
+          last_evaluated_at?: string
+          last_evaluation_source?: string | null
+          last_option_count?: number
+          opened_at?: string
+          pathway_code?: string
+          provider_fit_context?: Json
+          reason_code?: string
+          release_notification_state?: string
+          release_notified_at?: string | null
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_provider_demand_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_provider_demand_reevaluation_queue: {
+        Row: {
+          attempts: number
+          available_at: string
+          client_id: string | null
+          client_state: Database["public"]["Enums"]["state_code_enum"] | null
+          created_at: string
+          dedupe_key: string
+          enqueued_at: string
+          id: string
+          last_error: string | null
+          locked_at: string | null
+          pathway_code: string | null
+          payload: Json
+          processed_at: string | null
+          reason_code: string
+          scope_type: string
+          staff_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          available_at?: string
+          client_id?: string | null
+          client_state?: Database["public"]["Enums"]["state_code_enum"] | null
+          created_at?: string
+          dedupe_key: string
+          enqueued_at?: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          pathway_code?: string | null
+          payload?: Json
+          processed_at?: string | null
+          reason_code: string
+          scope_type: string
+          staff_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          available_at?: string
+          client_id?: string | null
+          client_state?: Database["public"]["Enums"]["state_code_enum"] | null
+          created_at?: string
+          dedupe_key?: string
+          enqueued_at?: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          pathway_code?: string | null
+          payload?: Json
+          processed_at?: string | null
+          reason_code?: string
+          scope_type?: string
+          staff_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_provider_demand_reevaluation_queue_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_provider_demand_reevaluation_queue_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_provider_demand_release_notifications: {
+        Row: {
+          attempts: number
+          available_at: string
+          client_id: string
+          created_at: string
+          demand_id: string
+          dispatched_at: string | null
+          id: string
+          last_error: string | null
+          sent_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          available_at?: string
+          client_id: string
+          created_at?: string
+          demand_id: string
+          dispatched_at?: string | null
+          id?: string
+          last_error?: string | null
+          sent_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          available_at?: string
+          client_id?: string
+          created_at?: string
+          demand_id?: string
+          dispatched_at?: string | null
+          id?: string
+          last_error?: string | null
+          sent_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_provider_demand_release_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_provider_demand_release_notifications_demand_id_fkey"
+            columns: ["demand_id"]
+            isOneToOne: true
+            referencedRelation: "client_provider_demand"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_provider_demand_release_notifications_demand_id_fkey"
+            columns: ["demand_id"]
+            isOneToOne: true
+            referencedRelation: "client_provider_demand_operations_v"
+            referencedColumns: ["demand_id"]
+          },
+        ]
+      }
+      client_qualifying_sessions: {
+        Row: {
+          appointment_id: string
+          client_id: string
+          created_at: string
+          disqualification_reason: string | null
+          documented_at: string
+          id: string
+          ordinal_for_client: number | null
+          qualification_version: number
+          qualifies: boolean
+          source: string
+          source_event_key: string | null
+          staff_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          client_id: string
+          created_at?: string
+          disqualification_reason?: string | null
+          documented_at: string
+          id?: string
+          ordinal_for_client?: number | null
+          qualification_version?: number
+          qualifies?: boolean
+          source: string
+          source_event_key?: string | null
+          staff_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          client_id?: string
+          created_at?: string
+          disqualification_reason?: string | null
+          documented_at?: string
+          id?: string
+          ordinal_for_client?: number | null
+          qualification_version?: number
+          qualifies?: boolean
+          source?: string
+          source_event_key?: string | null
+          staff_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_qualifying_sessions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_qualifying_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_qualifying_sessions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_qualifying_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_related_persons: {
         Row: {
           addr_1: string | null
@@ -3014,6 +4212,13 @@ export type Database = {
             foreignKeyName: "client_safety_plans_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_safety_plans_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3026,6 +4231,82 @@ export type Database = {
           },
         ]
       }
+      client_staff_relationships: {
+        Row: {
+          client_id: string
+          created_at: string
+          end_reason: string | null
+          ended_at: string | null
+          first_scheduled_appointment_id: string | null
+          id: string
+          relationship_type: string
+          scheduling_branch: string | null
+          scheduling_expected_by: string | null
+          scheduling_moved_at: string | null
+          source: string
+          staff_id: string
+          started_at: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          end_reason?: string | null
+          ended_at?: string | null
+          first_scheduled_appointment_id?: string | null
+          id?: string
+          relationship_type?: string
+          scheduling_branch?: string | null
+          scheduling_expected_by?: string | null
+          scheduling_moved_at?: string | null
+          source: string
+          staff_id: string
+          started_at?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          end_reason?: string | null
+          ended_at?: string | null
+          first_scheduled_appointment_id?: string | null
+          id?: string
+          relationship_type?: string
+          scheduling_branch?: string | null
+          scheduling_expected_by?: string | null
+          scheduling_moved_at?: string | null
+          source?: string
+          staff_id?: string
+          started_at?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_staff_relationship_first_appointment_fkey"
+            columns: ["first_scheduled_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_staff_relationships_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_staff_relationships_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_status_history: {
         Row: {
           changed_at: string
@@ -3033,10 +4314,11 @@ export type Database = {
           client_id: string
           created_at: string
           id: string
-          new_status: Database["public"]["Enums"]["pat_status_enum"]
-          old_status: Database["public"]["Enums"]["pat_status_enum"] | null
+          new_status: string | null
+          old_status: string | null
           reason: string | null
           source: string
+          state_dimension: Database["public"]["Enums"]["client_state_dimension_enum"]
           tenant_id: string
         }
         Insert: {
@@ -3045,10 +4327,11 @@ export type Database = {
           client_id: string
           created_at?: string
           id?: string
-          new_status: Database["public"]["Enums"]["pat_status_enum"]
-          old_status?: Database["public"]["Enums"]["pat_status_enum"] | null
+          new_status?: string | null
+          old_status?: string | null
           reason?: string | null
           source?: string
+          state_dimension?: Database["public"]["Enums"]["client_state_dimension_enum"]
           tenant_id: string
         }
         Update: {
@@ -3057,10 +4340,11 @@ export type Database = {
           client_id?: string
           created_at?: string
           id?: string
-          new_status?: Database["public"]["Enums"]["pat_status_enum"]
-          old_status?: Database["public"]["Enums"]["pat_status_enum"] | null
+          new_status?: string | null
+          old_status?: string | null
           reason?: string | null
           source?: string
+          state_dimension?: Database["public"]["Enums"]["client_state_dimension_enum"]
           tenant_id?: string
         }
         Relationships: [
@@ -3132,6 +4416,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_telehealth_consents_signed_by_profile_id_fkey"
+            columns: ["signed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "client_telehealth_consents_signed_by_profile_id_fkey"
@@ -3246,6 +4537,13 @@ export type Database = {
             foreignKeyName: "client_treatment_plans_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_treatment_plans_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3274,14 +4572,31 @@ export type Database = {
       }
       clients: {
         Row: {
+          at_risk: boolean
+          at_risk_anchor_at: string | null
+          at_risk_since: string | null
+          care_cadence: Database["public"]["Enums"]["client_care_cadence_enum"]
+          care_cadence_changed_at: string
           clickup_synced_at: string | null
           clickup_task_id: string | null
+          closed_at: string | null
+          closure_reason:
+            | Database["public"]["Enums"]["client_closure_reason_enum"]
+            | null
+          contact_policy: Database["public"]["Enums"]["client_contact_policy_enum"]
+          contact_policy_changed_at: string
           created_at: string
+          eligibility_state: Database["public"]["Enums"]["client_eligibility_state_enum"]
+          eligibility_state_changed_at: string
           email: string | null
+          engagement_state: Database["public"]["Enums"]["client_engagement_state_enum"]
+          engagement_state_changed_at: string
           id: string
           last_contact_at: string | null
           last_contact_channel: string | null
           last_contact_direction: string | null
+          lifecycle_stage: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+          lifecycle_stage_changed_at: string
           pat_addr_1: string | null
           pat_addr_2: string | null
           pat_age: number | null
@@ -3307,20 +4622,39 @@ export type Database = {
           primary_staff_id: string | null
           profile_id: string
           referral_source: string | null
+          service_policy: Database["public"]["Enums"]["client_service_policy_enum"]
+          service_policy_changed_at: string
           status_changed_at: string | null
           tags: string | null
           tenant_id: string
           updated_at: string
         }
         Insert: {
+          at_risk?: boolean
+          at_risk_anchor_at?: string | null
+          at_risk_since?: string | null
+          care_cadence?: Database["public"]["Enums"]["client_care_cadence_enum"]
+          care_cadence_changed_at?: string
           clickup_synced_at?: string | null
           clickup_task_id?: string | null
+          closed_at?: string | null
+          closure_reason?:
+            | Database["public"]["Enums"]["client_closure_reason_enum"]
+            | null
+          contact_policy?: Database["public"]["Enums"]["client_contact_policy_enum"]
+          contact_policy_changed_at?: string
           created_at?: string
+          eligibility_state?: Database["public"]["Enums"]["client_eligibility_state_enum"]
+          eligibility_state_changed_at?: string
           email?: string | null
+          engagement_state?: Database["public"]["Enums"]["client_engagement_state_enum"]
+          engagement_state_changed_at?: string
           id?: string
           last_contact_at?: string | null
           last_contact_channel?: string | null
           last_contact_direction?: string | null
+          lifecycle_stage?: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+          lifecycle_stage_changed_at?: string
           pat_addr_1?: string | null
           pat_addr_2?: string | null
           pat_age?: number | null
@@ -3346,20 +4680,39 @@ export type Database = {
           primary_staff_id?: string | null
           profile_id: string
           referral_source?: string | null
+          service_policy?: Database["public"]["Enums"]["client_service_policy_enum"]
+          service_policy_changed_at?: string
           status_changed_at?: string | null
           tags?: string | null
           tenant_id: string
           updated_at?: string
         }
         Update: {
+          at_risk?: boolean
+          at_risk_anchor_at?: string | null
+          at_risk_since?: string | null
+          care_cadence?: Database["public"]["Enums"]["client_care_cadence_enum"]
+          care_cadence_changed_at?: string
           clickup_synced_at?: string | null
           clickup_task_id?: string | null
+          closed_at?: string | null
+          closure_reason?:
+            | Database["public"]["Enums"]["client_closure_reason_enum"]
+            | null
+          contact_policy?: Database["public"]["Enums"]["client_contact_policy_enum"]
+          contact_policy_changed_at?: string
           created_at?: string
+          eligibility_state?: Database["public"]["Enums"]["client_eligibility_state_enum"]
+          eligibility_state_changed_at?: string
           email?: string | null
+          engagement_state?: Database["public"]["Enums"]["client_engagement_state_enum"]
+          engagement_state_changed_at?: string
           id?: string
           last_contact_at?: string | null
           last_contact_channel?: string | null
           last_contact_direction?: string | null
+          lifecycle_stage?: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+          lifecycle_stage_changed_at?: string
           pat_addr_1?: string | null
           pat_addr_2?: string | null
           pat_age?: number | null
@@ -3385,6 +4738,8 @@ export type Database = {
           primary_staff_id?: string | null
           profile_id?: string
           referral_source?: string | null
+          service_policy?: Database["public"]["Enums"]["client_service_policy_enum"]
+          service_policy_changed_at?: string
           status_changed_at?: string | null
           tags?: string | null
           tenant_id?: string
@@ -3397,6 +4752,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "clients_profile_id_fkey"
@@ -3479,6 +4841,13 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "consent_templates_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "consent_templates_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
@@ -3568,6 +4937,13 @@ export type Database = {
             foreignKeyName: "crm_activity_events_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_activity_events_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3630,6 +5006,13 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_bulk_send_logs_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "crm_bulk_send_logs_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
@@ -3804,6 +5187,13 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_bulk_sms_logs_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "crm_bulk_sms_logs_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
@@ -3990,6 +5380,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campaign_enrollments_enrolled_by_profile_id_fkey"
+            columns: ["enrolled_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "crm_campaign_enrollments_enrolled_by_profile_id_fkey"
@@ -4246,6 +5643,13 @@ export type Database = {
             foreignKeyName: "crm_campaigns_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_campaigns_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4435,6 +5839,13 @@ export type Database = {
             foreignKeyName: "crm_conversation_links_linked_by_profile_id_fkey"
             columns: ["linked_by_profile_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_conversation_links_linked_by_profile_id_fkey"
+            columns: ["linked_by_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4489,6 +5900,13 @@ export type Database = {
             foreignKeyName: "crm_email_signatures_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_email_signatures_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4536,6 +5954,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_email_templates_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "crm_email_templates_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
@@ -4775,6 +6200,13 @@ export type Database = {
             foreignKeyName: "crm_notes_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_notes_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4950,41 +6382,74 @@ export type Database = {
       }
       eligibility_checks: {
         Row: {
+          claimmd_eligibility_id: string | null
           client_id: string
           client_insurance_id: string
           coverage_end: string | null
           coverage_start: string | null
           created_at: string
-          eligibility_status: string | null
+          eligibility_status: string
+          error_codes: string[]
+          has_other_coverage: boolean | null
           id: string
+          insurance_updated_at_snapshot: string
+          insurance_verification_version: number
+          normalized_outcome: Database["public"]["Enums"]["insurance_eligibility_outcome_enum"]
+          payer_order_detected: string | null
+          recorded_by_profile_id: string | null
+          request_fingerprint: Json
           requested_at: string
           response_message: string | null
+          result_metadata: Json
+          service_date: string
           tenant_id: string
           updated_at: string
         }
         Insert: {
+          claimmd_eligibility_id?: string | null
           client_id: string
           client_insurance_id: string
           coverage_end?: string | null
           coverage_start?: string | null
           created_at?: string
-          eligibility_status?: string | null
+          eligibility_status: string
+          error_codes?: string[]
+          has_other_coverage?: boolean | null
           id?: string
+          insurance_updated_at_snapshot: string
+          insurance_verification_version: number
+          normalized_outcome: Database["public"]["Enums"]["insurance_eligibility_outcome_enum"]
+          payer_order_detected?: string | null
+          recorded_by_profile_id?: string | null
+          request_fingerprint?: Json
           requested_at?: string
           response_message?: string | null
+          result_metadata?: Json
+          service_date: string
           tenant_id: string
           updated_at?: string
         }
         Update: {
+          claimmd_eligibility_id?: string | null
           client_id?: string
           client_insurance_id?: string
           coverage_end?: string | null
           coverage_start?: string | null
           created_at?: string
-          eligibility_status?: string | null
+          eligibility_status?: string
+          error_codes?: string[]
+          has_other_coverage?: boolean | null
           id?: string
+          insurance_updated_at_snapshot?: string
+          insurance_verification_version?: number
+          normalized_outcome?: Database["public"]["Enums"]["insurance_eligibility_outcome_enum"]
+          payer_order_detected?: string | null
+          recorded_by_profile_id?: string | null
+          request_fingerprint?: Json
           requested_at?: string
           response_message?: string | null
+          result_metadata?: Json
+          service_date?: string
           tenant_id?: string
           updated_at?: string
         }
@@ -5001,6 +6466,27 @@ export type Database = {
             columns: ["client_insurance_id"]
             isOneToOne: false
             referencedRelation: "client_insurance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eligibility_checks_client_insurance_id_fkey"
+            columns: ["client_insurance_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_operations"
+            referencedColumns: ["current_insurance_id"]
+          },
+          {
+            foreignKeyName: "eligibility_checks_recorded_by_profile_id_fkey"
+            columns: ["recorded_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "eligibility_checks_recorded_by_profile_id_fkey"
+            columns: ["recorded_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -5698,6 +7184,13 @@ export type Database = {
             foreignKeyName: "form_templates_created_by_user_id_fkey"
             columns: ["created_by_user_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "form_templates_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -5804,6 +7297,168 @@ export type Database = {
           updated?: string | null
         }
         Relationships: []
+      }
+      integration_delivery_attempts: {
+        Row: {
+          attempt_number: number
+          attempted_at: string
+          completed_at: string | null
+          created_at: string
+          error_code: string | null
+          error_detail: string | null
+          id: string
+          outbox_id: string
+          response_code: string | null
+          response_metadata: Json
+          result_status: Database["public"]["Enums"]["integration_outbox_status_enum"]
+          worker_id: string | null
+        }
+        Insert: {
+          attempt_number: number
+          attempted_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_code?: string | null
+          error_detail?: string | null
+          id?: string
+          outbox_id: string
+          response_code?: string | null
+          response_metadata?: Json
+          result_status: Database["public"]["Enums"]["integration_outbox_status_enum"]
+          worker_id?: string | null
+        }
+        Update: {
+          attempt_number?: number
+          attempted_at?: string
+          completed_at?: string | null
+          created_at?: string
+          error_code?: string | null
+          error_detail?: string | null
+          id?: string
+          outbox_id?: string
+          response_code?: string | null
+          response_metadata?: Json
+          result_status?: Database["public"]["Enums"]["integration_outbox_status_enum"]
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_delivery_attempts_outbox_id_fkey"
+            columns: ["outbox_id"]
+            isOneToOne: false
+            referencedRelation: "integration_outbox"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_outbox: {
+        Row: {
+          actor_profile_id: string | null
+          aggregate_id: string | null
+          aggregate_type: string
+          attempt_count: number
+          available_at: string
+          causation_id: string | null
+          contains_phi: boolean
+          correlation_id: string | null
+          created_at: string
+          dead_lettered_at: string | null
+          delivered_at: string | null
+          destination: string
+          event_type: string
+          event_version: number
+          id: string
+          idempotency_key: string
+          last_error_code: string | null
+          last_error_detail: string | null
+          locked_at: string | null
+          locked_by: string | null
+          occurred_at: string
+          payload: Json
+          source: string
+          status: Database["public"]["Enums"]["integration_outbox_status_enum"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          aggregate_id?: string | null
+          aggregate_type: string
+          attempt_count?: number
+          available_at?: string
+          causation_id?: string | null
+          contains_phi?: boolean
+          correlation_id?: string | null
+          created_at?: string
+          dead_lettered_at?: string | null
+          delivered_at?: string | null
+          destination: string
+          event_type: string
+          event_version?: number
+          id?: string
+          idempotency_key: string
+          last_error_code?: string | null
+          last_error_detail?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          occurred_at?: string
+          payload?: Json
+          source: string
+          status?: Database["public"]["Enums"]["integration_outbox_status_enum"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          aggregate_id?: string | null
+          aggregate_type?: string
+          attempt_count?: number
+          available_at?: string
+          causation_id?: string | null
+          contains_phi?: boolean
+          correlation_id?: string | null
+          created_at?: string
+          dead_lettered_at?: string | null
+          delivered_at?: string | null
+          destination?: string
+          event_type?: string
+          event_version?: number
+          id?: string
+          idempotency_key?: string
+          last_error_code?: string | null
+          last_error_detail?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          occurred_at?: string
+          payload?: Json
+          source?: string
+          status?: Database["public"]["Enums"]["integration_outbox_status_enum"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_outbox_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "integration_outbox_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_outbox_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       jarvis_approvals: {
         Row: {
@@ -5974,6 +7629,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "missive_conversations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missive_conversation_links_linked_by_profile_id_fkey"
+            columns: ["linked_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "missive_conversation_links_linked_by_profile_id_fkey"
@@ -6928,6 +8590,1539 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_applicant_followups: {
+        Row: {
+          applicant_id: string
+          channel: string | null
+          completed_at: string | null
+          completed_by_profile_id: string | null
+          completion_note: string | null
+          created_at: string
+          failure_code: string | null
+          failure_detail: string | null
+          followup_sequence: number
+          followup_type: string
+          id: string
+          idempotency_key: string
+          owner_profile_id: string | null
+          scheduled_for: string
+          source: string
+          status: Database["public"]["Enums"]["provider_followup_status_enum"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          applicant_id: string
+          channel?: string | null
+          completed_at?: string | null
+          completed_by_profile_id?: string | null
+          completion_note?: string | null
+          created_at?: string
+          failure_code?: string | null
+          failure_detail?: string | null
+          followup_sequence: number
+          followup_type: string
+          id?: string
+          idempotency_key: string
+          owner_profile_id?: string | null
+          scheduled_for: string
+          source: string
+          status?: Database["public"]["Enums"]["provider_followup_status_enum"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          applicant_id?: string
+          channel?: string | null
+          completed_at?: string | null
+          completed_by_profile_id?: string | null
+          completion_note?: string | null
+          created_at?: string
+          failure_code?: string | null
+          failure_detail?: string | null
+          followup_sequence?: number
+          followup_type?: string
+          id?: string
+          idempotency_key?: string
+          owner_profile_id?: string | null
+          scheduled_for?: string
+          source?: string
+          status?: Database["public"]["Enums"]["provider_followup_status_enum"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_applicant_followups_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "provider_applicants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_applicant_followups_completed_by_profile_id_fkey"
+            columns: ["completed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_applicant_followups_completed_by_profile_id_fkey"
+            columns: ["completed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_applicant_followups_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_applicant_followups_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_applicant_followups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_applicants: {
+        Row: {
+          application_data: Json
+          close_reason: string | null
+          closed_at: string | null
+          converted_staff_id: string | null
+          created_at: string
+          email: string
+          first_contact_due_at: string | null
+          first_contacted_at: string | null
+          first_name: string
+          id: string
+          last_activity_at: string | null
+          last_name: string
+          license_type: string | null
+          next_action: string | null
+          next_action_due_at: string | null
+          owner_profile_id: string | null
+          phone: string | null
+          primary_state: Database["public"]["Enums"]["state_code_enum"] | null
+          profile_id: string | null
+          referral_source: string | null
+          source: string
+          source_record_key: string | null
+          status: Database["public"]["Enums"]["provider_applicant_status_enum"]
+          target_states: Database["public"]["Enums"]["state_code_enum"][]
+          tenant_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          application_data?: Json
+          close_reason?: string | null
+          closed_at?: string | null
+          converted_staff_id?: string | null
+          created_at?: string
+          email: string
+          first_contact_due_at?: string | null
+          first_contacted_at?: string | null
+          first_name: string
+          id?: string
+          last_activity_at?: string | null
+          last_name: string
+          license_type?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
+          owner_profile_id?: string | null
+          phone?: string | null
+          primary_state?: Database["public"]["Enums"]["state_code_enum"] | null
+          profile_id?: string | null
+          referral_source?: string | null
+          source: string
+          source_record_key?: string | null
+          status?: Database["public"]["Enums"]["provider_applicant_status_enum"]
+          target_states?: Database["public"]["Enums"]["state_code_enum"][]
+          tenant_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          application_data?: Json
+          close_reason?: string | null
+          closed_at?: string | null
+          converted_staff_id?: string | null
+          created_at?: string
+          email?: string
+          first_contact_due_at?: string | null
+          first_contacted_at?: string | null
+          first_name?: string
+          id?: string
+          last_activity_at?: string | null
+          last_name?: string
+          license_type?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
+          owner_profile_id?: string | null
+          phone?: string | null
+          primary_state?: Database["public"]["Enums"]["state_code_enum"] | null
+          profile_id?: string | null
+          referral_source?: string | null
+          source?: string
+          source_record_key?: string | null
+          status?: Database["public"]["Enums"]["provider_applicant_status_enum"]
+          target_states?: Database["public"]["Enums"]["state_code_enum"][]
+          tenant_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_applicants_converted_staff_id_fkey"
+            columns: ["converted_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_applicants_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_applicants_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_applicants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_applicants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_applicants_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_availability_confirmations: {
+        Row: {
+          capacity_snapshot_id: string | null
+          confirmation_cycle_key: string
+          confirmed_accepting_new_clients: boolean | null
+          confirmed_at: string | null
+          confirmed_by_profile_id: string | null
+          confirmed_preferences_version: number | null
+          created_at: string
+          due_at: string
+          evidence: Json
+          expiration_action_applied_at: string | null
+          expiration_due_at: string | null
+          expired_at: string | null
+          id: string
+          reminder_due_at: string | null
+          reminder_sent_at: string | null
+          requested_at: string | null
+          source: string
+          staff_id: string
+          state: Database["public"]["Enums"]["provider_availability_confirmation_state_enum"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          capacity_snapshot_id?: string | null
+          confirmation_cycle_key: string
+          confirmed_accepting_new_clients?: boolean | null
+          confirmed_at?: string | null
+          confirmed_by_profile_id?: string | null
+          confirmed_preferences_version?: number | null
+          created_at?: string
+          due_at: string
+          evidence?: Json
+          expiration_action_applied_at?: string | null
+          expiration_due_at?: string | null
+          expired_at?: string | null
+          id?: string
+          reminder_due_at?: string | null
+          reminder_sent_at?: string | null
+          requested_at?: string | null
+          source: string
+          staff_id: string
+          state?: Database["public"]["Enums"]["provider_availability_confirmation_state_enum"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          capacity_snapshot_id?: string | null
+          confirmation_cycle_key?: string
+          confirmed_accepting_new_clients?: boolean | null
+          confirmed_at?: string | null
+          confirmed_by_profile_id?: string | null
+          confirmed_preferences_version?: number | null
+          created_at?: string
+          due_at?: string
+          evidence?: Json
+          expiration_action_applied_at?: string | null
+          expiration_due_at?: string | null
+          expired_at?: string | null
+          id?: string
+          reminder_due_at?: string | null
+          reminder_sent_at?: string | null
+          requested_at?: string | null
+          source?: string
+          staff_id?: string
+          state?: Database["public"]["Enums"]["provider_availability_confirmation_state_enum"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_availability_confirmation_confirmed_by_profile_id_fkey"
+            columns: ["confirmed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_availability_confirmation_confirmed_by_profile_id_fkey"
+            columns: ["confirmed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_availability_confirmations_capacity_snapshot_id_fkey"
+            columns: ["capacity_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "provider_capacity_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_availability_confirmations_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_availability_confirmations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_capacity_snapshots: {
+        Row: {
+          active_regular_client_count: number
+          assigned_as_needed_client_count: number
+          blocking_reason_codes: string[]
+          calculated_at: string
+          calculation_version: number
+          created_at: string
+          current_month_scheduled_sessions: number
+          current_week_scheduled_sessions: number
+          has_30_day_session_capacity: boolean
+          has_active_client_capacity: boolean
+          id: string
+          input_hash: string
+          inputs: Json
+          max_active_clients: number | null
+          max_daily_appointments: number | null
+          max_monthly_sessions: number | null
+          max_weekly_appointments: number | null
+          max_weekly_sessions: number | null
+          next_30_day_open_session_capacity: number | null
+          next_30_day_scheduled_sessions: number
+          source: string
+          staff_id: string
+          tenant_id: string
+        }
+        Insert: {
+          active_regular_client_count?: number
+          assigned_as_needed_client_count?: number
+          blocking_reason_codes?: string[]
+          calculated_at?: string
+          calculation_version?: number
+          created_at?: string
+          current_month_scheduled_sessions?: number
+          current_week_scheduled_sessions?: number
+          has_30_day_session_capacity: boolean
+          has_active_client_capacity: boolean
+          id?: string
+          input_hash: string
+          inputs?: Json
+          max_active_clients?: number | null
+          max_daily_appointments?: number | null
+          max_monthly_sessions?: number | null
+          max_weekly_appointments?: number | null
+          max_weekly_sessions?: number | null
+          next_30_day_open_session_capacity?: number | null
+          next_30_day_scheduled_sessions?: number
+          source: string
+          staff_id: string
+          tenant_id: string
+        }
+        Update: {
+          active_regular_client_count?: number
+          assigned_as_needed_client_count?: number
+          blocking_reason_codes?: string[]
+          calculated_at?: string
+          calculation_version?: number
+          created_at?: string
+          current_month_scheduled_sessions?: number
+          current_week_scheduled_sessions?: number
+          has_30_day_session_capacity?: boolean
+          has_active_client_capacity?: boolean
+          id?: string
+          input_hash?: string
+          inputs?: Json
+          max_active_clients?: number | null
+          max_daily_appointments?: number | null
+          max_monthly_sessions?: number | null
+          max_weekly_appointments?: number | null
+          max_weekly_sessions?: number | null
+          next_30_day_open_session_capacity?: number | null
+          next_30_day_scheduled_sessions?: number
+          source?: string
+          staff_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_capacity_snapshots_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_capacity_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_contact_failure_history: {
+        Row: {
+          actor_profile_id: string | null
+          contact_failure_id: string
+          created_at: string
+          event_type: string
+          evidence: Json
+          id: string
+          new_status:
+            | Database["public"]["Enums"]["provider_contact_failure_status_enum"]
+            | null
+          occurred_at: string
+          prior_status:
+            | Database["public"]["Enums"]["provider_contact_failure_status_enum"]
+            | null
+          reason: string | null
+          source: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          contact_failure_id: string
+          created_at?: string
+          event_type: string
+          evidence?: Json
+          id?: string
+          new_status?:
+            | Database["public"]["Enums"]["provider_contact_failure_status_enum"]
+            | null
+          occurred_at?: string
+          prior_status?:
+            | Database["public"]["Enums"]["provider_contact_failure_status_enum"]
+            | null
+          reason?: string | null
+          source: string
+          tenant_id: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          contact_failure_id?: string
+          created_at?: string
+          event_type?: string
+          evidence?: Json
+          id?: string
+          new_status?:
+            | Database["public"]["Enums"]["provider_contact_failure_status_enum"]
+            | null
+          occurred_at?: string
+          prior_status?:
+            | Database["public"]["Enums"]["provider_contact_failure_status_enum"]
+            | null
+          reason?: string | null
+          source?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_contact_failure_history_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_contact_failure_history_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_contact_failure_history_contact_failure_id_fkey"
+            columns: ["contact_failure_id"]
+            isOneToOne: false
+            referencedRelation: "provider_contact_failures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_contact_failure_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_contact_failures: {
+        Row: {
+          accepting_suspension_applied_at: string | null
+          client_exception_id: string | null
+          client_id: string
+          corrected_at: string | null
+          corrected_by_profile_id: string | null
+          correction_reason: string | null
+          created_at: string
+          evaluated_at: string
+          evidence: Json
+          expected_by: string
+          failure_number_in_window: number
+          id: string
+          provider_exception_id: string | null
+          qualifying_movement_at: string | null
+          relationship_id: string
+          source: string
+          source_event_key: string
+          staff_id: string
+          status: Database["public"]["Enums"]["provider_contact_failure_status_enum"]
+          tenant_id: string
+          updated_at: string
+          window_ends_at: string
+          window_started_at: string
+        }
+        Insert: {
+          accepting_suspension_applied_at?: string | null
+          client_exception_id?: string | null
+          client_id: string
+          corrected_at?: string | null
+          corrected_by_profile_id?: string | null
+          correction_reason?: string | null
+          created_at?: string
+          evaluated_at?: string
+          evidence?: Json
+          expected_by: string
+          failure_number_in_window: number
+          id?: string
+          provider_exception_id?: string | null
+          qualifying_movement_at?: string | null
+          relationship_id: string
+          source: string
+          source_event_key: string
+          staff_id: string
+          status?: Database["public"]["Enums"]["provider_contact_failure_status_enum"]
+          tenant_id: string
+          updated_at?: string
+          window_ends_at: string
+          window_started_at: string
+        }
+        Update: {
+          accepting_suspension_applied_at?: string | null
+          client_exception_id?: string | null
+          client_id?: string
+          corrected_at?: string | null
+          corrected_by_profile_id?: string | null
+          correction_reason?: string | null
+          created_at?: string
+          evaluated_at?: string
+          evidence?: Json
+          expected_by?: string
+          failure_number_in_window?: number
+          id?: string
+          provider_exception_id?: string | null
+          qualifying_movement_at?: string | null
+          relationship_id?: string
+          source?: string
+          source_event_key?: string
+          staff_id?: string
+          status?: Database["public"]["Enums"]["provider_contact_failure_status_enum"]
+          tenant_id?: string
+          updated_at?: string
+          window_ends_at?: string
+          window_started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_contact_failures_client_exception_id_fkey"
+            columns: ["client_exception_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_contact_failures_client_exception_id_fkey"
+            columns: ["client_exception_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exceptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_contact_failures_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_contact_failures_corrected_by_profile_id_fkey"
+            columns: ["corrected_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_contact_failures_corrected_by_profile_id_fkey"
+            columns: ["corrected_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_contact_failures_provider_exception_id_fkey"
+            columns: ["provider_exception_id"]
+            isOneToOne: false
+            referencedRelation: "provider_network_exceptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_contact_failures_relationship_id_fkey"
+            columns: ["relationship_id"]
+            isOneToOne: false
+            referencedRelation: "client_staff_relationships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_contact_failures_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_contact_failures_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_matchability_evaluation_options: {
+        Row: {
+          capacity_snapshot_id: string | null
+          client_id: string
+          created_at: string
+          evaluation_id: string
+          id: string
+          ranking_components: Json
+          ranking_score: number | null
+          reason_codes: string[]
+          result_state: Database["public"]["Enums"]["provider_match_evaluation_state_enum"]
+          staff_id: string
+          tenant_id: string
+        }
+        Insert: {
+          capacity_snapshot_id?: string | null
+          client_id: string
+          created_at?: string
+          evaluation_id: string
+          id?: string
+          ranking_components?: Json
+          ranking_score?: number | null
+          reason_codes?: string[]
+          result_state: Database["public"]["Enums"]["provider_match_evaluation_state_enum"]
+          staff_id: string
+          tenant_id: string
+        }
+        Update: {
+          capacity_snapshot_id?: string | null
+          client_id?: string
+          created_at?: string
+          evaluation_id?: string
+          id?: string
+          ranking_components?: Json
+          ranking_score?: number | null
+          reason_codes?: string[]
+          result_state?: Database["public"]["Enums"]["provider_match_evaluation_state_enum"]
+          staff_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_matchability_evaluation_opti_capacity_snapshot_id_fkey"
+            columns: ["capacity_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "provider_capacity_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_matchability_evaluation_options_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_matchability_evaluation_options_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "provider_matchability_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_matchability_evaluation_options_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_matchability_evaluation_options_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_matchability_evaluations: {
+        Row: {
+          care_readiness_version: string | null
+          client_age: number | null
+          client_id: string
+          client_state: Database["public"]["Enums"]["state_code_enum"] | null
+          created_at: string
+          evaluated_at: string
+          evaluation_key: string
+          evaluation_version: number
+          expires_at: string | null
+          id: string
+          input_hash: string
+          inputs: Json
+          option_count: number
+          pathway_code: string
+          reason_codes: string[]
+          result_state: Database["public"]["Enums"]["provider_match_evaluation_state_enum"]
+          source: string
+          tenant_id: string
+        }
+        Insert: {
+          care_readiness_version?: string | null
+          client_age?: number | null
+          client_id: string
+          client_state?: Database["public"]["Enums"]["state_code_enum"] | null
+          created_at?: string
+          evaluated_at?: string
+          evaluation_key: string
+          evaluation_version?: number
+          expires_at?: string | null
+          id?: string
+          input_hash: string
+          inputs?: Json
+          option_count?: number
+          pathway_code: string
+          reason_codes?: string[]
+          result_state: Database["public"]["Enums"]["provider_match_evaluation_state_enum"]
+          source: string
+          tenant_id: string
+        }
+        Update: {
+          care_readiness_version?: string | null
+          client_age?: number | null
+          client_id?: string
+          client_state?: Database["public"]["Enums"]["state_code_enum"] | null
+          created_at?: string
+          evaluated_at?: string
+          evaluation_key?: string
+          evaluation_version?: number
+          expires_at?: string | null
+          id?: string
+          input_hash?: string
+          inputs?: Json
+          option_count?: number
+          pathway_code?: string
+          reason_codes?: string[]
+          result_state?: Database["public"]["Enums"]["provider_match_evaluation_state_enum"]
+          source?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_matchability_evaluations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_matchability_evaluations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_network_exception_history: {
+        Row: {
+          actor_profile_id: string | null
+          created_at: string
+          event_type: string
+          evidence: Json
+          exception_id: string
+          id: string
+          new_owner_profile_id: string | null
+          new_status:
+            | Database["public"]["Enums"]["provider_network_exception_status_enum"]
+            | null
+          occurred_at: string
+          prior_owner_profile_id: string | null
+          prior_status:
+            | Database["public"]["Enums"]["provider_network_exception_status_enum"]
+            | null
+          reason: string | null
+          source: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          created_at?: string
+          event_type: string
+          evidence?: Json
+          exception_id: string
+          id?: string
+          new_owner_profile_id?: string | null
+          new_status?:
+            | Database["public"]["Enums"]["provider_network_exception_status_enum"]
+            | null
+          occurred_at?: string
+          prior_owner_profile_id?: string | null
+          prior_status?:
+            | Database["public"]["Enums"]["provider_network_exception_status_enum"]
+            | null
+          reason?: string | null
+          source: string
+          tenant_id: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          created_at?: string
+          event_type?: string
+          evidence?: Json
+          exception_id?: string
+          id?: string
+          new_owner_profile_id?: string | null
+          new_status?:
+            | Database["public"]["Enums"]["provider_network_exception_status_enum"]
+            | null
+          occurred_at?: string
+          prior_owner_profile_id?: string | null
+          prior_status?:
+            | Database["public"]["Enums"]["provider_network_exception_status_enum"]
+            | null
+          reason?: string | null
+          source?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_network_exception_history_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_network_exception_history_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_network_exception_history_exception_id_fkey"
+            columns: ["exception_id"]
+            isOneToOne: false
+            referencedRelation: "provider_network_exceptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_network_exception_history_new_owner_profile_id_fkey"
+            columns: ["new_owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_network_exception_history_new_owner_profile_id_fkey"
+            columns: ["new_owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_network_exception_history_prior_owner_profile_id_fkey"
+            columns: ["prior_owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_network_exception_history_prior_owner_profile_id_fkey"
+            columns: ["prior_owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_network_exception_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_network_exception_reason_catalog: {
+        Row: {
+          applies_to_applicant: boolean
+          applies_to_pathway: boolean
+          applies_to_staff: boolean
+          applies_to_state: boolean
+          blocks_new_routing: boolean
+          category: string
+          created_at: string
+          default_severity: Database["public"]["Enums"]["provider_network_exception_severity_enum"]
+          description: string
+          display_name: string
+          is_active: boolean
+          reason_code: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          applies_to_applicant?: boolean
+          applies_to_pathway?: boolean
+          applies_to_staff?: boolean
+          applies_to_state?: boolean
+          blocks_new_routing?: boolean
+          category: string
+          created_at?: string
+          default_severity?: Database["public"]["Enums"]["provider_network_exception_severity_enum"]
+          description: string
+          display_name: string
+          is_active?: boolean
+          reason_code: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          applies_to_applicant?: boolean
+          applies_to_pathway?: boolean
+          applies_to_staff?: boolean
+          applies_to_state?: boolean
+          blocks_new_routing?: boolean
+          category?: string
+          created_at?: string
+          default_severity?: Database["public"]["Enums"]["provider_network_exception_severity_enum"]
+          description?: string
+          display_name?: string
+          is_active?: boolean
+          reason_code?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      provider_network_exceptions: {
+        Row: {
+          applicant_id: string | null
+          created_at: string
+          created_by_profile_id: string | null
+          dismissal_note: string | null
+          dismissed_at: string | null
+          dismissed_by_profile_id: string | null
+          evidence: Json
+          id: string
+          next_action: string
+          opened_at: string
+          owner_profile_id: string | null
+          pathway_code: string | null
+          reason_code: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          reopened_at: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by_profile_id: string | null
+          review_due_at: string | null
+          severity: Database["public"]["Enums"]["provider_network_exception_severity_enum"]
+          source: string
+          source_event_key: string | null
+          staff_id: string | null
+          started_at: string | null
+          state_code: Database["public"]["Enums"]["state_code_enum"] | null
+          status: Database["public"]["Enums"]["provider_network_exception_status_enum"]
+          tenant_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          applicant_id?: string | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          dismissal_note?: string | null
+          dismissed_at?: string | null
+          dismissed_by_profile_id?: string | null
+          evidence?: Json
+          id?: string
+          next_action: string
+          opened_at?: string
+          owner_profile_id?: string | null
+          pathway_code?: string | null
+          reason_code: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          reopened_at?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_profile_id?: string | null
+          review_due_at?: string | null
+          severity: Database["public"]["Enums"]["provider_network_exception_severity_enum"]
+          source: string
+          source_event_key?: string | null
+          staff_id?: string | null
+          started_at?: string | null
+          state_code?: Database["public"]["Enums"]["state_code_enum"] | null
+          status?: Database["public"]["Enums"]["provider_network_exception_status_enum"]
+          tenant_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          applicant_id?: string | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          dismissal_note?: string | null
+          dismissed_at?: string | null
+          dismissed_by_profile_id?: string | null
+          evidence?: Json
+          id?: string
+          next_action?: string
+          opened_at?: string
+          owner_profile_id?: string | null
+          pathway_code?: string | null
+          reason_code?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          reopened_at?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_profile_id?: string | null
+          review_due_at?: string | null
+          severity?: Database["public"]["Enums"]["provider_network_exception_severity_enum"]
+          source?: string
+          source_event_key?: string | null
+          staff_id?: string | null
+          started_at?: string | null
+          state_code?: Database["public"]["Enums"]["state_code_enum"] | null
+          status?: Database["public"]["Enums"]["provider_network_exception_status_enum"]
+          tenant_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_network_exceptions_applicant_fk"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "provider_applicants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_network_exceptions_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_network_exceptions_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_network_exceptions_dismissed_by_profile_id_fkey"
+            columns: ["dismissed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_network_exceptions_dismissed_by_profile_id_fkey"
+            columns: ["dismissed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_network_exceptions_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_network_exceptions_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_network_exceptions_reason_code_fkey"
+            columns: ["reason_code"]
+            isOneToOne: false
+            referencedRelation: "provider_network_exception_reason_catalog"
+            referencedColumns: ["reason_code"]
+          },
+          {
+            foreignKeyName: "provider_network_exceptions_resolved_by_profile_id_fkey"
+            columns: ["resolved_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_network_exceptions_resolved_by_profile_id_fkey"
+            columns: ["resolved_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_network_exceptions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_network_exceptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_state_intelligence_configuration: {
+        Row: {
+          active_min_matchable_providers: number
+          configuration_version: number
+          created_at: string
+          created_by_profile_id: string | null
+          demand_weight: number
+          effective_at: string
+          exception_weight: number
+          hold_service_block_threshold: number
+          id: string
+          is_active: boolean
+          pathway_gap_weight: number
+          recruiting_demand_threshold: number
+          retired_at: string | null
+          supply_gap_weight: number
+          tenant_id: string
+          thresholds: Json
+          updated_at: string
+          wait_time_weight: number
+          warm_min_matchable_providers: number
+        }
+        Insert: {
+          active_min_matchable_providers?: number
+          configuration_version: number
+          created_at?: string
+          created_by_profile_id?: string | null
+          demand_weight?: number
+          effective_at?: string
+          exception_weight?: number
+          hold_service_block_threshold?: number
+          id?: string
+          is_active?: boolean
+          pathway_gap_weight?: number
+          recruiting_demand_threshold?: number
+          retired_at?: string | null
+          supply_gap_weight?: number
+          tenant_id: string
+          thresholds?: Json
+          updated_at?: string
+          wait_time_weight?: number
+          warm_min_matchable_providers?: number
+        }
+        Update: {
+          active_min_matchable_providers?: number
+          configuration_version?: number
+          created_at?: string
+          created_by_profile_id?: string | null
+          demand_weight?: number
+          effective_at?: string
+          exception_weight?: number
+          hold_service_block_threshold?: number
+          id?: string
+          is_active?: boolean
+          pathway_gap_weight?: number
+          recruiting_demand_threshold?: number
+          retired_at?: string | null
+          supply_gap_weight?: number
+          tenant_id?: string
+          thresholds?: Json
+          updated_at?: string
+          wait_time_weight?: number
+          warm_min_matchable_providers?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_state_intelligence_configur_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_state_intelligence_configur_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_state_intelligence_configuration_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_state_market_overrides: {
+        Row: {
+          created_at: string
+          created_by_profile_id: string | null
+          effective_at: string
+          evidence: Json
+          expires_at: string | null
+          id: string
+          override_status: Database["public"]["Enums"]["provider_state_launch_status_enum"]
+          pathway_code: string | null
+          reason: string
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by_profile_id: string | null
+          state_code: Database["public"]["Enums"]["state_code_enum"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_profile_id?: string | null
+          effective_at?: string
+          evidence?: Json
+          expires_at?: string | null
+          id?: string
+          override_status: Database["public"]["Enums"]["provider_state_launch_status_enum"]
+          pathway_code?: string | null
+          reason: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by_profile_id?: string | null
+          state_code: Database["public"]["Enums"]["state_code_enum"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_profile_id?: string | null
+          effective_at?: string
+          evidence?: Json
+          expires_at?: string | null
+          id?: string
+          override_status?: Database["public"]["Enums"]["provider_state_launch_status_enum"]
+          pathway_code?: string | null
+          reason?: string
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by_profile_id?: string | null
+          state_code?: Database["public"]["Enums"]["state_code_enum"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_state_market_overrides_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_state_market_overrides_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_state_market_overrides_revoked_by_profile_id_fkey"
+            columns: ["revoked_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_state_market_overrides_revoked_by_profile_id_fkey"
+            columns: ["revoked_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_state_market_overrides_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_state_market_snapshots: {
+        Row: {
+          accepting_provider_count: number
+          active_regular_client_count: number
+          average_wait_days: number | null
+          blocking_exception_count: number
+          calculated_at: string
+          calculated_status: Database["public"]["Enums"]["provider_state_launch_status_enum"]
+          calculation_version: number
+          configuration_version: number
+          created_at: string
+          id: string
+          input_hash: string
+          inputs: Json
+          matchable_provider_count: number
+          open_provider_demand_count: number
+          pathway_code: string | null
+          ready_bench_provider_count: number
+          reason_codes: string[]
+          recruiting_priority_score: number
+          source: string
+          state_code: Database["public"]["Enums"]["state_code_enum"]
+          tenant_id: string
+          waiting_client_count: number
+        }
+        Insert: {
+          accepting_provider_count?: number
+          active_regular_client_count?: number
+          average_wait_days?: number | null
+          blocking_exception_count?: number
+          calculated_at?: string
+          calculated_status: Database["public"]["Enums"]["provider_state_launch_status_enum"]
+          calculation_version: number
+          configuration_version: number
+          created_at?: string
+          id?: string
+          input_hash: string
+          inputs?: Json
+          matchable_provider_count?: number
+          open_provider_demand_count?: number
+          pathway_code?: string | null
+          ready_bench_provider_count?: number
+          reason_codes?: string[]
+          recruiting_priority_score: number
+          source: string
+          state_code: Database["public"]["Enums"]["state_code_enum"]
+          tenant_id: string
+          waiting_client_count?: number
+        }
+        Update: {
+          accepting_provider_count?: number
+          active_regular_client_count?: number
+          average_wait_days?: number | null
+          blocking_exception_count?: number
+          calculated_at?: string
+          calculated_status?: Database["public"]["Enums"]["provider_state_launch_status_enum"]
+          calculation_version?: number
+          configuration_version?: number
+          created_at?: string
+          id?: string
+          input_hash?: string
+          inputs?: Json
+          matchable_provider_count?: number
+          open_provider_demand_count?: number
+          pathway_code?: string | null
+          ready_bench_provider_count?: number
+          reason_codes?: string[]
+          recruiting_priority_score?: number
+          source?: string
+          state_code?: Database["public"]["Enums"]["state_code_enum"]
+          tenant_id?: string
+          waiting_client_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_state_market_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_state_market_status: {
+        Row: {
+          accepting_provider_count: number
+          active_regular_client_count: number
+          average_wait_days: number | null
+          blocking_exception_count: number
+          calculated_at: string
+          calculated_status: Database["public"]["Enums"]["provider_state_launch_status_enum"]
+          calculation_version: number
+          configuration_version: number
+          created_at: string
+          effective_status: Database["public"]["Enums"]["provider_state_launch_status_enum"]
+          id: string
+          input_hash: string
+          matchable_provider_count: number
+          open_provider_demand_count: number
+          override_id: string | null
+          pathway_code: string | null
+          ready_bench_provider_count: number
+          reason_codes: string[]
+          recruiting_priority_score: number
+          state_code: Database["public"]["Enums"]["state_code_enum"]
+          tenant_id: string
+          updated_at: string
+          waiting_client_count: number
+        }
+        Insert: {
+          accepting_provider_count?: number
+          active_regular_client_count?: number
+          average_wait_days?: number | null
+          blocking_exception_count?: number
+          calculated_at?: string
+          calculated_status: Database["public"]["Enums"]["provider_state_launch_status_enum"]
+          calculation_version?: number
+          configuration_version: number
+          created_at?: string
+          effective_status: Database["public"]["Enums"]["provider_state_launch_status_enum"]
+          id?: string
+          input_hash: string
+          matchable_provider_count?: number
+          open_provider_demand_count?: number
+          override_id?: string | null
+          pathway_code?: string | null
+          ready_bench_provider_count?: number
+          reason_codes?: string[]
+          recruiting_priority_score: number
+          state_code: Database["public"]["Enums"]["state_code_enum"]
+          tenant_id: string
+          updated_at?: string
+          waiting_client_count?: number
+        }
+        Update: {
+          accepting_provider_count?: number
+          active_regular_client_count?: number
+          average_wait_days?: number | null
+          blocking_exception_count?: number
+          calculated_at?: string
+          calculated_status?: Database["public"]["Enums"]["provider_state_launch_status_enum"]
+          calculation_version?: number
+          configuration_version?: number
+          created_at?: string
+          effective_status?: Database["public"]["Enums"]["provider_state_launch_status_enum"]
+          id?: string
+          input_hash?: string
+          matchable_provider_count?: number
+          open_provider_demand_count?: number
+          override_id?: string | null
+          pathway_code?: string | null
+          ready_bench_provider_count?: number
+          reason_codes?: string[]
+          recruiting_priority_score?: number
+          state_code?: Database["public"]["Enums"]["state_code_enum"]
+          tenant_id?: string
+          updated_at?: string
+          waiting_client_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_state_market_status_override_fk"
+            columns: ["override_id"]
+            isOneToOne: false
+            referencedRelation: "provider_state_market_overrides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_state_market_status_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       referrals: {
         Row: {
           client_id: string
@@ -7042,6 +10237,13 @@ export type Database = {
             foreignKeyName: "services_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "services_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -7060,11 +10262,17 @@ export type Database = {
           id: string
           intl: boolean
           profile_id: string
+          prov_accepting_changed_at: string | null
+          prov_accepting_changed_by_profile_id: string | null
+          prov_accepting_confirmation_version: number
+          prov_accepting_confirmed_at: string | null
           prov_accepting_new_clients: boolean
+          prov_accepting_source: string | null
           prov_addr_1: string | null
           prov_addr_2: string | null
           prov_bio: string | null
           prov_buffer_minutes: number
+          prov_capacity_updated_at: string | null
           prov_city: string | null
           prov_degree: string | null
           prov_dob: string | null
@@ -7074,7 +10282,10 @@ export type Database = {
           prov_license_type: string | null
           prov_max_appointments_per_day: number | null
           prov_max_appointments_per_week: number | null
+          prov_max_client_age: number | null
           prov_max_clients: number | null
+          prov_max_monthly_sessions: number | null
+          prov_max_weekly_sessions: number | null
           prov_min_client_age: number
           prov_name_f: string | null
           prov_name_for_clients: string | null
@@ -7082,6 +10293,7 @@ export type Database = {
           prov_name_m: string | null
           prov_npi: string | null
           prov_phone: string | null
+          prov_preferences_version: number
           prov_qualifier: string | null
           prov_scheduling_interval_minutes: number
           prov_self_scheduling_enabled: boolean
@@ -7103,11 +10315,17 @@ export type Database = {
           id?: string
           intl?: boolean
           profile_id: string
+          prov_accepting_changed_at?: string | null
+          prov_accepting_changed_by_profile_id?: string | null
+          prov_accepting_confirmation_version?: number
+          prov_accepting_confirmed_at?: string | null
           prov_accepting_new_clients?: boolean
+          prov_accepting_source?: string | null
           prov_addr_1?: string | null
           prov_addr_2?: string | null
           prov_bio?: string | null
           prov_buffer_minutes?: number
+          prov_capacity_updated_at?: string | null
           prov_city?: string | null
           prov_degree?: string | null
           prov_dob?: string | null
@@ -7117,7 +10335,10 @@ export type Database = {
           prov_license_type?: string | null
           prov_max_appointments_per_day?: number | null
           prov_max_appointments_per_week?: number | null
+          prov_max_client_age?: number | null
           prov_max_clients?: number | null
+          prov_max_monthly_sessions?: number | null
+          prov_max_weekly_sessions?: number | null
           prov_min_client_age?: number
           prov_name_f?: string | null
           prov_name_for_clients?: string | null
@@ -7125,6 +10346,7 @@ export type Database = {
           prov_name_m?: string | null
           prov_npi?: string | null
           prov_phone?: string | null
+          prov_preferences_version?: number
           prov_qualifier?: string | null
           prov_scheduling_interval_minutes?: number
           prov_self_scheduling_enabled?: boolean
@@ -7146,11 +10368,17 @@ export type Database = {
           id?: string
           intl?: boolean
           profile_id?: string
+          prov_accepting_changed_at?: string | null
+          prov_accepting_changed_by_profile_id?: string | null
+          prov_accepting_confirmation_version?: number
+          prov_accepting_confirmed_at?: string | null
           prov_accepting_new_clients?: boolean
+          prov_accepting_source?: string | null
           prov_addr_1?: string | null
           prov_addr_2?: string | null
           prov_bio?: string | null
           prov_buffer_minutes?: number
+          prov_capacity_updated_at?: string | null
           prov_city?: string | null
           prov_degree?: string | null
           prov_dob?: string | null
@@ -7160,7 +10388,10 @@ export type Database = {
           prov_license_type?: string | null
           prov_max_appointments_per_day?: number | null
           prov_max_appointments_per_week?: number | null
+          prov_max_client_age?: number | null
           prov_max_clients?: number | null
+          prov_max_monthly_sessions?: number | null
+          prov_max_weekly_sessions?: number | null
           prov_min_client_age?: number
           prov_name_f?: string | null
           prov_name_for_clients?: string | null
@@ -7168,6 +10399,7 @@ export type Database = {
           prov_name_m?: string | null
           prov_npi?: string | null
           prov_phone?: string | null
+          prov_preferences_version?: number
           prov_qualifier?: string | null
           prov_scheduling_interval_minutes?: number
           prov_self_scheduling_enabled?: boolean
@@ -7188,6 +10420,27 @@ export type Database = {
           {
             foreignKeyName: "staff_profile_id_fkey"
             columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "staff_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_prov_accepting_changed_by_profile_id_fkey"
+            columns: ["prov_accepting_changed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "staff_prov_accepting_changed_by_profile_id_fkey"
+            columns: ["prov_accepting_changed_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -7558,6 +10811,114 @@ export type Database = {
           },
         ]
       }
+      staff_care_pathway_readiness: {
+        Row: {
+          created_at: string
+          effective_at: string
+          evidence: Json
+          expires_at: string | null
+          id: string
+          pathway_code: string
+          payer_code: string | null
+          readiness_state: string
+          region_code: string | null
+          review_due_at: string | null
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by_profile_id: string | null
+          source: string
+          staff_id: string
+          state_code: Database["public"]["Enums"]["state_code_enum"] | null
+          tenant_id: string
+          updated_at: string
+          verified_at: string
+          verified_by_profile_id: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          effective_at?: string
+          evidence?: Json
+          expires_at?: string | null
+          id?: string
+          pathway_code: string
+          payer_code?: string | null
+          readiness_state?: string
+          region_code?: string | null
+          review_due_at?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by_profile_id?: string | null
+          source: string
+          staff_id: string
+          state_code?: Database["public"]["Enums"]["state_code_enum"] | null
+          tenant_id: string
+          updated_at?: string
+          verified_at?: string
+          verified_by_profile_id?: string | null
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          effective_at?: string
+          evidence?: Json
+          expires_at?: string | null
+          id?: string
+          pathway_code?: string
+          payer_code?: string | null
+          readiness_state?: string
+          region_code?: string | null
+          review_due_at?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by_profile_id?: string | null
+          source?: string
+          staff_id?: string
+          state_code?: Database["public"]["Enums"]["state_code_enum"] | null
+          tenant_id?: string
+          updated_at?: string
+          verified_at?: string
+          verified_by_profile_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_care_pathway_readiness_revoked_by_profile_id_fkey"
+            columns: ["revoked_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "staff_care_pathway_readiness_revoked_by_profile_id_fkey"
+            columns: ["revoked_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_care_pathway_readiness_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_care_pathway_readiness_verified_by_profile_id_fkey"
+            columns: ["verified_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "staff_care_pathway_readiness_verified_by_profile_id_fkey"
+            columns: ["verified_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_certifications: {
         Row: {
           certification_date: string | null
@@ -7638,6 +10999,112 @@ export type Database = {
           },
           {
             foreignKeyName: "staff_certifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_clinical_routing_readiness: {
+        Row: {
+          created_at: string
+          effective_at: string
+          evidence: Json
+          expires_at: string | null
+          id: string
+          readiness_state: Database["public"]["Enums"]["provider_clinical_readiness_state_enum"]
+          reason_codes: string[]
+          review_due_at: string | null
+          reviewed_at: string | null
+          reviewed_by_profile_id: string | null
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by_profile_id: string | null
+          source: string
+          staff_id: string
+          tenant_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          effective_at?: string
+          evidence?: Json
+          expires_at?: string | null
+          id?: string
+          readiness_state?: Database["public"]["Enums"]["provider_clinical_readiness_state_enum"]
+          reason_codes?: string[]
+          review_due_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by_profile_id?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by_profile_id?: string | null
+          source: string
+          staff_id: string
+          tenant_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          effective_at?: string
+          evidence?: Json
+          expires_at?: string | null
+          id?: string
+          readiness_state?: Database["public"]["Enums"]["provider_clinical_readiness_state_enum"]
+          reason_codes?: string[]
+          review_due_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by_profile_id?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by_profile_id?: string | null
+          source?: string
+          staff_id?: string
+          tenant_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_clinical_routing_readiness_reviewed_by_profile_id_fkey"
+            columns: ["reviewed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "staff_clinical_routing_readiness_reviewed_by_profile_id_fkey"
+            columns: ["reviewed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_clinical_routing_readiness_revoked_by_profile_id_fkey"
+            columns: ["revoked_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "staff_clinical_routing_readiness_revoked_by_profile_id_fkey"
+            columns: ["revoked_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_clinical_routing_readiness_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_clinical_routing_readiness_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -7796,9 +11263,17 @@ export type Database = {
           license_number: string
           license_state: Database["public"]["Enums"]["state_code_enum"]
           license_type: string
+          review_due_at: string | null
+          revocation_reason: string | null
+          revoked_at: string | null
           staff_id: string
           tenant_id: string
           updated_at: string
+          verification_evidence: Json
+          verification_source: string | null
+          verification_state: string
+          verified_at: string | null
+          verified_by_profile_id: string | null
         }
         Insert: {
           created_at?: string
@@ -7809,9 +11284,17 @@ export type Database = {
           license_number: string
           license_state: Database["public"]["Enums"]["state_code_enum"]
           license_type: string
+          review_due_at?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
           staff_id: string
           tenant_id: string
           updated_at?: string
+          verification_evidence?: Json
+          verification_source?: string | null
+          verification_state?: string
+          verified_at?: string | null
+          verified_by_profile_id?: string | null
         }
         Update: {
           created_at?: string
@@ -7822,9 +11305,17 @@ export type Database = {
           license_number?: string
           license_state?: Database["public"]["Enums"]["state_code_enum"]
           license_type?: string
+          review_due_at?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
           staff_id?: string
           tenant_id?: string
           updated_at?: string
+          verification_evidence?: Json
+          verification_source?: string | null
+          verification_state?: string
+          verified_at?: string | null
+          verified_by_profile_id?: string | null
         }
         Relationships: [
           {
@@ -7839,6 +11330,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_licenses_verified_by_profile_id_fkey"
+            columns: ["verified_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "staff_licenses_verified_by_profile_id_fkey"
+            columns: ["verified_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -8352,6 +11857,13 @@ export type Database = {
             foreignKeyName: "tenant_memberships_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "tenant_memberships_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -8548,6 +12060,482 @@ export type Database = {
         }
         Relationships: []
       }
+      vaccn_case_step_progress: {
+        Row: {
+          blocked_reason: string | null
+          case_id: string
+          completed_at: string | null
+          completed_by_profile_id: string | null
+          completion_note: string | null
+          created_at: string
+          due_at: string | null
+          evidence: Json
+          id: string
+          owner_profile_id: string | null
+          skipped_reason: string | null
+          sop_step_id: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["vaccn_case_step_status_enum"]
+          tenant_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          blocked_reason?: string | null
+          case_id: string
+          completed_at?: string | null
+          completed_by_profile_id?: string | null
+          completion_note?: string | null
+          created_at?: string
+          due_at?: string | null
+          evidence?: Json
+          id?: string
+          owner_profile_id?: string | null
+          skipped_reason?: string | null
+          sop_step_id: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["vaccn_case_step_status_enum"]
+          tenant_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          blocked_reason?: string | null
+          case_id?: string
+          completed_at?: string | null
+          completed_by_profile_id?: string | null
+          completion_note?: string | null
+          created_at?: string
+          due_at?: string | null
+          evidence?: Json
+          id?: string
+          owner_profile_id?: string | null
+          skipped_reason?: string | null
+          sop_step_id?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["vaccn_case_step_status_enum"]
+          tenant_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaccn_case_step_progress_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "vaccn_registration_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccn_case_step_progress_completed_by_profile_id_fkey"
+            columns: ["completed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "vaccn_case_step_progress_completed_by_profile_id_fkey"
+            columns: ["completed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccn_case_step_progress_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "vaccn_case_step_progress_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccn_case_step_progress_sop_step_id_fkey"
+            columns: ["sop_step_id"]
+            isOneToOne: false
+            referencedRelation: "vaccn_sop_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccn_case_step_progress_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vaccn_registration_case_history: {
+        Row: {
+          actor_profile_id: string | null
+          case_id: string
+          created_at: string
+          event_type: string
+          evidence: Json
+          id: string
+          new_status:
+            | Database["public"]["Enums"]["vaccn_registration_case_status_enum"]
+            | null
+          occurred_at: string
+          prior_status:
+            | Database["public"]["Enums"]["vaccn_registration_case_status_enum"]
+            | null
+          reason: string | null
+          source: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          case_id: string
+          created_at?: string
+          event_type: string
+          evidence?: Json
+          id?: string
+          new_status?:
+            | Database["public"]["Enums"]["vaccn_registration_case_status_enum"]
+            | null
+          occurred_at?: string
+          prior_status?:
+            | Database["public"]["Enums"]["vaccn_registration_case_status_enum"]
+            | null
+          reason?: string | null
+          source: string
+          tenant_id: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          case_id?: string
+          created_at?: string
+          event_type?: string
+          evidence?: Json
+          id?: string
+          new_status?:
+            | Database["public"]["Enums"]["vaccn_registration_case_status_enum"]
+            | null
+          occurred_at?: string
+          prior_status?:
+            | Database["public"]["Enums"]["vaccn_registration_case_status_enum"]
+            | null
+          reason?: string | null
+          source?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaccn_registration_case_history_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "vaccn_registration_case_history_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccn_registration_case_history_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "vaccn_registration_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccn_registration_case_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vaccn_registration_cases: {
+        Row: {
+          blocked_reason_code: string | null
+          close_reason: string | null
+          closed_at: string | null
+          created_at: string
+          external_case_reference: string | null
+          id: string
+          next_action: string | null
+          next_action_due_at: string | null
+          non_sensitive_evidence: Json
+          optum_serve_required: boolean
+          owner_profile_id: string | null
+          ready_at: string | null
+          region_code: string | null
+          sensitive_evidence_location: string | null
+          sop_version_id: string | null
+          source: string
+          source_record_key: string | null
+          staff_id: string
+          state_code: Database["public"]["Enums"]["state_code_enum"]
+          status: Database["public"]["Enums"]["vaccn_registration_case_status_enum"]
+          submitted_at: string | null
+          tenant_id: string
+          tpa_code: string | null
+          updated_at: string
+          vamc_code: string | null
+          version: number
+        }
+        Insert: {
+          blocked_reason_code?: string | null
+          close_reason?: string | null
+          closed_at?: string | null
+          created_at?: string
+          external_case_reference?: string | null
+          id?: string
+          next_action?: string | null
+          next_action_due_at?: string | null
+          non_sensitive_evidence?: Json
+          optum_serve_required?: boolean
+          owner_profile_id?: string | null
+          ready_at?: string | null
+          region_code?: string | null
+          sensitive_evidence_location?: string | null
+          sop_version_id?: string | null
+          source: string
+          source_record_key?: string | null
+          staff_id: string
+          state_code: Database["public"]["Enums"]["state_code_enum"]
+          status?: Database["public"]["Enums"]["vaccn_registration_case_status_enum"]
+          submitted_at?: string | null
+          tenant_id: string
+          tpa_code?: string | null
+          updated_at?: string
+          vamc_code?: string | null
+          version?: number
+        }
+        Update: {
+          blocked_reason_code?: string | null
+          close_reason?: string | null
+          closed_at?: string | null
+          created_at?: string
+          external_case_reference?: string | null
+          id?: string
+          next_action?: string | null
+          next_action_due_at?: string | null
+          non_sensitive_evidence?: Json
+          optum_serve_required?: boolean
+          owner_profile_id?: string | null
+          ready_at?: string | null
+          region_code?: string | null
+          sensitive_evidence_location?: string | null
+          sop_version_id?: string | null
+          source?: string
+          source_record_key?: string | null
+          staff_id?: string
+          state_code?: Database["public"]["Enums"]["state_code_enum"]
+          status?: Database["public"]["Enums"]["vaccn_registration_case_status_enum"]
+          submitted_at?: string | null
+          tenant_id?: string
+          tpa_code?: string | null
+          updated_at?: string
+          vamc_code?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaccn_registration_cases_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "vaccn_registration_cases_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccn_registration_cases_sop_version_id_fkey"
+            columns: ["sop_version_id"]
+            isOneToOne: false
+            referencedRelation: "vaccn_sop_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccn_registration_cases_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccn_registration_cases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vaccn_sop_steps: {
+        Row: {
+          completion_criteria: Json
+          created_at: string
+          expected_duration_days: number | null
+          id: string
+          instructions: string
+          is_required: boolean
+          owning_role: string | null
+          required_evidence_schema: Json
+          requires_external_response: boolean
+          sop_version_id: string
+          step_key: string
+          step_order: number
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completion_criteria?: Json
+          created_at?: string
+          expected_duration_days?: number | null
+          id?: string
+          instructions: string
+          is_required?: boolean
+          owning_role?: string | null
+          required_evidence_schema?: Json
+          requires_external_response?: boolean
+          sop_version_id: string
+          step_key: string
+          step_order: number
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completion_criteria?: Json
+          created_at?: string
+          expected_duration_days?: number | null
+          id?: string
+          instructions?: string
+          is_required?: boolean
+          owning_role?: string | null
+          required_evidence_schema?: Json
+          requires_external_response?: boolean
+          sop_version_id?: string
+          step_key?: string
+          step_order?: number
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaccn_sop_steps_sop_version_id_fkey"
+            columns: ["sop_version_id"]
+            isOneToOne: false
+            referencedRelation: "vaccn_sop_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccn_sop_steps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vaccn_sop_versions: {
+        Row: {
+          applicability: Json
+          created_at: string
+          description: string | null
+          effective_at: string | null
+          id: string
+          published_at: string | null
+          published_by_profile_id: string | null
+          region_code: string | null
+          retired_at: string | null
+          sop_code: string
+          source_references: Json
+          state_codes: Database["public"]["Enums"]["state_code_enum"][]
+          status: Database["public"]["Enums"]["vaccn_sop_status_enum"]
+          tenant_id: string
+          title: string
+          tpa_code: string | null
+          updated_at: string
+          vamc_codes: string[]
+          version_number: number
+        }
+        Insert: {
+          applicability?: Json
+          created_at?: string
+          description?: string | null
+          effective_at?: string | null
+          id?: string
+          published_at?: string | null
+          published_by_profile_id?: string | null
+          region_code?: string | null
+          retired_at?: string | null
+          sop_code: string
+          source_references?: Json
+          state_codes?: Database["public"]["Enums"]["state_code_enum"][]
+          status?: Database["public"]["Enums"]["vaccn_sop_status_enum"]
+          tenant_id: string
+          title: string
+          tpa_code?: string | null
+          updated_at?: string
+          vamc_codes?: string[]
+          version_number: number
+        }
+        Update: {
+          applicability?: Json
+          created_at?: string
+          description?: string | null
+          effective_at?: string | null
+          id?: string
+          published_at?: string | null
+          published_by_profile_id?: string | null
+          region_code?: string | null
+          retired_at?: string | null
+          sop_code?: string
+          source_references?: Json
+          state_codes?: Database["public"]["Enums"]["state_code_enum"][]
+          status?: Database["public"]["Enums"]["vaccn_sop_status_enum"]
+          tenant_id?: string
+          title?: string
+          tpa_code?: string | null
+          updated_at?: string
+          vamc_codes?: string[]
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaccn_sop_versions_published_by_profile_id_fkey"
+            columns: ["published_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "vaccn_sop_versions_published_by_profile_id_fkey"
+            columns: ["published_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccn_sop_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       valorwell_credits: {
         Row: {
           applied_at: string
@@ -8699,6 +12687,143 @@ export type Database = {
           },
         ]
       }
+      client_journey_exception_current_summary: {
+        Row: {
+          active_exception_count: number | null
+          active_exceptions: Json | null
+          categories: string[] | null
+          client_id: string | null
+          highest_priority_next_action: string | null
+          highest_priority_reason_code: string | null
+          next_review_due_at: string | null
+          overdue_exception_count: number | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_journey_exceptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_journey_exception_operations: {
+        Row: {
+          age_provider_fit_exception: boolean | null
+          assigned_staff_id: string | null
+          assigned_staff_name: string | null
+          at_risk: boolean | null
+          category: string | null
+          client_age: number | null
+          client_email: string | null
+          client_id: string | null
+          client_name: string | null
+          client_state: string | null
+          contact_policy: string | null
+          created_at: string | null
+          current_insurance_id: string | null
+          eligibility_state: string | null
+          engagement_state: string | null
+          evidence: Json | null
+          exception_type: string | null
+          has_other_coverage: boolean | null
+          id: string | null
+          lifecycle_stage: string | null
+          next_action: string | null
+          open_duration_hours: number | null
+          overdue: boolean | null
+          owner_email: string | null
+          owner_name: string | null
+          owner_profile_id: string | null
+          payer_name: string | null
+          payer_order: string | null
+          payer_pathway: string | null
+          reason_code: string | null
+          reason_detail: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          resolution_note: string | null
+          resolution_state: string | null
+          resolved_at: string | null
+          resolved_by_profile_id: string | null
+          review_due_at: string | null
+          run_key: string | null
+          service_policy: string | null
+          source: string | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_journey_exceptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_resolved_by_profile_id_fkey"
+            columns: ["resolved_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_resolved_by_profile_id_fkey"
+            columns: ["resolved_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_run_key_fkey"
+            columns: ["run_key"]
+            isOneToOne: false
+            referencedRelation: "client_journey_phase4_runs"
+            referencedColumns: ["run_key"]
+          },
+          {
+            foreignKeyName: "clients_primary_staff_id_fkey"
+            columns: ["assigned_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_journey_exception_owner_options: {
+        Row: {
+          display_name: string | null
+          email: string | null
+          profile_id: string | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_outstanding_charges: {
         Row: {
           amount: number | null
@@ -8714,16 +12839,74 @@ export type Database = {
         }
         Relationships: []
       }
+      client_provider_demand_operations_v: {
+        Row: {
+          age_group: string | null
+          client_age: number | null
+          client_display_name: string | null
+          client_id: string | null
+          client_state: Database["public"]["Enums"]["state_code_enum"] | null
+          contact_policy:
+            | Database["public"]["Enums"]["client_contact_policy_enum"]
+            | null
+          created_at: string | null
+          demand_id: string | null
+          is_waiting: boolean | null
+          last_evaluated_at: string | null
+          last_evaluation_source: string | null
+          last_option_count: number | null
+          lifecycle_stage:
+            | Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+            | null
+          pathway_code: string | null
+          provider_fit_context: Json | null
+          release_notification_state: string | null
+          release_notified_at: string | null
+          resolution_reason: string | null
+          resolved_at: string | null
+          tenant_id: string | null
+          updated_at: string | null
+          waiting_days: number | null
+          waiting_since: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_provider_demand_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_provider_demand_summary_v: {
+        Row: {
+          age_group: string | null
+          average_wait_days: number | null
+          client_state: Database["public"]["Enums"]["state_code_enum"] | null
+          clients_waiting: number | null
+          contactable_clients: number | null
+          do_not_contact_clients: number | null
+          oldest_wait_days: number | null
+          oldest_waiting_since: string | null
+          pathway_code: string | null
+          tenant_id: string | null
+        }
+        Relationships: []
+      }
       clinician_client_status_movement_v: {
         Row: {
           changed_at: string | null
           client_id: string | null
           history_id: string | null
-          new_status: Database["public"]["Enums"]["pat_status_enum"] | null
-          old_status: Database["public"]["Enums"]["pat_status_enum"] | null
+          new_status: string | null
+          old_status: string | null
           primary_staff_id: string | null
           reason: string | null
           source: string | null
+          state_dimension:
+            | Database["public"]["Enums"]["client_state_dimension_enum"]
+            | null
           tenant_id: string | null
           time_in_previous_status: string | null
         }
@@ -8836,6 +13019,32 @@ export type Database = {
       }
     }
     Functions: {
+      acknowledge_client_insurance_deferment: {
+        Args: { p_client_id: string; p_eligibility_check_id: string }
+        Returns: Json
+      }
+      admin_override_client_state: {
+        Args: {
+          p_actor_profile_id?: string
+          p_client_id: string
+          p_new_value: string
+          p_reason: string
+          p_state_dimension: Database["public"]["Enums"]["client_state_dimension_enum"]
+        }
+        Returns: Json
+      }
+      admin_set_client_care_cadence: {
+        Args: {
+          p_care_cadence: Database["public"]["Enums"]["client_care_cadence_enum"]
+          p_client_id: string
+          p_reason: string
+        }
+        Returns: undefined
+      }
+      advance_client_intake_if_ready: {
+        Args: { p_client_id: string }
+        Returns: Json
+      }
       approve_payroll_line_item: {
         Args: {
           p_dispute_reason?: string
@@ -8852,6 +13061,10 @@ export type Database = {
       backfill_copay_charges: {
         Args: { p_tenant_id?: string }
         Returns: number
+      }
+      book_client_appointment: {
+        Args: { p_slot_end_utc?: string; p_slot_start_utc: string }
+        Returns: Json
       }
       check_assessments_due: {
         Args: { p_client_id: string }
@@ -8880,9 +13093,110 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      client_lifecycle_transition_source_allowed: {
+        Args: {
+          p_current: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+          p_source: string
+          p_target: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+        }
+        Returns: boolean
+      }
+      client_state_engine_authorize: {
+        Args: {
+          p_actor_profile_id: string
+          p_admin_override?: boolean
+          p_operation: string
+          p_reason: string
+          p_source: string
+        }
+        Returns: string
+      }
+      client_state_engine_begin_context: {
+        Args: { p_actor_profile_id: string; p_reason: string; p_source: string }
+        Returns: Json
+      }
+      client_state_engine_restore_context: {
+        Args: { p_previous: Json }
+        Returns: undefined
+      }
+      client_state_engine_snapshot: {
+        Args: { p_client_id: string }
+        Returns: Json
+      }
+      client_state_engine_source_allowed: {
+        Args: { p_operation: string; p_source: string }
+        Returns: boolean
+      }
+      close_client_journey: {
+        Args: {
+          p_actor_profile_id?: string
+          p_admin_override?: boolean
+          p_client_id: string
+          p_closure_reason: Database["public"]["Enums"]["client_closure_reason_enum"]
+          p_reason?: string
+          p_source: string
+        }
+        Returns: Json
+      }
+      complete_client_registration: {
+        Args: {
+          p_client_id: string
+          p_goals: string
+          p_marital_status?: string
+          p_referral_source: string
+          p_ssn?: string
+        }
+        Returns: Json
+      }
       convert_local_to_utc: {
         Args: { p_date: string; p_time: string; p_timezone?: string }
         Returns: string
+      }
+      create_client_journey_exception: {
+        Args: {
+          p_category: string
+          p_client_id: string
+          p_evidence?: Json
+          p_next_action: string
+          p_owner_profile_id?: string
+          p_reason_code: string
+          p_reason_detail: string
+          p_related_entity_id?: string
+          p_related_entity_type?: string
+          p_review_due_at: string
+          p_source?: string
+          p_tenant_id: string
+        }
+        Returns: {
+          category: string
+          client_id: string
+          created_at: string
+          created_by_profile_id: string | null
+          evidence: Json
+          exception_type: string
+          id: string
+          next_action: string
+          owner_profile_id: string | null
+          reason_code: string
+          reason_detail: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          resolution_note: string | null
+          resolution_state: string
+          resolved_at: string | null
+          resolved_by_profile_id: string | null
+          review_due_at: string
+          run_key: string | null
+          source: string
+          tenant_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_journey_exceptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       crm_bulk_update_client_status: {
         Args: {
@@ -9022,8 +13336,34 @@ export type Database = {
           total_responsibility: number
         }[]
       }
+      get_client_care_readiness: {
+        Args: { p_client_id: string }
+        Returns: {
+          care_requirements_complete: boolean
+          client_id: string
+          emergency_contact_complete: boolean
+          evidence: Json
+          insurance_pathway_ready: boolean
+          intake_complete: boolean
+          intake_form_complete: boolean
+          is_minor: boolean
+          lifecycle_stage: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+          missing_gates: string[]
+          pathway_code: string
+          payer_order_clear: boolean
+          registration_complete: boolean
+          required_consents_complete: boolean
+          service_allowed: boolean
+          tenant_id: string
+          therapist_selection_ready: boolean
+        }[]
+      }
       get_client_claim_line_breakdown: {
         Args: { p_claim_line_id: string }
+        Returns: Json
+      }
+      get_client_insurance_eligibility_status: {
+        Args: { p_client_id: string }
         Returns: Json
       }
       get_client_outstanding_items: {
@@ -9037,6 +13377,25 @@ export type Database = {
           remaining: number
           service_date: string
           tenant_id: string
+        }[]
+      }
+      get_eligible_therapists_for_client: {
+        Args: { p_client_id: string }
+        Returns: {
+          id: string
+          licenses: Json
+          pathway_code: string
+          prov_bio: string
+          prov_image_url: string
+          prov_max_client_age: number
+          prov_min_client_age: number
+          prov_name_f: string
+          prov_name_for_clients: string
+          prov_name_l: string
+          prov_scheduling_interval_minutes: number
+          prov_self_scheduling_enabled: boolean
+          prov_treatment_approaches: string[]
+          scheduling_branch: string
         }[]
       }
       get_now_in_timezone: {
@@ -9218,7 +13577,123 @@ export type Database = {
       }
       mark_at_risk_clients: { Args: { p_tenant_id: string }; Returns: number }
       reconcile_stalled_bulk_jobs: { Args: never; Returns: undefined }
+      record_client_eligibility_result: {
+        Args: {
+          p_claimmd_eligibility_id?: string
+          p_client_id: string
+          p_client_insurance_id: string
+          p_coverage_end?: string
+          p_coverage_start?: string
+          p_error_codes?: string[]
+          p_has_other_coverage?: boolean
+          p_outcome: string
+          p_payer_order_detected?: string
+          p_recorded_by_profile_id?: string
+          p_request_fingerprint?: Json
+          p_response_message?: string
+          p_result_metadata?: Json
+          p_service_date?: string
+        }
+        Returns: Json
+      }
       refresh_client_ages: { Args: never; Returns: number }
+      select_therapist_for_client: {
+        Args: { p_client_id: string; p_staff_id: string }
+        Returns: Json
+      }
+      set_client_at_risk: {
+        Args: {
+          p_actor_profile_id?: string
+          p_admin_override?: boolean
+          p_at_risk: boolean
+          p_client_id: string
+          p_reason?: string
+          p_source: string
+        }
+        Returns: Json
+      }
+      set_client_contact_policy: {
+        Args: {
+          p_actor_profile_id?: string
+          p_admin_override?: boolean
+          p_client_id: string
+          p_contact_policy: Database["public"]["Enums"]["client_contact_policy_enum"]
+          p_reason?: string
+          p_source: string
+        }
+        Returns: Json
+      }
+      set_client_eligibility_state: {
+        Args: {
+          p_actor_profile_id?: string
+          p_admin_override?: boolean
+          p_client_id: string
+          p_eligibility_state: Database["public"]["Enums"]["client_eligibility_state_enum"]
+          p_reason?: string
+          p_source: string
+        }
+        Returns: Json
+      }
+      set_client_engagement_state: {
+        Args: {
+          p_actor_profile_id?: string
+          p_admin_override?: boolean
+          p_client_id: string
+          p_engagement_state: Database["public"]["Enums"]["client_engagement_state_enum"]
+          p_reason?: string
+          p_source: string
+        }
+        Returns: Json
+      }
+      set_client_service_policy: {
+        Args: {
+          p_actor_profile_id?: string
+          p_client_id: string
+          p_reason: string
+          p_service_policy: Database["public"]["Enums"]["client_service_policy_enum"]
+          p_source: string
+        }
+        Returns: Json
+      }
+      set_staff_care_pathway_readiness: {
+        Args: {
+          p_evidence?: Json
+          p_expires_at?: string
+          p_pathway_code: string
+          p_readiness_state: string
+          p_source: string
+          p_staff_id: string
+        }
+        Returns: {
+          created_at: string
+          effective_at: string
+          evidence: Json
+          expires_at: string | null
+          id: string
+          pathway_code: string
+          payer_code: string | null
+          readiness_state: string
+          region_code: string | null
+          review_due_at: string | null
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by_profile_id: string | null
+          source: string
+          staff_id: string
+          state_code: Database["public"]["Enums"]["state_code_enum"] | null
+          tenant_id: string
+          updated_at: string
+          verified_at: string
+          verified_by_profile_id: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "staff_care_pathway_readiness"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       setup_admin_user: {
         Args: {
           _first_name?: string
@@ -9231,9 +13706,72 @@ export type Database = {
         }
         Returns: string
       }
+      transition_client_lifecycle: {
+        Args: {
+          p_actor_profile_id?: string
+          p_admin_override?: boolean
+          p_client_id: string
+          p_reason?: string
+          p_source: string
+          p_target_stage: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+        }
+        Returns: Json
+      }
       trg_enqueue_clickup_sync: {
         Args: { p_client_id: string }
         Returns: undefined
+      }
+      update_client_journey_exception: {
+        Args: {
+          p_change_source?: string
+          p_clear_owner?: boolean
+          p_exception_id: string
+          p_next_action?: string
+          p_owner_profile_id?: string
+          p_resolution_note?: string
+          p_resolution_state?: string
+          p_review_due_at?: string
+        }
+        Returns: {
+          category: string
+          client_id: string
+          created_at: string
+          created_by_profile_id: string | null
+          evidence: Json
+          exception_type: string
+          id: string
+          next_action: string
+          owner_profile_id: string | null
+          reason_code: string
+          reason_detail: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          resolution_note: string | null
+          resolution_state: string
+          resolved_at: string | null
+          resolved_by_profile_id: string | null
+          review_due_at: string
+          run_key: string | null
+          source: string
+          tenant_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_journey_exceptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      upsert_client_emergency_contact: {
+        Args: {
+          p_client_id: string
+          p_email?: string
+          p_name: string
+          p_phone: string
+          p_relationship: string
+        }
+        Returns: Json
       }
     }
     Enums: {
@@ -9248,10 +13786,39 @@ export type Database = {
         | "cancelled"
         | "late_cancel/noshow"
         | "draft"
+      client_care_cadence_enum: "regular" | "as_needed"
+      client_closure_reason_enum:
+        | "not_the_right_time"
+        | "found_somewhere_else"
+        | "completed_care"
+        | "paused_care"
+        | "administrative"
+        | "went_dark"
+        | "other"
+      client_contact_policy_enum: "normal" | "do_not_contact"
+      client_eligibility_state_enum:
+        | "eligible"
+        | "coverage_issue"
+        | "manual_review"
+        | "unknown"
+      client_engagement_state_enum:
+        | "normal"
+        | "unresponsive_warm"
+        | "unresponsive_cold"
+        | "went_dark"
       client_history_family_context_enum:
         | "family_of_origin"
         | "current_household"
       client_ideation_enum: "none" | "passive" | "active"
+      client_lifecycle_stage_enum:
+        | "registration"
+        | "intake"
+        | "matching"
+        | "matched"
+        | "scheduled"
+        | "early_care"
+        | "established_care"
+        | "closed"
       client_relation_type_enum:
         | "Patient"
         | "Parent"
@@ -9259,9 +13826,31 @@ export type Database = {
         | "Caregiver"
         | "Legal Guardian"
         | "Other"
+      client_service_policy_enum: "normal" | "service_blocked"
+      client_state_dimension_enum:
+        | "lifecycle_stage"
+        | "engagement_state"
+        | "at_risk"
+        | "eligibility_state"
+        | "contact_policy"
+        | "service_policy"
+        | "closure_reason"
+        | "care_cadence"
+        | "legacy_pat_status"
       client_status_enum: "New" | "Registered" | "Active" | "Inactive"
       client_substance_abuse_risk_enum: "none" | "low" | "medium" | "high"
       clinician_status_enum: "Invited" | "New" | "Active" | "Inactive"
+      contract_consumer_status_enum:
+        | "not_started"
+        | "in_progress"
+        | "validated"
+        | "blocked"
+        | "retired"
+      contract_release_status_enum:
+        | "draft"
+        | "published"
+        | "deprecated"
+        | "retired"
       form_type_enum: "signup" | "intake" | "session_notes"
       gad7_severity_enum: "minimal" | "mild" | "moderate" | "severe"
       gender_identity_enum:
@@ -9269,11 +13858,22 @@ export type Database = {
         | "Male"
         | "Non-Binary/Gender Fluid"
         | "Other"
+      insurance_eligibility_outcome_enum:
+        | "active"
+        | "inactive"
+        | "member_not_found"
+        | "no_coverage_for_date"
+        | "technical_error"
+      integration_outbox_status_enum:
+        | "pending"
+        | "processing"
+        | "delivered"
+        | "failed"
+        | "dead_letter"
       pat_rel_enum: "18" | "01" | "19" | "20" | "21" | "39" | "40" | "53" | "G8"
       pat_status_enum:
         | "Interested"
         | "New"
-        | "Active"
         | "Inactive"
         | "Registered"
         | "Waitlist"
@@ -9294,13 +13894,62 @@ export type Database = {
         | "At Risk"
         | "Legacy - Has Therapist Available"
         | "Legacy - No Therapist Available"
-        | "No Longer Eligible"
       phq9_severity_enum:
         | "minimal"
         | "mild"
         | "moderate"
         | "moderately_severe"
         | "severe"
+      provider_applicant_status_enum:
+        | "new"
+        | "contacted"
+        | "screening"
+        | "application"
+        | "credentialing"
+        | "ready"
+        | "hired"
+        | "declined"
+        | "withdrawn"
+        | "inactive"
+      provider_availability_confirmation_state_enum:
+        | "current"
+        | "due"
+        | "reminder_sent"
+        | "expired"
+        | "not_applicable"
+      provider_clinical_readiness_state_enum:
+        | "pending"
+        | "ready"
+        | "not_ready"
+        | "hold"
+      provider_contact_failure_status_enum: "recorded" | "corrected" | "voided"
+      provider_followup_status_enum:
+        | "pending"
+        | "completed"
+        | "skipped"
+        | "failed"
+        | "cancelled"
+      provider_match_evaluation_state_enum:
+        | "eligible"
+        | "ineligible"
+        | "stale"
+        | "error"
+      provider_network_exception_severity_enum:
+        | "information"
+        | "warning"
+        | "blocking"
+        | "critical"
+      provider_network_exception_status_enum:
+        | "open"
+        | "in_progress"
+        | "waiting"
+        | "resolved"
+        | "dismissed"
+      provider_state_launch_status_enum:
+        | "active"
+        | "warm"
+        | "recruiting"
+        | "hold"
       risk_level_enum: "none" | "low" | "moderate" | "high" | "imminent"
       sex_enum: "M" | "F"
       specialty_enum:
@@ -9373,6 +14022,21 @@ export type Database = {
         | "America/Puerto_Rico"
         | "Pacific/Guam"
         | "Pacific/Pago_Pago"
+      vaccn_case_step_status_enum:
+        | "not_started"
+        | "in_progress"
+        | "waiting"
+        | "completed"
+        | "skipped"
+        | "blocked"
+      vaccn_registration_case_status_enum:
+        | "not_started"
+        | "in_progress"
+        | "waiting_external"
+        | "blocked"
+        | "ready"
+        | "closed"
+      vaccn_sop_status_enum: "draft" | "published" | "retired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -9512,11 +14176,44 @@ export const Constants = {
         "late_cancel/noshow",
         "draft",
       ],
+      client_care_cadence_enum: ["regular", "as_needed"],
+      client_closure_reason_enum: [
+        "not_the_right_time",
+        "found_somewhere_else",
+        "completed_care",
+        "paused_care",
+        "administrative",
+        "went_dark",
+        "other",
+      ],
+      client_contact_policy_enum: ["normal", "do_not_contact"],
+      client_eligibility_state_enum: [
+        "eligible",
+        "coverage_issue",
+        "manual_review",
+        "unknown",
+      ],
+      client_engagement_state_enum: [
+        "normal",
+        "unresponsive_warm",
+        "unresponsive_cold",
+        "went_dark",
+      ],
       client_history_family_context_enum: [
         "family_of_origin",
         "current_household",
       ],
       client_ideation_enum: ["none", "passive", "active"],
+      client_lifecycle_stage_enum: [
+        "registration",
+        "intake",
+        "matching",
+        "matched",
+        "scheduled",
+        "early_care",
+        "established_care",
+        "closed",
+      ],
       client_relation_type_enum: [
         "Patient",
         "Parent",
@@ -9525,9 +14222,34 @@ export const Constants = {
         "Legal Guardian",
         "Other",
       ],
+      client_service_policy_enum: ["normal", "service_blocked"],
+      client_state_dimension_enum: [
+        "lifecycle_stage",
+        "engagement_state",
+        "at_risk",
+        "eligibility_state",
+        "contact_policy",
+        "service_policy",
+        "closure_reason",
+        "care_cadence",
+        "legacy_pat_status",
+      ],
       client_status_enum: ["New", "Registered", "Active", "Inactive"],
       client_substance_abuse_risk_enum: ["none", "low", "medium", "high"],
       clinician_status_enum: ["Invited", "New", "Active", "Inactive"],
+      contract_consumer_status_enum: [
+        "not_started",
+        "in_progress",
+        "validated",
+        "blocked",
+        "retired",
+      ],
+      contract_release_status_enum: [
+        "draft",
+        "published",
+        "deprecated",
+        "retired",
+      ],
       form_type_enum: ["signup", "intake", "session_notes"],
       gad7_severity_enum: ["minimal", "mild", "moderate", "severe"],
       gender_identity_enum: [
@@ -9536,11 +14258,24 @@ export const Constants = {
         "Non-Binary/Gender Fluid",
         "Other",
       ],
+      insurance_eligibility_outcome_enum: [
+        "active",
+        "inactive",
+        "member_not_found",
+        "no_coverage_for_date",
+        "technical_error",
+      ],
+      integration_outbox_status_enum: [
+        "pending",
+        "processing",
+        "delivered",
+        "failed",
+        "dead_letter",
+      ],
       pat_rel_enum: ["18", "01", "19", "20", "21", "39", "40", "53", "G8"],
       pat_status_enum: [
         "Interested",
         "New",
-        "Active",
         "Inactive",
         "Registered",
         "Waitlist",
@@ -9561,7 +14296,6 @@ export const Constants = {
         "At Risk",
         "Legacy - Has Therapist Available",
         "Legacy - No Therapist Available",
-        "No Longer Eligible",
       ],
       phq9_severity_enum: [
         "minimal",
@@ -9569,6 +14303,64 @@ export const Constants = {
         "moderate",
         "moderately_severe",
         "severe",
+      ],
+      provider_applicant_status_enum: [
+        "new",
+        "contacted",
+        "screening",
+        "application",
+        "credentialing",
+        "ready",
+        "hired",
+        "declined",
+        "withdrawn",
+        "inactive",
+      ],
+      provider_availability_confirmation_state_enum: [
+        "current",
+        "due",
+        "reminder_sent",
+        "expired",
+        "not_applicable",
+      ],
+      provider_clinical_readiness_state_enum: [
+        "pending",
+        "ready",
+        "not_ready",
+        "hold",
+      ],
+      provider_contact_failure_status_enum: ["recorded", "corrected", "voided"],
+      provider_followup_status_enum: [
+        "pending",
+        "completed",
+        "skipped",
+        "failed",
+        "cancelled",
+      ],
+      provider_match_evaluation_state_enum: [
+        "eligible",
+        "ineligible",
+        "stale",
+        "error",
+      ],
+      provider_network_exception_severity_enum: [
+        "information",
+        "warning",
+        "blocking",
+        "critical",
+      ],
+      provider_network_exception_status_enum: [
+        "open",
+        "in_progress",
+        "waiting",
+        "resolved",
+        "dismissed",
+      ],
+      provider_state_launch_status_enum: [
+        "active",
+        "warm",
+        "recruiting",
+        "hold",
       ],
       risk_level_enum: ["none", "low", "moderate", "high", "imminent"],
       sex_enum: ["M", "F"],
@@ -9645,6 +14437,23 @@ export const Constants = {
         "Pacific/Guam",
         "Pacific/Pago_Pago",
       ],
+      vaccn_case_step_status_enum: [
+        "not_started",
+        "in_progress",
+        "waiting",
+        "completed",
+        "skipped",
+        "blocked",
+      ],
+      vaccn_registration_case_status_enum: [
+        "not_started",
+        "in_progress",
+        "waiting_external",
+        "blocked",
+        "ready",
+        "closed",
+      ],
+      vaccn_sop_status_enum: ["draft", "published", "retired"],
     },
   },
 } as const
