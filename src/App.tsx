@@ -51,6 +51,15 @@ const App = () => (
             <Route path="inbox" element={<CrmInbox />} />
             <Route path="reports" element={<CrmReports />} />
             <Route path="settings" element={<CrmSettings />} />
+            <Route path="canonical" element={<CanonicalDashboard />} />
+            <Route path="canonical/clients" element={<CanonicalClients />} />
+            <Route path="canonical/clients/:id" element={<CanonicalClientDetail />} />
+            <Route path="canonical/tasks" element={<CanonicalTasks />} />
+            <Route path="canonical/exceptions" element={<CanonicalExceptions />} />
+            <Route path="canonical/campaigns" element={<CanonicalCampaigns />} />
+            <Route path="canonical/inbox" element={<CanonicalInbox />} />
+            <Route path="canonical/staff" element={<CanonicalStaff />} />
+            <Route path="canonical/reports" element={<CanonicalReports />} />
           </Route>
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
