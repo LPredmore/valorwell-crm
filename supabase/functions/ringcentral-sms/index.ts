@@ -565,6 +565,20 @@ async function handleInboundSms(req: Request): Promise<Response> {
         });
     }
 
+    // §6.2 REMOVE rule: detect keyword, set canonical DNC, cancel active enrollments.
+    if (matchedClient && isRemoveMessage(messageBody)) {
+      const supabaseUrl2 = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey2 = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      await applyRemove(supabaseUrl2, supabaseKey2, {
+        tenantId: matchedClient.tenant_id,
+        clientId: matchedClient.id,
+        source: 'inbound_sms',
+        correlationId: messageId ?? undefined,
+      });
+      console.log(`[REMOVE] applied for client ${matchedClient.id}`);
+    }
+
+
     // Check for active campaign enrollments for any matching client
     let pausedCount = 0;
     for (const client of matchingClientsFiltered) {
