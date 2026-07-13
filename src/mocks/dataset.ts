@@ -59,12 +59,12 @@ function makeClient(i: number): CanonicalClient {
     eligibility,
     contactPolicy: isDnc ? 'Do Not Contact' : 'Contact Allowed',
     servicePolicy: isBlocked ? 'Service Blocked' : 'Service Allowed',
-    careCadence: lifecycle === 'Established Care' ? 'Every Two Weeks' : lifecycle === 'Early Care' ? 'Weekly' : 'Not Set',
+    careCadence: lifecycle === 'Established Care' || lifecycle === 'Early Care' ? 'Regular' : 'As Needed',
     risk: atRisk
       ? { atRisk: true, atRiskSince: iso(i % 30), reasons: ['Missed 2 consecutive appointments'], severity: i % 3 === 0 ? 'High' : 'Moderate', lastEvaluatedAt: iso(1), requiredNextAction: 'Clinician outreach within 48h', ownerId: clinician }
       : { atRisk: false, reasons: [] },
     closure: lifecycle === 'Closed'
-      ? { closureReason: 'Completed Treatment Plan', dispositionReason: 'Graduated', closedAt: iso(i % 60), reentryAllowed: true }
+      ? { closureReason: 'Completed Care', dispositionReason: 'Graduated', closedAt: iso(i % 60), reentryAllowed: true }
       : undefined,
     payer: rand(PAYERS, i),
     program: i % 3 === 0 ? 'Veterans Program' : 'Standard',
