@@ -54,3 +54,19 @@ based on suppression code before send.
 - No `supabase as any` shortcuts.
 - No "backend unavailable" placeholder messaging.
 - No mutation of existing `pat_status` code paths.
+
+## Workstream 2 — Canonical Supabase surface (COMPLETE)
+
+Live in Supabase (additive, no changes to existing shared columns):
+- `crm_client_canonical_meta` — CRM-only per-client meta: concurrency token, risk_reason, at_risk_marked_at. RLS: tenant admin/staff read.
+- `crm_client_state_audit` — append-only audit of every canonical state change (dimension enum, from→to, reason, disposition_reason, actor, correlation_id, source). RLS: tenant admin/staff read.
+- `crm_idempotency_keys` — 24h de-dup for canonical writes. RLS: actor-scoped read.
+- `v_client_canonical_state` — single canonical read model joining `clients` + meta, exposing concurrency_token.
+- `crm_has_role(user, tenant)` helper — checks user_roles ∈ (admin,staff) AND tenant_memberships membership.
+- RPCs (all admin/staff gated, concurrency-checked, audited, idempotent):
+  `transition_client_lifecycle`, `set_client_engagement_state`,
+  `set_client_contact_policy`, `set_client_service_policy`,
+  `set_client_eligibility_state`, `set_client_care_cadence`,
+  `set_client_disposition`.
+
+Frontend still on mock provider. Next: implement the Supabase adapter for `ClientsRepository` reading from `v_client_canonical_state` and writing through these RPCs, then flip `useMock`.

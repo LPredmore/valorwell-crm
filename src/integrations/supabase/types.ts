@@ -202,6 +202,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "appointment_clinical_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "appointment_clinical_notes_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -375,6 +382,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_series_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "appointment_series_created_by_profile_id_fkey"
@@ -608,6 +622,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "appointments_created_by_profile_id_fkey"
@@ -1505,6 +1526,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "claims_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "claims_client_insurance_id_fkey"
             columns: ["client_insurance_id"]
             isOneToOne: false
@@ -1610,6 +1638,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "clickup_client_mirror_state_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "clickup_client_mirror_state_last_outbox_event_id_fkey"
             columns: ["last_outbox_event_id"]
             isOneToOne: false
@@ -1688,6 +1723,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_assessment_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_assessment_assignments_tenant_id_fkey"
@@ -1769,6 +1811,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_at_risk_evaluation_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_at_risk_evaluation_log_next_future_appointment_id_fkey"
             columns: ["next_future_appointment_id"]
             isOneToOne: false
@@ -1843,6 +1892,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_charges_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_charges_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -1905,6 +1961,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_diagnoses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_diagnoses_diagnosis_code_id_fkey"
@@ -1986,6 +2049,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_emergency_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_emergency_contacts_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -2061,6 +2131,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_form_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_form_assignments_form_response_id_fkey"
@@ -2165,6 +2242,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_gad7_assessments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_gad7_assessments_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -2233,6 +2317,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_history_family_members_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_history_family_members_history_form_id_fkey"
@@ -2404,6 +2495,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_history_forms_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_history_forms_submitted_by_profile_id_fkey"
             columns: ["submitted_by_profile_id"]
             isOneToOne: false
@@ -2472,6 +2570,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_history_medications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_history_medications_history_form_id_fkey"
             columns: ["history_form_id"]
             isOneToOne: false
@@ -2531,6 +2636,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_history_past_spouses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_history_past_spouses_history_form_id_fkey"
@@ -2595,6 +2707,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_history_past_treatments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_history_past_treatments_history_form_id_fkey"
@@ -2760,6 +2879,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_insurance_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_insurance_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -2855,6 +2981,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_insurance_deferment_acknowledgements_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_insurance_deferment_acknowledgements_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -2930,6 +3063,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exception_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_journey_exception_history_exception_id_fkey"
@@ -3091,6 +3231,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_journey_exceptions_created_by_profile_id_fkey"
@@ -3270,6 +3417,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_journey_phase4_reconciliation_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_journey_phase4_reconciliation_run_key_fkey"
             columns: ["run_key"]
             isOneToOne: false
@@ -3387,6 +3541,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_payment_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_payment_links_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -3450,6 +3611,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_payment_methods_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_payment_methods_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -3509,6 +3677,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_payments_tenant_id_fkey"
@@ -3656,6 +3831,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_pcl5_assessments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_pcl5_assessments_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -3766,6 +3948,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_phq9_assessments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_phq9_assessments_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -3850,6 +4039,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_provider_demand_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       client_provider_demand_reevaluation_queue: {
@@ -3922,6 +4118,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_provider_demand_reevaluation_queue_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_provider_demand_reevaluation_queue_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -3980,6 +4183,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_provider_demand_release_notifications_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_provider_demand_release_notifications_demand_id_fkey"
@@ -4062,6 +4272,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_qualifying_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_qualifying_sessions_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -4140,6 +4357,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_related_persons_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       client_safety_plans: {
@@ -4207,6 +4431,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_safety_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_safety_plans_created_by_profile_id_fkey"
@@ -4299,6 +4530,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_staff_relationships_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_staff_relationships_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -4354,6 +4592,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_status_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -4416,6 +4661,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_telehealth_consents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_telehealth_consents_signed_by_profile_id_fkey"
@@ -4532,6 +4784,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_treatment_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_treatment_plans_created_by_profile_id_fkey"
@@ -4934,6 +5193,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_activity_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "crm_activity_events_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
             isOneToOne: false
@@ -5078,6 +5344,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bulk_send_recipients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "crm_bulk_send_recipients_tenant_id_fkey"
@@ -5257,6 +5530,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_bulk_sms_recipients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "crm_bulk_sms_recipients_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -5382,6 +5662,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_campaign_enrollments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "crm_campaign_enrollments_enrolled_by_profile_id_fkey"
             columns: ["enrolled_by_profile_id"]
             isOneToOne: false
@@ -5457,6 +5744,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campaign_step_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "crm_campaign_step_logs_enrollment_id_fkey"
@@ -5746,6 +6040,114 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_client_canonical_meta: {
+        Row: {
+          at_risk_marked_at: string | null
+          client_id: string
+          concurrency_token: string
+          created_at: string
+          risk_reason: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          at_risk_marked_at?: string | null
+          client_id: string
+          concurrency_token?: string
+          created_at?: string
+          risk_reason?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          at_risk_marked_at?: string | null
+          client_id?: string
+          concurrency_token?: string
+          created_at?: string
+          risk_reason?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_client_canonical_meta_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_client_canonical_meta_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      crm_client_state_audit: {
+        Row: {
+          actor_label: string | null
+          actor_profile_id: string | null
+          client_id: string
+          correlation_id: string | null
+          created_at: string
+          dimension: Database["public"]["Enums"]["client_state_dimension_enum"]
+          disposition_reason: string | null
+          from_value: string | null
+          id: string
+          reason: string | null
+          source: string
+          tenant_id: string
+          to_value: string | null
+        }
+        Insert: {
+          actor_label?: string | null
+          actor_profile_id?: string | null
+          client_id: string
+          correlation_id?: string | null
+          created_at?: string
+          dimension: Database["public"]["Enums"]["client_state_dimension_enum"]
+          disposition_reason?: string | null
+          from_value?: string | null
+          id?: string
+          reason?: string | null
+          source?: string
+          tenant_id: string
+          to_value?: string | null
+        }
+        Update: {
+          actor_label?: string | null
+          actor_profile_id?: string | null
+          client_id?: string
+          correlation_id?: string | null
+          created_at?: string
+          dimension?: Database["public"]["Enums"]["client_state_dimension_enum"]
+          disposition_reason?: string | null
+          from_value?: string | null
+          id?: string
+          reason?: string | null
+          source?: string
+          tenant_id?: string
+          to_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_client_state_audit_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_client_state_audit_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       crm_conversation_cache: {
         Row: {
           cached_at: string
@@ -5834,6 +6236,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_conversation_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "crm_conversation_links_linked_by_profile_id_fkey"
@@ -6021,6 +6430,33 @@ export type Database = {
           },
         ]
       }
+      crm_idempotency_keys: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          expires_at: string
+          key: string
+          operation: string
+          result_json: Json | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          expires_at?: string
+          key: string
+          operation: string
+          result_json?: Json | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          expires_at?: string
+          key?: string
+          operation?: string
+          result_json?: Json | null
+        }
+        Relationships: []
+      }
       crm_inbound_sms_logs: {
         Row: {
           client_id: string | null
@@ -6065,6 +6501,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_inbound_sms_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "crm_inbound_sms_logs_tenant_id_fkey"
@@ -6195,6 +6638,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "crm_notes_created_by_profile_id_fkey"
@@ -6460,6 +6910,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eligibility_checks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "eligibility_checks_client_insurance_id_fkey"
@@ -7075,6 +7532,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "form_responses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "form_responses_form_template_id_fkey"
             columns: ["form_template_id"]
             isOneToOne: false
@@ -7572,6 +8036,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "messages_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -7622,6 +8093,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missive_conversation_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "missive_conversation_links_conversation_id_fkey"
@@ -9215,6 +9693,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "provider_contact_failures_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "provider_contact_failures_corrected_by_profile_id_fkey"
             columns: ["corrected_by_profile_id"]
             isOneToOne: false
@@ -9314,6 +9799,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "provider_matchability_evaluation_options_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "provider_matchability_evaluation_options_evaluation_id_fkey"
             columns: ["evaluation_id"]
             isOneToOne: false
@@ -9404,6 +9896,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_matchability_evaluations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "provider_matchability_evaluations_tenant_id_fkey"
@@ -10176,6 +10675,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "referrals_tenant_id_fkey"
@@ -12605,6 +13111,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "claims_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "claims_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -12672,6 +13185,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_charges_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_charges_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -12706,6 +13226,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -12762,6 +13289,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_journey_exceptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_journey_exceptions_owner_profile_id_fkey"
@@ -12877,6 +13411,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_provider_demand_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
         ]
       }
       client_provider_demand_summary_v: {
@@ -12917,6 +13458,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_status_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "clients_primary_staff_id_fkey"
@@ -12965,6 +13513,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "appointment_clinical_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "appointment_clinical_notes_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -13002,6 +13557,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_gad7_assessments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_gad7_assessments_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -13017,8 +13579,68 @@ export type Database = {
           },
         ]
       }
+      v_client_canonical_state: {
+        Row: {
+          at_risk: boolean | null
+          at_risk_marked_at: string | null
+          care_cadence:
+            | Database["public"]["Enums"]["client_care_cadence_enum"]
+            | null
+          care_cadence_changed_at: string | null
+          client_id: string | null
+          closed_at: string | null
+          closure_reason:
+            | Database["public"]["Enums"]["client_closure_reason_enum"]
+            | null
+          concurrency_token: string | null
+          contact_policy:
+            | Database["public"]["Enums"]["client_contact_policy_enum"]
+            | null
+          contact_policy_changed_at: string | null
+          eligibility_state:
+            | Database["public"]["Enums"]["client_eligibility_state_enum"]
+            | null
+          eligibility_state_changed_at: string | null
+          engagement_state:
+            | Database["public"]["Enums"]["client_engagement_state_enum"]
+            | null
+          engagement_state_changed_at: string | null
+          lifecycle_stage:
+            | Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+            | null
+          lifecycle_stage_changed_at: string | null
+          risk_reason: string | null
+          service_policy:
+            | Database["public"]["Enums"]["client_service_policy_enum"]
+            | null
+          service_policy_changed_at: string | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      _crm_ensure_meta: {
+        Args: { _client_id: string; _tenant_id: string }
+        Returns: string
+      }
+      _crm_idem_check: {
+        Args: { _actor: string; _key: string; _op: string }
+        Returns: Json
+      }
+      _crm_idem_store: {
+        Args: { _actor: string; _key: string; _op: string; _result: Json }
+        Returns: undefined
+      }
       acknowledge_client_insurance_deferment: {
         Args: { p_client_id: string; p_eligibility_check_id: string }
         Returns: Json
@@ -13210,6 +13832,10 @@ export type Database = {
           new_status: Database["public"]["Enums"]["pat_status_enum"]
           old_status: Database["public"]["Enums"]["pat_status_enum"]
         }[]
+      }
+      crm_has_role: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
       }
       crm_save_campaign_steps: {
         Args: { p_campaign_id: string; p_steps: Json; p_tenant_id: string }
@@ -13612,49 +14238,125 @@ export type Database = {
         }
         Returns: Json
       }
-      set_client_contact_policy: {
+      set_client_care_cadence: {
         Args: {
-          p_actor_profile_id?: string
-          p_admin_override?: boolean
-          p_client_id: string
-          p_contact_policy: Database["public"]["Enums"]["client_contact_policy_enum"]
-          p_reason?: string
-          p_source: string
+          client_id: string
+          concurrency_token: string
+          contract_version: string
+          idempotency_key?: string
+          reason: string
+          tenant_id: string
+          to_cadence: Database["public"]["Enums"]["client_care_cadence_enum"]
         }
         Returns: Json
       }
-      set_client_eligibility_state: {
+      set_client_contact_policy:
+        | {
+            Args: {
+              client_id: string
+              concurrency_token: string
+              contract_version: string
+              idempotency_key?: string
+              reason: string
+              tenant_id: string
+              to_policy: Database["public"]["Enums"]["client_contact_policy_enum"]
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_actor_profile_id?: string
+              p_admin_override?: boolean
+              p_client_id: string
+              p_contact_policy: Database["public"]["Enums"]["client_contact_policy_enum"]
+              p_reason?: string
+              p_source: string
+            }
+            Returns: Json
+          }
+      set_client_disposition: {
         Args: {
-          p_actor_profile_id?: string
-          p_admin_override?: boolean
-          p_client_id: string
-          p_eligibility_state: Database["public"]["Enums"]["client_eligibility_state_enum"]
-          p_reason?: string
-          p_source: string
+          client_id: string
+          concurrency_token: string
+          contract_version: string
+          disposition_reason: Database["public"]["Enums"]["client_closure_reason_enum"]
+          idempotency_key?: string
+          reason: string
+          tenant_id: string
         }
         Returns: Json
       }
-      set_client_engagement_state: {
-        Args: {
-          p_actor_profile_id?: string
-          p_admin_override?: boolean
-          p_client_id: string
-          p_engagement_state: Database["public"]["Enums"]["client_engagement_state_enum"]
-          p_reason?: string
-          p_source: string
-        }
-        Returns: Json
-      }
-      set_client_service_policy: {
-        Args: {
-          p_actor_profile_id?: string
-          p_client_id: string
-          p_reason: string
-          p_service_policy: Database["public"]["Enums"]["client_service_policy_enum"]
-          p_source: string
-        }
-        Returns: Json
-      }
+      set_client_eligibility_state:
+        | {
+            Args: {
+              client_id: string
+              concurrency_token: string
+              contract_version: string
+              idempotency_key?: string
+              reason: string
+              tenant_id: string
+              to_state: Database["public"]["Enums"]["client_eligibility_state_enum"]
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_actor_profile_id?: string
+              p_admin_override?: boolean
+              p_client_id: string
+              p_eligibility_state: Database["public"]["Enums"]["client_eligibility_state_enum"]
+              p_reason?: string
+              p_source: string
+            }
+            Returns: Json
+          }
+      set_client_engagement_state:
+        | {
+            Args: {
+              client_id: string
+              concurrency_token: string
+              contract_version: string
+              idempotency_key?: string
+              reason: string
+              tenant_id: string
+              to_state: Database["public"]["Enums"]["client_engagement_state_enum"]
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_actor_profile_id?: string
+              p_admin_override?: boolean
+              p_client_id: string
+              p_engagement_state: Database["public"]["Enums"]["client_engagement_state_enum"]
+              p_reason?: string
+              p_source: string
+            }
+            Returns: Json
+          }
+      set_client_service_policy:
+        | {
+            Args: {
+              client_id: string
+              concurrency_token: string
+              contract_version: string
+              idempotency_key?: string
+              reason: string
+              tenant_id: string
+              to_policy: Database["public"]["Enums"]["client_service_policy_enum"]
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_actor_profile_id?: string
+              p_client_id: string
+              p_reason: string
+              p_service_policy: Database["public"]["Enums"]["client_service_policy_enum"]
+              p_source: string
+            }
+            Returns: Json
+          }
       set_staff_care_pathway_readiness: {
         Args: {
           p_evidence?: Json
@@ -13706,17 +14408,31 @@ export type Database = {
         }
         Returns: string
       }
-      transition_client_lifecycle: {
-        Args: {
-          p_actor_profile_id?: string
-          p_admin_override?: boolean
-          p_client_id: string
-          p_reason?: string
-          p_source: string
-          p_target_stage: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
-        }
-        Returns: Json
-      }
+      transition_client_lifecycle:
+        | {
+            Args: {
+              client_id: string
+              concurrency_token: string
+              contract_version: string
+              disposition_reason?: Database["public"]["Enums"]["client_closure_reason_enum"]
+              idempotency_key?: string
+              reason: string
+              tenant_id: string
+              to_stage: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_actor_profile_id?: string
+              p_admin_override?: boolean
+              p_client_id: string
+              p_reason?: string
+              p_source: string
+              p_target_stage: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+            }
+            Returns: Json
+          }
       trg_enqueue_clickup_sync: {
         Args: { p_client_id: string }
         Returns: undefined
