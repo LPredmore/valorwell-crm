@@ -12,6 +12,8 @@ import {
   ListTodo,
   AlertTriangle,
   Sparkles,
+  Search,
+  Megaphone as MegaphoneIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -60,6 +62,8 @@ const navItems: NavItem[] = [
   { label: 'Canonical Clients', href: '/crm/canonical/clients', icon: Users },
   { label: 'Tasks', href: '/crm/canonical/tasks', icon: ListTodo },
   { label: 'Exceptions', href: '/crm/canonical/exceptions', icon: AlertTriangle },
+  { label: 'Canonical Campaigns', href: '/crm/canonical/campaigns', icon: MegaphoneIcon },
+  { label: 'Search', href: '/crm/canonical/search', icon: Search },
 ];
 
 export function CrmSidebar() {
