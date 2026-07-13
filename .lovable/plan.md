@@ -126,4 +126,17 @@ Adapters:
 - `src/repositories/supabase/audit.ts` — reads `crm_client_state_audit`
   per client and maps dimension → human event label.
 - Hybrid provider now serves clients, tasks, exceptions, staff, and audit
-  from Supabase. Remaining on mock: campaigns, communications, reports.
+  from Supabase. Remaining on mock: communications, reports.
+
+## Workstream 8 — Campaigns adapter (COMPLETE)
+
+- `src/repositories/supabase/campaigns.ts` — full CampaignsRepository over
+  `crm_campaigns` + `crm_campaign_steps` + `crm_campaign_enrollments` +
+  `crm_campaign_triggers`. Aggregates enrolled/active/completed/failed
+  metrics from enrollments; derives entry conditions from triggers;
+  maps `is_active` → status. Enroll/pause/resume/cancel/restart go
+  directly to `crm_campaign_enrollments`.
+- Steps are read-only in this pass — campaign editor step CRUD is a
+  later workstream once the step schema is finalized.
+- Hybrid provider now covers clients, tasks, exceptions, staff, audit,
+  and campaigns. Remaining on mock: communications, reports.
