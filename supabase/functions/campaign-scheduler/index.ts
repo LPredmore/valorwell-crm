@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkSuppression } from '../_shared/suppression.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -562,6 +563,27 @@ async function processCampaignMessages() {
           await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign, stepLog.tenant_id);
           continue;
         }
+      }
+
+      // §6.3 send-time suppression recheck. Blocks ordinary campaign follow-up
+      // if canonical contact_policy=DNC or service_policy=Service Blocked.
+      const suppressionUrl = Deno.env.get('SUPABASE_URL')!;
+      const suppressionKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const suppression = await checkSuppression(suppressionUrl, suppressionKey, {
+        tenantId: stepLog.tenant_id,
+        clientId: stepLog.client_id,
+        messageClass: 'ordinary_campaign_follow_up',
+      });
+      if (!suppression.allowed) {
+        console.log(`[suppression] blocked ${stepLog.id}: ${suppression.reason_code}`);
+        await supabase
+          .from('crm_campaign_step_logs')
+          .update({
+            status: 'suppressed',
+            error_message: `suppressed:${suppression.reason_code}`,
+          })
+          .eq('id', stepLog.id);
+        continue;
       }
 
       // Send the message!

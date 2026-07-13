@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/crm/clients/StatusBadge';
+import { LifecycleBadge, EngagementBadge, AtRiskBadge, DncBadge } from '@/components/crm/clients/CanonicalBadges';
+import { useCanonicalClientState } from '@/hooks/crm/useCanonicalClientState';
 import { ActivityTimeline } from '@/components/crm/detail/ActivityTimeline';
 import { NoteForm } from '@/components/crm/detail/NoteForm';
 import { ClientInfoCard } from '@/components/crm/detail/ClientInfoCard';
@@ -20,6 +22,8 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { tenantId, isAuthenticated } = useCrmAuth();
+  const { data: canonical } = useCanonicalClientState(id);
+
 
   const { data: client, isLoading } = useQuery({
     queryKey: ['crm-client', id],
@@ -115,7 +119,16 @@ export default function ClientDetail() {
             <h1 className="text-2xl font-bold">
               {getClientDisplayName(client)}
             </h1>
-            <StatusBadge status={client.pat_status} />
+            {canonical ? (
+              <>
+                <LifecycleBadge stage={canonical.lifecycle} />
+                <EngagementBadge state={canonical.engagement} />
+                <AtRiskBadge atRisk={canonical.at_risk?.at_risk} />
+                <DncBadge policy={canonical.contact_policy} />
+              </>
+            ) : (
+              <StatusBadge status={client.pat_status} />
+            )}
           </div>
           {client.pat_name_preferred && (
             <p className="text-sm text-muted-foreground">

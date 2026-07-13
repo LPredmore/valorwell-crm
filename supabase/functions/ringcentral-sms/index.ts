@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkSuppression, isRemoveMessage, applyRemove } from '../_shared/suppression.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -261,6 +262,32 @@ async function processBulkSms(bulkSmsId: string) {
         .eq('id', recipient.id);
       failedCount++;
       continue;
+    }
+
+    // §6.3 suppression recheck before every send.
+    // Staff recipients bypass canonical client suppression.
+    if (smsLog.recipient_type !== 'staff' && recipient.id) {
+      const { data: recRow } = await supabase
+        .from('crm_bulk_sms_recipients')
+        .select('client_id')
+        .eq('id', recipient.id)
+        .maybeSingle();
+      if (recRow?.client_id) {
+        const decision = await checkSuppression(supabaseUrl, supabaseServiceKey, {
+          tenantId: smsLog.tenant_id,
+          clientId: recRow.client_id,
+          messageClass: 'ordinary_promotional',
+        });
+        if (!decision.allowed) {
+          console.log(`[suppression] blocked ${recipient.id}: ${decision.reason_code}`);
+          await supabase
+            .from(recipientTable)
+            .update({ status: 'suppressed', error_message: `suppressed:${decision.reason_code}` })
+            .eq('id', recipient.id);
+          failedCount++;
+          continue;
+        }
+      }
     }
 
     // Send SMS
@@ -537,6 +564,20 @@ async function handleInboundSms(req: Request): Promise<Response> {
           },
         });
     }
+
+    // §6.2 REMOVE rule: detect keyword, set canonical DNC, cancel active enrollments.
+    if (matchedClient && isRemoveMessage(messageBody)) {
+      const supabaseUrl2 = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey2 = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      await applyRemove(supabaseUrl2, supabaseKey2, {
+        tenantId: matchedClient.tenant_id,
+        clientId: matchedClient.id,
+        source: 'inbound_sms',
+        correlationId: messageId ?? undefined,
+      });
+      console.log(`[REMOVE] applied for client ${matchedClient.id}`);
+    }
+
 
     // Check for active campaign enrollments for any matching client
     let pausedCount = 0;
