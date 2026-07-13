@@ -154,3 +154,32 @@ Adapters:
 - `ingestInbound` is a pass-through — inbound persistence remains owned
   by the RingCentral and HelpScout webhook edge functions.
 - Hybrid provider now covers everything except reports.
+
+## Workstream 10 — Reports adapter (COMPLETE)
+
+- `src/repositories/supabase/reports.ts` — every report aggregation now
+  computed live from Supabase:
+  - `journeyFunnel` — counts per lifecycle stage with median days from
+    `created_at` → `lifecycle_stage_changed_at`.
+  - `atRiskMetrics` — pulls `clients.at_risk`/`at_risk_since` + reasons
+    from `crm_client_canonical_meta.risk_reason` and overdue
+    interventions from `crm_tasks` where type = risk_intervention.
+  - `engagementMetrics` — counts by engagement state + median days
+    since `last_contact_at`.
+  - `closureMetrics` — grouped by mapped closure reason.
+  - `campaignPerformance` — enrollments joined with
+    `crm_campaign_step_logs` for sent/delivered/suppressed/failed;
+    step→campaign resolved via `crm_campaign_steps`.
+  - `taskPerformance` — open/overdue counts, per-owner breakdown,
+    average completion hours from `completed_at - created_at`.
+  - `exceptionMetrics` — by type/severity, open vs resolved, mean
+    resolution hours from `updated_at - created_at`.
+- `supabaseDataProvider` no longer wraps the mock provider — every
+  repository is Supabase-backed.
+
+## Status
+
+All 10 workstreams complete. The CRM's `CrmDataProvider` interface is
+fully backed by Supabase (tables, canonical RPCs, and edge functions).
+The mock provider remains available via `VITE_USE_MOCK_DATA=true` for
+local development and tests.
