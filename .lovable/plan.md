@@ -116,3 +116,14 @@ Adapters:
   row inheriting client/campaign/owner and severity → priority mapping.
 - `src/repositories/supabase/index.ts` — hybrid provider now serves
   clients, tasks, and exceptions from Supabase.
+
+## Workstream 7 — Staff & Audit adapters (COMPLETE)
+
+- `src/repositories/supabase/staff.ts` — reads `staff` joined with `profiles`
+  (email) and `user_roles` (role); computes caseload from
+  `clients.primary_staff_id` and open-task counts from `crm_tasks`; maps
+  `prov_accepting_new_clients` + `prov_max_clients` to availability.
+- `src/repositories/supabase/audit.ts` — reads `crm_client_state_audit`
+  per client and maps dimension → human event label.
+- Hybrid provider now serves clients, tasks, exceptions, staff, and audit
+  from Supabase. Remaining on mock: campaigns, communications, reports.
