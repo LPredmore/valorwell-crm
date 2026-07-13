@@ -153,6 +153,7 @@ export const mockDataProvider: CrmDataProvider = {
     async createTaskFromException(id) {
       const e = exceptions.find(x => x.id === id); if (!e) throw new Error();
       return mockDataProvider.tasks.create({
+        tenantId: e.tenantId,
         title: `Resolve: ${e.type}`, description: e.summary, clientId: e.clientId, exceptionId: e.id,
         type: 'Campaign Exception', priority: e.severity === 'Critical' ? 'Urgent' : 'High',
         status: 'Not Started', ownerId: e.ownerId, collaboratorIds: [], createdByProfileId: 'system',
