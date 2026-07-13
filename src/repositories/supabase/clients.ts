@@ -271,10 +271,16 @@ export const supabaseClientsRepository: ClientsRepository = {
     return reload(id);
   },
 
-  async updateRisk(id) {
-    // At-risk marking is currently derived at the DB level via
-    // mark_at_risk_clients. Manual override RPC will be added in a later
-    // workstream. Reload current row so the UI shows authoritative state.
+  async updateRisk(id, next) {
+    const tenant_id = await tenantOf(id);
+    const concurrency_token = await fetchConcurrencyToken(id);
+    await callRpc('set_client_risk', {
+      client_id: id, tenant_id,
+      at_risk: next.atRisk,
+      risk_reason: next.reasons?.[0] ?? null,
+      reason: next.reasons?.join('; ') ?? 'ui_update',
+      concurrency_token, contract_version: CONTRACT_VERSION,
+    });
     return reload(id);
   },
 
@@ -304,12 +310,18 @@ export const supabaseClientsRepository: ClientsRepository = {
   },
 
   async assignClinician(id, staffId) {
-    // Assignment is not yet covered by a canonical RPC; write via table
-    // requires appropriate privileges. Emit an audit-visible warning instead.
-    throw new Error('assignClinician: canonical assignment RPC not implemented yet');
+    const tenant_id = await tenantOf(id);
+    const concurrency_token = await fetchConcurrencyToken(id);
+    await callRpc('assign_client_clinician', {
+      client_id: id, tenant_id,
+      staff_id: staffId,
+      reason: 'ui_assign',
+      concurrency_token, contract_version: CONTRACT_VERSION,
+    });
+    return reload(id);
   },
 
   async assignOperationsOwner() {
-    throw new Error('assignOperationsOwner: canonical assignment RPC not implemented yet');
+    throw new Error('assignOperationsOwner: no operations-owner column exists on clients yet');
   },
 };
