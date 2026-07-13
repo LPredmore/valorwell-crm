@@ -1,14 +1,17 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  Users, 
-  Inbox, 
-  UserCog, 
-  Settings, 
+import {
+  Users,
+  Inbox,
+  UserCog,
+  Settings,
   LayoutDashboard,
   ChevronLeft,
   ChevronRight,
   Megaphone,
-  BarChart3
+  BarChart3,
+  ListTodo,
+  AlertTriangle,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
