@@ -17,6 +17,15 @@ import CrmCampaigns from "./pages/crm/Campaigns";
 import CrmCampaignEditor from "./pages/crm/CampaignEditor";
 import CrmCampaignEnrollments from "./pages/crm/CampaignEnrollments";
 import CrmReports from "./pages/crm/Reports";
+import CanonicalDashboard from "./pages/crm/canonical/CanonicalDashboard";
+import CanonicalClients from "./pages/crm/canonical/CanonicalClients";
+import CanonicalClientDetail from "./pages/crm/canonical/CanonicalClientDetail";
+import CanonicalTasks from "./pages/crm/canonical/CanonicalTasks";
+import CanonicalExceptions from "./pages/crm/canonical/CanonicalExceptions";
+import CanonicalReports from "./pages/crm/canonical/CanonicalReports";
+import CanonicalCampaigns from "./pages/crm/canonical/CanonicalCampaigns";
+import CanonicalInbox from "./pages/crm/canonical/CanonicalInbox";
+import CanonicalStaff from "./pages/crm/canonical/CanonicalStaff";
 
 const queryClient = new QueryClient();
 
