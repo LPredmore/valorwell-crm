@@ -119,7 +119,16 @@ export default function ClientDetail() {
             <h1 className="text-2xl font-bold">
               {getClientDisplayName(client)}
             </h1>
-            <StatusBadge status={client.pat_status} />
+            {canonical ? (
+              <>
+                <LifecycleBadge stage={canonical.lifecycle} />
+                <EngagementBadge state={canonical.engagement} />
+                <AtRiskBadge atRisk={canonical.at_risk?.at_risk} />
+                <DncBadge policy={canonical.contact_policy} />
+              </>
+            ) : (
+              <StatusBadge status={client.pat_status} />
+            )}
           </div>
           {client.pat_name_preferred && (
             <p className="text-sm text-muted-foreground">
