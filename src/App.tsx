@@ -26,6 +26,8 @@ import CanonicalReports from "./pages/crm/canonical/CanonicalReports";
 import CanonicalCampaigns from "./pages/crm/canonical/CanonicalCampaigns";
 import CanonicalInbox from "./pages/crm/canonical/CanonicalInbox";
 import CanonicalStaff from "./pages/crm/canonical/CanonicalStaff";
+import CanonicalCampaignDetail from "./pages/crm/canonical/CanonicalCampaignDetail";
+import CanonicalSearch from "./pages/crm/canonical/CanonicalSearch";
 
 const queryClient = new QueryClient();
 
@@ -57,7 +59,9 @@ const App = () => (
             <Route path="canonical/tasks" element={<CanonicalTasks />} />
             <Route path="canonical/exceptions" element={<CanonicalExceptions />} />
             <Route path="canonical/campaigns" element={<CanonicalCampaigns />} />
+            <Route path="canonical/campaigns/:id" element={<CanonicalCampaignDetail />} />
             <Route path="canonical/inbox" element={<CanonicalInbox />} />
+            <Route path="canonical/search" element={<CanonicalSearch />} />
             <Route path="canonical/staff" element={<CanonicalStaff />} />
             <Route path="canonical/reports" element={<CanonicalReports />} />
           </Route>
