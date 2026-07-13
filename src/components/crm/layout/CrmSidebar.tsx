@@ -7,7 +7,8 @@ import {
   LayoutDashboard,
   ChevronLeft,
   ChevronRight,
-  Megaphone
+  Megaphone,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,11 @@ const navItems: NavItem[] = [
     label: 'Staff',
     href: '/crm/staff',
     icon: UserCog,
+  },
+  {
+    label: 'Reports',
+    href: '/crm/reports',
+    icon: BarChart3,
   },
   {
     label: 'Settings',
