@@ -1,14 +1,15 @@
 import type { CrmDataProvider } from '@/repositories/types';
 import { mockDataProvider } from '@/repositories/mock';
+import { supabaseDataProvider } from '@/repositories/supabase';
 
 /**
- * Central switch between mock and Supabase-backed data providers.
+ * Data provider switch.
  *
- * The Supabase adapter is intentionally NOT wired here yet. Phase-1 of the
- * CRM overhaul builds the entire application against the mock provider.
- * When Supabase adapters are implemented in the dedicated backend phase,
- * flip the flag below by reading VITE_USE_MOCK_DATA at runtime.
+ * Set VITE_USE_MOCK_DATA=true in the environment to force the mock
+ * provider (useful for storybook/tests). By default the app now reads
+ * canonical client state from Supabase (v_client_canonical_state) and
+ * writes through the canonical RPCs (see supabase/migrations).
  */
-const useMock = true;
+const forceMock = import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
-export const dataProvider: CrmDataProvider = useMock ? mockDataProvider : mockDataProvider;
+export const dataProvider: CrmDataProvider = forceMock ? mockDataProvider : supabaseDataProvider;
