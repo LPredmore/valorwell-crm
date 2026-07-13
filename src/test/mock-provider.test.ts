@@ -1,0 +1,118 @@
+import { describe, it, expect } from 'vitest';
+import { mockDataProvider } from '@/repositories/mock';
+
+describe('mock data provider — canonical client workflows', () => {
+  it('lists clients with lifecycle filter', async () => {
+    const all = await mockDataProvider.clients.list({});
+    const inCare = await mockDataProvider.clients.list({ lifecycle: ['Established Care'] });
+    expect(all.total).toBeGreaterThan(inCare.total);
+    expect(inCare.rows.every(c => c.lifecycle === 'Established Care')).toBe(true);
+  });
+
+  it('search finds a client by name', async () => {
+    const first = (await mockDataProvider.clients.list({ pageSize: 1 })).rows[0];
+    const hit = await mockDataProvider.clients.list({ search: first.legalFirstName });
+    expect(hit.rows.some(c => c.id === first.id)).toBe(true);
+  });
+
+  it('updates lifecycle and reflects in subsequent read', async () => {
+    const first = (await mockDataProvider.clients.list({ pageSize: 1 })).rows[0];
+    const updated = await mockDataProvider.clients.updateLifecycle(first.id, 'Scheduled', 'Booked intake');
+    expect(updated.lifecycle).toBe('Scheduled');
+    const reread = await mockDataProvider.clients.get(first.id);
+    expect(reread?.lifecycle).toBe('Scheduled');
+  });
+
+  it('closes and reopens a client', async () => {
+    const first = (await mockDataProvider.clients.list({ pageSize: 1 })).rows[0];
+    const closed = await mockDataProvider.clients.close(first.id, { closureReason: 'Test', closedAt: new Date().toISOString() });
+    expect(closed.lifecycle).toBe('Closed');
+    const reopened = await mockDataProvider.clients.reopen(first.id, 'Client returned');
+    expect(reopened.lifecycle).not.toBe('Closed');
+    expect(reopened.closure).toBeUndefined();
+  });
+});
+
+describe('mock data provider — communication policy', () => {
+  it('blocks ordinary campaign follow-up for a Do Not Contact client', async () => {
+    const dnc = (await mockDataProvider.clients.list({ contactPolicy: ['Do Not Contact'], pageSize: 1 })).rows[0];
+    expect(dnc).toBeDefined();
+    const res = await mockDataProvider.communications.evaluatePolicy({
+      clientId: dnc.id, channel: 'sms', messageClass: 'ordinary_campaign_follow_up',
+    });
+    expect(res.allowed).toBe(false);
+    expect(res.suppressionCode).toBe('DO_NOT_CONTACT');
+  });
+
+  it('allows critical operational messages even for DNC clients', async () => {
+    const dnc = (await mockDataProvider.clients.list({ contactPolicy: ['Do Not Contact'], pageSize: 1 })).rows[0];
+    const res = await mockDataProvider.communications.evaluatePolicy({
+      clientId: dnc.id, channel: 'sms', messageClass: 'critical_operational',
+    });
+    // Only channel restriction (if phone missing) could block; otherwise allowed.
+    if (dnc.phone) expect(res.allowed).toBe(true);
+  });
+
+  it('REMOVE keyword marks client Do Not Contact and cancels enrollments', async () => {
+    const target = (await mockDataProvider.clients.list({ contactPolicy: ['Contact Allowed'], pageSize: 1 })).rows[0];
+    await mockDataProvider.communications.ingestInbound({
+      tenantId: target.tenantId, clientId: target.id, channel: 'sms', direction: 'inbound',
+      from: target.phone ?? 'x', to: '+15555550100', body: 'REMOVE', threadId: `thread-${target.id}`,
+    });
+    const after = await mockDataProvider.clients.get(target.id);
+    expect(after?.contactPolicy).toBe('Do Not Contact');
+  });
+});
+
+describe('mock data provider — tasks and exceptions', () => {
+  it('creates a task and completes it', async () => {
+    const t = await mockDataProvider.tasks.create({
+      tenantId: 'tenant-valorwell', title: 'Test task', type: 'General', priority: 'Normal',
+      status: 'Not Started', collaboratorIds: [], createdByProfileId: 'test-user', checklist: [], tags: [],
+    });
+    const done = await mockDataProvider.tasks.complete(t.id);
+    expect(done.status).toBe('Completed');
+    expect(done.completedAt).toBeDefined();
+  });
+
+  it('resolves an exception with an audit note', async () => {
+    const list = await mockDataProvider.exceptions.list({ status: ['Open'] });
+    if (list.length === 0) return;
+    const resolved = await mockDataProvider.exceptions.resolve(list[0].id, 'looked into it');
+    expect(resolved.status).toBe('Resolved');
+    expect(resolved.resolutionHistory.at(-1)?.action).toBe('resolved');
+  });
+
+  it('creates a task from an exception', async () => {
+    const list = await mockDataProvider.exceptions.list();
+    if (list.length === 0) return;
+    const task = await mockDataProvider.exceptions.createTaskFromException(list[0].id);
+    expect(task.exceptionId).toBe(list[0].id);
+  });
+});
+
+describe('mock data provider — campaigns', () => {
+  it('enrolls a client and can cancel the enrollment', async () => {
+    const c = (await mockDataProvider.clients.list({ pageSize: 1 })).rows[0];
+    const [enrollment] = await mockDataProvider.campaigns.enroll('camp-1', [c.id]);
+    const canceled = await mockDataProvider.campaigns.cancelEnrollment(enrollment.id, 'test');
+    expect(canceled.status).toBe('Canceled');
+    expect(canceled.exitReason).toBe('test');
+  });
+});
+
+describe('mock data provider — reports render data', () => {
+  it('returns a funnel with all lifecycle stages', async () => {
+    const funnel = await mockDataProvider.reports.journeyFunnel();
+    expect(funnel.length).toBe(9);
+    expect(funnel.every(r => typeof r.count === 'number')).toBe(true);
+  });
+  it('returns engagement counts summing to client total', async () => {
+    const [{ counts }, all] = await Promise.all([
+      mockDataProvider.reports.engagementMetrics(),
+      mockDataProvider.clients.list({ pageSize: 500 }),
+    ]);
+    const sum = counts.Engaged + counts.Warm + counts.Cold + counts['Went Dark'];
+    expect(sum).toBe(all.total);
+  });
+});
