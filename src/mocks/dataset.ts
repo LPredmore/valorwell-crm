@@ -24,9 +24,9 @@ const LAST = ['Smith','Johnson','Williams','Brown','Jones','Garcia','Miller','Da
 const STATES = ['CA','TX','NY','FL','IL','PA','OH','GA','NC','MI','NJ','VA','WA','AZ','MA','TN','IN','MO','MD','WI'];
 const PAYERS = ['TRICARE','VA CCN','BCBS','United','Aetna','Cigna','Self-pay','Kaiser'];
 
-const LIFECYCLES: CanonicalClient['lifecycle'][] = ['Registration','Intake','Matching','Wait Path','Scheduled','Early Care','Established Care','Inactive','Closed'];
+const LIFECYCLES: CanonicalClient['lifecycle'][] = ['Registration','Intake','Matching','Matched','Scheduled','Early Care','Established Care','Closed'];
 const ENGAGEMENTS: CanonicalClient['engagement'][] = ['Engaged','Warm','Cold','Went Dark'];
-const ELIG: CanonicalClient['eligibility'][] = ['Unknown','Pending Verification','Eligible','Temporarily Ineligible','Ineligible'];
+const ELIG: CanonicalClient['eligibility'][] = ['Eligible','Coverage Issue','Manual Review','Unknown'];
 
 function rand<T>(arr: readonly T[], i: number): T { return arr[i % arr.length]; }
 
