@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
-import { RefreshCw } from 'lucide-react';
 import { Mail, Phone, MapPin, User, Calendar, Tag, X, Check, ChevronsUpDown, Clock } from 'lucide-react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -26,42 +24,6 @@ import { cn } from '@/lib/utils';
 import type { CrmClient, PatStatus } from '@/lib/crm/types';
 import { format, formatDistanceToNow } from 'date-fns';
 
-function ClickUpSyncRow({ clientId, syncedAt }: { clientId: string; syncedAt: string | null }) {
-  const { toast } = useToast();
-  const qc = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  const handleSync = async () => {
-    setBusy(true);
-    try {
-      const { error } = await supabase.functions.invoke('clickup-sync', {
-        body: { client_id: clientId, action: 'upsert' },
-      });
-      if (error) throw error;
-      toast({ title: 'Synced to ClickUp' });
-      qc.invalidateQueries({ queryKey: ['crm-client', clientId] });
-    } catch (e) {
-      toast({ title: 'Sync failed', description: (e as Error).message, variant: 'destructive' });
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <div className="flex items-start gap-3">
-      <RefreshCw className="h-4 w-4 text-muted-foreground mt-0.5" />
-      <div className="flex-1">
-        <p className="text-sm font-medium">ClickUp</p>
-        <div className="flex items-center gap-2">
-          <p className="text-sm text-muted-foreground">
-            {syncedAt ? `Synced ${formatDistanceToNow(new Date(syncedAt), { addSuffix: true })}` : 'Not yet synced'}
-          </p>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={handleSync} disabled={busy}>
-            {busy ? 'Syncing…' : 'Re-sync'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface ClientInfoCardProps {
   client: CrmClient;
@@ -315,9 +277,8 @@ export function ClientInfoCard({ client }: ClientInfoCardProps) {
             </p>
           </div>
         </div>
-
-        <ClickUpSyncRow clientId={client.id} syncedAt={client.clickup_synced_at ?? null} />
       </CardContent>
+
 
       {/* Compose Dialogs */}
       <BulkComposeDialog

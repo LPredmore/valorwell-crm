@@ -183,3 +183,17 @@ All 10 workstreams complete. The CRM's `CrmDataProvider` interface is
 fully backed by Supabase (tables, canonical RPCs, and edge functions).
 The mock provider remains available via `VITE_USE_MOCK_DATA=true` for
 local development and tests.
+
+## Workstream 11 — ClickUp retirement (COMPLETE)
+
+- DB triggers `trg_clients_clickup_sync` and `trg_enrollment_clickup_sync`
+  dropped; helper functions `trg_clients_clickup_sync`,
+  `trg_enrollment_clickup_sync`, and `trg_enqueue_clickup_sync` removed.
+- No ClickUp cron jobs existed; nothing scheduled to remove.
+- Edge function `supabase/functions/clickup-sync/` deleted along with its
+  `[functions.clickup-sync]` entry in `supabase/config.toml`.
+- UI removed: `ClickUpSyncRow` on the client detail card and the
+  `ClickUpConfigPanel` on the settings page.
+- Historical `clickup_client_mirror_state`, `crm_clickup_field_map`, and
+  `crm_clickup_sync_runs` tables kept for audit — nothing writes to them
+  anymore.
