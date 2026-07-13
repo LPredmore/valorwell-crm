@@ -97,3 +97,22 @@ Workstream 4 (assignments) and Workstream 5 (risk RPCs).
 - Adapter wired: `assignClinician` and `updateRisk` now hit the RPCs.
 - `assignOperationsOwner` still throws — no operations-owner column exists
   on `clients` and adding one would be non-additive. Handled at UI level.
+
+## Workstream 6 — Tasks & Exceptions on Supabase (COMPLETE)
+
+Migration:
+- New enums: `crm_task_status_enum`, `crm_task_priority_enum`,
+  `crm_task_type_enum`, `crm_exception_type_enum`,
+  `crm_exception_severity_enum`, `crm_exception_status_enum`.
+- New tables: `crm_tasks`, `crm_exceptions` — tenant-scoped, RLS on with
+  admin/staff read/write policies, updated_at triggers, useful indexes.
+
+Adapters:
+- `src/repositories/supabase/tasks.ts` — full TasksRepository against
+  `crm_tasks` with domain ↔ db enum mappers, filter/sort/paged list, and
+  bulk mutations.
+- `src/repositories/supabase/exceptions.ts` — full ExceptionsRepository,
+  including `createTaskFromException` which inserts a linked `crm_tasks`
+  row inheriting client/campaign/owner and severity → priority mapping.
+- `src/repositories/supabase/index.ts` — hybrid provider now serves
+  clients, tasks, and exceptions from Supabase.

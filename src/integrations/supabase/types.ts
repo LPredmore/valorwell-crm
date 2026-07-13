@@ -6386,6 +6386,78 @@ export type Database = {
           },
         ]
       }
+      crm_exceptions: {
+        Row: {
+          campaign_id: string | null
+          client_id: string | null
+          created_at: string
+          due_at: string | null
+          id: string
+          last_activity_at: string
+          owner_id: string | null
+          recommended_resolution: string | null
+          resolution_history: Json
+          severity: Database["public"]["Enums"]["crm_exception_severity_enum"]
+          status: Database["public"]["Enums"]["crm_exception_status_enum"]
+          summary: string
+          tenant_id: string
+          type: Database["public"]["Enums"]["crm_exception_type_enum"]
+          updated_at: string
+          workflow: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          last_activity_at?: string
+          owner_id?: string | null
+          recommended_resolution?: string | null
+          resolution_history?: Json
+          severity?: Database["public"]["Enums"]["crm_exception_severity_enum"]
+          status?: Database["public"]["Enums"]["crm_exception_status_enum"]
+          summary: string
+          tenant_id: string
+          type: Database["public"]["Enums"]["crm_exception_type_enum"]
+          updated_at?: string
+          workflow?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          last_activity_at?: string
+          owner_id?: string | null
+          recommended_resolution?: string | null
+          resolution_history?: Json
+          severity?: Database["public"]["Enums"]["crm_exception_severity_enum"]
+          status?: Database["public"]["Enums"]["crm_exception_status_enum"]
+          summary?: string
+          tenant_id?: string
+          type?: Database["public"]["Enums"]["crm_exception_type_enum"]
+          updated_at?: string
+          workflow?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_exceptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_exceptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       crm_helpscout_settings: {
         Row: {
           connection_status: string
@@ -6666,6 +6738,96 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_tasks: {
+        Row: {
+          campaign_id: string | null
+          checklist: Json
+          client_id: string | null
+          collaborator_ids: string[]
+          completed_at: string | null
+          created_at: string
+          created_by_profile_id: string
+          description: string | null
+          due_at: string | null
+          exception_id: string | null
+          id: string
+          owner_id: string | null
+          priority: Database["public"]["Enums"]["crm_task_priority_enum"]
+          recurrence: string | null
+          staff_id: string | null
+          start_at: string | null
+          status: Database["public"]["Enums"]["crm_task_status_enum"]
+          tags: string[]
+          tenant_id: string
+          title: string
+          type: Database["public"]["Enums"]["crm_task_type_enum"]
+          updated_at: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          checklist?: Json
+          client_id?: string | null
+          collaborator_ids?: string[]
+          completed_at?: string | null
+          created_at?: string
+          created_by_profile_id: string
+          description?: string | null
+          due_at?: string | null
+          exception_id?: string | null
+          id?: string
+          owner_id?: string | null
+          priority?: Database["public"]["Enums"]["crm_task_priority_enum"]
+          recurrence?: string | null
+          staff_id?: string | null
+          start_at?: string | null
+          status?: Database["public"]["Enums"]["crm_task_status_enum"]
+          tags?: string[]
+          tenant_id: string
+          title: string
+          type?: Database["public"]["Enums"]["crm_task_type_enum"]
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          checklist?: Json
+          client_id?: string | null
+          collaborator_ids?: string[]
+          completed_at?: string | null
+          created_at?: string
+          created_by_profile_id?: string
+          description?: string | null
+          due_at?: string | null
+          exception_id?: string | null
+          id?: string
+          owner_id?: string | null
+          priority?: Database["public"]["Enums"]["crm_task_priority_enum"]
+          recurrence?: string | null
+          staff_id?: string | null
+          start_at?: string | null
+          status?: Database["public"]["Enums"]["crm_task_status_enum"]
+          tags?: string[]
+          tenant_id?: string
+          title?: string
+          type?: Database["public"]["Enums"]["crm_task_type_enum"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
           },
         ]
       }
@@ -14592,6 +14754,39 @@ export type Database = {
         | "published"
         | "deprecated"
         | "retired"
+      crm_exception_severity_enum: "low" | "medium" | "high" | "critical"
+      crm_exception_status_enum: "open" | "in_review" | "resolved" | "dismissed"
+      crm_exception_type_enum:
+        | "campaign_message_failed"
+        | "campaign_step_overdue"
+        | "client_reply_needs_review"
+        | "client_went_dark"
+        | "client_became_at_risk"
+        | "missed_appointment_follow_up"
+        | "eligibility_verification_failed"
+        | "no_clinician_match_found"
+        | "communication_suppressed"
+        | "assignment_missing"
+        | "data_conflict"
+        | "integration_failure"
+        | "manual_review_required"
+      crm_task_priority_enum: "low" | "normal" | "high" | "urgent"
+      crm_task_status_enum:
+        | "not_started"
+        | "in_progress"
+        | "waiting"
+        | "blocked"
+        | "completed"
+        | "canceled"
+      crm_task_type_enum:
+        | "client_follow_up"
+        | "staff_follow_up"
+        | "campaign_exception"
+        | "eligibility_review"
+        | "match_review"
+        | "documentation"
+        | "risk_intervention"
+        | "general"
       form_type_enum: "signup" | "intake" | "session_notes"
       gad7_severity_enum: "minimal" | "mild" | "moderate" | "severe"
       gender_identity_enum:
@@ -14990,6 +15185,42 @@ export const Constants = {
         "published",
         "deprecated",
         "retired",
+      ],
+      crm_exception_severity_enum: ["low", "medium", "high", "critical"],
+      crm_exception_status_enum: ["open", "in_review", "resolved", "dismissed"],
+      crm_exception_type_enum: [
+        "campaign_message_failed",
+        "campaign_step_overdue",
+        "client_reply_needs_review",
+        "client_went_dark",
+        "client_became_at_risk",
+        "missed_appointment_follow_up",
+        "eligibility_verification_failed",
+        "no_clinician_match_found",
+        "communication_suppressed",
+        "assignment_missing",
+        "data_conflict",
+        "integration_failure",
+        "manual_review_required",
+      ],
+      crm_task_priority_enum: ["low", "normal", "high", "urgent"],
+      crm_task_status_enum: [
+        "not_started",
+        "in_progress",
+        "waiting",
+        "blocked",
+        "completed",
+        "canceled",
+      ],
+      crm_task_type_enum: [
+        "client_follow_up",
+        "staff_follow_up",
+        "campaign_exception",
+        "eligibility_review",
+        "match_review",
+        "documentation",
+        "risk_intervention",
+        "general",
       ],
       form_type_enum: ["signup", "intake", "session_notes"],
       gad7_severity_enum: ["minimal", "mild", "moderate", "severe"],
