@@ -277,9 +277,8 @@ export function ClientInfoCard({ client }: ClientInfoCardProps) {
             </p>
           </div>
         </div>
-
-        <ClickUpSyncRow clientId={client.id} syncedAt={client.clickup_synced_at ?? null} />
       </CardContent>
+
 
       {/* Compose Dialogs */}
       <BulkComposeDialog
