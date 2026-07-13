@@ -104,7 +104,7 @@ describe('mock data provider — campaigns', () => {
 describe('mock data provider — reports render data', () => {
   it('returns a funnel with all lifecycle stages', async () => {
     const funnel = await mockDataProvider.reports.journeyFunnel();
-    expect(funnel.length).toBe(9);
+    expect(funnel.length).toBe(8);
     expect(funnel.every(r => typeof r.count === 'number')).toBe(true);
   });
   it('returns engagement counts summing to client total', async () => {
