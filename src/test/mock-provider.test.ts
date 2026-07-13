@@ -25,7 +25,7 @@ describe('mock data provider — canonical client workflows', () => {
 
   it('closes and reopens a client', async () => {
     const first = (await mockDataProvider.clients.list({ pageSize: 1 })).rows[0];
-    const closed = await mockDataProvider.clients.close(first.id, { closureReason: 'Test', closedAt: new Date().toISOString() });
+    const closed = await mockDataProvider.clients.close(first.id, { closureReason: 'Other', closedAt: new Date().toISOString() });
     expect(closed.lifecycle).toBe('Closed');
     const reopened = await mockDataProvider.clients.reopen(first.id, 'Client returned');
     expect(reopened.lifecycle).not.toBe('Closed');

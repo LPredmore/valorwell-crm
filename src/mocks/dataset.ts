@@ -24,9 +24,9 @@ const LAST = ['Smith','Johnson','Williams','Brown','Jones','Garcia','Miller','Da
 const STATES = ['CA','TX','NY','FL','IL','PA','OH','GA','NC','MI','NJ','VA','WA','AZ','MA','TN','IN','MO','MD','WI'];
 const PAYERS = ['TRICARE','VA CCN','BCBS','United','Aetna','Cigna','Self-pay','Kaiser'];
 
-const LIFECYCLES: CanonicalClient['lifecycle'][] = ['Registration','Intake','Matching','Wait Path','Scheduled','Early Care','Established Care','Inactive','Closed'];
+const LIFECYCLES: CanonicalClient['lifecycle'][] = ['Registration','Intake','Matching','Matched','Scheduled','Early Care','Established Care','Closed'];
 const ENGAGEMENTS: CanonicalClient['engagement'][] = ['Engaged','Warm','Cold','Went Dark'];
-const ELIG: CanonicalClient['eligibility'][] = ['Unknown','Pending Verification','Eligible','Temporarily Ineligible','Ineligible'];
+const ELIG: CanonicalClient['eligibility'][] = ['Eligible','Coverage Issue','Manual Review','Unknown'];
 
 function rand<T>(arr: readonly T[], i: number): T { return arr[i % arr.length]; }
 
@@ -59,12 +59,12 @@ function makeClient(i: number): CanonicalClient {
     eligibility,
     contactPolicy: isDnc ? 'Do Not Contact' : 'Contact Allowed',
     servicePolicy: isBlocked ? 'Service Blocked' : 'Service Allowed',
-    careCadence: lifecycle === 'Established Care' ? 'Every Two Weeks' : lifecycle === 'Early Care' ? 'Weekly' : 'Not Set',
+    careCadence: lifecycle === 'Established Care' || lifecycle === 'Early Care' ? 'Regular' : 'As Needed',
     risk: atRisk
       ? { atRisk: true, atRiskSince: iso(i % 30), reasons: ['Missed 2 consecutive appointments'], severity: i % 3 === 0 ? 'High' : 'Moderate', lastEvaluatedAt: iso(1), requiredNextAction: 'Clinician outreach within 48h', ownerId: clinician }
       : { atRisk: false, reasons: [] },
     closure: lifecycle === 'Closed'
-      ? { closureReason: 'Completed Treatment Plan', dispositionReason: 'Graduated', closedAt: iso(i % 60), reentryAllowed: true }
+      ? { closureReason: 'Completed Care', dispositionReason: 'Graduated', closedAt: iso(i % 60), reentryAllowed: true }
       : undefined,
     payer: rand(PAYERS, i),
     program: i % 3 === 0 ? 'Veterans Program' : 'Standard',
