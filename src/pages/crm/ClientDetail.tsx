@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/crm/clients/StatusBadge';
+import { LifecycleBadge, EngagementBadge, AtRiskBadge, DncBadge } from '@/components/crm/clients/CanonicalBadges';
+import { useCanonicalClientState } from '@/hooks/crm/useCanonicalClientState';
 import { ActivityTimeline } from '@/components/crm/detail/ActivityTimeline';
 import { NoteForm } from '@/components/crm/detail/NoteForm';
 import { ClientInfoCard } from '@/components/crm/detail/ClientInfoCard';
