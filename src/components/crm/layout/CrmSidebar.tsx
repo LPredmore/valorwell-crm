@@ -56,6 +56,10 @@ const navItems: NavItem[] = [
     href: '/crm/settings',
     icon: Settings,
   },
+  { label: 'Canonical Dashboard', href: '/crm/canonical', icon: Sparkles },
+  { label: 'Canonical Clients', href: '/crm/canonical/clients', icon: Users },
+  { label: 'Tasks', href: '/crm/canonical/tasks', icon: ListTodo },
+  { label: 'Exceptions', href: '/crm/canonical/exceptions', icon: AlertTriangle },
 ];
 
 export function CrmSidebar() {
