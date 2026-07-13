@@ -36,13 +36,16 @@ Shipped:
   keyword, task lifecycle, exception resolution, campaign enrollment/cancel,
   and report rendering.
 
-## Batch 2 — Pages & UI (in progress)
+## Batch 2 — Pages & UI (COMPLETE)
 
-Next: canonical client list, canonical kanban, canonical detail page tabs
-(Overview/Journey/Communications/Tasks/Campaigns/Eligibility/Audit),
-Tasks page, Exceptions page, Campaign builder & scheduler dashboard,
-communications SMS/Email + policy-aware composer, Reports page, Staff &
-assignment workflows, dashboard, global search.
+Shipped canonical pages (all under `/crm/canonical/*`):
+Dashboard, Clients (table + kanban + filters), ClientDetail (7 tabs incl.
+mutations), Tasks (11 saved views + bulk), Exceptions, Campaigns list +
+per-campaign detail with enrollments (pause/resume/cancel/restart) and step
+inspector, Inbox with policy-aware composer, Staff, Reports, and global
+Search. All bound to the mock provider — zero Supabase reads/writes.
+Communications composer runs the policy evaluator on open and blocks/warns
+based on suppression code before send.
 
 ## Explicit non-goals for this phase
 
