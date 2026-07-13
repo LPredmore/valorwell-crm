@@ -565,6 +565,27 @@ async function processCampaignMessages() {
         }
       }
 
+      // §6.3 send-time suppression recheck. Blocks ordinary campaign follow-up
+      // if canonical contact_policy=DNC or service_policy=Service Blocked.
+      const suppressionUrl = Deno.env.get('SUPABASE_URL')!;
+      const suppressionKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const suppression = await checkSuppression(suppressionUrl, suppressionKey, {
+        tenantId: stepLog.tenant_id,
+        clientId: stepLog.client_id,
+        messageClass: 'ordinary_campaign_follow_up',
+      });
+      if (!suppression.allowed) {
+        console.log(`[suppression] blocked ${stepLog.id}: ${suppression.reason_code}`);
+        await supabase
+          .from('crm_campaign_step_logs')
+          .update({
+            status: 'suppressed',
+            error_message: `suppressed:${suppression.reason_code}`,
+          })
+          .eq('id', stepLog.id);
+        continue;
+      }
+
       // Send the message!
       if (stepLog.channel === 'email') {
         // Get HelpScout token if not already
