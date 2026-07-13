@@ -6,12 +6,12 @@ import { supabaseExceptionsRepository } from './exceptions';
 import { supabaseStaffRepository } from './staff';
 import { supabaseAuditRepository } from './audit';
 import { supabaseCampaignsRepository } from './campaigns';
+import { supabaseCommunicationsRepository } from './communications';
 
 /**
- * Hybrid provider: canonical clients, tasks, exceptions, staff, audit, and
- * campaigns read/write from Supabase. Communications and reports continue
- * on the mock provider until their backing tables and RPCs ship in later
- * workstreams.
+ * Hybrid provider: canonical clients, tasks, exceptions, staff, audit,
+ * campaigns, and communications read/write from Supabase. Reports remain
+ * on the mock provider until aggregations ship in the next workstream.
  */
 export const supabaseDataProvider: CrmDataProvider = {
   ...mockDataProvider,
@@ -21,5 +21,7 @@ export const supabaseDataProvider: CrmDataProvider = {
   staff: supabaseStaffRepository,
   audit: supabaseAuditRepository,
   campaigns: supabaseCampaignsRepository,
+  communications: supabaseCommunicationsRepository,
 };
+
 

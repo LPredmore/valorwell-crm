@@ -140,3 +140,17 @@ Adapters:
   later workstream once the step schema is finalized.
 - Hybrid provider now covers clients, tasks, exceptions, staff, audit,
   and campaigns. Remaining on mock: communications, reports.
+
+## Workstream 9 — Communications adapter (COMPLETE)
+
+- `src/repositories/supabase/communications.ts` — unified per-client
+  timeline from `crm_inbound_sms_logs`, `crm_bulk_sms_recipients`,
+  `crm_conversation_links` + `crm_conversation_cache`, and `messages`.
+  `listThreads('sms'|'email')` aggregates the latest message per thread.
+- `send` delegates to existing `ringcentral-sms` / `helpscout-proxy`
+  edge functions; internal notes insert into `messages` directly.
+- `evaluatePolicy` reuses the canonical client (contact/service policy,
+  lifecycle, channel availability) via the Supabase clients adapter.
+- `ingestInbound` is a pass-through — inbound persistence remains owned
+  by the RingCentral and HelpScout webhook edge functions.
+- Hybrid provider now covers everything except reports.
