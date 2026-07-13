@@ -3,7 +3,7 @@ import type {
 } from '../types';
 import type { CanonicalClient, LifecycleStage } from '@/domain/canonical';
 import type { CrmTask, TaskStatus, OperationalException, Campaign, CampaignEnrollment, CommunicationMessage, StaffMember, AuditEvent, CommunicationPolicyResult } from '@/domain/operations';
-import { mockClients, mockCampaigns, mockEnrollments, mockTasks, mockExceptions, mockStaff, mockAudit, mockMessages } from '../dataset';
+import { mockClients, mockCampaigns, mockEnrollments, mockTasks, mockExceptions, mockStaff, mockAudit, mockMessages } from '@/mocks/dataset';
 
 // In-memory mutable stores so mock mutations feel real across the session.
 let clients: CanonicalClient[] = [...mockClients];
