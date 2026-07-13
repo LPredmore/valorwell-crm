@@ -87,3 +87,13 @@ Frontend still on mock provider. Next: implement the Supabase adapter for `Clien
 
 Assignment RPCs and manual risk override intentionally throw — pending
 Workstream 4 (assignments) and Workstream 5 (risk RPCs).
+
+## Workstream 4/5 — Assignment + Risk RPCs (COMPLETE)
+
+- New Supabase RPCs: `assign_client_clinician`, `set_client_risk` — both
+  admin/staff gated, concurrency-checked, idempotent, audited.
+- `set_client_risk` also updates `crm_client_canonical_meta.risk_reason` and
+  `at_risk_marked_at`.
+- Adapter wired: `assignClinician` and `updateRisk` now hit the RPCs.
+- `assignOperationsOwner` still throws — no operations-owner column exists
+  on `clients` and adding one would be non-additive. Handled at UI level.
