@@ -1,5 +1,4 @@
 import type { CrmDataProvider } from '../types';
-import { mockDataProvider } from '../mock';
 import { supabaseClientsRepository } from './clients';
 import { supabaseTasksRepository } from './tasks';
 import { supabaseExceptionsRepository } from './exceptions';
@@ -7,14 +6,13 @@ import { supabaseStaffRepository } from './staff';
 import { supabaseAuditRepository } from './audit';
 import { supabaseCampaignsRepository } from './campaigns';
 import { supabaseCommunicationsRepository } from './communications';
+import { supabaseReportsRepository } from './reports';
 
 /**
- * Hybrid provider: canonical clients, tasks, exceptions, staff, audit,
- * campaigns, and communications read/write from Supabase. Reports remain
- * on the mock provider until aggregations ship in the next workstream.
+ * Full Supabase provider. Every domain repository is backed by Supabase
+ * tables, RPCs, or edge functions — no mock fallbacks.
  */
 export const supabaseDataProvider: CrmDataProvider = {
-  ...mockDataProvider,
   clients: supabaseClientsRepository,
   tasks: supabaseTasksRepository,
   exceptions: supabaseExceptionsRepository,
@@ -22,6 +20,8 @@ export const supabaseDataProvider: CrmDataProvider = {
   audit: supabaseAuditRepository,
   campaigns: supabaseCampaignsRepository,
   communications: supabaseCommunicationsRepository,
+  reports: supabaseReportsRepository,
 };
+
 
 
