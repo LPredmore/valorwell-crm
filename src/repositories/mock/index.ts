@@ -254,7 +254,7 @@ export const mockDataProvider: CrmDataProvider = {
   reports: {
     async journeyFunnel() {
       await wait();
-      const stages = ['Registration','Intake','Matching','Wait Path','Scheduled','Early Care','Established Care','Inactive','Closed'] as const;
+      const stages = ['Registration','Intake','Matching','Matched','Scheduled','Early Care','Established Care','Closed'] as const;
       return stages.map(stage => ({
         stage, count: clients.filter(c => c.lifecycle === stage).length,
         medianDays: 3 + stages.indexOf(stage) * 4,
