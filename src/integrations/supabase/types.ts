@@ -13675,6 +13675,18 @@ export type Database = {
         }
         Returns: Json
       }
+      assign_client_clinician: {
+        Args: {
+          client_id: string
+          concurrency_token: string
+          contract_version: string
+          idempotency_key?: string
+          reason: string
+          staff_id: string
+          tenant_id: string
+        }
+        Returns: Json
+      }
       autocreate_copay_for_appointment: {
         Args: { p_appointment_id: string }
         Returns: undefined
@@ -14334,6 +14346,19 @@ export type Database = {
             }
             Returns: Json
           }
+      set_client_risk: {
+        Args: {
+          at_risk: boolean
+          client_id: string
+          concurrency_token: string
+          contract_version: string
+          idempotency_key?: string
+          reason: string
+          risk_reason: string
+          tenant_id: string
+        }
+        Returns: Json
+      }
       set_client_service_policy:
         | {
             Args: {
