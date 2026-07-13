@@ -70,3 +70,20 @@ Live in Supabase (additive, no changes to existing shared columns):
   `set_client_disposition`.
 
 Frontend still on mock provider. Next: implement the Supabase adapter for `ClientsRepository` reading from `v_client_canonical_state` and writing through these RPCs, then flip `useMock`.
+
+## Workstream 3 — Supabase ClientsRepository adapter (COMPLETE)
+
+- `src/repositories/supabase/clients.ts` — real adapter:
+  - Reads directly from `public.clients` (identity, contact, canonical dims,
+    tags, activity) with server-side filtering/sorting/pagination.
+  - Concurrency tokens fetched from `v_client_canonical_state`.
+  - Writes route through the 7 canonical RPCs (lifecycle, engagement,
+    contact/service policy, eligibility, care cadence, disposition, reopen).
+  - Uses the domain ↔ db mappers only — no `pat_status`.
+- `src/repositories/supabase/index.ts` — hybrid provider (Supabase for
+  clients, mock for the rest until their tables/RPCs ship).
+- `src/services/dataProvider.ts` — default flipped to Supabase; opt out
+  with `VITE_USE_MOCK_DATA=true`.
+
+Assignment RPCs and manual risk override intentionally throw — pending
+Workstream 4 (assignments) and Workstream 5 (risk RPCs).
