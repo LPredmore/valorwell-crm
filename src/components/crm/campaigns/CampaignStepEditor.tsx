@@ -93,12 +93,14 @@ export function CampaignStepEditor({
                 id={`step-${stepIndex}-active`}
                 checked={step.is_active}
                 onCheckedChange={(checked) => onChange({ is_active: checked })}
+                disabled={!canMutate}
               />
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={onRemove}
+              disabled={!canMutate}
               className="text-muted-foreground hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
