@@ -24,6 +24,7 @@ interface Props {
 }
 
 export function PolicyAwareComposer({ open, onOpenChange, clientId, defaultChannel = 'sms', defaultTo = '' }: Props) {
+  const canMutate = useCanMutate();
   const qc = useQueryClient();
   const { toast } = useToast();
   const [channel, setChannel] = useState<'sms' | 'email'>(defaultChannel);
