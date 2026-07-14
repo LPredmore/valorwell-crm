@@ -22,7 +22,7 @@ and `src/components/crm/auth/CrmMutationGate.tsx`).
 **Canonical read view (1):**
 - `public.v_client_canonical_state`
 
-**Lifecycle / state RPCs (8):**
+**Lifecycle / state RPCs (9):**
 1. `public.crm_transition_lifecycle`
 2. `public.crm_set_engagement`
 3. `public.crm_set_contact_policy`
@@ -30,7 +30,8 @@ and `src/components/crm/auth/CrmMutationGate.tsx`).
 5. `public.crm_set_eligibility`
 6. `public.crm_set_care_cadence`
 7. `public.crm_assign_clinician`
-8. `public.crm_close_client` (paired with `public.crm_reopen_client`; both count as item 8's close/reopen surface)
+8. `public.crm_close_client`
+9. `public.crm_reopen_client`
 
 **Communication policy RPC (1):**
 - `public.crm_evaluate_communication_policy`
