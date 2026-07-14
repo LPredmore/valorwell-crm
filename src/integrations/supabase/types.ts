@@ -14038,43 +14038,33 @@ export type Database = {
       }
       v_client_canonical_state: {
         Row: {
-          at_risk: boolean | null
-          at_risk_marked_at: string | null
-          care_cadence:
-            | Database["public"]["Enums"]["client_care_cadence_enum"]
-            | null
-          care_cadence_changed_at: string | null
+          assigned_therapist_id: string | null
+          at_risk: Json | null
+          care_cadence: string | null
           client_id: string | null
-          closed_at: string | null
-          closure_reason:
-            | Database["public"]["Enums"]["client_closure_reason_enum"]
-            | null
           concurrency_token: string | null
-          contact_policy:
-            | Database["public"]["Enums"]["client_contact_policy_enum"]
-            | null
-          contact_policy_changed_at: string | null
-          eligibility_state:
-            | Database["public"]["Enums"]["client_eligibility_state_enum"]
-            | null
-          eligibility_state_changed_at: string | null
-          engagement_state:
-            | Database["public"]["Enums"]["client_engagement_state_enum"]
-            | null
-          engagement_state_changed_at: string | null
-          lifecycle_stage:
-            | Database["public"]["Enums"]["client_lifecycle_stage_enum"]
-            | null
-          lifecycle_stage_changed_at: string | null
-          risk_reason: string | null
-          service_policy:
-            | Database["public"]["Enums"]["client_service_policy_enum"]
-            | null
-          service_policy_changed_at: string | null
+          contact_policy: string | null
+          contract_version: string | null
+          disposition_at: string | null
+          disposition_reason: string | null
+          eligibility: string | null
+          eligibility_manual_review: Json | null
+          engagement: string | null
+          lifecycle: string | null
+          next_appointment_at: string | null
+          provider_demand_state: string | null
+          service_policy: string | null
           tenant_id: string | null
           updated_at: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clients_primary_staff_id_fkey"
+            columns: ["assigned_therapist_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clients_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -14447,10 +14437,12 @@ export type Database = {
           old_status: Database["public"]["Enums"]["pat_status_enum"]
         }[]
       }
-      crm_has_role: {
-        Args: { _tenant_id: string; _user_id: string }
-        Returns: boolean
-      }
+      crm_has_role:
+        | {
+            Args: { _roles: string[]; _tenant_id: string; _user_id: string }
+            Returns: boolean
+          }
+        | { Args: { _tenant_id: string; _user_id: string }; Returns: boolean }
       crm_save_campaign_steps: {
         Args: { p_campaign_id: string; p_steps: Json; p_tenant_id: string }
         Returns: {
