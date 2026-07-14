@@ -59,4 +59,57 @@ describe('P09 legacy authority assertions', () => {
     const content = readFileSync('src/pages/crm/canonical/CanonicalReports.tsx', 'utf8');
     expect(content).not.toMatch(/pat_status/);
   });
+
+  it('App.tsx has no -legacy routes and no legacy page imports', () => {
+    const app = readFileSync('src/App.tsx', 'utf8');
+    expect(app).not.toMatch(/-legacy/);
+    // Legacy standalone pages that were removed as part of the canonical cutover.
+    const removedPages = [
+      './pages/crm/Clients',
+      './pages/crm/ClientDetail',
+      './pages/crm/Staff',
+      './pages/crm/Inbox',
+      './pages/crm/Reports',
+      './pages/crm/Campaigns',
+    ];
+    for (const p of removedPages) {
+      expect(app.includes(p)).toBe(false);
+    }
+  });
+
+  it('no source file imports the removed legacy hooks or pages', () => {
+    const removedModules = [
+      '@/hooks/crm/useClients',
+      '@/hooks/crm/useUpdateClientStatus',
+      '@/hooks/crm/useUpdateClientTag',
+      '@/hooks/crm/useBulkUpdateStatus',
+      '@/hooks/crm/useBulkUpdateTag',
+      '@/hooks/crm/useTagOptions',
+      '@/hooks/crm/useStaff',
+      '@/hooks/crm/useConversations',
+      '@/hooks/crm/useSmsConversations',
+      '@/hooks/crm/useBulkSend',
+      '@/hooks/crm/useBulkSms',
+      '@/components/crm/clients/ClientTable',
+      '@/components/crm/clients/ClientKanban',
+      '@/components/crm/clients/ClientFilters',
+      '@/components/crm/clients/BulkActionBar',
+      '@/components/crm/clients/StatusBadge',
+      '@/components/crm/detail/ActivityTimeline',
+      '@/components/crm/detail/ClientInfoCard',
+      '@/components/crm/staff/StaffTable',
+      '@/components/crm/bulk/BulkComposeDialog',
+      '@/components/crm/campaigns/EnrollInCampaignDialog',
+    ];
+    const violators: Array<{ file: string; module: string }> = [];
+    for (const file of FILES) {
+      const content = readFileSync(file, 'utf8');
+      for (const m of removedModules) {
+        if (content.includes(`'${m}'`) || content.includes(`"${m}"`)) {
+          violators.push({ file, module: m });
+        }
+      }
+    }
+    expect(violators).toEqual([]);
+  });
 });
