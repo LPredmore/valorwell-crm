@@ -169,6 +169,7 @@ export function CampaignStepEditor({
                     value={step.email_subject}
                     onChange={(e) => onChange({ email_subject: e.target.value })}
                     placeholder="Enter email subject..."
+                    disabled={!canMutate}
                   />
                 </div>
                 <div className="space-y-2">
@@ -205,6 +206,7 @@ export function CampaignStepEditor({
                   onChange={(e) => onChange({ sms_body_text: e.target.value })}
                   placeholder="Enter SMS message..."
                   rows={3}
+                  disabled={!canMutate}
                 />
               </div>
             )}
