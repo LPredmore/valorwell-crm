@@ -44,14 +44,24 @@ const App = () => (
           {/* CRM Routes */}
           <Route path="/crm" element={<CrmLayout />}>
             <Route index element={<CrmIndex />} />
-            <Route path="clients" element={<CrmClients />} />
-            <Route path="clients/:id" element={<ClientDetail />} />
-            <Route path="staff" element={<CrmStaff />} />
-            <Route path="campaigns" element={<CrmCampaigns />} />
-            <Route path="campaigns/:id" element={<CrmCampaignEditor />} />
+            {/* Primary CRM surfaces now route to canonical pages.
+                Legacy pages remain importable for reference but are unrouted. */}
+            <Route path="clients" element={<CanonicalClients />} />
+            <Route path="clients/:id" element={<CanonicalClientDetail />} />
+            <Route path="clients-legacy" element={<CrmClients />} />
+            <Route path="clients-legacy/:id" element={<ClientDetail />} />
+            <Route path="staff" element={<CanonicalStaff />} />
+            <Route path="staff-legacy" element={<CrmStaff />} />
+            <Route path="campaigns" element={<CanonicalCampaigns />} />
+            <Route path="campaigns/:id" element={<CanonicalCampaignDetail />} />
+            <Route path="campaigns/:id/edit" element={<CrmCampaignEditor />} />
             <Route path="campaigns/:id/enrollments" element={<CrmCampaignEnrollments />} />
-            <Route path="inbox" element={<CrmInbox />} />
-            <Route path="reports" element={<CrmReports />} />
+            <Route path="tasks" element={<CanonicalTasks />} />
+            <Route path="exceptions" element={<CanonicalExceptions />} />
+            <Route path="inbox" element={<CanonicalInbox />} />
+            <Route path="inbox-legacy" element={<CrmInbox />} />
+            <Route path="reports" element={<CanonicalReports />} />
+            <Route path="reports-legacy" element={<CrmReports />} />
             <Route path="settings" element={<CrmSettings />} />
             <Route path="canonical" element={<CanonicalDashboard />} />
             <Route path="canonical/clients" element={<CanonicalClients />} />
