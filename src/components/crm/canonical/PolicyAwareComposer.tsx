@@ -132,32 +132,24 @@ export function PolicyAwareComposer({ open, onOpenChange, clientId, defaultChann
             <Textarea rows={6} value={body} onChange={(e) => setBody(e.target.value)} />
           </div>
 
-          {checking && <div className="text-xs text-muted-foreground">Checking communication policy…</div>}
-          {policy && policy.allowed && (
-            <Alert>
-              <ShieldCheck className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                Policy check passed{policy.reasons.length ? `: ${policy.reasons.join(', ')}` : '.'}
-              </AlertDescription>
-            </Alert>
-          )}
-          {policy && !policy.allowed && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                <div className="font-medium">Blocked: {policy.suppressionCode ?? 'SUPPRESSED'}</div>
-                <div>{policy.reasons.join('; ')}</div>
-                {policy.requiresReview && <div className="mt-1">Requires supervisor review to override.</div>}
-              </AlertDescription>
-            </Alert>
-          )}
+          <SuppressionBanner policy={policy} checking={checking} />
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSend} disabled={sending || !body.trim() || !to.trim() || (!!blocked && !policy?.requiresReview)} className="gap-2">
+          <Button
+            onClick={handleSend}
+            disabled={
+              sending ||
+              !body.trim() ||
+              !to.trim() ||
+              !canMutate ||
+              (!!blocked && !policy?.requiresReview)
+            }
+            className="gap-2"
+          >
             <Send className="h-4 w-4" />
-            {blocked ? 'Send with override' : sending ? 'Sending…' : 'Send'}
+            {!canMutate ? 'Read-only' : blocked ? 'Send with override' : sending ? 'Sending…' : 'Send'}
           </Button>
         </DialogFooter>
       </DialogContent>
