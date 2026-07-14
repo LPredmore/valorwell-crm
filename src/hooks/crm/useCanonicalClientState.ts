@@ -28,9 +28,30 @@ const CANONICAL_COLUMNS = [
   'updated_at',
 ].join(',');
 
+export type CanonicalReadStatus = 'ok' | 'CONTRACT_NOT_DEPLOYED' | 'empty';
+
+export interface CanonicalReadResult<T> {
+  status: CanonicalReadStatus;
+  data: T | null;
+  message?: string;
+}
+
+function classifyError(message: string): CanonicalReadStatus {
+  if (
+    /relation .* does not exist/i.test(message) ||
+    /could not find the table/i.test(message) ||
+    /PGRST20[12]/i.test(message)
+  ) {
+    return 'CONTRACT_NOT_DEPLOYED';
+  }
+  return 'CONTRACT_NOT_DEPLOYED';
+}
+
 /**
  * Reads the authoritative canonical state for a client.
  * Never reads pat_status. Never derives lifecycle/engagement/at-risk client-side.
+ * Fail-closed: returns explicit CONTRACT_NOT_DEPLOYED status when the backend
+ * view is missing, instead of silently returning null.
  */
 export function useCanonicalClientState(clientId: string | undefined | null) {
   const { tenantId, isAuthenticated } = useCrmAuth();
@@ -38,7 +59,7 @@ export function useCanonicalClientState(clientId: string | undefined | null) {
   return useQuery({
     queryKey: ['canonical-client-state', tenantId, clientId, CONTRACT_VERSION],
     enabled: isAuthenticated && !!tenantId && !!clientId,
-    queryFn: async (): Promise<CanonicalClientState | null> => {
+    queryFn: async (): Promise<CanonicalReadResult<CanonicalClientState>> => {
       const { data, error } = await (supabase as any)
         .from(CANONICAL_READ_VIEW)
         .select(CANONICAL_COLUMNS)
@@ -47,11 +68,14 @@ export function useCanonicalClientState(clientId: string | undefined | null) {
         .maybeSingle();
 
       if (error) {
-        // Canonical view not yet published — surface safe empty state.
         console.warn(`[canonical] ${CANONICAL_READ_VIEW} unavailable:`, error.message);
-        return null;
+        return {
+          status: classifyError(error.message),
+          data: null,
+          message: error.message,
+        };
       }
-      return data as CanonicalClientState | null;
+      return { status: data ? 'ok' : 'empty', data: (data as CanonicalClientState) ?? null };
     },
   });
 }
@@ -66,7 +90,7 @@ export function useCanonicalClientStates(clientIds: string[]) {
   return useQuery({
     queryKey: ['canonical-client-states', tenantId, key, CONTRACT_VERSION],
     enabled: isAuthenticated && !!tenantId && clientIds.length > 0,
-    queryFn: async (): Promise<Record<string, CanonicalClientState>> => {
+    queryFn: async (): Promise<CanonicalReadResult<Record<string, CanonicalClientState>>> => {
       const { data, error } = await (supabase as any)
         .from(CANONICAL_READ_VIEW)
         .select(CANONICAL_COLUMNS)
@@ -75,13 +99,17 @@ export function useCanonicalClientStates(clientIds: string[]) {
 
       if (error) {
         console.warn(`[canonical] ${CANONICAL_READ_VIEW} unavailable:`, error.message);
-        return {};
+        return {
+          status: classifyError(error.message),
+          data: null,
+          message: error.message,
+        };
       }
       const out: Record<string, CanonicalClientState> = {};
       for (const row of (data ?? []) as CanonicalClientState[]) {
         out[row.client_id] = row;
       }
-      return out;
+      return { status: 'ok', data: out };
     },
   });
 }
