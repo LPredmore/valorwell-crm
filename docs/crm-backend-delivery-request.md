@@ -22,7 +22,7 @@ and `src/components/crm/auth/CrmMutationGate.tsx`).
 **Canonical read view (1):**
 - `public.v_client_canonical_state`
 
-**Lifecycle / state RPCs (8):**
+**Lifecycle / state RPCs (9):**
 1. `public.crm_transition_lifecycle`
 2. `public.crm_set_engagement`
 3. `public.crm_set_contact_policy`
@@ -30,7 +30,8 @@ and `src/components/crm/auth/CrmMutationGate.tsx`).
 5. `public.crm_set_eligibility`
 6. `public.crm_set_care_cadence`
 7. `public.crm_assign_clinician`
-8. `public.crm_close_client` (paired with `public.crm_reopen_client`; both count as item 8's close/reopen surface)
+8. `public.crm_close_client`
+9. `public.crm_reopen_client`
 
 **Communication policy RPC (1):**
 - `public.crm_evaluate_communication_policy`
@@ -81,7 +82,7 @@ and `src/components/crm/auth/CrmMutationGate.tsx`).
   Fields marked **derived** are computed inside the view definition from
   the owning source tables. Fields marked **authoritative** are stored on
   the canonical `clients`/state tables and updated only by the RPCs in
-  A1.2–A1.9.
+  A1.2–A1.9 (nine lifecycle RPCs).
 
 - **Grants:** `GRANT SELECT ON public.v_client_canonical_state TO authenticated;`
 - **Tenant isolation:** view definition MUST filter rows to
@@ -167,17 +168,27 @@ and `src/components/crm/auth/CrmMutationGate.tsx`).
 - **Frontend implemented:** yes (wired through generic canonical mutation gate).
 - **Verification test:** `LV-13`.
 
-### A1.9 `public.crm_close_client` + `public.crm_reopen_client` — RPCs
+### A1.9a `public.crm_close_client` — RPC
 
-- **Inputs:**
-  - `crm_close_client(p_client_id uuid, p_disposition_reason text, p_reason text, p_concurrency_token text, p_idempotency_key uuid, p_contract_version text) returns jsonb`
-  - `crm_reopen_client(p_client_id uuid, p_reason text, p_concurrency_token text, p_idempotency_key uuid, p_contract_version text) returns jsonb`
-- **Behavior:** close sets lifecycle to `Closed`, `disposition_reason`, `disposition_at=now()`; reopen restores lifecycle to prior stage (or `Registration` if unknown), clears disposition fields.
-- Audit event types: `closed`, `reopened`.
-- Policy otherwise identical to A1.2.
-- **CRM consumer:** close/reopen buttons on `CanonicalClientDetail`.
+- **Input:** `crm_close_client(p_client_id uuid, p_disposition_reason text, p_reason text, p_concurrency_token text, p_idempotency_key uuid, p_contract_version text) returns jsonb`
+- **Return:** `MutationResult`.
+- **Behavior:** sets lifecycle to `Closed`, sets `disposition_reason`, sets `disposition_at=now()`.
+- **Audit event type:** `closed`.
+- Role / tenancy / grants / idempotency policy identical to A1.2.
+- **CRM consumer:** close button on `CanonicalClientDetail` (via `useCanonicalMutations`).
 - **Frontend implemented:** yes.
-- **Verification test:** `LV-14`, `LV-15`.
+- **Verification test:** `LV-14`.
+
+### A1.9b `public.crm_reopen_client` — RPC
+
+- **Input:** `crm_reopen_client(p_client_id uuid, p_reason text, p_concurrency_token text, p_idempotency_key uuid, p_contract_version text) returns jsonb`
+- **Return:** `MutationResult`.
+- **Behavior:** restores lifecycle to the prior non-Closed stage recorded on the last `closed` audit event (or `Registration` if unknown), clears `disposition_reason` and `disposition_at`.
+- **Audit event type:** `reopened`.
+- Role / tenancy / grants / idempotency policy identical to A1.2.
+- **CRM consumer:** reopen button on `CanonicalClientDetail`.
+- **Frontend implemented:** yes.
+- **Verification test:** `LV-15`.
 
 ### A1.10 `public.crm_evaluate_communication_policy` — RPC
 
@@ -258,7 +269,7 @@ and `src/components/crm/auth/CrmMutationGate.tsx`).
   row rather than editing.
 - **No anon access.** No broad authenticated INSERT/UPDATE/DELETE.
 - **CRM consumer:** activity timeline reads on `CanonicalClientDetail`.
-  Writes are done exclusively by A1.2–A1.9 RPCs and the edge functions
+  Writes are done exclusively by A1.2–A1.9 (nine lifecycle RPCs) RPCs and the edge functions
   listed in A1.10.
 - **Frontend implemented:** yes (read-only reads only).
 - **Verification test:** `LV-20`, `LV-21`.
@@ -353,45 +364,51 @@ tables remain owned by other apps.)
 
 ## Frontend completion evidence (this handoff)
 
-- **Commit SHA:** `83afc019d7c094e3943f71ddd8f224dcaf31d07a`
-- **Files changed since prior handoff:** see git log; last batch removed
-  47 legacy files (see earlier deletions), added `CrmMutationGate`,
-  `SuppressionBanner`, canonical hook fail-closed classification,
-  Settings gate wrapping, `CampaignStepEditor` mutation gating, and
-  hardened `p09-legacy-assertions.test.ts`.
-- **Build:** passes (Vite production build not blocked by any missing
-  contract; `CONTRACT_NOT_DEPLOYED` states are handled at runtime).
-- **Type-check:** `bunx tsgo --noEmit` clean.
-- **Lint:** `bunx eslint src` reports 93 pre-existing `any`-cast errors
-  in `src/repositories/supabase/*.ts`. These are intentional temporary
-  casts on `supabase.from(...)` calls that reference views/RPCs not yet
-  in the generated `types.ts`. They MUST be removed by regenerating
-  types after backend delivery (post-delivery step 1); no other lint
-  errors exist. No new lint errors were introduced by this handoff.
+- **CRM frontend code baseline SHA (frozen):** `83afc019d7c094e3943f71ddd8f224dcaf31d07a`.
+  This is the pinned frontend baseline. This handoff document itself is
+  a docs-only update on top of that baseline and produces a subsequent
+  SHA solely for the doc change; no code files were modified.
+- **Files changed in this handoff:** `docs/crm-backend-delivery-request.md` only.
+- **Production build:**
+  - Command: `bun run build` (`vite build`)
+  - Exit code: `0`
+  - Result: built successfully in ~7.3s; `dist/index.html`, `dist/assets/index-*.css` (69.22 kB / 12.07 kB gz), `dist/assets/index-*.js` (1,238.27 kB / 371.81 kB gz).
+  - Warnings: (a) Vite chunk-size advisory — main bundle > 500 kB; cosmetic, does not affect runtime, chunking, dependency resolution, env vars, or deployment. (b) `caniuse-lite` data 13 months old — cosmetic; no runtime impact. No warnings affect deploy correctness.
+- **Type-check:** `bunx tsgo --noEmit` — clean, no errors.
+- **Lint:** `bunx eslint src --max-warnings=0` — 93 pre-existing
+  `@typescript-eslint/no-explicit-any` errors, all in
+  `src/repositories/supabase/*.ts` and `src/hooks/crm/useCanonicalMutations.ts`.
+  Every one is a deliberate `(supabase as any)` cast against a view or
+  RPC that is not yet in generated `types.ts`. Per §5 of this document
+  these MUST NOT be cleared by inventing local types; they clear
+  automatically when types are regenerated post-deployment (LV-27).
+  No new lint errors were introduced.
 - **Unit/integration tests:** `bunx vitest run` — 3 files, 20/20 passing.
   Includes `src/test/p09-legacy-assertions.test.ts` which statically
   asserts:
   - no direct `.update({ pat_status | assigned_therapist_id | contact_policy | service_policy | care_cadence | at_risk })` write anywhere in `src/`;
   - no legacy `-legacy` routes;
   - no imports of the 21 removed legacy hooks/components/pages.
+- **Working tree:** clean at the doc-write SHA; no untracked or modified files outside `docs/`.
 - **Protected canonical state:** confirmed not written directly by the
   frontend (test above enforces this).
 - **`pat_status` authority:** confirmed no authoritative CRM workflow
-  reads or writes `pat_status`. The generated `types.ts` still declares
-  the column (owned by other apps) but CRM code never uses it.
-- **Fail-closed:** unavailable mutations render the read-only fallback
-  from `CrmMutationGate`; unavailable canonical reads render the
+  reads or writes `pat_status`. Generated `types.ts` still declares the
+  column (owned by other apps); CRM code never uses it.
+- **Fail-closed:** unavailable mutations render `CrmMutationGate`'s
+  read-only fallback; unavailable canonical reads render the
   `CONTRACT_NOT_DEPLOYED` state via `SuppressionBanner`.
-- **ClickUp mirror:** obsolete; no CRM code path calls `clickup_client_mirror_state`
-  or the ClickUp edge function. Confirmed via `rg "clickup_client_mirror_state|crm_clickup_" src/`.
+- **ClickUp mirror:** obsolete; no CRM code path calls
+  `clickup_client_mirror_state` or the ClickUp edge function
+  (`rg "clickup_client_mirror_state|crm_clickup_" src/` → 0 matches).
 - **No fabricated success:** no mock responses, no temporary RPCs, no
-  direct-table fallbacks. Every canonical mutation goes through the RPC
-  helper in `src/hooks/crm/useCanonicalMutations.ts`.
+  direct-table fallbacks. Every canonical mutation flows through
+  `src/hooks/crm/useCanonicalMutations.ts`.
 - **Distinguishing unavailable-backend vs. app errors:** canonical read
-  hook classifies missing-relation errors as `CONTRACT_NOT_DEPLOYED`
-  (structured state) and other errors continue to surface via toast.
-  Mutation gate refuses submission when the caller lacks
-  admin/staff role or when the mutation hook reports the RPC missing.
+  hook classifies missing-relation / PGRST20{1,2} errors as
+  `CONTRACT_NOT_DEPLOYED`; other errors surface via toast. Mutation
+  gate refuses submission when caller lacks admin/staff role or when
+  the RPC layer reports the contract missing.
 
 ---
 
@@ -411,46 +428,109 @@ tables remain owned by other apps.)
 
 ## Live verification suite
 
-Every test below must be run against project `ahqauomkgflopxgnlndd`
-using two distinct authenticated users in two distinct tenants
-(call them `USER_A` in `TENANT_A`, `USER_B` in `TENANT_B`) plus one
-`service_role` key. Tests are described so they can be executed
-manually via the Supabase SQL editor or automated via a Deno test in
-`supabase/functions/_shared/crm-live-verification_test.ts`.
+The suite is **documentation-only at this handoff**. No executable
+automated test file exists yet for LV-01…LV-30. The prior draft of
+this document incorrectly implied an existing test file
+(`supabase/functions/_shared/crm-live-verification_test.ts`) — that
+file does NOT exist in this repo (`find supabase/functions -name '*_test.ts' -o -name '*.test.ts'` returns nothing).
 
-| ID | Test | Expected result |
-|---|---|---|
-| LV-01 | `USER_A` selects from `v_client_canonical_state WHERE client_id = <A_client>` | 1 row, all columns present and typed |
-| LV-02 | `USER_A` selects from `v_client_canonical_state WHERE client_id = <B_client>` | 0 rows |
-| LV-03 | `USER_A` calls `crm_transition_lifecycle` on `<A_client>` with valid stage + fresh `concurrency_token` + new `idempotency_key` | `{ok:true}`, one `lifecycle_changed` audit row created |
-| LV-04 | `USER_A` calls same RPC on `<B_client>` | `{ok:false, error_code:'unauthorized'}`, no audit row |
-| LV-05 | `USER_A` calls same RPC with invalid transition (e.g. `Closed → Lead`) | `{ok:false, error_code:'invalid_transition'}` |
-| LV-06 | `USER_A` calls same RPC with stale `concurrency_token` | `{ok:false, error_code:'concurrency_conflict'}` |
-| LV-07 | `USER_A` replays LV-03 with same `idempotency_key` | identical `{ok:true}`; audit rows count unchanged |
-| LV-08 | `USER_A` calls `crm_set_engagement` on `<A_client>` | `{ok:true}`, `engagement_changed` audit row |
-| LV-09 | `USER_A` calls `crm_set_contact_policy` to `Do Not Contact` on `<A_client>` with active enrollment | `{ok:true}`, `contact_policy_changed` audit row, all active `crm_campaign_enrollments` cancelled, one `campaign_cancelled_by_policy` audit row per cancellation |
-| LV-10 | `USER_A` calls `crm_set_service_policy` | `{ok:true}`, `service_policy_changed` audit row |
-| LV-11 | `USER_A` calls `crm_set_eligibility` to `Manual Review` without `manual_review` payload | `{ok:false, error_code:'invalid_transition'}` |
-| LV-12 | `USER_A` calls `crm_set_care_cadence` | `{ok:true}`, `care_cadence_changed` audit row |
-| LV-13 | `USER_A` calls `crm_assign_clinician` with a `staff_id` from `TENANT_B` | `{ok:false, error_code:'invalid_transition', message:'staff_not_in_tenant'}` |
-| LV-14 | `USER_A` calls `crm_close_client` | `{ok:true}`, lifecycle=`Closed`, `closed` audit row |
-| LV-15 | `USER_A` calls `crm_reopen_client` | `{ok:true}`, lifecycle restored, `reopened` audit row |
-| LV-16 | `USER_A` calls `crm_evaluate_communication_policy(<A_DNC_client>,'sms','ordinary_campaign_follow_up')` | `{allowed:false, reason_code:'contact_policy_dnc'}` |
-| LV-17 | Same, but `message_class='clinical_safety_legal'` | `{allowed:true, reason_code:'ok'}` |
-| LV-18 | `USER_A` calls RPC for `<A_service_blocked_client>` any class | `{allowed:false, reason_code:'service_policy_blocked'}` |
-| LV-19 | `USER_A` calls RPC for `<B_client>` | `{allowed:false, reason_code:'unknown_canonical_state'}` |
-| LV-20 | `USER_A` runs `INSERT INTO crm_activity_events (tenant_id, client_id, event_type, ...) VALUES (...)` via PostgREST | permission-denied / RLS error; no row inserted |
-| LV-21 | Trigger LV-03 and observe `crm_activity_events` — verify audit row is present and rows are not editable by `USER_A` (UPDATE/DELETE also refused) | insert visible; UPDATE/DELETE refused |
-| LV-22 | `USER_A` selects from each of the six `v_crm_reports_*` views | rows returned only for `TENANT_A`; column shape matches contract |
-| LV-23 | `USER_B` selects same views | no `TENANT_A` rows visible |
-| LV-24 | `helpscout-proxy` send to DNC client with `ordinary_campaign_follow_up` | HTTP 200 `{status:'suppressed'}`, no HelpScout API call made, `email_suppressed` audit row written |
-| LV-25 | `ringcentral-sms` bulk send with a DNC recipient | that recipient reports `suppressed`, no RingCentral API call, `sms_suppressed` audit row |
-| LV-26 | `campaign-scheduler` tick with a DNC-enrolled client | step logged as `suppressed`, enrollment auto-cancelled if terminal |
-| LV-27 | Regenerate `types.ts`, then `bunx tsgo --noEmit` and `bunx eslint src` | both clean; no residual `as any` casts on canonical objects |
-| LV-28 | Frontend smoke test: canonical client detail loads for `USER_A`, all badges render authoritative values | no `CONTRACT_NOT_DEPLOYED` banner |
-| LV-29 | Frontend smoke test: `USER_B` (staff of TENANT_B) navigates to a URL with `<A_client>` id | canonical hook returns `empty`, page shows structured unavailable-record state, no data leak |
-| LV-30 | Frontend smoke test: non-admin/non-staff user attempts a lifecycle change | `CrmMutationGate` renders read-only fallback; no RPC call issued |
+Fixtures required before any LV test can run:
+
+- `USER_A` — admin/staff of `TENANT_A`; auth JWT.
+- `USER_B` — admin/staff of `TENANT_B`; auth JWT.
+- `USER_C` — authenticated user with neither `admin` nor `staff` role.
+- `service_role` key (server-side only, never in browser).
+- Seed rows: one canonical client per tenant, one DNC client in
+  `TENANT_A`, one service-blocked client in `TENANT_A`, one active
+  campaign enrollment on the DNC client, one staff row per tenant.
+
+Classification (all rows currently backend-blocked because the target
+objects do not exist in project `ahqauomkgflopxgnlndd`):
+
+| ID | Target | Automated? | File / procedure | Current status | Expected post-deployment result |
+|---|---|---|---|---|---|
+| LV-01 | `v_client_canonical_state` read (own tenant) | Manual (SQL editor) or scriptable via `curl` + PostgREST | procedure §Live verification | backend-blocked | 1 row, all columns typed |
+| LV-02 | `v_client_canonical_state` cross-tenant read | Manual | procedure | backend-blocked | 0 rows |
+| LV-03 | `crm_transition_lifecycle` authorized | Manual | procedure | backend-blocked | `{ok:true}` + audit row |
+| LV-04 | `crm_transition_lifecycle` cross-tenant | Manual | procedure | backend-blocked | `{ok:false, error_code:'unauthorized'}` |
+| LV-05 | `crm_transition_lifecycle` invalid transition | Manual | procedure | backend-blocked | `{ok:false, error_code:'invalid_transition'}` |
+| LV-06 | `crm_transition_lifecycle` stale concurrency token | Manual | procedure | backend-blocked | `{ok:false, error_code:'concurrency_conflict'}` |
+| LV-07 | `crm_transition_lifecycle` idempotency replay | Manual | procedure | backend-blocked | identical result, no duplicate audit |
+| LV-08 | `crm_set_engagement` | Manual | procedure | backend-blocked | `{ok:true}` + `engagement_changed` audit |
+| LV-09 | `crm_set_contact_policy` → DNC cancels enrollments | Manual | procedure | backend-blocked | `{ok:true}` + `contact_policy_changed` + `campaign_cancelled_by_policy` per cancellation |
+| LV-10 | `crm_set_service_policy` | Manual | procedure | backend-blocked | `{ok:true}` + `service_policy_changed` audit |
+| LV-11 | `crm_set_eligibility` requires manual-review payload | Manual | procedure | backend-blocked | `{ok:false, error_code:'invalid_transition'}` |
+| LV-12 | `crm_set_care_cadence` | Manual | procedure | backend-blocked | `{ok:true}` + `care_cadence_changed` audit |
+| LV-13 | `crm_assign_clinician` cross-tenant staff | Manual | procedure | backend-blocked | `{ok:false, error_code:'invalid_transition', message:'staff_not_in_tenant'}` |
+| LV-14 | `crm_close_client` | Manual | procedure | backend-blocked | lifecycle=Closed, `closed` audit |
+| LV-15 | `crm_reopen_client` | Manual | procedure | backend-blocked | lifecycle restored, `reopened` audit |
+| LV-16 | `crm_evaluate_communication_policy` DNC ordinary | Manual | procedure | backend-blocked | `{allowed:false, reason_code:'contact_policy_dnc'}` |
+| LV-17 | `crm_evaluate_communication_policy` clinical exception | Manual | procedure | backend-blocked | `{allowed:true}` |
+| LV-18 | `crm_evaluate_communication_policy` service-blocked | Manual | procedure | backend-blocked | `{allowed:false, reason_code:'service_policy_blocked'}` |
+| LV-19 | `crm_evaluate_communication_policy` cross-tenant | Manual | procedure | backend-blocked | `{allowed:false, reason_code:'unknown_canonical_state'}` |
+| LV-20 | `crm_activity_events` direct INSERT refused | Manual (PostgREST) | procedure | backend-blocked | permission-denied |
+| LV-21 | `crm_activity_events` UPDATE/DELETE refused | Manual | procedure | backend-blocked | permission-denied |
+| LV-22 | six `v_crm_reports_*` views, own tenant | Manual | procedure | backend-blocked | tenant-scoped rows |
+| LV-23 | six `v_crm_reports_*` views, cross-tenant | Manual | procedure | backend-blocked | no leak |
+| LV-24 | `helpscout-proxy` enforces suppression | Manual (invoke edge fn) | procedure | backend-blocked (requires A1.10 RPC) | `{status:'suppressed'}` + `email_suppressed` audit |
+| LV-25 | `ringcentral-sms` enforces suppression | Manual | procedure | backend-blocked | recipient `suppressed` + `sms_suppressed` audit |
+| LV-26 | `campaign-scheduler` enforces suppression | Manual | procedure | backend-blocked | step `suppressed`, enrollment cancelled if terminal |
+| LV-27 | Regenerate `types.ts`, typecheck + lint clean | Automated once types exist: `bunx tsgo --noEmit && bunx eslint src --max-warnings=0` | run at repo root | blocked on types regen | 0 errors, 0 residual casts |
+| LV-28 | Frontend smoke: canonical detail loads | Manual browser walk-through | procedure | backend-blocked | no `CONTRACT_NOT_DEPLOYED` banner |
+| LV-29 | Frontend smoke: cross-tenant client id | Manual | procedure | backend-blocked | structured empty state, no leak |
+| LV-30 | Frontend smoke: non-admin/staff mutation gated | Static assertion + manual click-through. Static portion is covered by `src/test/p09-legacy-assertions.test.ts` (removed-legacy imports); live click-through remains manual. | file: `src/test/p09-legacy-assertions.test.ts` | static portion **passing** (`bunx vitest run` — 20/20); live click-through backend-blocked | gate renders read-only fallback, no RPC issued |
+
+Summary counts:
+
+- Already implemented & passing as automated tests: **0** end-to-end LV tests. The only automated coverage today is the static portion of LV-30 via `p09-legacy-assertions.test.ts`.
+- Implemented but skipped pending contract: **0**.
+- Manual live-verification procedures: **LV-01 … LV-26, LV-28, LV-29** (28 tests).
+- Automatable once backend deployed (planned): **LV-27** (typecheck + lint, one-shot after `types.ts` regen).
+- Documentation-only: entire suite is currently documentation; no
+  vitest/deno file executes any RPC round-trip today.
 
 A contract row in this document may be marked "DELIVERED — verified"
-only after every referenced `LV-##` passes and the CRM types file has
-been regenerated.
+only after every referenced `LV-##` passes against live project
+`ahqauomkgflopxgnlndd` and the CRM types file has been regenerated.
+
+---
+
+## Backend completion trigger
+
+The CRM remains **backend-blocked** and MUST NOT be considered live
+until the Supabase project `ahqauomkgflopxgnlndd` has:
+
+1. **Published all required objects** listed in the Quick index:
+   `v_client_canonical_state`, all nine lifecycle RPCs
+   (`crm_transition_lifecycle`, `crm_set_engagement`,
+   `crm_set_contact_policy`, `crm_set_service_policy`,
+   `crm_set_eligibility`, `crm_set_care_cadence`,
+   `crm_assign_clinician`, `crm_close_client`, `crm_reopen_client`),
+   `crm_evaluate_communication_policy`, all six
+   `v_crm_reports_*` views, and the `crm_activity_events` lockdown.
+2. **Applied the exact signatures** documented in A1.1–A1.11 and
+   A2.1–A2.6. Any parameter name / return-shape drift is a rejection.
+3. **Applied tenant-scoped RLS** on every read surface and every RPC's
+   internal reads/writes, sourced from `tenant_memberships` /
+   `crm_has_role(auth.uid(), ...)`.
+4. **Applied explicit GRANT/REVOKE controls** as specified — including
+   the `REVOKE ALL … FROM anon, authenticated` + `GRANT SELECT …
+   TO authenticated` + `GRANT ALL … TO service_role` on
+   `crm_activity_events`, and `GRANT EXECUTE` on every RPC.
+5. **Enforced idempotency** on all nine lifecycle RPCs via
+   `public.crm_idempotency_keys` (24h replay window).
+6. **Enforced communication suppression at the sending backend** —
+   `helpscout-proxy`, `ringcentral-sms`, and `campaign-scheduler` all
+   call `crm_evaluate_communication_policy` server-side and refuse
+   dispatch on `allowed=false`. Frontend result is never trusted.
+7. **Passed authorized and unauthorized round-trip tests** — LV-01
+   through LV-26 with a real `USER_A`/`USER_B`/`USER_C` fixture set.
+8. **Produced the contract release/version evidence** — new
+   `backend_contract_releases` row with matching `contract_version`,
+   which is then wired into `src/lib/crm/contracts/v1/index.ts` as
+   `CONTRACT_VERSION`.
+
+Only after all eight conditions are satisfied and every `LV-##` has
+been executed against live Supabase may the CRM be declared launched
+and the "Current blocker" lines in A1 be updated to
+"DELIVERED — verified via LV-##".
