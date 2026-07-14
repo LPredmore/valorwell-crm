@@ -364,45 +364,51 @@ tables remain owned by other apps.)
 
 ## Frontend completion evidence (this handoff)
 
-- **Commit SHA:** `83afc019d7c094e3943f71ddd8f224dcaf31d07a`
-- **Files changed since prior handoff:** see git log; last batch removed
-  47 legacy files (see earlier deletions), added `CrmMutationGate`,
-  `SuppressionBanner`, canonical hook fail-closed classification,
-  Settings gate wrapping, `CampaignStepEditor` mutation gating, and
-  hardened `p09-legacy-assertions.test.ts`.
-- **Build:** passes (Vite production build not blocked by any missing
-  contract; `CONTRACT_NOT_DEPLOYED` states are handled at runtime).
-- **Type-check:** `bunx tsgo --noEmit` clean.
-- **Lint:** `bunx eslint src` reports 93 pre-existing `any`-cast errors
-  in `src/repositories/supabase/*.ts`. These are intentional temporary
-  casts on `supabase.from(...)` calls that reference views/RPCs not yet
-  in the generated `types.ts`. They MUST be removed by regenerating
-  types after backend delivery (post-delivery step 1); no other lint
-  errors exist. No new lint errors were introduced by this handoff.
+- **CRM frontend code baseline SHA (frozen):** `83afc019d7c094e3943f71ddd8f224dcaf31d07a`.
+  This is the pinned frontend baseline. This handoff document itself is
+  a docs-only update on top of that baseline and produces a subsequent
+  SHA solely for the doc change; no code files were modified.
+- **Files changed in this handoff:** `docs/crm-backend-delivery-request.md` only.
+- **Production build:**
+  - Command: `bun run build` (`vite build`)
+  - Exit code: `0`
+  - Result: built successfully in ~7.3s; `dist/index.html`, `dist/assets/index-*.css` (69.22 kB / 12.07 kB gz), `dist/assets/index-*.js` (1,238.27 kB / 371.81 kB gz).
+  - Warnings: (a) Vite chunk-size advisory — main bundle > 500 kB; cosmetic, does not affect runtime, chunking, dependency resolution, env vars, or deployment. (b) `caniuse-lite` data 13 months old — cosmetic; no runtime impact. No warnings affect deploy correctness.
+- **Type-check:** `bunx tsgo --noEmit` — clean, no errors.
+- **Lint:** `bunx eslint src --max-warnings=0` — 93 pre-existing
+  `@typescript-eslint/no-explicit-any` errors, all in
+  `src/repositories/supabase/*.ts` and `src/hooks/crm/useCanonicalMutations.ts`.
+  Every one is a deliberate `(supabase as any)` cast against a view or
+  RPC that is not yet in generated `types.ts`. Per §5 of this document
+  these MUST NOT be cleared by inventing local types; they clear
+  automatically when types are regenerated post-deployment (LV-27).
+  No new lint errors were introduced.
 - **Unit/integration tests:** `bunx vitest run` — 3 files, 20/20 passing.
   Includes `src/test/p09-legacy-assertions.test.ts` which statically
   asserts:
   - no direct `.update({ pat_status | assigned_therapist_id | contact_policy | service_policy | care_cadence | at_risk })` write anywhere in `src/`;
   - no legacy `-legacy` routes;
   - no imports of the 21 removed legacy hooks/components/pages.
+- **Working tree:** clean at the doc-write SHA; no untracked or modified files outside `docs/`.
 - **Protected canonical state:** confirmed not written directly by the
   frontend (test above enforces this).
 - **`pat_status` authority:** confirmed no authoritative CRM workflow
-  reads or writes `pat_status`. The generated `types.ts` still declares
-  the column (owned by other apps) but CRM code never uses it.
-- **Fail-closed:** unavailable mutations render the read-only fallback
-  from `CrmMutationGate`; unavailable canonical reads render the
+  reads or writes `pat_status`. Generated `types.ts` still declares the
+  column (owned by other apps); CRM code never uses it.
+- **Fail-closed:** unavailable mutations render `CrmMutationGate`'s
+  read-only fallback; unavailable canonical reads render the
   `CONTRACT_NOT_DEPLOYED` state via `SuppressionBanner`.
-- **ClickUp mirror:** obsolete; no CRM code path calls `clickup_client_mirror_state`
-  or the ClickUp edge function. Confirmed via `rg "clickup_client_mirror_state|crm_clickup_" src/`.
+- **ClickUp mirror:** obsolete; no CRM code path calls
+  `clickup_client_mirror_state` or the ClickUp edge function
+  (`rg "clickup_client_mirror_state|crm_clickup_" src/` → 0 matches).
 - **No fabricated success:** no mock responses, no temporary RPCs, no
-  direct-table fallbacks. Every canonical mutation goes through the RPC
-  helper in `src/hooks/crm/useCanonicalMutations.ts`.
+  direct-table fallbacks. Every canonical mutation flows through
+  `src/hooks/crm/useCanonicalMutations.ts`.
 - **Distinguishing unavailable-backend vs. app errors:** canonical read
-  hook classifies missing-relation errors as `CONTRACT_NOT_DEPLOYED`
-  (structured state) and other errors continue to surface via toast.
-  Mutation gate refuses submission when the caller lacks
-  admin/staff role or when the mutation hook reports the RPC missing.
+  hook classifies missing-relation / PGRST20{1,2} errors as
+  `CONTRACT_NOT_DEPLOYED`; other errors surface via toast. Mutation
+  gate refuses submission when caller lacks admin/staff role or when
+  the RPC layer reports the contract missing.
 
 ---
 
