@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import type { CampaignStepFormData } from '@/lib/crm/campaign-types';
 import { PERSONALIZATION_VARIABLES } from '@/lib/crm/campaign-types';
 import { useState } from 'react';
+import { useCanMutate } from '@/components/crm/auth/CrmMutationGate';
 
 interface CampaignStepEditorProps {
   step: CampaignStepFormData;
@@ -38,6 +39,7 @@ export function CampaignStepEditor({
   onRemove,
   dragHandleProps,
 }: CampaignStepEditorProps) {
+  const canMutate = useCanMutate();
   const [isOpen, setIsOpen] = useState(true);
   const smsLength = step.sms_body_text?.length || 0;
   const isOverSmsLimit = smsLength > 160;
@@ -91,12 +93,14 @@ export function CampaignStepEditor({
                 id={`step-${stepIndex}-active`}
                 checked={step.is_active}
                 onCheckedChange={(checked) => onChange({ is_active: checked })}
+                disabled={!canMutate}
               />
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={onRemove}
+              disabled={!canMutate}
               className="text-muted-foreground hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
@@ -122,6 +126,7 @@ export function CampaignStepEditor({
                 <Select
                   value={step.channel}
                   onValueChange={(value: 'email' | 'sms') => onChange({ channel: value })}
+                  disabled={!canMutate}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -139,6 +144,7 @@ export function CampaignStepEditor({
                   min={0}
                   value={step.delay_days}
                   onChange={(e) => onChange({ delay_days: parseInt(e.target.value) || 0 })}
+                  disabled={!canMutate}
                 />
               </div>
               <div className="space-y-2">
@@ -149,6 +155,7 @@ export function CampaignStepEditor({
                   max={23}
                   value={step.delay_hours}
                   onChange={(e) => onChange({ delay_hours: parseInt(e.target.value) || 0 })}
+                  disabled={!canMutate}
                 />
               </div>
             </div>
@@ -162,6 +169,7 @@ export function CampaignStepEditor({
                     value={step.email_subject}
                     onChange={(e) => onChange({ email_subject: e.target.value })}
                     placeholder="Enter email subject..."
+                    disabled={!canMutate}
                   />
                 </div>
                 <div className="space-y-2">
@@ -198,6 +206,7 @@ export function CampaignStepEditor({
                   onChange={(e) => onChange({ sms_body_text: e.target.value })}
                   placeholder="Enter SMS message..."
                   rows={3}
+                  disabled={!canMutate}
                 />
               </div>
             )}
