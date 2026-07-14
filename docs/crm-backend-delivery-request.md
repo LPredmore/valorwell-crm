@@ -428,46 +428,109 @@ tables remain owned by other apps.)
 
 ## Live verification suite
 
-Every test below must be run against project `ahqauomkgflopxgnlndd`
-using two distinct authenticated users in two distinct tenants
-(call them `USER_A` in `TENANT_A`, `USER_B` in `TENANT_B`) plus one
-`service_role` key. Tests are described so they can be executed
-manually via the Supabase SQL editor or automated via a Deno test in
-`supabase/functions/_shared/crm-live-verification_test.ts`.
+The suite is **documentation-only at this handoff**. No executable
+automated test file exists yet for LV-01…LV-30. The prior draft of
+this document incorrectly implied an existing test file
+(`supabase/functions/_shared/crm-live-verification_test.ts`) — that
+file does NOT exist in this repo (`find supabase/functions -name '*_test.ts' -o -name '*.test.ts'` returns nothing).
 
-| ID | Test | Expected result |
-|---|---|---|
-| LV-01 | `USER_A` selects from `v_client_canonical_state WHERE client_id = <A_client>` | 1 row, all columns present and typed |
-| LV-02 | `USER_A` selects from `v_client_canonical_state WHERE client_id = <B_client>` | 0 rows |
-| LV-03 | `USER_A` calls `crm_transition_lifecycle` on `<A_client>` with valid stage + fresh `concurrency_token` + new `idempotency_key` | `{ok:true}`, one `lifecycle_changed` audit row created |
-| LV-04 | `USER_A` calls same RPC on `<B_client>` | `{ok:false, error_code:'unauthorized'}`, no audit row |
-| LV-05 | `USER_A` calls same RPC with invalid transition (e.g. `Closed → Lead`) | `{ok:false, error_code:'invalid_transition'}` |
-| LV-06 | `USER_A` calls same RPC with stale `concurrency_token` | `{ok:false, error_code:'concurrency_conflict'}` |
-| LV-07 | `USER_A` replays LV-03 with same `idempotency_key` | identical `{ok:true}`; audit rows count unchanged |
-| LV-08 | `USER_A` calls `crm_set_engagement` on `<A_client>` | `{ok:true}`, `engagement_changed` audit row |
-| LV-09 | `USER_A` calls `crm_set_contact_policy` to `Do Not Contact` on `<A_client>` with active enrollment | `{ok:true}`, `contact_policy_changed` audit row, all active `crm_campaign_enrollments` cancelled, one `campaign_cancelled_by_policy` audit row per cancellation |
-| LV-10 | `USER_A` calls `crm_set_service_policy` | `{ok:true}`, `service_policy_changed` audit row |
-| LV-11 | `USER_A` calls `crm_set_eligibility` to `Manual Review` without `manual_review` payload | `{ok:false, error_code:'invalid_transition'}` |
-| LV-12 | `USER_A` calls `crm_set_care_cadence` | `{ok:true}`, `care_cadence_changed` audit row |
-| LV-13 | `USER_A` calls `crm_assign_clinician` with a `staff_id` from `TENANT_B` | `{ok:false, error_code:'invalid_transition', message:'staff_not_in_tenant'}` |
-| LV-14 | `USER_A` calls `crm_close_client` | `{ok:true}`, lifecycle=`Closed`, `closed` audit row |
-| LV-15 | `USER_A` calls `crm_reopen_client` | `{ok:true}`, lifecycle restored, `reopened` audit row |
-| LV-16 | `USER_A` calls `crm_evaluate_communication_policy(<A_DNC_client>,'sms','ordinary_campaign_follow_up')` | `{allowed:false, reason_code:'contact_policy_dnc'}` |
-| LV-17 | Same, but `message_class='clinical_safety_legal'` | `{allowed:true, reason_code:'ok'}` |
-| LV-18 | `USER_A` calls RPC for `<A_service_blocked_client>` any class | `{allowed:false, reason_code:'service_policy_blocked'}` |
-| LV-19 | `USER_A` calls RPC for `<B_client>` | `{allowed:false, reason_code:'unknown_canonical_state'}` |
-| LV-20 | `USER_A` runs `INSERT INTO crm_activity_events (tenant_id, client_id, event_type, ...) VALUES (...)` via PostgREST | permission-denied / RLS error; no row inserted |
-| LV-21 | Trigger LV-03 and observe `crm_activity_events` — verify audit row is present and rows are not editable by `USER_A` (UPDATE/DELETE also refused) | insert visible; UPDATE/DELETE refused |
-| LV-22 | `USER_A` selects from each of the six `v_crm_reports_*` views | rows returned only for `TENANT_A`; column shape matches contract |
-| LV-23 | `USER_B` selects same views | no `TENANT_A` rows visible |
-| LV-24 | `helpscout-proxy` send to DNC client with `ordinary_campaign_follow_up` | HTTP 200 `{status:'suppressed'}`, no HelpScout API call made, `email_suppressed` audit row written |
-| LV-25 | `ringcentral-sms` bulk send with a DNC recipient | that recipient reports `suppressed`, no RingCentral API call, `sms_suppressed` audit row |
-| LV-26 | `campaign-scheduler` tick with a DNC-enrolled client | step logged as `suppressed`, enrollment auto-cancelled if terminal |
-| LV-27 | Regenerate `types.ts`, then `bunx tsgo --noEmit` and `bunx eslint src` | both clean; no residual `as any` casts on canonical objects |
-| LV-28 | Frontend smoke test: canonical client detail loads for `USER_A`, all badges render authoritative values | no `CONTRACT_NOT_DEPLOYED` banner |
-| LV-29 | Frontend smoke test: `USER_B` (staff of TENANT_B) navigates to a URL with `<A_client>` id | canonical hook returns `empty`, page shows structured unavailable-record state, no data leak |
-| LV-30 | Frontend smoke test: non-admin/non-staff user attempts a lifecycle change | `CrmMutationGate` renders read-only fallback; no RPC call issued |
+Fixtures required before any LV test can run:
+
+- `USER_A` — admin/staff of `TENANT_A`; auth JWT.
+- `USER_B` — admin/staff of `TENANT_B`; auth JWT.
+- `USER_C` — authenticated user with neither `admin` nor `staff` role.
+- `service_role` key (server-side only, never in browser).
+- Seed rows: one canonical client per tenant, one DNC client in
+  `TENANT_A`, one service-blocked client in `TENANT_A`, one active
+  campaign enrollment on the DNC client, one staff row per tenant.
+
+Classification (all rows currently backend-blocked because the target
+objects do not exist in project `ahqauomkgflopxgnlndd`):
+
+| ID | Target | Automated? | File / procedure | Current status | Expected post-deployment result |
+|---|---|---|---|---|---|
+| LV-01 | `v_client_canonical_state` read (own tenant) | Manual (SQL editor) or scriptable via `curl` + PostgREST | procedure §Live verification | backend-blocked | 1 row, all columns typed |
+| LV-02 | `v_client_canonical_state` cross-tenant read | Manual | procedure | backend-blocked | 0 rows |
+| LV-03 | `crm_transition_lifecycle` authorized | Manual | procedure | backend-blocked | `{ok:true}` + audit row |
+| LV-04 | `crm_transition_lifecycle` cross-tenant | Manual | procedure | backend-blocked | `{ok:false, error_code:'unauthorized'}` |
+| LV-05 | `crm_transition_lifecycle` invalid transition | Manual | procedure | backend-blocked | `{ok:false, error_code:'invalid_transition'}` |
+| LV-06 | `crm_transition_lifecycle` stale concurrency token | Manual | procedure | backend-blocked | `{ok:false, error_code:'concurrency_conflict'}` |
+| LV-07 | `crm_transition_lifecycle` idempotency replay | Manual | procedure | backend-blocked | identical result, no duplicate audit |
+| LV-08 | `crm_set_engagement` | Manual | procedure | backend-blocked | `{ok:true}` + `engagement_changed` audit |
+| LV-09 | `crm_set_contact_policy` → DNC cancels enrollments | Manual | procedure | backend-blocked | `{ok:true}` + `contact_policy_changed` + `campaign_cancelled_by_policy` per cancellation |
+| LV-10 | `crm_set_service_policy` | Manual | procedure | backend-blocked | `{ok:true}` + `service_policy_changed` audit |
+| LV-11 | `crm_set_eligibility` requires manual-review payload | Manual | procedure | backend-blocked | `{ok:false, error_code:'invalid_transition'}` |
+| LV-12 | `crm_set_care_cadence` | Manual | procedure | backend-blocked | `{ok:true}` + `care_cadence_changed` audit |
+| LV-13 | `crm_assign_clinician` cross-tenant staff | Manual | procedure | backend-blocked | `{ok:false, error_code:'invalid_transition', message:'staff_not_in_tenant'}` |
+| LV-14 | `crm_close_client` | Manual | procedure | backend-blocked | lifecycle=Closed, `closed` audit |
+| LV-15 | `crm_reopen_client` | Manual | procedure | backend-blocked | lifecycle restored, `reopened` audit |
+| LV-16 | `crm_evaluate_communication_policy` DNC ordinary | Manual | procedure | backend-blocked | `{allowed:false, reason_code:'contact_policy_dnc'}` |
+| LV-17 | `crm_evaluate_communication_policy` clinical exception | Manual | procedure | backend-blocked | `{allowed:true}` |
+| LV-18 | `crm_evaluate_communication_policy` service-blocked | Manual | procedure | backend-blocked | `{allowed:false, reason_code:'service_policy_blocked'}` |
+| LV-19 | `crm_evaluate_communication_policy` cross-tenant | Manual | procedure | backend-blocked | `{allowed:false, reason_code:'unknown_canonical_state'}` |
+| LV-20 | `crm_activity_events` direct INSERT refused | Manual (PostgREST) | procedure | backend-blocked | permission-denied |
+| LV-21 | `crm_activity_events` UPDATE/DELETE refused | Manual | procedure | backend-blocked | permission-denied |
+| LV-22 | six `v_crm_reports_*` views, own tenant | Manual | procedure | backend-blocked | tenant-scoped rows |
+| LV-23 | six `v_crm_reports_*` views, cross-tenant | Manual | procedure | backend-blocked | no leak |
+| LV-24 | `helpscout-proxy` enforces suppression | Manual (invoke edge fn) | procedure | backend-blocked (requires A1.10 RPC) | `{status:'suppressed'}` + `email_suppressed` audit |
+| LV-25 | `ringcentral-sms` enforces suppression | Manual | procedure | backend-blocked | recipient `suppressed` + `sms_suppressed` audit |
+| LV-26 | `campaign-scheduler` enforces suppression | Manual | procedure | backend-blocked | step `suppressed`, enrollment cancelled if terminal |
+| LV-27 | Regenerate `types.ts`, typecheck + lint clean | Automated once types exist: `bunx tsgo --noEmit && bunx eslint src --max-warnings=0` | run at repo root | blocked on types regen | 0 errors, 0 residual casts |
+| LV-28 | Frontend smoke: canonical detail loads | Manual browser walk-through | procedure | backend-blocked | no `CONTRACT_NOT_DEPLOYED` banner |
+| LV-29 | Frontend smoke: cross-tenant client id | Manual | procedure | backend-blocked | structured empty state, no leak |
+| LV-30 | Frontend smoke: non-admin/staff mutation gated | Static assertion + manual click-through. Static portion is covered by `src/test/p09-legacy-assertions.test.ts` (removed-legacy imports); live click-through remains manual. | file: `src/test/p09-legacy-assertions.test.ts` | static portion **passing** (`bunx vitest run` — 20/20); live click-through backend-blocked | gate renders read-only fallback, no RPC issued |
+
+Summary counts:
+
+- Already implemented & passing as automated tests: **0** end-to-end LV tests. The only automated coverage today is the static portion of LV-30 via `p09-legacy-assertions.test.ts`.
+- Implemented but skipped pending contract: **0**.
+- Manual live-verification procedures: **LV-01 … LV-26, LV-28, LV-29** (28 tests).
+- Automatable once backend deployed (planned): **LV-27** (typecheck + lint, one-shot after `types.ts` regen).
+- Documentation-only: entire suite is currently documentation; no
+  vitest/deno file executes any RPC round-trip today.
 
 A contract row in this document may be marked "DELIVERED — verified"
-only after every referenced `LV-##` passes and the CRM types file has
-been regenerated.
+only after every referenced `LV-##` passes against live project
+`ahqauomkgflopxgnlndd` and the CRM types file has been regenerated.
+
+---
+
+## Backend completion trigger
+
+The CRM remains **backend-blocked** and MUST NOT be considered live
+until the Supabase project `ahqauomkgflopxgnlndd` has:
+
+1. **Published all required objects** listed in the Quick index:
+   `v_client_canonical_state`, all nine lifecycle RPCs
+   (`crm_transition_lifecycle`, `crm_set_engagement`,
+   `crm_set_contact_policy`, `crm_set_service_policy`,
+   `crm_set_eligibility`, `crm_set_care_cadence`,
+   `crm_assign_clinician`, `crm_close_client`, `crm_reopen_client`),
+   `crm_evaluate_communication_policy`, all six
+   `v_crm_reports_*` views, and the `crm_activity_events` lockdown.
+2. **Applied the exact signatures** documented in A1.1–A1.11 and
+   A2.1–A2.6. Any parameter name / return-shape drift is a rejection.
+3. **Applied tenant-scoped RLS** on every read surface and every RPC's
+   internal reads/writes, sourced from `tenant_memberships` /
+   `crm_has_role(auth.uid(), ...)`.
+4. **Applied explicit GRANT/REVOKE controls** as specified — including
+   the `REVOKE ALL … FROM anon, authenticated` + `GRANT SELECT …
+   TO authenticated` + `GRANT ALL … TO service_role` on
+   `crm_activity_events`, and `GRANT EXECUTE` on every RPC.
+5. **Enforced idempotency** on all nine lifecycle RPCs via
+   `public.crm_idempotency_keys` (24h replay window).
+6. **Enforced communication suppression at the sending backend** —
+   `helpscout-proxy`, `ringcentral-sms`, and `campaign-scheduler` all
+   call `crm_evaluate_communication_policy` server-side and refuse
+   dispatch on `allowed=false`. Frontend result is never trusted.
+7. **Passed authorized and unauthorized round-trip tests** — LV-01
+   through LV-26 with a real `USER_A`/`USER_B`/`USER_C` fixture set.
+8. **Produced the contract release/version evidence** — new
+   `backend_contract_releases` row with matching `contract_version`,
+   which is then wired into `src/lib/crm/contracts/v1/index.ts` as
+   `CONTRACT_VERSION`.
+
+Only after all eight conditions are satisfied and every `LV-##` has
+been executed against live Supabase may the CRM be declared launched
+and the "Current blocker" lines in A1 be updated to
+"DELIVERED — verified via LV-##".
