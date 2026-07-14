@@ -4,31 +4,59 @@ import { useToast } from '@/hooks/use-toast';
 import {
   RPC,
   CONTRACT_VERSION,
-  type LifecycleTransitionInput,
-  type EngagementSetInput,
-  type ContactPolicySetInput,
-  type ServicePolicySetInput,
-  type EligibilitySetInput,
-  type CareCadenceSetInput,
   type MutationResult,
 } from '@/lib/crm/contracts';
 
-function useCanonicalRpc<TInput extends { client_id: string }>(
+/**
+ * All CRM lifecycle mutations route through the nine live RPCs published on
+ * contract `valorwell-crm-contracts@1.0.1+20260714`. Every call:
+ *   - sends the exact contract version constant (fail-closed on mismatch),
+ *   - sends a real concurrency token pulled from v_client_canonical_state
+ *     by the caller (never the literal string "auto"),
+ *   - sends a fresh client-generated idempotency key so retries are safe,
+ *   - never reports success unless the RPC returned `{ ok: true }`.
+ */
+
+function newIdempotencyKey(): string {
+  return crypto.randomUUID();
+}
+
+function assertRealToken(token: string | null | undefined): string {
+  if (!token || token === 'auto') {
+    throw new Error('Concurrency token unavailable — refusing to send "auto"');
+  }
+  return token;
+}
+
+interface BaseArgs {
+  client_id: string;
+  reason: string;
+  concurrency_token: string;
+  idempotency_key?: string;
+}
+
+function useCanonicalRpc<TInput extends BaseArgs>(
   rpcName: string,
   successMsg: string,
+  buildArgs: (input: TInput) => Record<string, unknown>,
 ) {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (input: TInput): Promise<MutationResult> => {
-      const { data, error } = await (supabase as any).rpc(rpcName, {
-        ...input,
-        contract_version: input['contract_version' as keyof TInput] ?? CONTRACT_VERSION,
-      });
+      assertRealToken(input.concurrency_token);
+      const args = {
+        ...buildArgs(input),
+        p_concurrency_token: input.concurrency_token,
+        p_idempotency_key: input.idempotency_key ?? newIdempotencyKey(),
+        p_contract_version: CONTRACT_VERSION,
+      };
+      const { data, error } = await (supabase as any).rpc(rpcName, args);
       if (error) {
         return { ok: false, error_code: 'unknown', message: error.message };
       }
-      return (data ?? { ok: true }) as MutationResult;
+      const result = (data ?? { ok: false, error_code: 'unknown' }) as MutationResult;
+      return result;
     },
     onSuccess: (result, input) => {
       if (!result.ok) {
@@ -49,15 +77,86 @@ function useCanonicalRpc<TInput extends { client_id: string }>(
   });
 }
 
+export interface LifecycleTransitionArgs extends BaseArgs {
+  to_stage: string;
+  disposition_reason?: string | null;
+}
+export interface EngagementSetArgs extends BaseArgs { to_state: string; }
+export interface ContactPolicySetArgs extends BaseArgs { to_policy: string; }
+export interface ServicePolicySetArgs extends BaseArgs { to_policy: string; }
+export interface EligibilitySetArgs extends BaseArgs {
+  to_state: string;
+  manual_review?: {
+    owner: string;
+    next_action: string;
+    review_due_at: string;
+  } | null;
+}
+export interface CareCadenceSetArgs extends BaseArgs { to_cadence: string; }
+export interface AssignClinicianArgs extends BaseArgs { staff_id: string | null; }
+export interface CloseClientArgs extends BaseArgs { disposition_reason: string; }
+export type ReopenClientArgs = BaseArgs;
+
 export const useTransitionLifecycle = () =>
-  useCanonicalRpc<LifecycleTransitionInput>(RPC.transitionLifecycle, 'Lifecycle updated');
+  useCanonicalRpc<LifecycleTransitionArgs>(RPC.transitionLifecycle, 'Lifecycle updated', (i) => ({
+    p_client_id: i.client_id,
+    p_to_stage: i.to_stage,
+    p_reason: i.reason,
+    p_disposition_reason: i.disposition_reason ?? null,
+  }));
+
 export const useSetEngagement = () =>
-  useCanonicalRpc<EngagementSetInput>(RPC.setEngagement, 'Engagement updated');
+  useCanonicalRpc<EngagementSetArgs>(RPC.setEngagement, 'Engagement updated', (i) => ({
+    p_client_id: i.client_id,
+    p_to_state: i.to_state,
+    p_reason: i.reason,
+  }));
+
 export const useSetContactPolicy = () =>
-  useCanonicalRpc<ContactPolicySetInput>(RPC.setContactPolicy, 'Contact policy updated');
+  useCanonicalRpc<ContactPolicySetArgs>(RPC.setContactPolicy, 'Contact policy updated', (i) => ({
+    p_client_id: i.client_id,
+    p_to_policy: i.to_policy,
+    p_reason: i.reason,
+  }));
+
 export const useSetServicePolicy = () =>
-  useCanonicalRpc<ServicePolicySetInput>(RPC.setServicePolicy, 'Service policy updated');
+  useCanonicalRpc<ServicePolicySetArgs>(RPC.setServicePolicy, 'Service policy updated', (i) => ({
+    p_client_id: i.client_id,
+    p_to_policy: i.to_policy,
+    p_reason: i.reason,
+  }));
+
 export const useSetEligibility = () =>
-  useCanonicalRpc<EligibilitySetInput>(RPC.setEligibility, 'Eligibility updated');
+  useCanonicalRpc<EligibilitySetArgs>(RPC.setEligibility, 'Eligibility updated', (i) => ({
+    p_client_id: i.client_id,
+    p_to_state: i.to_state,
+    p_manual_review: i.manual_review ?? null,
+    p_reason: i.reason,
+  }));
+
 export const useSetCareCadence = () =>
-  useCanonicalRpc<CareCadenceSetInput>(RPC.setCareCadence, 'Care cadence updated');
+  useCanonicalRpc<CareCadenceSetArgs>(RPC.setCareCadence, 'Care cadence updated', (i) => ({
+    p_client_id: i.client_id,
+    p_to_cadence: i.to_cadence,
+    p_reason: i.reason,
+  }));
+
+export const useAssignClinician = () =>
+  useCanonicalRpc<AssignClinicianArgs>(RPC.assignClinician, 'Clinician assignment updated', (i) => ({
+    p_client_id: i.client_id,
+    p_staff_id: i.staff_id,
+    p_reason: i.reason,
+  }));
+
+export const useCloseClient = () =>
+  useCanonicalRpc<CloseClientArgs>(RPC.closeClient, 'Client closed', (i) => ({
+    p_client_id: i.client_id,
+    p_disposition_reason: i.disposition_reason,
+    p_reason: i.reason,
+  }));
+
+export const useReopenClient = () =>
+  useCanonicalRpc<ReopenClientArgs>(RPC.reopenClient, 'Client reopened', (i) => ({
+    p_client_id: i.client_id,
+    p_reason: i.reason,
+  }));
