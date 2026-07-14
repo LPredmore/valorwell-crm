@@ -29,7 +29,8 @@ export interface SuppressionDecision {
     | 'contact_policy_dnc'
     | 'service_policy_blocked'
     | 'unknown_canonical_state'
-    | 'class_never_permitted';
+    | 'class_never_permitted'
+    | 'lifecycle_closed_no_active_care';
   policy_version: string;
   contact_policy: string | null;
   service_policy: string | null;
