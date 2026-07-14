@@ -1,8 +1,13 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import type { CampaignsRepository } from '../types';
 import type {
   Campaign, CampaignEnrollment, CampaignStep, CampaignStatus,
 } from '@/domain/operations';
+
+type CampaignRow = Database['public']['Tables']['crm_campaigns']['Row'];
+type CampaignStepRow = Database['public']['Tables']['crm_campaign_steps']['Row'];
+type EnrollmentRow = Database['public']['Tables']['crm_campaign_enrollments']['Row'];
 
 const CAMPAIGN_COLS = `
   id, tenant_id, name, description, is_active,
@@ -33,7 +38,7 @@ const ENROLL_STATUS_D2D: Record<CampaignEnrollment['status'], string> = {
   Canceled: 'canceled', Failed: 'failed',
 };
 
-function stepToDomain(r: any): CampaignStep {
+function stepToDomain(r: CampaignStepRow): CampaignStep {
   const channel = String(r.channel || '').toLowerCase();
   const type: CampaignStep['type'] =
     channel === 'sms' ? 'SMS' :
@@ -58,7 +63,7 @@ function stepToDomain(r: any): CampaignStep {
 async function loadSteps(campaignIds: string[]): Promise<Map<string, CampaignStep[]>> {
   const map = new Map<string, CampaignStep[]>();
   if (!campaignIds.length) return map;
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('crm_campaign_steps')
     .select(STEP_COLS)
     .in('campaign_id', campaignIds)
@@ -76,11 +81,11 @@ async function loadMetrics(campaignIds: string[]): Promise<Map<string, Campaign[
   const map = new Map<string, Campaign['metrics']>();
   if (!campaignIds.length) return map;
   const [enrRes, logRes] = await Promise.all([
-    (supabase as any)
+    supabase
       .from('crm_campaign_enrollments')
       .select('campaign_id, status')
       .in('campaign_id', campaignIds),
-    (supabase as any)
+    supabase
       .from('crm_campaign_step_logs')
       .select('step_id, status, enrollment_id')
       .in('step_id', []), // filled below via join through steps
@@ -102,7 +107,7 @@ async function loadMetrics(campaignIds: string[]): Promise<Map<string, Campaign[
   return map;
 }
 
-function mapStatus(r: any, hasActiveEnrollments: boolean): CampaignStatus {
+function mapStatus(r: CampaignRow, hasActiveEnrollments: boolean): CampaignStatus {
   if (!r.is_active) return 'Paused';
   if (hasActiveEnrollments) return 'Active';
   return 'Active';
@@ -111,7 +116,7 @@ function mapStatus(r: any, hasActiveEnrollments: boolean): CampaignStatus {
 async function loadTriggers(campaignIds: string[]): Promise<Map<string, string[]>> {
   const map = new Map<string, string[]>();
   if (!campaignIds.length) return map;
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('crm_campaign_triggers')
     .select('campaign_id, trigger_on_status, is_active')
     .in('campaign_id', campaignIds);
@@ -126,7 +131,7 @@ async function loadTriggers(campaignIds: string[]): Promise<Map<string, string[]
 }
 
 function campaignRowToDomain(
-  r: any,
+  r: CampaignRow,
   steps: CampaignStep[],
   entries: string[],
   metrics: Campaign['metrics'],
@@ -152,7 +157,7 @@ function campaignRowToDomain(
 }
 
 function enrollmentToDomain(
-  r: any,
+  r: EnrollmentRow,
   stepIdByOrder: Map<string, string>,
 ): CampaignEnrollment {
   const stepKey = `${r.campaign_id}:${r.current_step}`;
@@ -171,19 +176,19 @@ function enrollmentToDomain(
 
 export const supabaseCampaignsRepository: CampaignsRepository = {
   async list() {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('crm_campaigns')
       .select(CAMPAIGN_COLS)
       .order('updated_at', { ascending: false });
     if (error) throw new Error(error.message);
     const rows = data ?? [];
-    const ids = rows.map((r: any) => r.id);
+    const ids = rows.map((r) => r.id);
     const [stepsMap, triggersMap, metricsMap] = await Promise.all([
       loadSteps(ids),
       loadTriggers(ids),
       loadMetrics(ids),
     ]);
-    return rows.map((r: any) =>
+    return rows.map((r) =>
       campaignRowToDomain(
         r,
         stepsMap.get(r.id) ?? [],
@@ -194,7 +199,7 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
   },
 
   async get(id) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('crm_campaigns').select(CAMPAIGN_COLS).eq('id', id).maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) return null;
@@ -217,7 +222,7 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
       is_active: input.status === 'Active',
       created_by_profile_id: input.ownerId ?? null,
     };
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('crm_campaigns').insert(row).select(CAMPAIGN_COLS).single();
     if (error) throw new Error(error.message);
     return campaignRowToDomain(data, [], [], {
@@ -231,7 +236,7 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
     if (patch.description !== undefined) out.description = patch.description ?? null;
     if (patch.status !== undefined) out.is_active = patch.status === 'Active';
     if (patch.ownerId !== undefined) out.created_by_profile_id = patch.ownerId ?? null;
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('crm_campaigns').update(out).eq('id', id).select(CAMPAIGN_COLS).single();
     if (error) throw new Error(error.message);
     const [stepsMap, triggersMap, metricsMap] = await Promise.all([
@@ -247,12 +252,12 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
 
   async enrollments(campaignId) {
     const [enrRes, stepsRes] = await Promise.all([
-      (supabase as any)
+      supabase
         .from('crm_campaign_enrollments')
         .select(ENROLL_COLS)
         .eq('campaign_id', campaignId)
         .order('enrolled_at', { ascending: false }),
-      (supabase as any)
+      supabase
         .from('crm_campaign_steps')
         .select('id, campaign_id, step_order')
         .eq('campaign_id', campaignId),
@@ -263,11 +268,11 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
     for (const s of stepsRes.data ?? []) {
       stepIdByOrder.set(`${s.campaign_id}:${s.step_order}`, s.id);
     }
-    return (enrRes.data ?? []).map((r: any) => enrollmentToDomain(r, stepIdByOrder));
+    return (enrRes.data ?? []).map((r) => enrollmentToDomain(r, stepIdByOrder));
   },
 
   async enroll(campaignId, clientIds) {
-    const { data: camp, error: campErr } = await (supabase as any)
+    const { data: camp, error: campErr } = await supabase
       .from('crm_campaigns').select('tenant_id').eq('id', campaignId).single();
     if (campErr) throw new Error(campErr.message);
     const rows = clientIds.map((cid) => ({
@@ -277,14 +282,14 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
       status: 'active',
       current_step: 0,
     }));
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('crm_campaign_enrollments').insert(rows).select(ENROLL_COLS);
     if (error) throw new Error(error.message);
-    return (data ?? []).map((r: any) => enrollmentToDomain(r, new Map()));
+    return (data ?? []).map((r) => enrollmentToDomain(r, new Map()));
   },
 
   async pauseEnrollment(enrollmentId) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('crm_campaign_enrollments')
       .update({ status: 'paused', paused_at: new Date().toISOString() })
       .eq('id', enrollmentId).select(ENROLL_COLS).single();
@@ -293,7 +298,7 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
   },
 
   async resumeEnrollment(enrollmentId) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('crm_campaign_enrollments')
       .update({ status: 'active', pause_reason: null, paused_at: null })
       .eq('id', enrollmentId).select(ENROLL_COLS).single();
@@ -302,7 +307,7 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
   },
 
   async cancelEnrollment(enrollmentId, reason) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('crm_campaign_enrollments')
       .update({ status: 'canceled', pause_reason: reason, completed_at: new Date().toISOString() })
       .eq('id', enrollmentId).select(ENROLL_COLS).single();
@@ -311,7 +316,7 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
   },
 
   async restartEnrollment(enrollmentId) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('crm_campaign_enrollments')
       .update({ status: 'active', current_step: 0, completed_at: null, pause_reason: null, paused_at: null })
       .eq('id', enrollmentId).select(ENROLL_COLS).single();

@@ -122,7 +122,7 @@ export function EmailSignaturesPanel() {
         .getPublicUrl(path);
 
       setForm((f) => ({ ...f, image_url: urlData.publicUrl }));
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
     } finally {
       setUploading(false);

@@ -9,7 +9,7 @@ const STAFF_SELECT = `
   prov_max_clients
 `;
 
-type Row = Record<string, any>;
+type Row = Record<string, string | number | null>;
 
 function mapRole(role: string | undefined): StaffMember['role'] {
   if (role === 'admin') return 'admin';
@@ -32,10 +32,10 @@ async function buildStaff(rows: Row[]): Promise<StaffMember[]> {
   const staffIds = rows.map((r) => r.id);
 
   const [profilesRes, rolesRes, caseloadRes, tasksRes] = await Promise.all([
-    (supabase as any).from('profiles').select('id, email').in('id', profileIds),
-    (supabase as any).from('user_roles').select('user_id, role').in('user_id', profileIds),
-    (supabase as any).from('clients').select('primary_staff_id').in('primary_staff_id', staffIds),
-    (supabase as any)
+    supabase.from('profiles').select('id, email').in('id', profileIds),
+    supabase.from('user_roles').select('user_id, role').in('user_id', profileIds),
+    supabase.from('clients').select('primary_staff_id').in('primary_staff_id', staffIds),
+    supabase
       .from('crm_tasks')
       .select('staff_id, status')
       .in('staff_id', staffIds)
@@ -43,7 +43,7 @@ async function buildStaff(rows: Row[]): Promise<StaffMember[]> {
   ]);
 
   const emailByProfile = new Map<string, string>(
-    (profilesRes.data ?? []).map((p: any) => [p.id, p.email as string]),
+    (profilesRes.data ?? []).map((p) => [p.id, p.email]),
   );
   const roleByProfile = new Map<string, string>();
   for (const r of rolesRes.data ?? []) {
@@ -94,7 +94,7 @@ async function buildStaff(rows: Row[]): Promise<StaffMember[]> {
 
 export const supabaseStaffRepository: StaffRepository = {
   async list() {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('staff')
       .select(STAFF_SELECT)
       .order('prov_name_l', { ascending: true, nullsFirst: false });
@@ -102,7 +102,7 @@ export const supabaseStaffRepository: StaffRepository = {
     return buildStaff(data ?? []);
   },
   async get(id) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('staff')
       .select(STAFF_SELECT)
       .eq('id', id)

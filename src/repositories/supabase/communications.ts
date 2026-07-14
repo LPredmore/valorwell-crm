@@ -17,7 +17,7 @@ import { supabaseClientsRepository } from './clients';
  * edge functions — this adapter does not duplicate their delivery logic.
  */
 
-type Row = Record<string, any>;
+type Row = Record<string, string | number | boolean | null>;
 
 function rowInboundSms(r: Row, tenantId: string): CommunicationMessage {
   return {
@@ -90,7 +90,7 @@ function rowInternal(r: Row): CommunicationMessage {
 }
 
 async function tenantForClient(clientId: string): Promise<string> {
-  const { data } = await (supabase as any)
+  const { data } = await supabase
     .from('clients').select('tenant_id').eq('id', clientId).maybeSingle();
   return data?.tenant_id ?? '';
 }
@@ -99,18 +99,18 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
   async listForClient(clientId) {
     const tenantId = await tenantForClient(clientId);
     const [inbound, bulk, links, internal] = await Promise.all([
-      (supabase as any)
+      supabase
         .from('crm_inbound_sms_logs')
         .select('*').eq('client_id', clientId)
         .order('received_at', { ascending: false }).limit(200),
-      (supabase as any)
+      supabase
         .from('crm_bulk_sms_recipients')
         .select('*').eq('client_id', clientId)
         .order('sent_at', { ascending: false, nullsFirst: false }).limit(200),
-      (supabase as any)
+      supabase
         .from('crm_conversation_links')
         .select('*').eq('client_id', clientId).limit(200),
-      (supabase as any)
+      supabase
         .from('messages')
         .select('*').eq('client_id', clientId)
         .order('created_at', { ascending: false }).limit(200),
@@ -119,7 +119,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
     const convoIds = (links.data ?? []).map((l: Row) => l.helpscout_conversation_id);
     let cacheById = new Map<string, Row>();
     if (convoIds.length) {
-      const { data: cacheRows } = await (supabase as any)
+      const { data: cacheRows } = await supabase
         .from('crm_conversation_cache').select('*').in('helpscout_conversation_id', convoIds);
       cacheById = new Map((cacheRows ?? []).map((c: Row) => [c.helpscout_conversation_id, c]));
     }
@@ -136,10 +136,10 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
   async listThreads(channel) {
     if (channel === 'sms') {
       const [inbound, bulk] = await Promise.all([
-        (supabase as any)
+        supabase
           .from('crm_inbound_sms_logs')
           .select('*').order('received_at', { ascending: false }).limit(500),
-        (supabase as any)
+        supabase
           .from('crm_bulk_sms_recipients')
           .select('*').order('sent_at', { ascending: false, nullsFirst: false }).limit(500),
       ]);
@@ -155,7 +155,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
       return Array.from(byThread.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     }
     // email
-    const { data } = await (supabase as any)
+    const { data } = await supabase
       .from('crm_conversation_cache')
       .select('*')
       .order('last_thread_at', { ascending: false, nullsFirst: false })
@@ -186,7 +186,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
       if (error) throw new Error(error.message);
       return {
         ...msg,
-        id: (data as any)?.id ?? `sms-${Date.now()}`,
+        id: data?.id ?? `sms-${Date.now()}`,
         createdAt: new Date().toISOString(),
         status: 'sent',
       };
@@ -204,13 +204,13 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
       if (error) throw new Error(error.message);
       return {
         ...msg,
-        id: (data as any)?.id ?? `email-${Date.now()}`,
+        id: data?.id ?? `email-${Date.now()}`,
         createdAt: new Date().toISOString(),
         status: 'sent',
       };
     }
     // Internal note
-    const { data, error } = await (supabase as any).from('messages').insert({
+    const { data, error } = await supabase.from('messages').insert({
       tenant_id: msg.tenantId,
       client_id: msg.clientId,
       staff_id: msg.from,

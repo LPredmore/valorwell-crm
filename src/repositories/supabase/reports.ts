@@ -6,7 +6,7 @@ import {
   type LifecycleStage, type EngagementState,
 } from '@/domain/canonical';
 
-type Row = Record<string, any>;
+type Row = Record<string, string | number | null>;
 
 async function fetchAll(table: string, columns: string): Promise<Row[]> {
   // Paged fetch because Supabase caps at 1000/row.
@@ -15,7 +15,7 @@ async function fetchAll(table: string, columns: string): Promise<Row[]> {
   let from = 0;
   // Safety upper bound to avoid runaway loops.
   for (let i = 0; i < 20; i += 1) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from(table).select(columns).range(from, from + size - 1);
     if (error) throw new Error(error.message);
     const rows = data ?? [];
@@ -95,7 +95,7 @@ export const supabaseReportsRepository: ReportsRepository = {
 
     // Overdue interventions = open crm_tasks with type=risk_intervention past due
     const nowIso = new Date().toISOString();
-    const { count: overdue, error: taskErr } = await (supabase as any)
+    const { count: overdue, error: taskErr } = await supabase
       .from('crm_tasks')
       .select('id', { head: true, count: 'exact' })
       .eq('type', 'risk_intervention')

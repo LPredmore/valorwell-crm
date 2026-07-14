@@ -31,7 +31,7 @@ const CLIENT_SELECT = `
   created_at, updated_at
 `;
 
-type Row = Record<string, any>;
+
 
 function tokenFor(id: string, updatedAt: string | null | undefined): string {
   // Deterministic pseudo-uuid derived from id+updated_at; matches the SQL
@@ -41,7 +41,7 @@ function tokenFor(id: string, updatedAt: string | null | undefined): string {
 }
 
 async function fetchConcurrencyToken(clientId: string): Promise<string> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('v_client_canonical_state')
     .select('concurrency_token')
     .eq('client_id', clientId)
@@ -104,7 +104,7 @@ async function callRpc(
   name: string,
   args: Record<string, unknown>,
 ): Promise<void> {
-  const { data, error } = await (supabase as any).rpc(name, args);
+  const { data, error } = await supabase.rpc(name, args);
   if (error) throw new Error(error.message);
   if (data && data.ok === false) {
     throw new Error(data.message ?? data.error_code ?? 'Canonical write refused');
@@ -112,7 +112,7 @@ async function callRpc(
 }
 
 async function reload(id: string): Promise<CanonicalClient> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('clients')
     .select(CLIENT_SELECT)
     .eq('id', id)
@@ -123,7 +123,7 @@ async function reload(id: string): Promise<CanonicalClient> {
 }
 
 async function tenantOf(id: string): Promise<string> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('clients')
     .select('tenant_id')
     .eq('id', id)
@@ -137,7 +137,7 @@ export const supabaseClientsRepository: ClientsRepository = {
   async list(q: ListClientsQuery): Promise<Paged<CanonicalClient>> {
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 50;
-    let query = (supabase as any)
+    let query = supabase
       .from('clients')
       .select(CLIENT_SELECT, { count: 'exact' });
 
@@ -190,7 +190,7 @@ export const supabaseClientsRepository: ClientsRepository = {
   },
 
   async get(id: string) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('clients')
       .select(CLIENT_SELECT)
       .eq('id', id)

@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { AuditRepository } from '../types';
 import type { AuditEvent } from '@/domain/operations';
 
-type Row = Record<string, any>;
+type Row = Record<string, string | number | null>;
 
 function eventTypeFor(dimension: string): string {
   switch (dimension) {
@@ -41,7 +41,7 @@ function rowToEvent(r: Row): AuditEvent {
 
 export const supabaseAuditRepository: AuditRepository = {
   async listForClient(clientId) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('crm_client_state_audit')
       .select('*')
       .eq('client_id', clientId)
