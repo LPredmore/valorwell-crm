@@ -5834,6 +5834,9 @@ export type Database = {
       crm_campaign_step_logs: {
         Row: {
           channel: string
+          claim_attempts: number
+          claim_token: string | null
+          claimed_at: string | null
           client_id: string
           created_at: string
           enrollment_id: string
@@ -5846,9 +5849,13 @@ export type Database = {
           status: string
           step_id: string
           tenant_id: string
+          updated_at: string
         }
         Insert: {
           channel: string
+          claim_attempts?: number
+          claim_token?: string | null
+          claimed_at?: string | null
           client_id: string
           created_at?: string
           enrollment_id: string
@@ -5861,9 +5868,13 @@ export type Database = {
           status?: string
           step_id: string
           tenant_id: string
+          updated_at?: string
         }
         Update: {
           channel?: string
+          claim_attempts?: number
+          claim_token?: string | null
+          claimed_at?: string | null
           client_id?: string
           created_at?: string
           enrollment_id?: string
@@ -5876,6 +5887,7 @@ export type Database = {
           status?: string
           step_id?: string
           tenant_id?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -6407,6 +6419,67 @@ export type Database = {
           },
         ]
       }
+      crm_eligibility_manual_reviews: {
+        Row: {
+          active: boolean
+          client_id: string
+          closed_at: string | null
+          created_at: string
+          next_action: string
+          owner: string
+          reason: string | null
+          review_due_at: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          client_id: string
+          closed_at?: string | null
+          created_at?: string
+          next_action: string
+          owner: string
+          reason?: string | null
+          review_due_at: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          client_id?: string
+          closed_at?: string | null
+          created_at?: string
+          next_action?: string
+          owner?: string
+          reason?: string | null
+          review_due_at?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_eligibility_manual_reviews_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_eligibility_manual_reviews_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "crm_eligibility_manual_reviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_email_signatures: {
         Row: {
           body_html: string | null
@@ -6644,28 +6717,43 @@ export type Database = {
       }
       crm_idempotency_keys: {
         Row: {
+          action_key: string | null
           actor_id: string | null
           created_at: string
           expires_at: string
           key: string
           operation: string
           result_json: Json | null
+          status: string
+          target_id: string | null
+          tenant_id: string | null
+          updated_at: string
         }
         Insert: {
+          action_key?: string | null
           actor_id?: string | null
           created_at?: string
           expires_at?: string
           key: string
           operation: string
           result_json?: Json | null
+          status?: string
+          target_id?: string | null
+          tenant_id?: string | null
+          updated_at?: string
         }
         Update: {
+          action_key?: string | null
           actor_id?: string | null
           created_at?: string
           expires_at?: string
           key?: string
           operation?: string
           result_json?: Json | null
+          status?: string
+          target_id?: string | null
+          tenant_id?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -14388,6 +14476,7 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: {
           channel: string
+          claim_token: string
           client_id: string
           enrollment_id: string
           id: string
@@ -14603,6 +14692,15 @@ export type Database = {
           p_staff_id: string
           p_start_at: string
           p_time_zone: string
+        }
+        Returns: Json
+      }
+      crm_apply_remove: {
+        Args: {
+          p_client_id: string
+          p_correlation_id: string
+          p_source: string
+          p_tenant_id: string
         }
         Returns: Json
       }
@@ -15165,6 +15263,16 @@ export type Database = {
         Returns: Json
       }
       refresh_client_ages: { Args: never; Returns: number }
+      release_campaign_step_claim: {
+        Args: {
+          p_claim_token: string
+          p_next_scheduled_for?: string
+          p_reason?: string
+          p_status: string
+          p_step_log_id: string
+        }
+        Returns: boolean
+      }
       release_client_provider_demand: {
         Args: {
           p_client_action_id: string
@@ -15231,30 +15339,17 @@ export type Database = {
         }
         Returns: Json
       }
-      set_client_contact_policy:
-        | {
-            Args: {
-              client_id: string
-              concurrency_token: string
-              contract_version: string
-              idempotency_key?: string
-              reason: string
-              tenant_id: string
-              to_policy: Database["public"]["Enums"]["client_contact_policy_enum"]
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_actor_profile_id?: string
-              p_admin_override?: boolean
-              p_client_id: string
-              p_contact_policy: Database["public"]["Enums"]["client_contact_policy_enum"]
-              p_reason?: string
-              p_source: string
-            }
-            Returns: Json
-          }
+      set_client_contact_policy: {
+        Args: {
+          p_actor_profile_id?: string
+          p_admin_override?: boolean
+          p_client_id: string
+          p_contact_policy: Database["public"]["Enums"]["client_contact_policy_enum"]
+          p_reason?: string
+          p_source: string
+        }
+        Returns: Json
+      }
       set_client_disposition: {
         Args: {
           client_id: string
