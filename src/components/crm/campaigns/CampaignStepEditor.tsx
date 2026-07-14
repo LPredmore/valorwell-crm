@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import type { CampaignStepFormData } from '@/lib/crm/campaign-types';
 import { PERSONALIZATION_VARIABLES } from '@/lib/crm/campaign-types';
 import { useState } from 'react';
+import { useCanMutate } from '@/components/crm/auth/CrmMutationGate';
 
 interface CampaignStepEditorProps {
   step: CampaignStepFormData;
