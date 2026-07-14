@@ -17,15 +17,33 @@ import {
  *   - never reports success unless the RPC returned `{ ok: true }`.
  */
 
-function newIdempotencyKey(): string {
+export function newIdempotencyKey(): string {
   return crypto.randomUUID();
 }
 
-function assertRealToken(token: string | null | undefined): string {
+export function assertRealToken(token: string | null | undefined): string {
   if (!token || token === 'auto') {
     throw new Error('Concurrency token unavailable — refusing to send "auto"');
   }
   return token;
+}
+
+/**
+ * Pure builder for canonical RPC args. Exposed for idempotency-key tests:
+ * a caller-provided key must be forwarded verbatim (retry safety); an
+ * absent key must produce a fresh UUID per invocation (new-action safety).
+ */
+export function buildCanonicalRpcArgs(
+  base: Record<string, unknown>,
+  concurrencyToken: string,
+  idempotencyKey: string | undefined,
+): Record<string, unknown> {
+  return {
+    ...base,
+    p_concurrency_token: concurrencyToken,
+    p_idempotency_key: idempotencyKey ?? newIdempotencyKey(),
+    p_contract_version: CONTRACT_VERSION,
+  };
 }
 
 interface BaseArgs {
