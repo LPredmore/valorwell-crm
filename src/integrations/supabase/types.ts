@@ -235,6 +235,7 @@ export type Database = {
           series_id: string
           tenant_id: string
           updated_at: string
+          version: number
         }
         Insert: {
           change_type: Database["public"]["Enums"]["appointment_exception_type_enum"]
@@ -246,6 +247,7 @@ export type Database = {
           series_id: string
           tenant_id: string
           updated_at?: string
+          version?: number
         }
         Update: {
           change_type?: Database["public"]["Enums"]["appointment_exception_type_enum"]
@@ -257,6 +259,7 @@ export type Database = {
           series_id?: string
           tenant_id?: string
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -338,6 +341,7 @@ export type Database = {
           tenant_id: string
           time_zone: Database["public"]["Enums"]["time_zones"]
           updated_at: string
+          version: number
         }
         Insert: {
           client_id: string
@@ -356,6 +360,7 @@ export type Database = {
           tenant_id: string
           time_zone: Database["public"]["Enums"]["time_zones"]
           updated_at?: string
+          version?: number
         }
         Update: {
           client_id?: string
@@ -374,6 +379,7 @@ export type Database = {
           tenant_id?: string
           time_zone?: Database["public"]["Enums"]["time_zones"]
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -539,6 +545,7 @@ export type Database = {
           time_zone: Database["public"]["Enums"]["time_zones"]
           units_1: number | null
           updated_at: string
+          version: number
           videoroom_url: string | null
         }
         Insert: {
@@ -576,6 +583,7 @@ export type Database = {
           time_zone: Database["public"]["Enums"]["time_zones"]
           units_1?: number | null
           updated_at: string
+          version?: number
           videoroom_url?: string | null
         }
         Update: {
@@ -613,6 +621,7 @@ export type Database = {
           time_zone?: Database["public"]["Enums"]["time_zones"]
           units_1?: number | null
           updated_at?: string
+          version?: number
           videoroom_url?: string | null
         }
         Relationships: [
@@ -1405,6 +1414,64 @@ export type Database = {
           },
           {
             foreignKeyName: "claim_status_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claim_submission_requests: {
+        Row: {
+          claim_ids: string[]
+          client_action_id: string
+          created_at: string
+          id: string
+          requested_by_profile_id: string | null
+          result: Json | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          claim_ids: string[]
+          client_action_id: string
+          created_at?: string
+          id?: string
+          requested_by_profile_id?: string | null
+          result?: Json | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          claim_ids?: string[]
+          client_action_id?: string
+          created_at?: string
+          id?: string
+          requested_by_profile_id?: string | null
+          result?: Json | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_submission_requests_requested_by_profile_id_fkey"
+            columns: ["requested_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "claim_submission_requests_requested_by_profile_id_fkey"
+            columns: ["requested_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_submission_requests_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3175,6 +3242,7 @@ export type Database = {
           source: string
           tenant_id: string
           updated_at: string
+          version: number
         }
         Insert: {
           category: string
@@ -3199,6 +3267,7 @@ export type Database = {
           source?: string
           tenant_id: string
           updated_at?: string
+          version?: number
         }
         Update: {
           category?: string
@@ -3223,6 +3292,7 @@ export type Database = {
           source?: string
           tenant_id?: string
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -3990,6 +4060,7 @@ export type Database = {
           resolved_at: string | null
           tenant_id: string
           updated_at: string
+          version: number
         }
         Insert: {
           client_age?: number | null
@@ -4010,6 +4081,7 @@ export type Database = {
           resolved_at?: string | null
           tenant_id: string
           updated_at?: string
+          version?: number
         }
         Update: {
           client_age?: number | null
@@ -4030,6 +4102,7 @@ export type Database = {
           resolved_at?: string | null
           tenant_id?: string
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -4844,6 +4917,7 @@ export type Database = {
             | null
           contact_policy: Database["public"]["Enums"]["client_contact_policy_enum"]
           contact_policy_changed_at: string
+          contract_version: number
           created_at: string
           eligibility_state: Database["public"]["Enums"]["client_eligibility_state_enum"]
           eligibility_state_changed_at: string
@@ -4902,6 +4976,7 @@ export type Database = {
             | null
           contact_policy?: Database["public"]["Enums"]["client_contact_policy_enum"]
           contact_policy_changed_at?: string
+          contract_version?: number
           created_at?: string
           eligibility_state?: Database["public"]["Enums"]["client_eligibility_state_enum"]
           eligibility_state_changed_at?: string
@@ -4960,6 +5035,7 @@ export type Database = {
             | null
           contact_policy?: Database["public"]["Enums"]["client_contact_policy_enum"]
           contact_policy_changed_at?: string
+          contract_version?: number
           created_at?: string
           eligibility_state?: Database["public"]["Enums"]["client_eligibility_state_enum"]
           eligibility_state_changed_at?: string
@@ -5116,6 +5192,70 @@ export type Database = {
           },
           {
             foreignKeyName: "consent_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_action_requests: {
+        Row: {
+          actor_profile_id: string | null
+          client_action_id: string
+          created_at: string
+          error_code: string | null
+          id: string
+          operation: string
+          request_hash: string
+          result: Json | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          client_action_id: string
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          operation: string
+          request_hash: string
+          result?: Json | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          client_action_id?: string
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          operation?: string
+          request_hash?: string
+          result?: Json | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_action_requests_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "contract_action_requests_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_action_requests_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -8480,6 +8620,7 @@ export type Database = {
           created_at: string
           ended_at: string | null
           error_message: string | null
+          execution_request_id: string | null
           id: string
           line_items_failed: number
           line_items_sent: number
@@ -8495,6 +8636,7 @@ export type Database = {
           created_at?: string
           ended_at?: string | null
           error_message?: string | null
+          execution_request_id?: string | null
           id?: string
           line_items_failed?: number
           line_items_sent?: number
@@ -8510,6 +8652,7 @@ export type Database = {
           created_at?: string
           ended_at?: string | null
           error_message?: string | null
+          execution_request_id?: string | null
           id?: string
           line_items_failed?: number
           line_items_sent?: number
@@ -8523,6 +8666,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "payroll_execution_log_execution_request_id_fkey"
+            columns: ["execution_request_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_execution_requests"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "payroll_execution_log_payroll_run_id_fkey"
             columns: ["payroll_run_id"]
             isOneToOne: false
@@ -8531,6 +8681,71 @@ export type Database = {
           },
           {
             foreignKeyName: "payroll_execution_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_execution_requests: {
+        Row: {
+          client_action_id: string
+          created_at: string
+          id: string
+          payroll_run_id: string
+          requested_by_profile_id: string | null
+          result: Json | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_action_id: string
+          created_at?: string
+          id?: string
+          payroll_run_id: string
+          requested_by_profile_id?: string | null
+          result?: Json | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_action_id?: string
+          created_at?: string
+          id?: string
+          payroll_run_id?: string
+          requested_by_profile_id?: string | null
+          result?: Json | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_execution_requests_payroll_run_id_fkey"
+            columns: ["payroll_run_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_execution_requests_requested_by_profile_id_fkey"
+            columns: ["requested_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "payroll_execution_requests_requested_by_profile_id_fkey"
+            columns: ["requested_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_execution_requests_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -9905,6 +10120,80 @@ export type Database = {
           },
         ]
       }
+      provider_lifecycle_history: {
+        Row: {
+          actor_profile_id: string | null
+          client_action_id: string
+          continuity_result: Json
+          created_at: string
+          from_status: Database["public"]["Enums"]["clinician_status_enum"]
+          id: string
+          prior_version: number
+          reason: string
+          resulting_version: number
+          staff_id: string
+          tenant_id: string
+          to_status: Database["public"]["Enums"]["clinician_status_enum"]
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          client_action_id: string
+          continuity_result?: Json
+          created_at?: string
+          from_status: Database["public"]["Enums"]["clinician_status_enum"]
+          id?: string
+          prior_version: number
+          reason: string
+          resulting_version: number
+          staff_id: string
+          tenant_id: string
+          to_status: Database["public"]["Enums"]["clinician_status_enum"]
+        }
+        Update: {
+          actor_profile_id?: string | null
+          client_action_id?: string
+          continuity_result?: Json
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["clinician_status_enum"]
+          id?: string
+          prior_version?: number
+          reason?: string
+          resulting_version?: number
+          staff_id?: string
+          tenant_id?: string
+          to_status?: Database["public"]["Enums"]["clinician_status_enum"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_lifecycle_history_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "provider_lifecycle_history_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_lifecycle_history_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_lifecycle_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_matchability_evaluation_options: {
         Row: {
           capacity_snapshot_id: string | null
@@ -10926,6 +11215,7 @@ export type Database = {
       }
       staff: {
         Row: {
+          contract_version: number
           created_at: string
           id: string
           intl: boolean
@@ -10945,6 +11235,7 @@ export type Database = {
           prov_degree: string | null
           prov_dob: string | null
           prov_field: Database["public"]["Enums"]["specialty_enum"] | null
+          prov_image_alt_text: string | null
           prov_image_url: string | null
           prov_license_number: string | null
           prov_license_type: string | null
@@ -10979,6 +11270,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          contract_version?: number
           created_at?: string
           id?: string
           intl?: boolean
@@ -10998,6 +11290,7 @@ export type Database = {
           prov_degree?: string | null
           prov_dob?: string | null
           prov_field?: Database["public"]["Enums"]["specialty_enum"] | null
+          prov_image_alt_text?: string | null
           prov_image_url?: string | null
           prov_license_number?: string | null
           prov_license_type?: string | null
@@ -11032,6 +11325,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          contract_version?: number
           created_at?: string
           id?: string
           intl?: boolean
@@ -11051,6 +11345,7 @@ export type Database = {
           prov_degree?: string | null
           prov_dob?: string | null
           prov_field?: Database["public"]["Enums"]["specialty_enum"] | null
+          prov_image_alt_text?: string | null
           prov_image_url?: string | null
           prov_license_number?: string | null
           prov_license_type?: string | null
@@ -13825,6 +14120,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_transition_provider_lifecycle: {
+        Args: {
+          p_client_action_id: string
+          p_from: Database["public"]["Enums"]["clinician_status_enum"]
+          p_prior_version: number
+          p_reason: string
+          p_staff_id: string
+          p_to: Database["public"]["Enums"]["clinician_status_enum"]
+        }
+        Returns: Json
+      }
       advance_client_intake_if_ready: {
         Args: { p_client_id: string }
         Returns: Json
@@ -13849,6 +14155,16 @@ export type Database = {
         }
         Returns: Json
       }
+      assign_client_journey_exception: {
+        Args: {
+          p_client_action_id: string
+          p_exception_id: string
+          p_note: string
+          p_owner_profile_id: string
+          p_prior_version: number
+        }
+        Returns: Json
+      }
       autocreate_copay_for_appointment: {
         Args: { p_appointment_id: string }
         Returns: undefined
@@ -13860,6 +14176,25 @@ export type Database = {
       }
       book_client_appointment: {
         Args: { p_slot_end_utc?: string; p_slot_start_utc: string }
+        Returns: Json
+      }
+      cancel_appointment: {
+        Args: {
+          p_appointment_id: string
+          p_client_action_id: string
+          p_kind: string
+          p_prior_version: number
+          p_reason: string
+        }
+        Returns: Json
+      }
+      cancel_recurring_appointment_series: {
+        Args: {
+          p_client_action_id: string
+          p_prior_version: number
+          p_reason: string
+          p_series_id: string
+        }
         Returns: Json
       }
       check_assessments_due: {
@@ -13889,6 +14224,27 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      client_closure: {
+        Args: {
+          p_client_action_id: string
+          p_client_id: string
+          p_confirmed: boolean
+          p_disposition: string
+          p_prior_version: number
+          p_reason: string
+        }
+        Returns: Json
+      }
+      client_correction: {
+        Args: {
+          p_client_action_id: string
+          p_client_id: string
+          p_patch: Json
+          p_prior_version: number
+          p_reason: string
+        }
+        Returns: Json
+      }
       client_lifecycle_transition_source_allowed: {
         Args: {
           p_current: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
@@ -13896,6 +14252,25 @@ export type Database = {
           p_target: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
         }
         Returns: boolean
+      }
+      client_reactivation: {
+        Args: {
+          p_client_action_id: string
+          p_client_id: string
+          p_prior_version: number
+          p_reason: string
+        }
+        Returns: Json
+      }
+      client_reassign: {
+        Args: {
+          p_client_action_id: string
+          p_client_id: string
+          p_new_staff_id: string
+          p_prior_version: number
+          p_reason: string
+        }
+        Returns: Json
       }
       client_state_engine_authorize: {
         Args: {
@@ -13944,55 +14319,120 @@ export type Database = {
         }
         Returns: Json
       }
+      confirm_accepting_status: {
+        Args: { p_client_action_id: string }
+        Returns: Json
+      }
       convert_local_to_utc: {
         Args: { p_date: string; p_time: string; p_timezone?: string }
         Returns: string
       }
-      create_client_journey_exception: {
+      correct_appointment: {
         Args: {
-          p_category: string
+          p_appointment_id: string
+          p_client_action_id: string
+          p_patch: Json
+          p_prior_version: number
+          p_reason: string
+        }
+        Returns: Json
+      }
+      create_appointment: {
+        Args: {
+          p_client_action_id?: string
           p_client_id: string
-          p_evidence?: Json
-          p_next_action: string
-          p_owner_profile_id?: string
-          p_reason_code: string
-          p_reason_detail: string
-          p_related_entity_id?: string
-          p_related_entity_type?: string
-          p_review_due_at: string
-          p_source?: string
-          p_tenant_id: string
+          p_end_at: string
+          p_is_telehealth: boolean
+          p_prior_slot_token?: string
+          p_service_code: string
+          p_staff_id: string
+          p_start_at: string
         }
-        Returns: {
-          category: string
-          client_id: string
-          created_at: string
-          created_by_profile_id: string | null
-          evidence: Json
-          exception_type: string
-          id: string
-          next_action: string
-          owner_profile_id: string | null
-          reason_code: string
-          reason_detail: string
-          related_entity_id: string | null
-          related_entity_type: string | null
-          resolution_note: string | null
-          resolution_state: string
-          resolved_at: string | null
-          resolved_by_profile_id: string | null
-          review_due_at: string
-          run_key: string | null
-          source: string
-          tenant_id: string
-          updated_at: string
+        Returns: Json
+      }
+      create_client_account: {
+        Args: {
+          p_client_action_id: string
+          p_client_id: string
+          p_reason: string
         }
-        SetofOptions: {
-          from: "*"
-          to: "client_journey_exceptions"
-          isOneToOne: true
-          isSetofReturn: false
+        Returns: Json
+      }
+      create_client_journey_exception:
+        | {
+            Args: {
+              p_client_action_id: string
+              p_client_id: string
+              p_next_action: string
+              p_owner_profile_id: string
+              p_reason_code: string
+              p_reason_detail: string
+              p_review_due_at: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_category: string
+              p_client_id: string
+              p_evidence?: Json
+              p_next_action: string
+              p_owner_profile_id?: string
+              p_reason_code: string
+              p_reason_detail: string
+              p_related_entity_id?: string
+              p_related_entity_type?: string
+              p_review_due_at: string
+              p_source?: string
+              p_tenant_id: string
+            }
+            Returns: {
+              category: string
+              client_id: string
+              created_at: string
+              created_by_profile_id: string | null
+              evidence: Json
+              exception_type: string
+              id: string
+              next_action: string
+              owner_profile_id: string | null
+              reason_code: string
+              reason_detail: string
+              related_entity_id: string | null
+              related_entity_type: string | null
+              resolution_note: string | null
+              resolution_state: string
+              resolved_at: string | null
+              resolved_by_profile_id: string | null
+              review_due_at: string
+              run_key: string | null
+              source: string
+              tenant_id: string
+              updated_at: string
+              version: number
+            }
+            SetofOptions: {
+              from: "*"
+              to: "client_journey_exceptions"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+      create_recurring_appointment_series: {
+        Args: {
+          p_client_action_id: string
+          p_client_id: string
+          p_duration_minutes: number
+          p_is_telehealth: boolean
+          p_max_occurrences: number
+          p_rrule: string
+          p_series_end_date: string
+          p_service_code: string
+          p_staff_id: string
+          p_start_at: string
+          p_time_zone: string
         }
+        Returns: Json
       }
       crm_bulk_update_client_status: {
         Args: {
@@ -14040,6 +14480,10 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: undefined
       }
+      execute_payroll_payment: {
+        Args: { p_client_action_id: string; p_payroll_run_id: string }
+        Returns: Json
+      }
       find_clients_by_emails_insensitive: {
         Args: { p_emails: string[]; p_tenant_id: string }
         Returns: {
@@ -14051,21 +14495,34 @@ export type Database = {
         Args: { p_format?: string; p_timestamp: string; p_timezone: string }
         Returns: string
       }
-      get_available_appointment_slots: {
-        Args: {
-          p_client_timezone: string
-          p_duration_minutes?: number
-          p_staff_id: string
-          p_target_date: string
-        }
-        Returns: {
-          display_date: string
-          display_end_time: string
-          display_time: string
-          slot_end_utc: string
-          slot_start_utc: string
-        }[]
-      }
+      get_assigned_clients: { Args: never; Returns: Json }
+      get_available_appointment_slots:
+        | {
+            Args: {
+              p_client_id: string
+              p_duration_minutes: number
+              p_from_date: string
+              p_service_code: string
+              p_staff_id: string
+              p_to_date: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_client_timezone: string
+              p_duration_minutes?: number
+              p_staff_id: string
+              p_target_date: string
+            }
+            Returns: {
+              display_date: string
+              display_end_time: string
+              display_time: string
+              slot_end_utc: string
+              slot_start_utc: string
+            }[]
+          }
       get_claim_line_pr_breakdown: {
         Args: { p_claim_line_id: string }
         Returns: Json
@@ -14136,6 +14593,10 @@ export type Database = {
           total_responsibility: number
         }[]
       }
+      get_client_canonical_state: {
+        Args: { p_client_id: string }
+        Returns: Json
+      }
       get_client_care_readiness: {
         Args: { p_client_id: string }
         Returns: {
@@ -14179,6 +14640,10 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      get_documented_session_status: {
+        Args: { p_appointment_id: string }
+        Returns: Json
+      }
       get_eligible_therapists_for_client: {
         Args: { p_client_id: string }
         Returns: {
@@ -14208,6 +14673,18 @@ export type Database = {
           now_year: number
           today_date: string
         }[]
+      }
+      get_provider_calculated_capacity: {
+        Args: { p_staff_id: string }
+        Returns: Json
+      }
+      get_provider_contact_failure_view: {
+        Args: { p_staff_id: string }
+        Returns: Json
+      }
+      get_provider_readiness_view: {
+        Args: { p_staff_id: string }
+        Returns: Json
       }
       get_revenue_report:
         | {
@@ -14396,7 +14873,55 @@ export type Database = {
         }
         Returns: Json
       }
+      reevaluate_client_provider_demand: {
+        Args: {
+          p_client_action_id: string
+          p_demand_id: string
+          p_prior_version: number
+          p_reason: string
+        }
+        Returns: Json
+      }
       refresh_client_ages: { Args: never; Returns: number }
+      release_client_provider_demand: {
+        Args: {
+          p_client_action_id: string
+          p_demand_id: string
+          p_prior_version: number
+          p_reason: string
+        }
+        Returns: Json
+      }
+      reopen_client_journey_exception: {
+        Args: {
+          p_client_action_id: string
+          p_exception_id: string
+          p_note: string
+          p_prior_version: number
+        }
+        Returns: Json
+      }
+      reschedule_appointment: {
+        Args: {
+          p_appointment_id: string
+          p_client_action_id: string
+          p_new_end_at: string
+          p_new_start_at: string
+          p_prior_version: number
+          p_reason: string
+        }
+        Returns: Json
+      }
+      resolve_client_journey_exception: {
+        Args: {
+          p_client_action_id: string
+          p_exception_id: string
+          p_note: string
+          p_prior_version: number
+          p_state: string
+        }
+        Returns: Json
+      }
       select_therapist_for_client: {
         Args: { p_client_id: string; p_staff_id: string }
         Returns: Json
@@ -14595,6 +15120,53 @@ export type Database = {
         }
         Returns: string
       }
+      staff_list_client_journey_exception_owner_options: {
+        Args: never
+        Returns: Json
+      }
+      staff_list_client_journey_exceptions: {
+        Args: {
+          p_filters?: Json
+          p_page?: number
+          p_page_size?: number
+          p_sort_by?: string
+          p_sort_dir?: string
+        }
+        Returns: Json
+      }
+      staff_list_clients: {
+        Args: {
+          p_filters?: Json
+          p_page?: number
+          p_page_size?: number
+          p_sort_by?: string
+          p_sort_dir?: string
+        }
+        Returns: Json
+      }
+      staff_list_provider_demand: {
+        Args: {
+          p_filters?: Json
+          p_page?: number
+          p_page_size?: number
+          p_sort_by?: string
+          p_sort_dir?: string
+        }
+        Returns: Json
+      }
+      start_client_journey_exception: {
+        Args: {
+          p_client_action_id: string
+          p_exception_id: string
+          p_note: string
+          p_prior_version: number
+        }
+        Returns: Json
+      }
+      submit_claim: {
+        Args: { p_claim_id: string; p_client_action_id: string }
+        Returns: Json
+      }
       transition_client_lifecycle:
         | {
             Args: {
@@ -14658,6 +15230,7 @@ export type Database = {
           source: string
           tenant_id: string
           updated_at: string
+          version: number
         }
         SetofOptions: {
           from: "*"
@@ -14665,6 +15238,60 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      update_client_journey_exception_next_action: {
+        Args: {
+          p_client_action_id: string
+          p_exception_id: string
+          p_next_action: string
+          p_note: string
+          p_prior_version: number
+        }
+        Returns: Json
+      }
+      update_client_journey_exception_review_due: {
+        Args: {
+          p_client_action_id: string
+          p_exception_id: string
+          p_note: string
+          p_prior_version: number
+          p_review_due_at: string
+        }
+        Returns: Json
+      }
+      update_provider_accepting_preference: {
+        Args: {
+          p_accepting: boolean
+          p_client_action_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      update_provider_capacity_preferences: {
+        Args: { p_client_action_id: string; p_patch: Json }
+        Returns: Json
+      }
+      update_provider_profile_fields: {
+        Args: { p_client_action_id: string; p_patch: Json }
+        Returns: Json
+      }
+      update_provider_profile_image_metadata: {
+        Args: {
+          p_alt_text?: string
+          p_client_action_id?: string
+          p_storage_path: string
+        }
+        Returns: Json
+      }
+      update_recurring_appointment_series: {
+        Args: {
+          p_client_action_id: string
+          p_patch: Json
+          p_prior_version: number
+          p_reason: string
+          p_series_id: string
+        }
+        Returns: Json
       }
       upsert_client_emergency_contact: {
         Args: {
