@@ -8,15 +8,9 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { CrmLayout } from "./components/crm/layout/CrmLayout";
 import CrmIndex from "./pages/crm/Index";
-import CrmClients from "./pages/crm/Clients";
-import ClientDetail from "./pages/crm/ClientDetail";
 import CrmSettings from "./pages/crm/Settings";
-import CrmInbox from "./pages/crm/Inbox";
-import CrmStaff from "./pages/crm/Staff";
-import CrmCampaigns from "./pages/crm/Campaigns";
 import CrmCampaignEditor from "./pages/crm/CampaignEditor";
 import CrmCampaignEnrollments from "./pages/crm/CampaignEnrollments";
-import CrmReports from "./pages/crm/Reports";
 import CanonicalDashboard from "./pages/crm/canonical/CanonicalDashboard";
 import CanonicalClients from "./pages/crm/canonical/CanonicalClients";
 import CanonicalClientDetail from "./pages/crm/canonical/CanonicalClientDetail";
@@ -40,18 +34,14 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
-          
-          {/* CRM Routes */}
+
+          {/* CRM Routes — canonical pages only. Legacy pat_status-based
+              pages have been removed as part of the canonical cutover. */}
           <Route path="/crm" element={<CrmLayout />}>
             <Route index element={<CrmIndex />} />
-            {/* Primary CRM surfaces now route to canonical pages.
-                Legacy pages remain importable for reference but are unrouted. */}
             <Route path="clients" element={<CanonicalClients />} />
             <Route path="clients/:id" element={<CanonicalClientDetail />} />
-            <Route path="clients-legacy" element={<CrmClients />} />
-            <Route path="clients-legacy/:id" element={<ClientDetail />} />
             <Route path="staff" element={<CanonicalStaff />} />
-            <Route path="staff-legacy" element={<CrmStaff />} />
             <Route path="campaigns" element={<CanonicalCampaigns />} />
             <Route path="campaigns/:id" element={<CanonicalCampaignDetail />} />
             <Route path="campaigns/:id/edit" element={<CrmCampaignEditor />} />
@@ -59,9 +49,7 @@ const App = () => (
             <Route path="tasks" element={<CanonicalTasks />} />
             <Route path="exceptions" element={<CanonicalExceptions />} />
             <Route path="inbox" element={<CanonicalInbox />} />
-            <Route path="inbox-legacy" element={<CrmInbox />} />
             <Route path="reports" element={<CanonicalReports />} />
-            <Route path="reports-legacy" element={<CrmReports />} />
             <Route path="settings" element={<CrmSettings />} />
             <Route path="canonical" element={<CanonicalDashboard />} />
             <Route path="canonical/clients" element={<CanonicalClients />} />
@@ -75,7 +63,7 @@ const App = () => (
             <Route path="canonical/staff" element={<CanonicalStaff />} />
             <Route path="canonical/reports" element={<CanonicalReports />} />
           </Route>
-          
+
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
