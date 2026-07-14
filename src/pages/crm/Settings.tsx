@@ -2,8 +2,20 @@ import { KanbanConfigPanel } from '@/components/crm/settings/KanbanConfigPanel';
 import { HelpScoutConfigPanel } from '@/components/crm/settings/HelpScoutConfigPanel';
 import { EmailSignaturesPanel } from '@/components/crm/settings/EmailSignaturesPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ShieldAlert } from 'lucide-react';
 import { CONTRACT_VERSION, CANONICAL_READ_VIEW } from '@/lib/crm/contracts';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { CrmMutationGate } from '@/components/crm/auth/CrmMutationGate';
+
+const ReadOnlyNotice = (
+  <Alert>
+    <ShieldAlert className="h-4 w-4" />
+    <AlertDescription className="text-xs">
+      You do not have permission to modify this section. Sign in as an admin or staff member to make changes.
+    </AlertDescription>
+  </Alert>
+);
 
 export default function CrmSettings() {
   const { role, tenantId, userId, isAuthenticated } = useCrmAuth();
@@ -32,9 +44,15 @@ export default function CrmSettings() {
           </CardContent>
         </Card>
 
-        <HelpScoutConfigPanel />
-        <KanbanConfigPanel />
-        <EmailSignaturesPanel />
+        <CrmMutationGate readOnlyFallback={ReadOnlyNotice}>
+          <HelpScoutConfigPanel />
+        </CrmMutationGate>
+        <CrmMutationGate readOnlyFallback={ReadOnlyNotice}>
+          <KanbanConfigPanel />
+        </CrmMutationGate>
+        <CrmMutationGate readOnlyFallback={ReadOnlyNotice}>
+          <EmailSignaturesPanel />
+        </CrmMutationGate>
       </div>
     </div>
   );
