@@ -14076,6 +14076,79 @@ export type Database = {
       }
     }
     Functions: {
+      _crm_authorize_client_write: {
+        Args: { _client_id: string; _concurrency_token: string }
+        Returns: {
+          current_cadence: Database["public"]["Enums"]["client_care_cadence_enum"]
+          current_closure: Database["public"]["Enums"]["client_closure_reason_enum"]
+          current_contact: Database["public"]["Enums"]["client_contact_policy_enum"]
+          current_eligibility: Database["public"]["Enums"]["client_eligibility_state_enum"]
+          current_engagement: Database["public"]["Enums"]["client_engagement_state_enum"]
+          current_lifecycle: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+          current_service: Database["public"]["Enums"]["client_service_policy_enum"]
+          current_therapist: string
+          tenant_id: string
+        }[]
+      }
+      _crm_bump_token: {
+        Args: { _client_id: string; _tenant_id: string }
+        Returns: undefined
+      }
+      _crm_cadence_from_label: {
+        Args: { _label: string }
+        Returns: Database["public"]["Enums"]["client_care_cadence_enum"]
+      }
+      _crm_closure_from_label: {
+        Args: { _label: string }
+        Returns: Database["public"]["Enums"]["client_closure_reason_enum"]
+      }
+      _crm_closure_to_label: {
+        Args: { _v: Database["public"]["Enums"]["client_closure_reason_enum"] }
+        Returns: string
+      }
+      _crm_contact_policy_from_label: {
+        Args: { _label: string }
+        Returns: Database["public"]["Enums"]["client_contact_policy_enum"]
+      }
+      _crm_contact_policy_to_label: {
+        Args: { _v: Database["public"]["Enums"]["client_contact_policy_enum"] }
+        Returns: string
+      }
+      _crm_eligibility_from_label: {
+        Args: { _label: string }
+        Returns: Database["public"]["Enums"]["client_eligibility_state_enum"]
+      }
+      _crm_eligibility_to_label: {
+        Args: {
+          _v: Database["public"]["Enums"]["client_eligibility_state_enum"]
+        }
+        Returns: string
+      }
+      _crm_emit_state_change: {
+        Args: {
+          _activity_event_type: string
+          _actor: string
+          _client_id: string
+          _correlation_id: string
+          _dimension: Database["public"]["Enums"]["client_state_dimension_enum"]
+          _disposition_reason: string
+          _from_value: string
+          _reason: string
+          _tenant_id: string
+          _to_value: string
+        }
+        Returns: undefined
+      }
+      _crm_engagement_from_label: {
+        Args: { _label: string }
+        Returns: Database["public"]["Enums"]["client_engagement_state_enum"]
+      }
+      _crm_engagement_to_label: {
+        Args: {
+          _v: Database["public"]["Enums"]["client_engagement_state_enum"]
+        }
+        Returns: string
+      }
       _crm_ensure_meta: {
         Args: { _client_id: string; _tenant_id: string }
         Returns: string
@@ -14087,6 +14160,22 @@ export type Database = {
       _crm_idem_store: {
         Args: { _actor: string; _key: string; _op: string; _result: Json }
         Returns: undefined
+      }
+      _crm_lifecycle_from_label: {
+        Args: { _label: string }
+        Returns: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+      }
+      _crm_lifecycle_to_label: {
+        Args: { _v: Database["public"]["Enums"]["client_lifecycle_stage_enum"] }
+        Returns: string
+      }
+      _crm_service_policy_from_label: {
+        Args: { _label: string }
+        Returns: Database["public"]["Enums"]["client_service_policy_enum"]
+      }
+      _crm_service_policy_to_label: {
+        Args: { _v: Database["public"]["Enums"]["client_service_policy_enum"] }
+        Returns: string
       }
       acknowledge_client_insurance_deferment: {
         Args: { p_client_id: string; p_eligibility_check_id: string }
@@ -14424,6 +14513,17 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_assign_clinician: {
+        Args: {
+          p_client_id: string
+          p_concurrency_token?: string
+          p_contract_version?: string
+          p_idempotency_key?: string
+          p_reason: string
+          p_staff_id: string
+        }
+        Returns: Json
+      }
       crm_bulk_update_client_status: {
         Args: {
           p_actor_profile_id: string
@@ -14437,12 +14537,41 @@ export type Database = {
           old_status: Database["public"]["Enums"]["pat_status_enum"]
         }[]
       }
+      crm_close_client: {
+        Args: {
+          p_client_id: string
+          p_concurrency_token?: string
+          p_contract_version?: string
+          p_disposition_reason: string
+          p_idempotency_key?: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      crm_evaluate_communication_policy: {
+        Args: {
+          p_channel: string
+          p_client_id: string
+          p_message_class: string
+        }
+        Returns: Json
+      }
       crm_has_role:
         | {
             Args: { _roles: string[]; _tenant_id: string; _user_id: string }
             Returns: boolean
           }
         | { Args: { _tenant_id: string; _user_id: string }; Returns: boolean }
+      crm_reopen_client: {
+        Args: {
+          p_client_id: string
+          p_concurrency_token?: string
+          p_contract_version?: string
+          p_idempotency_key?: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       crm_save_campaign_steps: {
         Args: { p_campaign_id: string; p_steps: Json; p_tenant_id: string }
         Returns: {
@@ -14467,6 +14596,74 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      crm_set_care_cadence: {
+        Args: {
+          p_client_id: string
+          p_concurrency_token?: string
+          p_contract_version?: string
+          p_idempotency_key?: string
+          p_reason: string
+          p_to_cadence: string
+        }
+        Returns: Json
+      }
+      crm_set_contact_policy: {
+        Args: {
+          p_client_id: string
+          p_concurrency_token?: string
+          p_contract_version?: string
+          p_idempotency_key?: string
+          p_reason: string
+          p_to_policy: string
+        }
+        Returns: Json
+      }
+      crm_set_eligibility: {
+        Args: {
+          p_client_id: string
+          p_concurrency_token?: string
+          p_contract_version?: string
+          p_idempotency_key?: string
+          p_manual_review?: Json
+          p_reason?: string
+          p_to_state: string
+        }
+        Returns: Json
+      }
+      crm_set_engagement: {
+        Args: {
+          p_client_id: string
+          p_concurrency_token?: string
+          p_contract_version?: string
+          p_idempotency_key?: string
+          p_reason: string
+          p_to_state: string
+        }
+        Returns: Json
+      }
+      crm_set_service_policy: {
+        Args: {
+          p_client_id: string
+          p_concurrency_token?: string
+          p_contract_version?: string
+          p_idempotency_key?: string
+          p_reason: string
+          p_to_policy: string
+        }
+        Returns: Json
+      }
+      crm_transition_lifecycle: {
+        Args: {
+          p_client_id: string
+          p_concurrency_token?: string
+          p_contract_version?: string
+          p_disposition_reason?: string
+          p_idempotency_key?: string
+          p_reason: string
+          p_to_stage: string
+        }
+        Returns: Json
       }
       evaluate_intake_screening: {
         Args: { p_client_id: string }
