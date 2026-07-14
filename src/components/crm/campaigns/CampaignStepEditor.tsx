@@ -39,6 +39,7 @@ export function CampaignStepEditor({
   onRemove,
   dragHandleProps,
 }: CampaignStepEditorProps) {
+  const canMutate = useCanMutate();
   const [isOpen, setIsOpen] = useState(true);
   const smsLength = step.sms_body_text?.length || 0;
   const isOverSmsLimit = smsLength > 160;
