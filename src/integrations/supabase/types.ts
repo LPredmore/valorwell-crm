@@ -14074,6 +14074,99 @@ export type Database = {
           },
         ]
       }
+      v_crm_reports_campaigns: {
+        Row: {
+          bucket_end: string | null
+          bucket_start: string | null
+          campaign_id: string | null
+          cancelled_count: number | null
+          completed_count: number | null
+          enrolled_count: number | null
+          failed_count: number | null
+          responded_count: number | null
+          suppressed_count: number | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_campaign_enrollments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "crm_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campaign_enrollments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_crm_reports_closure: {
+        Row: {
+          bucket_end: string | null
+          bucket_start: string | null
+          closed_count: number | null
+          disposition_reason: string | null
+          net_closed: number | null
+          reopened_count: number | null
+          tenant_id: string | null
+        }
+        Relationships: []
+      }
+      v_crm_reports_engagement: {
+        Row: {
+          avg_days_to_normal: number | null
+          bucket_end: string | null
+          bucket_start: string | null
+          current_count: number | null
+          engagement: string | null
+          entered_count: number | null
+          tenant_id: string | null
+        }
+        Relationships: []
+      }
+      v_crm_reports_exceptions: {
+        Row: {
+          bucket_end: string | null
+          bucket_start: string | null
+          exception_type: string | null
+          median_hours_to_resolve: number | null
+          open_count: number | null
+          raised_count: number | null
+          resolved_count: number | null
+          tenant_id: string | null
+        }
+        Relationships: []
+      }
+      v_crm_reports_funnel: {
+        Row: {
+          bucket_end: string | null
+          bucket_start: string | null
+          current_count: number | null
+          entered_count: number | null
+          exited_count: number | null
+          median_days_in_stage: number | null
+          stage: string | null
+          tenant_id: string | null
+        }
+        Relationships: []
+      }
+      v_crm_reports_tasks: {
+        Row: {
+          assignee_id: string | null
+          bucket_end: string | null
+          bucket_start: string | null
+          completed_count: number | null
+          median_hours_to_complete: number | null
+          open_count: number | null
+          overdue_count: number | null
+          tenant_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _crm_authorize_client_write: {
