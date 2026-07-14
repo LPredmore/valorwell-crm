@@ -44,9 +44,15 @@ export default function CrmSettings() {
           </CardContent>
         </Card>
 
-        <HelpScoutConfigPanel />
-        <KanbanConfigPanel />
-        <EmailSignaturesPanel />
+        <CrmMutationGate readOnlyFallback={ReadOnlyNotice}>
+          <HelpScoutConfigPanel />
+        </CrmMutationGate>
+        <CrmMutationGate readOnlyFallback={ReadOnlyNotice}>
+          <KanbanConfigPanel />
+        </CrmMutationGate>
+        <CrmMutationGate readOnlyFallback={ReadOnlyNotice}>
+          <EmailSignaturesPanel />
+        </CrmMutationGate>
       </div>
     </div>
   );
