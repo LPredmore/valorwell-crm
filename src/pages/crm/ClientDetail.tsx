@@ -22,7 +22,8 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { tenantId, isAuthenticated } = useCrmAuth();
-  const { data: canonical } = useCanonicalClientState(id);
+  const { data: canonicalResult } = useCanonicalClientState(id);
+  const canonical = canonicalResult?.status === 'ok' ? canonicalResult.data : null;
 
 
   const { data: client, isLoading } = useQuery({
