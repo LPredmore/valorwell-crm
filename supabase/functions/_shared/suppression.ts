@@ -35,6 +35,11 @@ export interface SuppressionDecision {
   service_policy: string | null;
 }
 
+/**
+ * Authoritative server-side suppression check.
+ * Delegates to `public.crm_evaluate_communication_policy` — the frontend
+ * `PolicyAwareComposer` result is never trusted here.
+ */
 export async function checkSuppression(
   supabaseUrl: string,
   serviceRoleKey: string,
@@ -42,14 +47,14 @@ export async function checkSuppression(
 ): Promise<SuppressionDecision> {
   const client = createClient(supabaseUrl, serviceRoleKey);
 
-  const { data, error } = await client
-    .from('v_client_canonical_state')
-    .select('contact_policy,service_policy,contract_version')
-    .eq('tenant_id', args.tenantId)
-    .eq('client_id', args.clientId)
-    .maybeSingle();
+  const { data, error } = await client.rpc('crm_evaluate_communication_policy', {
+    p_client_id: args.clientId,
+    p_channel: 'email',
+    p_message_class: args.messageClass,
+  });
 
   if (error || !data) {
+    console.warn('[checkSuppression] policy RPC failed:', error?.message);
     return {
       allowed: false,
       reason_code: 'unknown_canonical_state',
@@ -59,34 +64,19 @@ export async function checkSuppression(
     };
   }
 
-  // Service Blocked halts all outbound.
-  if (data.service_policy === 'Service Blocked') {
-    return {
-      allowed: false,
-      reason_code: 'service_policy_blocked',
-      policy_version: data.contract_version ?? 'unknown',
-      contact_policy: data.contact_policy,
-      service_policy: data.service_policy,
-    };
-  }
-
-  // DNC suppresses ordinary classes only.
-  if (data.contact_policy === 'Do Not Contact' && SUPPRESSABLE.has(args.messageClass)) {
-    return {
-      allowed: false,
-      reason_code: 'contact_policy_dnc',
-      policy_version: data.contract_version ?? 'unknown',
-      contact_policy: data.contact_policy,
-      service_policy: data.service_policy,
-    };
-  }
-
+  const d = data as {
+    allowed: boolean;
+    reason_code: SuppressionDecision['reason_code'];
+    policy_version: string;
+    contact_policy: string | null;
+    service_policy: string | null;
+  };
   return {
-    allowed: true,
-    reason_code: 'ok',
-    policy_version: data.contract_version ?? 'unknown',
-    contact_policy: data.contact_policy,
-    service_policy: data.service_policy,
+    allowed: d.allowed,
+    reason_code: d.reason_code,
+    policy_version: d.policy_version ?? 'unknown',
+    contact_policy: d.contact_policy,
+    service_policy: d.service_policy,
   };
 }
 
