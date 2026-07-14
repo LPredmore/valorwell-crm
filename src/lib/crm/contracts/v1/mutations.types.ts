@@ -56,20 +56,27 @@ export type MutationErrorCode =
   | 'concurrency_conflict'
   | 'suppression_violation'
   | 'contract_version_mismatch'
+  | 'stale_concurrency'
+  | 'policy_denied'
   | 'unknown';
 
 export interface MutationResult {
   ok: boolean;
   error_code?: MutationErrorCode;
   message?: string;
+  [k: string]: unknown;
 }
 
+// Live RPC names on backend contract valorwell-crm-contracts@1.0.1+20260714.
 export const RPC = {
-  transitionLifecycle: 'transition_client_lifecycle',
-  setEngagement: 'set_client_engagement_state',
-  setContactPolicy: 'set_client_contact_policy',
-  setServicePolicy: 'set_client_service_policy',
-  setEligibility: 'set_client_eligibility_state',
-  setCareCadence: 'set_client_care_cadence',
-  setDisposition: 'set_client_disposition',
+  transitionLifecycle: 'crm_transition_lifecycle',
+  setEngagement: 'crm_set_engagement',
+  setContactPolicy: 'crm_set_contact_policy',
+  setServicePolicy: 'crm_set_service_policy',
+  setEligibility: 'crm_set_eligibility',
+  setCareCadence: 'crm_set_care_cadence',
+  assignClinician: 'crm_assign_clinician',
+  closeClient: 'crm_close_client',
+  reopenClient: 'crm_reopen_client',
 } as const;
+
