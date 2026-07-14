@@ -5,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, ShieldCheck, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { dataProvider } from '@/services/dataProvider';
 import type { CommunicationPolicyResult } from '@/domain/operations';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { SuppressionBanner } from './SuppressionBanner';
+import { useCanMutate } from '@/components/crm/auth/CrmMutationGate';
 
 type MessageClass = 'ordinary_campaign_follow_up' | 'critical_operational' | 'transactional' | 'manual';
 
