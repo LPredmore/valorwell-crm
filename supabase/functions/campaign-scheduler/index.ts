@@ -1,37 +1,20 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { checkSuppression } from '../_shared/suppression.ts';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkSuppression } from "../_shared/suppression.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Rate limiting for SMS - 2 seconds between messages
-const SMS_DELAY_MS = 2000;
-// Email delay - shorter since HelpScout handles rate limiting
-const EMAIL_DELAY_MS = 200;
-
-// RingCentral and HelpScout API interfaces
-interface RingCentralTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-}
-
-interface HelpScoutTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-}
-
-interface StepLogToProcess {
+interface ClaimedStep {
   id: string;
   enrollment_id: string;
   step_id: string;
   tenant_id: string;
   client_id: string;
   scheduled_for: string;
-  channel: 'email' | 'sms';
+  channel: "email" | "sms";
+  claim_token: string;
 }
 
 interface CampaignStep {
@@ -40,20 +23,12 @@ interface CampaignStep {
   step_order: number;
   delay_days: number;
   delay_hours: number;
-  channel: 'email' | 'sms';
+  channel: "email" | "sms";
   email_subject: string | null;
   email_body_html: string | null;
   sms_body_text: string | null;
   is_active: boolean;
   signature_id: string | null;
-}
-
-interface CampaignEnrollment {
-  id: string;
-  campaign_id: string;
-  client_id: string;
-  current_step: number;
-  status: string;
 }
 
 interface Campaign {
@@ -83,850 +58,530 @@ interface ClientData {
   } | null;
 }
 
-// ============ PERSONALIZATION ============
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
-function personalizeContent(content: string, client: ClientData): string {
-  const firstName = client.pat_name_preferred || client.pat_name_f || 'there';
-  
-  let therapistName = 'your therapist';
+function normalizePhone(phone: string | null): string | null {
+  if (!phone) return null;
+  let digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("1") && digits.length === 11) digits = digits.slice(1);
+  return digits.length === 10 ? `+1${digits}` : null;
+}
+
+function personalize(content: string, client: ClientData): string {
+  const firstName = client.pat_name_preferred || client.pat_name_f || "there";
+  let therapist = "your therapist";
   if (client.primary_staff) {
-    if (client.primary_staff.prov_name_for_clients) {
-      therapistName = client.primary_staff.prov_name_for_clients;
-    } else {
-      const parts = [client.primary_staff.prov_name_f, client.primary_staff.prov_name_l].filter(Boolean);
-      if (parts.length > 0) {
-        therapistName = parts.join(' ');
-      }
-    }
+    therapist =
+      client.primary_staff.prov_name_for_clients ||
+      [client.primary_staff.prov_name_f, client.primary_staff.prov_name_l]
+        .filter(Boolean)
+        .join(" ") ||
+      therapist;
   }
-
   return content
     .replace(/\{\{first_name\}\}/gi, firstName)
-    .replace(/\{\{therapist_name\}\}/gi, therapistName);
+    .replace(/\{\{therapist_name\}\}/gi, therapist);
 }
 
-// ============ PHONE NORMALIZATION ============
-
-function normalizePhoneNumber(phone: string | null): { valid: boolean; normalized: string | null } {
-  if (!phone) return { valid: false, normalized: null };
-
-  let digits = phone.replace(/\D/g, '');
-  if (digits.startsWith('1') && digits.length === 11) {
-    digits = digits.substring(1);
-  }
-
-  if (digits.length !== 10) {
-    return { valid: false, normalized: null };
-  }
-
-  return { valid: true, normalized: `+1${digits}` };
+function parseTime(value: string): number | null {
+  const [h, m] = value.split(":").map(Number);
+  if (!Number.isInteger(h) || !Number.isInteger(m)) return null;
+  return h * 60 + m;
 }
 
-// ============ TIMEZONE HELPERS ============
-
-function isWeekday(date: Date): boolean {
-  const day = date.getDay();
-  return day !== 0 && day !== 6; // 0 = Sunday, 6 = Saturday
-}
-
-function parseTimeString(timeStr: string): { hour: number; minute: number } {
-  const [hourStr, minuteStr] = timeStr.split(':');
-  return {
-    hour: parseInt(hourStr, 10),
-    minute: parseInt(minuteStr, 10),
-  };
-}
-
-function isWithinSendWindow(
-  clientTimezone: string,
-  windowStart: string,
-  windowEnd: string
-): boolean {
-  try {
-    // Get current time in client's timezone
-    const now = new Date();
-    const clientTimeStr = now.toLocaleTimeString('en-US', {
-      timeZone: clientTimezone,
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-    
-    const [currentHour, currentMinute] = clientTimeStr.split(':').map(Number);
-    const currentMinutes = currentHour * 60 + currentMinute;
-    
-    const start = parseTimeString(windowStart);
-    const end = parseTimeString(windowEnd);
-    const startMinutes = start.hour * 60 + start.minute;
-    const endMinutes = end.hour * 60 + end.minute;
-    
-    return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-  } catch (error) {
-    console.error('Error checking send window:', error);
-    return true; // Default to allowing send on error
-  }
-}
-
-function isValidSendTime(
-  clientTimezone: string,
-  campaign: Campaign
-): boolean {
+function isValidSendTime(timeZone: string, campaign: Campaign): boolean {
   try {
     const now = new Date();
-    
-    // Get the date in client's timezone
-    const clientDateStr = now.toLocaleDateString('en-US', {
-      timeZone: clientTimezone,
-      weekday: 'short',
-    });
-    
-    // Check weekday constraint
-    if (campaign.weekdays_only) {
-      const dayAbbr = clientDateStr.substring(0, 3);
-      if (dayAbbr === 'Sat' || dayAbbr === 'Sun') {
-        console.log(`Skipping: ${clientTimezone} is weekend (${dayAbbr})`);
-        return false;
-      }
-    }
-    
-    // Check send window
-    if (!isWithinSendWindow(clientTimezone, campaign.send_window_start, campaign.send_window_end)) {
-      console.log(`Skipping: ${clientTimezone} outside send window`);
+    const weekday = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      weekday: "short",
+    }).format(now);
+    if (campaign.weekdays_only && (weekday === "Sat" || weekday === "Sun")) {
       return false;
     }
-    
-    return true;
+
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+    }).formatToParts(now);
+    const hour = Number(parts.find((p) => p.type === "hour")?.value);
+    const minute = Number(parts.find((p) => p.type === "minute")?.value);
+    const start = parseTime(campaign.send_window_start);
+    const end = parseTime(campaign.send_window_end);
+    if (!Number.isFinite(hour) || !Number.isFinite(minute) || start === null || end === null) {
+      return false;
+    }
+    const current = hour * 60 + minute;
+    return current >= start && current <= end;
   } catch (error) {
-    console.error('Error checking valid send time:', error);
-    return true; // Default to allowing send on error
+    console.error("Send-window evaluation failed:", error);
+    return false;
   }
 }
 
-// ============ RINGCENTRAL SMS ============
-
-async function getRingCentralAccessToken(): Promise<string> {
-  const clientId = Deno.env.get('RINGCENTRAL_CLIENT_ID');
-  const clientSecret = Deno.env.get('RINGCENTRAL_CLIENT_SECRET');
-  const jwtToken = Deno.env.get('RINGCENTRAL_JWT_TOKEN');
-  const serverUrl = Deno.env.get('RINGCENTRAL_SERVER_URL') || 'https://platform.ringcentral.com';
-
+async function getRingCentralToken(): Promise<string> {
+  const clientId = Deno.env.get("RINGCENTRAL_CLIENT_ID");
+  const clientSecret = Deno.env.get("RINGCENTRAL_CLIENT_SECRET");
+  const jwtToken = Deno.env.get("RINGCENTRAL_JWT_TOKEN");
+  const serverUrl =
+    Deno.env.get("RINGCENTRAL_SERVER_URL") || "https://platform.ringcentral.com";
   if (!clientId || !clientSecret || !jwtToken) {
-    throw new Error('Missing RingCentral credentials');
+    throw new Error("Missing RingCentral credentials");
   }
-
-  const credentials = btoa(`${clientId}:${clientSecret}`);
-
   const response = await fetch(`${serverUrl}/restapi/oauth/token`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${credentials}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
     },
     body: new URLSearchParams({
-      'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      'assertion': jwtToken,
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwtToken,
     }),
   });
-
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('RingCentral auth failed:', response.status, errorText);
-    throw new Error(`RingCentral authentication failed: ${response.status}`);
+    await response.text();
+    throw new Error(`RingCentral auth failed: ${response.status}`);
   }
-
-  const data: RingCentralTokenResponse = await response.json();
-  return data.access_token;
+  return (await response.json()).access_token;
 }
 
-async function sendSms(
-  accessToken: string,
-  toPhone: string,
-  messageText: string
-): Promise<{ success: boolean; error?: string }> {
-  const serverUrl = Deno.env.get('RINGCENTRAL_SERVER_URL') || 'https://platform.ringcentral.com';
-  const fromNumber = Deno.env.get('RINGCENTRAL_FROM_NUMBER');
-
-  if (!fromNumber) {
-    return { success: false, error: 'Missing sender phone number configuration' };
-  }
-
-  try {
-    const response = await fetch(`${serverUrl}/restapi/v1.0/account/~/extension/~/sms`, {
-      method: 'POST',
+async function sendSms(token: string, phone: string, text: string): Promise<void> {
+  const serverUrl =
+    Deno.env.get("RINGCENTRAL_SERVER_URL") || "https://platform.ringcentral.com";
+  const fromNumber = Deno.env.get("RINGCENTRAL_FROM_NUMBER");
+  if (!fromNumber) throw new Error("Missing RingCentral sender number");
+  const response = await fetch(
+    `${serverUrl}/restapi/v1.0/account/~/extension/~/sms`,
+    {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         from: { phoneNumber: fromNumber },
-        to: [{ phoneNumber: toPhone }],
-        text: messageText,
+        to: [{ phoneNumber: phone }],
+        text,
       }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('RingCentral SMS failed:', response.status, errorText);
-      return { success: false, error: `RingCentral error: ${response.status}` };
-    }
-
-    await response.text(); // Consume response body
-    return { success: true };
-  } catch (error) {
-    console.error('SMS send error:', error);
-    return { success: false, error: `Request failed: ${error.message}` };
+    },
+  );
+  if (!response.ok) {
+    await response.text();
+    throw new Error(`RingCentral send failed: ${response.status}`);
   }
+  await response.text();
 }
 
-// ============ HELPSCOUT EMAIL ============
-
-async function getHelpScoutAccessToken(): Promise<string> {
-  const appId = Deno.env.get('HELPSCOUT_APP_ID');
-  const appSecret = Deno.env.get('HELPSCOUT_APP_SECRET');
-
-  if (!appId || !appSecret) {
-    throw new Error('HelpScout credentials not configured');
-  }
-
-  const response = await fetch('https://api.helpscout.net/v2/oauth2/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
+async function getHelpScoutToken(): Promise<string> {
+  const appId = Deno.env.get("HELPSCOUT_APP_ID");
+  const secret = Deno.env.get("HELPSCOUT_APP_SECRET");
+  if (!appId || !secret) throw new Error("HelpScout credentials not configured");
+  const response = await fetch("https://api.helpscout.net/v2/oauth2/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      grant_type: 'client_credentials',
+      grant_type: "client_credentials",
       client_id: appId,
-      client_secret: appSecret,
+      client_secret: secret,
     }),
   });
-
   if (!response.ok) {
-    const error = await response.text();
-    console.error('HelpScout token error:', error);
-    throw new Error(`Failed to get HelpScout token: ${response.status}`);
+    await response.text();
+    throw new Error(`HelpScout auth failed: ${response.status}`);
   }
-
-  const data: HelpScoutTokenResponse = await response.json();
-  return data.access_token;
+  return (await response.json()).access_token;
 }
 
 async function sendEmail(
-  accessToken: string,
+  token: string,
   mailboxId: string,
-  toEmail: string,
+  client: ClientData,
   subject: string,
-  bodyHtml: string,
-  firstName: string,
-  lastName: string
-): Promise<{ success: boolean; conversationId?: string; error?: string }> {
-  try {
-    // Single-step: Create conversation with a reply thread (triggers SMTP send immediately)
-    // No fake "customer" thread - this prevents Gmail from quoting placeholder text
-    const createResponse = await fetch('https://api.helpscout.net/v2/conversations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
+  body: string,
+): Promise<string | null> {
+  if (!client.email) throw new Error("Missing client email");
+  const response = await fetch("https://api.helpscout.net/v2/conversations", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      subject,
+      customer: {
+        email: client.email,
+        firstName: client.pat_name_preferred || client.pat_name_f || "",
+        lastName: client.pat_name_l || "",
       },
-      body: JSON.stringify({
-        subject,
-        customer: {
-          email: toEmail,
-          firstName,
-          lastName,
-        },
-        mailboxId: parseInt(mailboxId),
-        type: 'email',
-        status: 'pending',
-        threads: [
-          {
-            type: 'reply', // Staff-initiated outbound - triggers SMTP delivery
-            customer: { email: toEmail },
-            text: bodyHtml, // Actual email content
-          },
-        ],
-      }),
-    });
-
-    if (!createResponse.ok && createResponse.status !== 201) {
-      const errorText = await createResponse.text();
-      console.error('HelpScout create/send failed:', createResponse.status, errorText);
-      return { success: false, error: `Create conversation failed: ${createResponse.status}` };
-    }
-
-    // Extract conversation ID from Location header
-    const locationHeader = createResponse.headers.get('Location') || createResponse.headers.get('Resource-ID');
-    const conversationId = locationHeader?.split('/').pop();
-
-    console.log(`Created and sent conversation ${conversationId || '(no id)'} to ${toEmail}`);
-    return { success: true, conversationId };
-  } catch (error) {
-    console.error('Email send error:', error);
-    return { success: false, error: `Request failed: ${error.message}` };
+      mailboxId: Number(mailboxId),
+      type: "email",
+      status: "pending",
+      threads: [{
+        type: "reply",
+        customer: { email: client.email },
+        text: body,
+      }],
+    }),
+  });
+  if (!response.ok && response.status !== 201) {
+    await response.text();
+    throw new Error(`HelpScout send failed: ${response.status}`);
   }
+  const location =
+    response.headers.get("Location") || response.headers.get("Resource-ID");
+  return location?.split("/").pop() || null;
 }
 
-// ============ STEP SCHEDULING ============
-
-function calculateNextScheduledTime(
-  delayDays: number,
-  delayHours: number,
-  fromTime: Date = new Date()
-): Date {
-  const nextTime = new Date(fromTime);
-  nextTime.setDate(nextTime.getDate() + delayDays);
-  nextTime.setHours(nextTime.getHours() + delayHours);
-  return nextTime;
+async function releaseClaim(
+  db: ReturnType<typeof createClient>,
+  step: ClaimedStep,
+  status: "scheduled" | "failed" | "skipped" | "suppressed" | "cancelled",
+  reason?: string,
+  nextAt?: Date,
+): Promise<void> {
+  const { error } = await db.rpc("release_campaign_step_claim", {
+    p_step_log_id: step.id,
+    p_claim_token: step.claim_token,
+    p_status: status,
+    p_reason: reason ?? null,
+    p_next_scheduled_for: nextAt?.toISOString() ?? null,
+  });
+  if (error) console.error("Claim release failed:", step.id, error.message);
 }
 
-// ============ MAIN PROCESSING ============
+async function markSent(
+  db: ReturnType<typeof createClient>,
+  step: ClaimedStep,
+  extra: Record<string, unknown> = {},
+): Promise<boolean> {
+  const { data, error } = await db
+    .from("crm_campaign_step_logs")
+    .update({
+      status: "sent",
+      sent_at: new Date().toISOString(),
+      claimed_at: null,
+      claim_token: null,
+      updated_at: new Date().toISOString(),
+      ...extra,
+    })
+    .eq("id", step.id)
+    .eq("status", "processing")
+    .eq("claim_token", step.claim_token)
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return !!data;
+}
+
+async function scheduleNext(
+  db: ReturnType<typeof createClient>,
+  enrollment: any,
+  currentStep: CampaignStep,
+  campaign: Campaign,
+  tenantId: string,
+): Promise<void> {
+  const { data: steps, error } = await db
+    .from("crm_campaign_steps")
+    .select("*")
+    .eq("campaign_id", enrollment.campaign_id)
+    .eq("is_active", true)
+    .order("step_order", { ascending: true });
+  if (error) throw new Error(error.message);
+
+  const index = (steps || []).findIndex((s: any) => s.id === currentStep.id);
+  const next = (steps || [])[index + 1] as CampaignStep | undefined;
+
+  if (!next) {
+    await db
+      .from("crm_campaign_enrollments")
+      .update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        current_step: currentStep.step_order,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", enrollment.id);
+
+    if (campaign.on_complete_action || campaign.on_complete_status) {
+      await db.from("crm_activity_events").insert({
+        tenant_id: tenantId,
+        client_id: enrollment.client_id,
+        event_type: "campaign_completion_state_action_deferred",
+        created_by_profile_id: null,
+        metadata: {
+          campaign_id: campaign.id,
+          requested_action: campaign.on_complete_action,
+          requested_status: campaign.on_complete_status,
+          reason: "legacy_pat_status_completion_action_retired",
+        },
+      });
+    }
+    return;
+  }
+
+  const nextAt = new Date();
+  nextAt.setDate(nextAt.getDate() + (next.delay_days || 0));
+  nextAt.setHours(nextAt.getHours() + (next.delay_hours || 0));
+
+  const { error: insertError } = await db.from("crm_campaign_step_logs").insert({
+    enrollment_id: enrollment.id,
+    step_id: next.id,
+    tenant_id: tenantId,
+    client_id: enrollment.client_id,
+    scheduled_for: nextAt.toISOString(),
+    status: "scheduled",
+    channel: next.channel,
+    updated_at: new Date().toISOString(),
+  });
+  if (insertError && insertError.code !== "23505") throw new Error(insertError.message);
+
+  await db
+    .from("crm_campaign_enrollments")
+    .update({
+      current_step: currentStep.step_order,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", enrollment.id);
+}
 
 async function processCampaignMessages() {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-  const mailboxId = Deno.env.get('HELPSCOUT_MAILBOX_ID');
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const db = createClient(supabaseUrl, serviceRoleKey);
+  const mailboxId = Deno.env.get("HELPSCOUT_MAILBOX_ID");
 
-  console.log('Campaign scheduler starting...');
-
-  // Atomically claim pending step logs using SELECT ... FOR UPDATE SKIP LOCKED.
-  // This prevents duplicate sends if two scheduler invocations overlap.
-  const { data: pendingStepLogs, error: stepLogsError } = await supabase.rpc(
-    'claim_pending_campaign_steps',
-    { p_limit: 50 }
+  const { data: claimed, error: claimError } = await db.rpc(
+    "claim_pending_campaign_steps",
+    { p_limit: 50 },
   );
+  if (claimError) throw new Error(claimError.message);
 
-  if (stepLogsError) {
-    console.error('Failed to claim pending step logs:', stepLogsError);
-    return { processed: 0, errors: [stepLogsError.message] };
-  }
+  let rcToken: string | null = null;
+  let hsToken: string | null = null;
+  const result = { processed: 0, sent: 0, skipped: 0, suppressed: 0, failed: 0 };
 
-
-  if (!pendingStepLogs || pendingStepLogs.length === 0) {
-    console.log('No pending messages to process');
-    return { processed: 0, errors: [] };
-  }
-
-  console.log(`Processing ${pendingStepLogs.length} pending messages`);
-
-  // Get tokens once for batch processing
-  let ringCentralToken: string | null = null;
-  let helpScoutToken: string | null = null;
-
-  const errors: string[] = [];
-  let processed = 0;
-  let sent = 0;
-  let skipped = 0;
-  let failed = 0;
-
-  for (const stepLog of pendingStepLogs as StepLogToProcess[]) {
+  for (const step of (claimed || []) as ClaimedStep[]) {
     try {
-      console.log(`Processing step log: ${stepLog.id}`);
-
-      // Fetch enrollment with campaign info
-      const { data: enrollment, error: enrollmentError } = await supabase
-        .from('crm_campaign_enrollments')
+      const { data: enrollment, error: enrollmentError } = await db
+        .from("crm_campaign_enrollments")
         .select(`
           id, campaign_id, client_id, current_step, status,
           campaign:crm_campaigns (
-            id, name, is_active, weekdays_only, 
+            id, name, is_active, weekdays_only,
             send_window_start, send_window_end, default_timezone,
             on_complete_action, on_complete_status
           )
         `)
-        .eq('id', stepLog.enrollment_id)
+        .eq("id", step.enrollment_id)
         .single();
 
-      if (enrollmentError || !enrollment) {
-        console.error(`Enrollment not found for step log ${stepLog.id}`);
-        await supabase
-          .from('crm_campaign_step_logs')
-          .update({ status: 'skipped', skip_reason: 'enrollment_not_found' })
-          .eq('id', stepLog.id);
-        skipped++;
-        continue;
-      }
-
-      // Check enrollment is still active
-      if (enrollment.status !== 'active') {
-        console.log(`Enrollment ${enrollment.id} is ${enrollment.status}, skipping`);
-        await supabase
-          .from('crm_campaign_step_logs')
-          .update({ status: 'skipped', skip_reason: `enrollment_${enrollment.status}` })
-          .eq('id', stepLog.id);
-        skipped++;
+      if (enrollmentError || !enrollment || enrollment.status !== "active") {
+        await releaseClaim(db, step, "skipped", "enrollment_not_active");
+        result.skipped++;
         continue;
       }
 
       const campaign = enrollment.campaign as unknown as Campaign;
-      if (!campaign || !campaign.is_active) {
-        console.log(`Campaign is inactive, skipping`);
-        await supabase
-          .from('crm_campaign_step_logs')
-          .update({ status: 'skipped', skip_reason: 'campaign_inactive' })
-          .eq('id', stepLog.id);
-        skipped++;
+      if (!campaign?.is_active) {
+        await releaseClaim(db, step, "skipped", "campaign_inactive");
+        result.skipped++;
         continue;
       }
 
-      // Fetch client data
-      const { data: client, error: clientError } = await supabase
-        .from('clients')
+      const { data: client, error: clientError } = await db
+        .from("clients")
         .select(`
           id, email, phone, pat_name_f, pat_name_l, pat_name_preferred, pat_time_zone,
           primary_staff:staff!clients_primary_staff_id_fkey (
             prov_name_f, prov_name_l, prov_name_for_clients
           )
         `)
-        .eq('id', stepLog.client_id)
+        .eq("id", step.client_id)
         .single();
-
       if (clientError || !client) {
-        console.error(`Client not found for step log ${stepLog.id}`);
-        await supabase
-          .from('crm_campaign_step_logs')
-          .update({ status: 'skipped', skip_reason: 'client_not_found' })
-          .eq('id', stepLog.id);
-        skipped++;
+        await releaseClaim(db, step, "skipped", "client_not_found");
+        result.skipped++;
         continue;
       }
 
-      // Determine timezone (client's or campaign default)
-      const clientTimezone = client.pat_time_zone || campaign.default_timezone || 'America/Chicago';
-
-      // Check if valid send time (weekday + window)
-      if (!isValidSendTime(clientTimezone, campaign)) {
-        // Reschedule for next valid window (next run will try again)
-        console.log(`Not within valid send time for ${client.id}, will retry on next run`);
-        continue; // Leave as scheduled, next cron run will check again
-      }
-
-      // Fetch step details
-      const { data: step, error: stepError } = await supabase
-        .from('crm_campaign_steps')
-        .select('*')
-        .eq('id', stepLog.step_id)
-        .single();
-
-      if (stepError || !step) {
-        console.error(`Step not found for step log ${stepLog.id}`);
-        await supabase
-          .from('crm_campaign_step_logs')
-          .update({ status: 'skipped', skip_reason: 'step_not_found' })
-          .eq('id', stepLog.id);
-        skipped++;
-        continue;
-      }
-
-      const typedStep = step as CampaignStep;
       const typedClient = client as unknown as ClientData;
+      const timeZone =
+        typedClient.pat_time_zone || campaign.default_timezone || "America/Chicago";
+      if (!isValidSendTime(timeZone, campaign)) {
+        await releaseClaim(
+          db,
+          step,
+          "scheduled",
+          "outside_send_window",
+          new Date(Date.now() + 15 * 60 * 1000),
+        );
+        continue;
+      }
 
-      // Check if step is active
+      const { data: stepData, error: stepError } = await db
+        .from("crm_campaign_steps")
+        .select("*")
+        .eq("id", step.step_id)
+        .single();
+      if (stepError || !stepData) {
+        await releaseClaim(db, step, "skipped", "step_not_found");
+        result.skipped++;
+        continue;
+      }
+      const typedStep = stepData as CampaignStep;
       if (!typedStep.is_active) {
-        console.log(`Step ${typedStep.id} is disabled, skipping`);
-        await supabase
-          .from('crm_campaign_step_logs')
-          .update({ status: 'skipped', skip_reason: 'step_disabled' })
-          .eq('id', stepLog.id);
-        skipped++;
-        
-      // Still schedule next step
-      await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign, stepLog.tenant_id);
+        await releaseClaim(db, step, "skipped", "step_disabled");
+        result.skipped++;
         continue;
       }
 
-      // Check contact info for channel
-      if (stepLog.channel === 'email' && !typedClient.email) {
-        console.log(`Client ${typedClient.id} has no email, skipping email step`);
-        await supabase
-          .from('crm_campaign_step_logs')
-          .update({ status: 'skipped', skip_reason: 'missing_email' })
-          .eq('id', stepLog.id);
-        skipped++;
-        
-        // Still schedule next step
-        await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign, stepLog.tenant_id);
-        continue;
-      }
-
-      if (stepLog.channel === 'sms') {
-        const phoneResult = normalizePhoneNumber(typedClient.phone);
-        if (!phoneResult.valid) {
-          console.log(`Client ${typedClient.id} has no valid phone, skipping SMS step`);
-          await supabase
-            .from('crm_campaign_step_logs')
-            .update({ status: 'skipped', skip_reason: 'missing_phone' })
-            .eq('id', stepLog.id);
-          skipped++;
-          
-          // Still schedule next step
-          await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign, stepLog.tenant_id);
-          continue;
-        }
-      }
-
-      // §6.3 send-time suppression recheck. Blocks ordinary campaign follow-up
-      // if canonical contact_policy=DNC or service_policy=Service Blocked.
-      const suppressionUrl = Deno.env.get('SUPABASE_URL')!;
-      const suppressionKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const suppression = await checkSuppression(suppressionUrl, suppressionKey, {
-        tenantId: stepLog.tenant_id,
-        clientId: stepLog.client_id,
-        messageClass: 'ordinary_campaign_follow_up',
+      const decision = await checkSuppression(supabaseUrl, serviceRoleKey, {
+        tenantId: step.tenant_id,
+        clientId: step.client_id,
+        channel: step.channel,
+        messageClass: "ordinary_campaign_follow_up",
+        workflow: "campaign_scheduler",
+        correlationId: step.id,
+        campaignId: campaign.id,
+        stepId: typedStep.id,
       });
-      if (!suppression.allowed) {
-        console.log(`[suppression] blocked ${stepLog.id}: ${suppression.reason_code}`);
-        await supabase
-          .from('crm_campaign_step_logs')
-          .update({
-            status: 'suppressed',
-            error_message: `suppressed:${suppression.reason_code}`,
-          })
-          .eq('id', stepLog.id);
+      if (!decision.allowed) {
+        await releaseClaim(
+          db,
+          step,
+          "suppressed",
+          `suppressed:${decision.reason_code}`,
+        );
+        result.suppressed++;
         continue;
       }
 
-      // Send the message!
-      if (stepLog.channel === 'email') {
-        // Get HelpScout token if not already
-        if (!helpScoutToken) {
-          try {
-            helpScoutToken = await getHelpScoutAccessToken();
-          } catch (error) {
-            console.error('Failed to get HelpScout token:', error);
-            errors.push(`HelpScout auth failed: ${error.message}`);
-            continue;
-          }
-        }
-
-        if (!mailboxId) {
-          console.error('HELPSCOUT_MAILBOX_ID not configured');
-          await supabase
-            .from('crm_campaign_step_logs')
-            .update({ status: 'failed', error_message: 'Mailbox not configured' })
-            .eq('id', stepLog.id);
-          failed++;
+      if (step.channel === "email") {
+        if (!typedClient.email) {
+          await releaseClaim(db, step, "skipped", "missing_email");
+          result.skipped++;
           continue;
         }
+        if (!mailboxId) throw new Error("HELPSCOUT_MAILBOX_ID not configured");
+        hsToken ||= await getHelpScoutToken();
+        const subject = personalize(
+          typedStep.email_subject || "Message from your care team",
+          typedClient,
+        );
+        let body = personalize(typedStep.email_body_html || "", typedClient);
 
-        const subject = personalizeContent(typedStep.email_subject || 'Message from your care team', typedClient);
-        let body = personalizeContent(typedStep.email_body_html || '', typedClient);
-
-        // Append signature if configured
         if (typedStep.signature_id) {
-          const { data: sigData } = await supabase
-            .from('crm_email_signatures')
-            .select('signature_type, body_html, image_url')
-            .eq('id', typedStep.signature_id)
-            .single();
-
-          if (sigData) {
-            let sigHtml = '';
-            if (sigData.signature_type === 'image' && sigData.image_url) {
-              sigHtml = `<img src="${sigData.image_url}" alt="Signature" style="max-width:600px">`;
-            } else if (sigData.body_html) {
-              sigHtml = sigData.body_html;
-            }
-            if (sigHtml) {
-              body += '<br><br>' + sigHtml;
-            }
+          const { data: signature } = await db
+            .from("crm_email_signatures")
+            .select("signature_type, body_html, image_url")
+            .eq("id", typedStep.signature_id)
+            .maybeSingle();
+          if (signature?.signature_type === "image" && signature.image_url) {
+            body += `<br><br><img src="${signature.image_url}" alt="Signature">`;
+          } else if (signature?.body_html) {
+            body += `<br><br>${signature.body_html}`;
           }
         }
 
-        const firstName = typedClient.pat_name_preferred || typedClient.pat_name_f || '';
-        const lastName = typedClient.pat_name_l || '';
-
-        const result = await sendEmail(
-          helpScoutToken,
+        const conversationId = await sendEmail(
+          hsToken,
           mailboxId,
-          typedClient.email!,
+          typedClient,
           subject,
           body,
-          firstName,
-          lastName
         );
-
-        if (result.success) {
-          console.log(`Email sent to ${typedClient.email}`);
-          await supabase
-            .from('crm_campaign_step_logs')
-            .update({
-              status: 'sent',
-              sent_at: new Date().toISOString(),
-              helpscout_conversation_id: result.conversationId,
-            })
-            .eq('id', stepLog.id);
-          sent++;
-
-          // Log activity event
-          await supabase
-            .from('crm_activity_events')
-            .insert({
-              tenant_id: stepLog.tenant_id,
-              client_id: stepLog.client_id,
-              event_type: 'email_sent',
-              created_by_profile_id: null,
-              metadata: {
-                source: 'campaign',
-                subject,
-                campaign_id: campaign.id,
-                campaign_name: campaign.name,
-                step_order: typedStep.step_order,
-              },
-            });
-        } else {
-          console.error(`Failed to send email: ${result.error}`);
-          await supabase
-            .from('crm_campaign_step_logs')
-            .update({ status: 'failed', error_message: result.error })
-            .eq('id', stepLog.id);
-          failed++;
+        if (!(await markSent(db, step, {
+          helpscout_conversation_id: conversationId,
+        }))) {
+          continue;
         }
 
-        await new Promise(resolve => setTimeout(resolve, EMAIL_DELAY_MS));
-      } else if (stepLog.channel === 'sms') {
-        // Get RingCentral token if not already
-        if (!ringCentralToken) {
-          try {
-            ringCentralToken = await getRingCentralAccessToken();
-          } catch (error) {
-            console.error('Failed to get RingCentral token:', error);
-            errors.push(`RingCentral auth failed: ${error.message}`);
-            continue;
-          }
+        await db.from("crm_activity_events").insert({
+          tenant_id: step.tenant_id,
+          client_id: step.client_id,
+          event_type: "email_sent",
+          created_by_profile_id: null,
+          metadata: {
+            source: "campaign",
+            campaign_id: campaign.id,
+            step_id: typedStep.id,
+            conversation_id: conversationId,
+          },
+        });
+      } else {
+        const phone = normalizePhone(typedClient.phone);
+        if (!phone) {
+          await releaseClaim(db, step, "skipped", "missing_phone");
+          result.skipped++;
+          continue;
         }
+        rcToken ||= await getRingCentralToken();
+        await sendSms(
+          rcToken,
+          phone,
+          personalize(typedStep.sms_body_text || "", typedClient),
+        );
+        if (!(await markSent(db, step))) continue;
 
-        const phoneResult = normalizePhoneNumber(typedClient.phone);
-        const messageText = personalizeContent(typedStep.sms_body_text || '', typedClient);
-
-        const result = await sendSms(ringCentralToken, phoneResult.normalized!, messageText);
-
-        if (result.success) {
-          console.log(`SMS sent to ${typedClient.phone}`);
-          await supabase
-            .from('crm_campaign_step_logs')
-            .update({ status: 'sent', sent_at: new Date().toISOString() })
-            .eq('id', stepLog.id);
-          sent++;
-
-          // Log activity event
-          await supabase
-            .from('crm_activity_events')
-            .insert({
-              tenant_id: stepLog.tenant_id,
-              client_id: stepLog.client_id,
-              event_type: 'sms_sent',
-              created_by_profile_id: null,
-              metadata: {
-                source: 'campaign',
-                campaign_id: campaign.id,
-                campaign_name: campaign.name,
-                step_order: typedStep.step_order,
-              },
-            });
-        } else {
-          console.error(`Failed to send SMS: ${result.error}`);
-          await supabase
-            .from('crm_campaign_step_logs')
-            .update({ status: 'failed', error_message: result.error })
-            .eq('id', stepLog.id);
-          failed++;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, SMS_DELAY_MS));
+        await db.from("crm_activity_events").insert({
+          tenant_id: step.tenant_id,
+          client_id: step.client_id,
+          event_type: "sms_sent",
+          created_by_profile_id: null,
+          metadata: {
+            source: "campaign",
+            campaign_id: campaign.id,
+            step_id: typedStep.id,
+          },
+        });
       }
 
-      // Schedule next step
-      await scheduleNextStep(supabase, enrollment as unknown as CampaignEnrollment, typedStep, campaign, stepLog.tenant_id);
-      processed++;
+      await scheduleNext(db, enrollment, typedStep, campaign, step.tenant_id);
+      result.processed++;
+      result.sent++;
     } catch (error) {
-      console.error(`Error processing step log ${stepLog.id}:`, error);
-      errors.push(`Step ${stepLog.id}: ${error.message}`);
-      
-      await supabase
-        .from('crm_campaign_step_logs')
-        .update({ status: 'failed', error_message: error.message })
-        .eq('id', stepLog.id);
-      failed++;
+      console.error("Campaign step failed:", step.id, error);
+      await releaseClaim(
+        db,
+        step,
+        "failed",
+        error instanceof Error ? error.message : "unknown_error",
+      );
+      result.failed++;
     }
   }
 
-  console.log(`Campaign scheduler complete: ${processed} processed, ${sent} sent, ${skipped} skipped, ${failed} failed`);
-  return { processed, sent, skipped, failed, errors };
+  return result;
 }
-
-async function scheduleNextStep(
-  supabase: ReturnType<typeof createClient>,
-  enrollment: CampaignEnrollment,
-  currentStep: CampaignStep,
-  campaign: Campaign,
-  tenantId: string
-) {
-  // Get all steps for this campaign
-  const { data: steps, error: stepsError } = await supabase
-    .from('crm_campaign_steps')
-    .select('*')
-    .eq('campaign_id', enrollment.campaign_id)
-    .eq('is_active', true)
-    .order('step_order', { ascending: true });
-
-  if (stepsError || !steps) {
-    console.error('Failed to fetch campaign steps:', stepsError);
-    return;
-  }
-
-  // Find next step
-  const currentIndex = steps.findIndex((s: CampaignStep) => s.id === currentStep.id);
-  const nextStep = steps[currentIndex + 1] as CampaignStep | undefined;
-
-  if (!nextStep) {
-    // No more steps - mark enrollment as completed
-    console.log(`Enrollment ${enrollment.id} completed all steps`);
-    await supabase
-      .from('crm_campaign_enrollments')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        current_step: currentStep.step_order,
-      })
-      .eq('id', enrollment.id);
-
-    // Apply completion action if configured
-    if (campaign.on_complete_action === 'change_status' && campaign.on_complete_status) {
-      // Get current client status for activity log
-      const { data: clientData } = await supabase
-        .from('clients')
-        .select('pat_status')
-        .eq('id', enrollment.client_id)
-        .single();
-
-      const oldStatus = clientData?.pat_status || null;
-      const newStatus = campaign.on_complete_status;
-
-      // Only update if status is actually different
-      if (oldStatus !== newStatus) {
-        // Update client status
-        const { error: updateError } = await supabase
-          .from('clients')
-          .update({ pat_status: newStatus })
-          .eq('id', enrollment.client_id);
-
-        if (updateError) {
-          console.error(`Failed to update client status on campaign completion:`, updateError);
-        } else {
-          // Log activity event for audit trail
-          await supabase
-            .from('crm_activity_events')
-            .insert({
-              tenant_id: tenantId,
-              client_id: enrollment.client_id,
-              event_type: 'status_change',
-              old_value: oldStatus,
-              new_value: newStatus,
-              created_by_profile_id: null, // System-triggered, no user
-              metadata: {
-                triggered_by: 'campaign_completion',
-                campaign_id: campaign.id,
-                campaign_name: campaign.name,
-              },
-            });
-
-          console.log(`Changed client ${enrollment.client_id} status from "${oldStatus}" to "${newStatus}" on campaign "${campaign.name}" completion`);
-        }
-      }
-    }
-
-    return;
-  }
-
-  // Calculate next scheduled time
-  const nextScheduledFor = calculateNextScheduledTime(nextStep.delay_days, nextStep.delay_hours);
-
-  // Create step log for next step (idempotent via partial unique index on status='scheduled')
-  const { error: insertError } = await supabase
-    .from('crm_campaign_step_logs')
-    .upsert(
-      {
-        enrollment_id: enrollment.id,
-        step_id: nextStep.id,
-        tenant_id: tenantId,
-        client_id: enrollment.client_id,
-        scheduled_for: nextScheduledFor.toISOString(),
-        status: 'scheduled',
-        channel: nextStep.channel,
-      },
-      { onConflict: 'enrollment_id,step_id', ignoreDuplicates: true }
-    );
-
-  if (insertError) {
-    console.error('Failed to schedule next step:', insertError);
-    return;
-  }
-
-  // Update enrollment current_step to reflect the step that was just sent
-  // (current_step = step_order of the last step actually sent; 0 = not started yet)
-  await supabase
-    .from('crm_campaign_enrollments')
-    .update({ current_step: currentStep.step_order })
-    .eq('id', enrollment.id);
-
-  console.log(`Marked step ${currentStep.step_order} sent; next step ${nextStep.step_order} scheduled for enrollment ${enrollment.id} at ${nextScheduledFor.toISOString()}`);
-}
-
-// ============ HTTP HANDLER ============
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  // Require CRON_SECRET on every invocation. pg_cron sends it in X-Cron-Secret.
-  const expectedSecret = Deno.env.get('CRON_SECRET');
-  if (!expectedSecret) {
-    console.error('CRON_SECRET is not configured - refusing invocation');
-    return new Response(
-      JSON.stringify({ error: 'Scheduler secret not configured' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-  const providedSecret = req.headers.get('X-Cron-Secret');
-  if (providedSecret !== expectedSecret) {
-    console.error('Campaign scheduler rejected - X-Cron-Secret mismatch');
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized' }),
-      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  const expected = Deno.env.get("CRON_SECRET");
+  if (!expected) return json({ error: "Scheduler secret not configured" }, 500);
+  if (req.headers.get("X-Cron-Secret") !== expected) {
+    return json({ error: "Unauthorized" }, 401);
   }
 
   try {
-    console.log('Campaign scheduler triggered');
     const result = await processCampaignMessages();
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        ...result,
-        timestamp: new Date().toISOString(),
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return json({ success: true, ...result, timestamp: new Date().toISOString() });
   } catch (error) {
-    console.error('Campaign scheduler error:', error);
-    return new Response(
-      JSON.stringify({
+    console.error("Campaign scheduler failed:", error);
+    return json(
+      {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString(),
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      },
+      500,
     );
   }
 });
-

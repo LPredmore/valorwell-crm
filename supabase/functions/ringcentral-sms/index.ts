@@ -1,186 +1,150 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { checkSuppression, isRemoveMessage, applyRemove } from '../_shared/suppression.ts';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  applyRemove,
+  checkSuppression,
+  isRemoveMessage,
+} from "../_shared/suppression.ts";
+
+declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Rate limiting config - 2 seconds between messages (30/min, well under 40/min limit)
 const MESSAGE_DELAY_MS = 2000;
-const RATE_LIMIT_RETRY_DELAY_MS = 30000; // 30 second cooldown on 429
+const RATE_LIMIT_RETRY_DELAY_MS = 30000;
 
 interface RingCentralTokenResponse {
   access_token: string;
-  token_type: string;
-  expires_in: number;
 }
 
-interface SMSRecipient {
+interface Recipient {
   id: string;
+  clientId: string | null;
   phone: string | null;
   name: string;
 }
 
-// Normalize phone number to E.164 format (+1XXXXXXXXXX)
-function normalizePhoneNumber(phone: string | null): { valid: boolean; normalized: string | null; error?: string } {
-  if (!phone) {
-    return { valid: false, normalized: null, error: 'No phone number' };
-  }
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
-  // Strip all non-numeric characters
-  let digits = phone.replace(/\D/g, '');
-
-  // If starts with 1 and has 11 digits, remove leading 1
-  if (digits.startsWith('1') && digits.length === 11) {
-    digits = digits.substring(1);
-  }
-
-  // Must have exactly 10 digits for US number
+function normalizePhoneNumber(
+  phone: string | null,
+): { valid: boolean; normalized: string | null; error?: string } {
+  if (!phone) return { valid: false, normalized: null, error: "No phone number" };
+  let digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("1") && digits.length === 11) digits = digits.slice(1);
   if (digits.length !== 10) {
-    return { valid: false, normalized: null, error: `Invalid phone format: ${phone}` };
+    return { valid: false, normalized: null, error: "Invalid phone format" };
   }
-
-  // Prepend +1 for E.164 format
   return { valid: true, normalized: `+1${digits}` };
 }
 
-// Exchange JWT for access token
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function getAccessToken(): Promise<string> {
-  const clientId = Deno.env.get('RINGCENTRAL_CLIENT_ID');
-  const clientSecret = Deno.env.get('RINGCENTRAL_CLIENT_SECRET');
-  const jwtToken = Deno.env.get('RINGCENTRAL_JWT_TOKEN');
-  const serverUrl = Deno.env.get('RINGCENTRAL_SERVER_URL') || 'https://platform.ringcentral.com';
-
+  const clientId = Deno.env.get("RINGCENTRAL_CLIENT_ID");
+  const clientSecret = Deno.env.get("RINGCENTRAL_CLIENT_SECRET");
+  const jwtToken = Deno.env.get("RINGCENTRAL_JWT_TOKEN");
+  const serverUrl =
+    Deno.env.get("RINGCENTRAL_SERVER_URL") || "https://platform.ringcentral.com";
   if (!clientId || !clientSecret || !jwtToken) {
-    throw new Error('Missing RingCentral credentials');
+    throw new Error("Missing RingCentral credentials");
   }
-
-  const credentials = btoa(`${clientId}:${clientSecret}`);
 
   const response = await fetch(`${serverUrl}/restapi/oauth/token`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${credentials}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
     },
     body: new URLSearchParams({
-      'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      'assertion': jwtToken,
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwtToken,
     }),
   });
-
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('RingCentral auth failed:', response.status, errorText);
+    await response.text();
     throw new Error(`RingCentral authentication failed: ${response.status}`);
   }
-
   const data: RingCentralTokenResponse = await response.json();
   return data.access_token;
 }
 
-// Send SMS via RingCentral API
 async function sendSms(
-  accessToken: string,
+  token: string,
   toPhone: string,
-  messageText: string
-): Promise<{ success: boolean; error?: string; rateLimited?: boolean }> {
-  const serverUrl = Deno.env.get('RINGCENTRAL_SERVER_URL') || 'https://platform.ringcentral.com';
-  const fromNumber = Deno.env.get('RINGCENTRAL_FROM_NUMBER');
+  text: string,
+): Promise<{ success: boolean; rateLimited?: boolean; error?: string }> {
+  const serverUrl =
+    Deno.env.get("RINGCENTRAL_SERVER_URL") || "https://platform.ringcentral.com";
+  const fromNumber = Deno.env.get("RINGCENTRAL_FROM_NUMBER");
+  if (!fromNumber) return { success: false, error: "Missing sender number" };
 
-  if (!fromNumber) {
-    return { success: false, error: 'Missing sender phone number configuration' };
-  }
-
-  try {
-    const response = await fetch(`${serverUrl}/restapi/v1.0/account/~/extension/~/sms`, {
-      method: 'POST',
+  const response = await fetch(
+    `${serverUrl}/restapi/v1.0/account/~/extension/~/sms`,
+    {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         from: { phoneNumber: fromNumber },
         to: [{ phoneNumber: toPhone }],
-        text: messageText,
+        text,
       }),
-    });
+    },
+  );
 
-    if (response.status === 429) {
-      console.warn('Rate limited by RingCentral');
-      return { success: false, error: 'Rate limited', rateLimited: true };
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('RingCentral SMS failed:', response.status, errorText);
-      return { success: false, error: `RingCentral error: ${response.status}` };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('SMS send error:', error);
-    return { success: false, error: `Request failed: ${error.message}` };
+  if (response.status === 429) {
+    await response.text();
+    return { success: false, rateLimited: true, error: "Rate limited" };
   }
+  if (!response.ok) {
+    await response.text();
+    return { success: false, error: `RingCentral error: ${response.status}` };
+  }
+  await response.text();
+  return { success: true };
 }
 
-// Sleep helper
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+async function processBulkSms(bulkSmsId: string): Promise<void> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const db = createClient(supabaseUrl, serviceRoleKey);
 
-// Main processing function (runs in background)
-async function processBulkSms(bulkSmsId: string) {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-  console.log(`Starting bulk SMS processing for: ${bulkSmsId}`);
-
-  // Get the bulk SMS log
-  const { data: smsLog, error: logError } = await supabase
-    .from('crm_bulk_sms_logs')
-    .select('*')
-    .eq('id', bulkSmsId)
+  const { data: log, error: logError } = await db
+    .from("crm_bulk_sms_logs")
+    .select("*")
+    .eq("id", bulkSmsId)
     .single();
 
-  if (logError || !smsLog) {
-    console.error('Failed to fetch SMS log:', logError);
+  if (logError || !log) {
+    console.error("Bulk SMS log not found:", logError?.message);
     return;
   }
 
-  // Update status to sending + initial heartbeat
-  await supabase
-    .from('crm_bulk_sms_logs')
-    .update({ status: 'sending', heartbeat_at: new Date().toISOString() })
-    .eq('id', bulkSmsId);
+  await db
+    .from("crm_bulk_sms_logs")
+    .update({ status: "sending", heartbeat_at: new Date().toISOString() })
+    .eq("id", bulkSmsId);
 
+  let recipients: Recipient[] = [];
+  let recipientTable: string;
 
-  // Get RingCentral access token
-  let accessToken: string;
-  try {
-    accessToken = await getAccessToken();
-    console.log('Successfully obtained RingCentral access token');
-  } catch (error) {
-    console.error('Failed to get access token:', error);
-    await supabase
-      .from('crm_bulk_sms_logs')
-      .update({ 
-        status: 'failed', 
-        completed_at: new Date().toISOString() 
-      })
-      .eq('id', bulkSmsId);
-    return;
-  }
-
-  // Fetch recipients based on type
-  let recipients: SMSRecipient[] = [];
-  
-  if (smsLog.recipient_type === 'staff') {
-    // Fetch staff recipients with phone numbers
-    const { data: staffRecipients, error: staffError } = await supabase
-      .from('crm_bulk_sms_staff_recipients')
+  if (log.recipient_type === "staff") {
+    recipientTable = "crm_bulk_sms_staff_recipients";
+    const { data, error } = await db
+      .from(recipientTable)
       .select(`
         id,
         staff:staff_id (
@@ -190,22 +154,19 @@ async function processBulkSms(bulkSmsId: string) {
           prov_name_l
         )
       `)
-      .eq('bulk_sms_id', bulkSmsId)
-      .eq('status', 'pending');
-
-    if (staffError) {
-      console.error('Failed to fetch staff recipients:', staffError);
-    } else {
-      recipients = (staffRecipients || []).map(r => ({
-        id: r.id,
-        phone: (r.staff as any)?.prov_phone || null,
-        name: `${(r.staff as any)?.prov_name_f || ''} ${(r.staff as any)?.prov_name_l || ''}`.trim() || 'Unknown',
-      }));
-    }
+      .eq("bulk_sms_id", bulkSmsId)
+      .eq("status", "pending");
+    if (error) throw new Error(error.message);
+    recipients = (data || []).map((row: any) => ({
+      id: row.id,
+      clientId: null,
+      phone: row.staff?.prov_phone ?? null,
+      name: `${row.staff?.prov_name_f ?? ""} ${row.staff?.prov_name_l ?? ""}`.trim(),
+    }));
   } else {
-    // Fetch client recipients with phone numbers
-    const { data: clientRecipients, error: clientError } = await supabase
-      .from('crm_bulk_sms_recipients')
+    recipientTable = "crm_bulk_sms_recipients";
+    const { data, error } = await db
+      .from(recipientTable)
       .select(`
         id,
         client:client_id (
@@ -216,532 +177,306 @@ async function processBulkSms(bulkSmsId: string) {
           pat_name_preferred
         )
       `)
-      .eq('bulk_sms_id', bulkSmsId)
-      .eq('status', 'pending');
-
-    if (clientError) {
-      console.error('Failed to fetch client recipients:', clientError);
-    } else {
-      recipients = (clientRecipients || []).map(r => {
-        const client = r.client as any;
-        const firstName = client?.pat_name_preferred || client?.pat_name_f || '';
-        const lastName = client?.pat_name_l || '';
-        return {
-          id: r.id,
-          phone: client?.phone || null,
-          name: `${firstName} ${lastName}`.trim() || 'Unknown',
-        };
-      });
-    }
+      .eq("bulk_sms_id", bulkSmsId)
+      .eq("status", "pending");
+    if (error) throw new Error(error.message);
+    recipients = (data || []).map((row: any) => ({
+      id: row.id,
+      clientId: row.client?.id ?? null,
+      phone: row.client?.phone ?? null,
+      name: `${row.client?.pat_name_preferred || row.client?.pat_name_f || ""} ${
+        row.client?.pat_name_l || ""
+      }`.trim(),
+    }));
   }
 
-  console.log(`Processing ${recipients.length} recipients`);
+  let token: string;
+  try {
+    token = await getAccessToken();
+  } catch (error) {
+    await db
+      .from("crm_bulk_sms_logs")
+      .update({
+        status: "failed",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", bulkSmsId);
+    throw error;
+  }
 
-  const recipientTable = smsLog.recipient_type === 'staff' 
-    ? 'crm_bulk_sms_staff_recipients' 
-    : 'crm_bulk_sms_recipients';
-
-  let sentCount = 0;
-  let failedCount = 0;
+  let sent = 0;
+  let failed = 0;
 
   for (let i = 0; i < recipients.length; i++) {
     const recipient = recipients[i];
-    console.log(`Processing recipient ${i + 1}/${recipients.length}: ${recipient.name}`);
+    const normalized = normalizePhoneNumber(recipient.phone);
 
-    // Normalize phone number
-    const phoneResult = normalizePhoneNumber(recipient.phone);
-
-    if (!phoneResult.valid) {
-      console.log(`Skipping ${recipient.name}: ${phoneResult.error}`);
-      await supabase
+    if (!normalized.valid || !normalized.normalized) {
+      await db
         .from(recipientTable)
-        .update({ 
-          status: 'failed', 
-          error_message: phoneResult.error 
-        })
-        .eq('id', recipient.id);
-      failedCount++;
+        .update({ status: "failed", error_message: normalized.error })
+        .eq("id", recipient.id);
+      failed++;
       continue;
     }
 
-    // §6.3 suppression recheck before every send.
-    // Staff recipients bypass canonical client suppression.
-    if (smsLog.recipient_type !== 'staff' && recipient.id) {
-      const { data: recRow } = await supabase
-        .from('crm_bulk_sms_recipients')
-        .select('client_id')
-        .eq('id', recipient.id)
-        .maybeSingle();
-      if (recRow?.client_id) {
-        const decision = await checkSuppression(supabaseUrl, supabaseServiceKey, {
-          tenantId: smsLog.tenant_id,
-          clientId: recRow.client_id,
-          messageClass: 'ordinary_promotional',
-        });
-        if (!decision.allowed) {
-          console.log(`[suppression] blocked ${recipient.id}: ${decision.reason_code}`);
-          await supabase
-            .from(recipientTable)
-            .update({ status: 'suppressed', error_message: `suppressed:${decision.reason_code}` })
-            .eq('id', recipient.id);
-          failedCount++;
-          continue;
-        }
+    if (recipient.clientId) {
+      const decision = await checkSuppression(supabaseUrl, serviceRoleKey, {
+        tenantId: log.tenant_id,
+        clientId: recipient.clientId,
+        channel: "sms",
+        messageClass: "ordinary_promotional",
+        workflow: "ringcentral_bulk_sms",
+        correlationId: bulkSmsId,
+      });
+      if (!decision.allowed) {
+        await db
+          .from(recipientTable)
+          .update({
+            status: "failed",
+            error_message: `suppressed:${decision.reason_code}`,
+          })
+          .eq("id", recipient.id);
+        failed++;
+        continue;
       }
     }
 
-    // Send SMS
-    let result = await sendSms(accessToken, phoneResult.normalized!, smsLog.body_text);
-
-    // Handle rate limiting with retry
+    let result = await sendSms(token, normalized.normalized, log.body_text);
     if (result.rateLimited) {
-      console.log(`Rate limited, waiting ${RATE_LIMIT_RETRY_DELAY_MS}ms before retry...`);
       await sleep(RATE_LIMIT_RETRY_DELAY_MS);
-      result = await sendSms(accessToken, phoneResult.normalized!, smsLog.body_text);
+      result = await sendSms(token, normalized.normalized, log.body_text);
     }
 
     if (result.success) {
-      console.log(`SMS sent successfully to ${recipient.name}`);
-      await supabase
+      await db
         .from(recipientTable)
-        .update({ 
-          status: 'sent', 
-          sent_at: new Date().toISOString() 
-        })
-        .eq('id', recipient.id);
-      sentCount++;
+        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .eq("id", recipient.id);
+      sent++;
 
-      // Log activity event for client recipients only
-      if (smsLog.recipient_type !== 'staff' && recipient.id) {
-        // Get client_id from the recipient record
-        const { data: recipientRecord } = await supabase
-          .from('crm_bulk_sms_recipients')
-          .select('client_id')
-          .eq('id', recipient.id)
-          .single();
-
-        if (recipientRecord?.client_id) {
-          await supabase
-            .from('crm_activity_events')
-            .insert({
-              tenant_id: smsLog.tenant_id,
-              client_id: recipientRecord.client_id,
-              event_type: 'sms_sent',
-              created_by_profile_id: null,
-              metadata: {
-                source: 'bulk',
-                to_phone: phoneResult.normalized,
-              },
-            });
-        }
-      }
-    } else {
-      console.error(`Failed to send to ${recipient.name}: ${result.error}`);
-      await supabase
-        .from(recipientTable)
-        .update({ 
-          status: 'failed', 
-          error_message: result.error 
-        })
-        .eq('id', recipient.id);
-      failedCount++;
-    }
-
-    // Update counts + heartbeat on log periodically
-    if ((i + 1) % 5 === 0 || i === recipients.length - 1) {
-      await supabase
-        .from('crm_bulk_sms_logs')
-        .update({ sent_count: sentCount, failed_count: failedCount, heartbeat_at: new Date().toISOString() })
-        .eq('id', bulkSmsId);
-    }
-
-
-    // Wait before next message (rate limiting)
-    if (i < recipients.length - 1) {
-      await sleep(MESSAGE_DELAY_MS);
-    }
-  }
-
-  // Final update
-  const finalStatus = failedCount === recipients.length ? 'failed' : 'completed';
-  await supabase
-    .from('crm_bulk_sms_logs')
-    .update({ 
-      status: finalStatus,
-      sent_count: sentCount,
-      failed_count: failedCount,
-      completed_at: new Date().toISOString(),
-    })
-    .eq('id', bulkSmsId);
-
-  console.log(`Bulk SMS completed: ${sentCount} sent, ${failedCount} failed`);
-}
-
-// ============ INBOUND SMS WEBHOOK HANDLER ============
-// Handles incoming SMS messages from RingCentral to auto-pause campaigns
-// and log them to crm_inbound_sms_logs for visibility in the Communications UI
-
-async function handleInboundSms(req: Request): Promise<Response> {
-  // Check for RingCentral webhook validation request FIRST (before parsing JSON)
-  const validationToken = req.headers.get('Validation-Token');
-
-  if (validationToken) {
-    console.log('RingCentral webhook validation - echoing token');
-    return new Response('', {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        'Validation-Token': validationToken,
-      },
-    });
-  }
-
-  // Fail closed: require the shared verification token secret to be configured.
-  // RingCentral sends this token in the Verification-Token header on every delivery.
-  const expectedToken = Deno.env.get('RINGCENTRAL_WEBHOOK_VERIFICATION_TOKEN');
-  if (!expectedToken) {
-    console.error('RINGCENTRAL_WEBHOOK_VERIFICATION_TOKEN is not configured - refusing webhook');
-    return new Response(JSON.stringify({ error: 'Webhook verification token not configured' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-  const providedToken = req.headers.get('Verification-Token');
-  if (providedToken !== expectedToken) {
-    console.error('RingCentral webhook rejected - Verification-Token mismatch');
-    return new Response(JSON.stringify({ error: 'Invalid verification token' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-
-  try {
-    const payload = await req.json();
-    console.log('RingCentral inbound SMS webhook:', JSON.stringify(payload).substring(0, 500));
-
-    // RingCentral webhook validation request
-    if (payload.event === '/restapi/v1.0/subscription/~?threshold=60&interval=15') {
-      // This is a subscription validation request
-      console.log('RingCentral subscription validation');
-      return new Response(JSON.stringify({ received: true }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Extract SMS details from the webhook payload
-    // RingCentral webhook structure for SMS varies
-    const fromNumber = 
-      payload.body?.from?.phoneNumber ||
-      payload.from?.phoneNumber ||
-      payload.body?.message?.from?.phoneNumber ||
-      payload.message?.from?.phoneNumber;
-
-    const toNumber = 
-      payload.body?.to?.[0]?.phoneNumber ||
-      payload.to?.[0]?.phoneNumber ||
-      payload.body?.message?.to?.[0]?.phoneNumber ||
-      payload.message?.to?.[0]?.phoneNumber ||
-      Deno.env.get('RINGCENTRAL_FROM_NUMBER');
-
-    const messageBody = 
-      payload.body?.subject ||
-      payload.subject ||
-      payload.body?.message?.subject ||
-      payload.message?.subject ||
-      null;
-
-    const messageId = 
-      payload.body?.id?.toString() ||
-      payload.id?.toString() ||
-      payload.body?.message?.id?.toString() ||
-      payload.message?.id?.toString() ||
-      null;
-
-    if (!fromNumber) {
-      console.log('No from phone number in webhook payload');
-      return new Response(JSON.stringify({ received: true, noPhone: true }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Normalize the incoming phone number
-    const phoneResult = normalizePhoneNumber(fromNumber);
-    if (!phoneResult.valid) {
-      console.log(`Invalid phone format: ${fromNumber}`);
-      return new Response(JSON.stringify({ received: true, invalidPhone: true }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.log(`Processing SMS response from: ${phoneResult.normalized}`);
-
-    // Look up client by phone using the indexed normalized-digits expression.
-    const normalizedDigits = phoneResult.normalized!.replace(/\D/g, '');
-    const last10Digits = normalizedDigits.slice(-10);
-
-    // Use RPC-free indexed match: match on last-10 digits by using ilike patterns
-    // (bounded by tenant would be ideal but tenant is unknown at this point).
-    // The clients_phone_last10_idx index covers regexp_replace(phone,'\D','','g').
-    const { data: matchingClients, error: clientError } = await supabase
-      .from('clients')
-      .select('id, tenant_id, phone')
-      .filter('phone', 'not.is', null)
-      .or(`phone.ilike.%${last10Digits.slice(0,3)}%${last10Digits.slice(3,6)}%${last10Digits.slice(6)}%,phone.ilike.%${last10Digits}%`)
-      .limit(25);
-
-    if (clientError) {
-      console.error('Error looking up clients:', clientError);
-      return new Response(JSON.stringify({ error: 'Database error' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Precise match: last 10 digits after normalization
-    const matchingClientsFiltered = (matchingClients || []).filter(client => {
-      if (!client.phone) return false;
-      const clientDigits = client.phone.replace(/\D/g, '');
-      return clientDigits.slice(-10) === last10Digits;
-    });
-
-
-    // Log the inbound SMS to the database for visibility in Communications UI
-    // ALWAYS log, even if no client match (for audit trail and manual association later)
-    let loggedSmsId: string | null = null;
-    const matchedClient = matchingClientsFiltered.length > 0 ? matchingClientsFiltered[0] : null;
-
-    // Determine tenant_id from the matched client. If no client match, log with NULL
-    // tenant_id (nullable column) so unmatched inbound messages remain auditable
-    // without being mis-attributed to an arbitrary default tenant.
-    const tenantIdForLog: string | null = matchedClient?.tenant_id ?? null;
-    if (!matchedClient) {
-      console.warn(`No client match for inbound SMS from ${phoneResult.normalized}; logging with NULL tenant_id`);
-    }
-
-    const { data: insertedLog, error: logError } = await supabase
-      .from('crm_inbound_sms_logs')
-      .insert({
-        tenant_id: tenantIdForLog,
-        client_id: matchedClient?.id || null,
-        from_phone: phoneResult.normalized!,
-        to_phone: toNumber || '',
-        message_body: messageBody,
-        ringcentral_message_id: messageId,
-        received_at: new Date().toISOString(),
-        is_read: false,
-      })
-      .select('id')
-      .single();
-
-    if (logError) {
-      // Don't fail the webhook, just log the error
-      console.error('Failed to log inbound SMS:', logError);
-    } else {
-      loggedSmsId = insertedLog?.id || null;
-      console.log(`Logged inbound SMS with id: ${loggedSmsId}, client_id: ${matchedClient?.id || 'null'}`);
-    }
-
-    // Log sms_received activity event for matched client
-    if (matchedClient) {
-      await supabase
-        .from('crm_activity_events')
-        .insert({
-          tenant_id: matchedClient.tenant_id,
-          client_id: matchedClient.id,
-          event_type: 'sms_received',
+      if (recipient.clientId) {
+        await db.from("crm_activity_events").insert({
+          tenant_id: log.tenant_id,
+          client_id: recipient.clientId,
+          event_type: "sms_sent",
           created_by_profile_id: null,
           metadata: {
-            source: 'webhook',
-            from_phone: phoneResult.normalized,
+            source: "bulk",
+            workflow: "ringcentral_bulk_sms",
+            bulk_sms_id: bulkSmsId,
           },
         });
+      }
+    } else {
+      await db
+        .from(recipientTable)
+        .update({ status: "failed", error_message: result.error })
+        .eq("id", recipient.id);
+      failed++;
     }
 
-    // §6.2 REMOVE rule: detect keyword, set canonical DNC, cancel active enrollments.
-    if (matchedClient && isRemoveMessage(messageBody)) {
-      const supabaseUrl2 = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey2 = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      await applyRemove(supabaseUrl2, supabaseKey2, {
-        tenantId: matchedClient.tenant_id,
-        clientId: matchedClient.id,
-        source: 'inbound_sms',
-        correlationId: messageId ?? undefined,
-      });
-      console.log(`[REMOVE] applied for client ${matchedClient.id}`);
+    if ((i + 1) % 5 === 0 || i === recipients.length - 1) {
+      await db
+        .from("crm_bulk_sms_logs")
+        .update({
+          sent_count: sent,
+          failed_count: failed,
+          heartbeat_at: new Date().toISOString(),
+        })
+        .eq("id", bulkSmsId);
     }
 
-
-    // Check for active campaign enrollments for any matching client
-    let pausedCount = 0;
-    for (const client of matchingClientsFiltered) {
-      const { data: enrollments, error: enrollmentError } = await supabase
-        .from('crm_campaign_enrollments')
-        .select('id, campaign_id')
-        .eq('client_id', client.id)
-        .eq('status', 'active');
-
-      if (enrollmentError) {
-        console.error('Error checking enrollments:', enrollmentError);
-        continue;
-      }
-
-      if (!enrollments || enrollments.length === 0) {
-        continue;
-      }
-
-      // Pause the enrollment(s)
-      for (const enrollment of enrollments) {
-        const { error: updateError } = await supabase
-          .from('crm_campaign_enrollments')
-          .update({
-            status: 'responded',
-            paused_at: new Date().toISOString(),
-            pause_reason: 'sms_response',
-          })
-          .eq('id', enrollment.id);
-
-        if (updateError) {
-          console.error(`Failed to pause enrollment ${enrollment.id}:`, updateError);
-        } else {
-          console.log(`Paused enrollment ${enrollment.id} due to SMS response`);
-          pausedCount++;
-        }
-      }
-    }
-
-    return new Response(
-      JSON.stringify({ 
-        received: true, 
-        enrollmentsPaused: pausedCount,
-        logged: !!loggedSmsId,
-        clientFound: matchingClientsFiltered.length > 0,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  } catch (error) {
-    console.error('Inbound SMS processing error:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    if (i < recipients.length - 1) await sleep(MESSAGE_DELAY_MS);
   }
+
+  await db
+    .from("crm_bulk_sms_logs")
+    .update({
+      status: failed === recipients.length && recipients.length > 0
+        ? "failed"
+        : "completed",
+      sent_count: sent,
+      failed_count: failed,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", bulkSmsId);
 }
 
-// Declare EdgeRuntime for background tasks
-declare const EdgeRuntime: {
-  waitUntil: (promise: Promise<unknown>) => void;
-};
+async function handleInbound(req: Request): Promise<Response> {
+  const validationToken = req.headers.get("Validation-Token");
+  if (validationToken) {
+    return new Response("", {
+      status: 200,
+      headers: { ...corsHeaders, "Validation-Token": validationToken },
+    });
+  }
+
+  const expectedToken = Deno.env.get("RINGCENTRAL_WEBHOOK_VERIFICATION_TOKEN");
+  if (!expectedToken) return json({ error: "Webhook verification not configured" }, 500);
+  if (req.headers.get("Verification-Token") !== expectedToken) {
+    return json({ error: "Invalid verification token" }, 401);
+  }
+
+  const payload = await req.json();
+  const fromNumber =
+    payload.body?.from?.phoneNumber ||
+    payload.from?.phoneNumber ||
+    payload.body?.message?.from?.phoneNumber ||
+    payload.message?.from?.phoneNumber;
+  const toNumber =
+    payload.body?.to?.[0]?.phoneNumber ||
+    payload.to?.[0]?.phoneNumber ||
+    Deno.env.get("RINGCENTRAL_FROM_NUMBER") ||
+    "";
+  const messageBody =
+    payload.body?.subject ||
+    payload.subject ||
+    payload.body?.message?.subject ||
+    payload.message?.subject ||
+    null;
+  const messageId =
+    payload.body?.id?.toString() ||
+    payload.id?.toString() ||
+    payload.body?.message?.id?.toString() ||
+    payload.message?.id?.toString() ||
+    crypto.randomUUID();
+
+  const normalized = normalizePhoneNumber(fromNumber ?? null);
+  if (!normalized.valid || !normalized.normalized) {
+    return json({ received: true, invalidPhone: true });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const db = createClient(supabaseUrl, serviceRoleKey);
+  const last10 = normalized.normalized.replace(/\D/g, "").slice(-10);
+
+  const { data: candidates, error } = await db
+    .from("clients")
+    .select("id, tenant_id, phone")
+    .not("phone", "is", null)
+    .or(
+      `phone.ilike.%${last10.slice(0, 3)}%${last10.slice(3, 6)}%${last10.slice(6)}%,phone.ilike.%${last10}%`,
+    )
+    .limit(25);
+
+  if (error) return json({ error: "Database error" }, 500);
+
+  const matches = (candidates || []).filter((client: any) =>
+    (client.phone || "").replace(/\D/g, "").slice(-10) === last10
+  );
+  const matched = matches[0] ?? null;
+
+  await db.from("crm_inbound_sms_logs").insert({
+    tenant_id: matched?.tenant_id ?? null,
+    client_id: matched?.id ?? null,
+    from_phone: normalized.normalized,
+    to_phone: toNumber,
+    message_body: messageBody,
+    ringcentral_message_id: messageId,
+    received_at: new Date().toISOString(),
+    is_read: false,
+  });
+
+  if (!matched) return json({ received: true, clientFound: false });
+
+  await db.from("crm_activity_events").insert({
+    tenant_id: matched.tenant_id,
+    client_id: matched.id,
+    event_type: "sms_received",
+    created_by_profile_id: null,
+    metadata: { source: "webhook", ringcentral_message_id: messageId },
+  });
+
+  let removeApplied = false;
+  if (isRemoveMessage(messageBody)) {
+    const result = await applyRemove(supabaseUrl, serviceRoleKey, {
+      tenantId: matched.tenant_id,
+      clientId: matched.id,
+      source: "ringcentral_inbound",
+      correlationId: messageId,
+    });
+    if (!result.ok) {
+      console.error("REMOVE failed:", result.error_code, result.message);
+      return json({ error: "REMOVE processing failed" }, 500);
+    }
+    removeApplied = true;
+  }
+
+  const { data: active } = await db
+    .from("crm_campaign_enrollments")
+    .select("id")
+    .eq("tenant_id", matched.tenant_id)
+    .eq("client_id", matched.id)
+    .eq("status", "active");
+
+  if (active?.length) {
+    await db
+      .from("crm_campaign_enrollments")
+      .update({
+        status: "responded",
+        paused_at: new Date().toISOString(),
+        pause_reason: "sms_response",
+        updated_at: new Date().toISOString(),
+      })
+      .in("id", active.map((row: any) => row.id));
+  }
+
+  return json({
+    received: true,
+    clientFound: true,
+    removeApplied,
+    enrollmentsPaused: active?.length ?? 0,
+  });
+}
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  // Parse URL to check for inbound action
   const url = new URL(req.url);
-  const action = url.searchParams.get('action');
-
-  // Handle inbound SMS webhook (no auth required)
-  if (action === 'inbound') {
-    console.log('Processing inbound SMS webhook');
-    return handleInboundSms(req);
+  if (url.searchParams.get("action") === "inbound") {
+    try {
+      return await handleInbound(req);
+    } catch (error) {
+      console.error("Inbound SMS error:", error);
+      return json({ error: "Inbound processing failed" }, 500);
+    }
   }
 
-  try {
-    // Verify authentication for all other actions
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const userDb = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const token = authHeader.slice("Bearer ".length);
+  const { data: claimsData, error: claimsError } = await userDb.auth.getClaims(token);
+  if (claimsError || !claimsData?.claims?.sub) return json({ error: "Invalid token" }, 401);
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claims, error: claimsError } = await supabase.auth.getClaims(token);
-    
-    if (claimsError || !claims?.claims) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  const body = await req.json();
+  const bulkSmsId = body.bulkSmsId;
+  if (!bulkSmsId) return json({ error: "Missing bulkSmsId" }, 400);
 
-    // Parse request body
-    const { bulkSmsId } = await req.json();
+  const db = createClient(supabaseUrl, serviceRoleKey);
+  const { data: log } = await db
+    .from("crm_bulk_sms_logs")
+    .select("tenant_id")
+    .eq("id", bulkSmsId)
+    .maybeSingle();
+  if (!log) return json({ error: "Bulk SMS job not found" }, 404);
 
-    if (!bulkSmsId) {
-      return new Response(
-        JSON.stringify({ error: 'Missing bulkSmsId parameter' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  const { data: membership } = await db
+    .from("tenant_memberships")
+    .select("tenant_id")
+    .eq("profile_id", claimsData.claims.sub)
+    .eq("tenant_id", log.tenant_id)
+    .maybeSingle();
+  if (!membership) return json({ error: "Forbidden" }, 403);
 
-    // Ownership check: the caller must belong to the tenant that owns this bulk job.
-    const userId = (claims.claims as { sub?: string }).sub;
-    const serviceSupabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-    const { data: bulkLog } = await serviceSupabase
-      .from('crm_bulk_sms_logs')
-      .select('tenant_id')
-      .eq('id', bulkSmsId)
-      .maybeSingle();
-    if (!bulkLog) {
-      return new Response(
-        JSON.stringify({ error: 'Bulk SMS job not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    const { data: membership } = await serviceSupabase
-      .from('tenant_memberships')
-      .select('tenant_id')
-      .eq('profile_id', userId)
-      .eq('tenant_id', bulkLog.tenant_id)
-      .maybeSingle();
-    if (!membership) {
-      console.error(`Cross-tenant bulk SMS attempt by ${userId} on job ${bulkSmsId}`);
-      return new Response(
-        JSON.stringify({ error: 'Forbidden' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`Received bulk SMS request for: ${bulkSmsId}`);
-
-    // Start background processing
-    EdgeRuntime.waitUntil(processBulkSms(bulkSmsId));
-
-
-    // Return immediate response
-    return new Response(
-      JSON.stringify({ success: true, message: 'SMS processing started' }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('Error in ringcentral-sms function:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
+  EdgeRuntime.waitUntil(processBulkSms(bulkSmsId));
+  return json({ success: true, bulkSmsId });
 });

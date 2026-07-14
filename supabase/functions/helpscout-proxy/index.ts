@@ -1,9 +1,10 @@
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  checkSuppression,
+  type MessageClass,
+} from "../_shared/suppression.ts";
 
-// Declare EdgeRuntime for background tasks
-declare const EdgeRuntime: {
-  waitUntil: (promise: Promise<unknown>) => void;
-} | undefined;
+declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,1177 +12,654 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// HelpScout API base URL
 const HELPSCOUT_API_BASE = "https://api.helpscout.net/v2";
+let cachedToken: { token: string; expiresAt: number } | null = null;
 
-interface HelpScoutTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
-// Cached HelpScout access token (module-scope; survives warm invocations)
-let cachedToken: { token: string; expiresAt: number } | null = null;
-let inflightTokenRequest: Promise<string> | null = null;
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
 
-// Get HelpScout access token using client credentials (cached with 60s safety margin)
 async function getAccessToken(): Promise<string> {
-  const now = Date.now();
-  if (cachedToken && now < cachedToken.expiresAt - 60_000) {
+  if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
     return cachedToken.token;
   }
-  if (inflightTokenRequest) {
-    return inflightTokenRequest;
+  const appId = Deno.env.get("HELPSCOUT_APP_ID");
+  const appSecret = Deno.env.get("HELPSCOUT_APP_SECRET");
+  if (!appId || !appSecret) throw new Error("HelpScout credentials not configured");
+
+  const response = await fetch(`${HELPSCOUT_API_BASE}/oauth2/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: appId,
+      client_secret: appSecret,
+    }),
+  });
+  if (!response.ok) {
+    await response.text();
+    throw new Error(`HelpScout authentication failed: ${response.status}`);
   }
-
-  inflightTokenRequest = (async () => {
-    const appId = Deno.env.get("HELPSCOUT_APP_ID");
-    const appSecret = Deno.env.get("HELPSCOUT_APP_SECRET");
-
-    if (!appId || !appSecret) {
-      throw new Error("HelpScout credentials not configured");
-    }
-
-    const response = await fetch("https://api.helpscout.net/v2/oauth2/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: appId,
-        client_secret: appSecret,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("HelpScout token error:", error);
-      throw new Error(`Failed to get HelpScout token: ${response.status}`);
-    }
-
-    const data: HelpScoutTokenResponse = await response.json();
-    cachedToken = {
-      token: data.access_token,
-      expiresAt: Date.now() + data.expires_in * 1000,
-    };
-    return data.access_token;
-  })();
-
-  try {
-    return await inflightTokenRequest;
-  } finally {
-    inflightTokenRequest = null;
-  }
+  const data = await response.json();
+  cachedToken = {
+    token: data.access_token,
+    expiresAt: Date.now() + Number(data.expires_in || 3600) * 1000,
+  };
+  return cachedToken.token;
 }
 
-// Make authenticated request to HelpScout API
-async function helpscoutRequest(
+async function hsRequest(
   method: string,
   endpoint: string,
-  body?: unknown
+  body?: unknown,
 ): Promise<Response> {
   const token = await getAccessToken();
-
-  const options: RequestInit = {
+  return fetch(`${HELPSCOUT_API_BASE}${endpoint}`, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-  };
-
-  if (body && (method === "POST" || method === "PUT" || method === "PATCH")) {
-    options.body = JSON.stringify(body);
-  }
-
-  const response = await fetch(`${HELPSCOUT_API_BASE}${endpoint}`, options);
-  return response;
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
 }
 
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
+async function authenticate(req: Request): Promise<{
+  userId: string;
+  tenantId: string;
+  serviceDb: ReturnType<typeof createClient>;
+}> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) throw new Error("UNAUTHORIZED");
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const userDb = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data, error } = await userDb.auth.getClaims(
+    authHeader.slice("Bearer ".length),
+  );
+  const userId = data?.claims?.sub;
+  if (error || !userId) throw new Error("UNAUTHORIZED");
+
+  const serviceDb = createClient(supabaseUrl, serviceKey);
+  const { data: membership, error: membershipError } = await serviceDb
+    .from("tenant_memberships")
+    .select("tenant_id")
+    .eq("profile_id", userId)
+    .maybeSingle();
+  if (membershipError || !membership) throw new Error("FORBIDDEN");
+
+  return { userId, tenantId: membership.tenant_id, serviceDb };
 }
 
-function maskEmail(email: string) {
-  const normalized = normalizeEmail(email);
-  const [local, domain] = normalized.split("@");
-  if (!local || !domain) return "(invalid-email)";
-
-  const first = local[0] ?? "*";
-  const last = local.length > 1 ? local[local.length - 1] : "*";
-  return `${first}***${last}@${domain}`;
+async function resolveClientByEmail(
+  db: ReturnType<typeof createClient>,
+  tenantId: string,
+  email: string,
+): Promise<{ id: string; tenant_id: string; email: string | null } | null> {
+  const { data, error } = await db.rpc("find_clients_by_emails_insensitive", {
+    p_tenant_id: tenantId,
+    p_emails: [normalizeEmail(email)],
+  });
+  if (error) throw new Error(`Client lookup failed: ${error.message}`);
+  const row = (data || [])[0];
+  if (!row) return null;
+  return { id: row.id, tenant_id: tenantId, email: row.email ?? email };
 }
 
-// Handle bulk sending of emails
-async function handleBulkSend(
-  bulkSendId: string,
-  supabase: SupabaseClient,
-  mailboxId: string
+async function enforcePolicy(
+  clientId: string,
+  tenantId: string,
+  messageClass: MessageClass,
+  workflow: string,
+  correlationId: string | null,
 ): Promise<void> {
-  console.log(`Starting bulk send for job: ${bulkSendId}`);
-
-  try {
-    // Fetch bulk send log with recipient_type
-    const { data: bulkSendLog, error: logError } = await supabase
-      .from("crm_bulk_send_logs")
-      .select("*, recipient_type")
-      .eq("id", bulkSendId)
-      .single();
-
-    if (logError || !bulkSendLog) {
-      console.error("Failed to fetch bulk send log:", logError);
-      return;
-    }
-
-    // Update status to 'sending' and stamp initial heartbeat
-    await supabase
-      .from("crm_bulk_send_logs")
-      .update({ status: "sending", heartbeat_at: new Date().toISOString() })
-      .eq("id", bulkSendId);
-
-
-    const recipientType = bulkSendLog.recipient_type || 'client';
-    console.log(`Processing bulk send for recipient type: ${recipientType}`);
-
-    // Fetch recipients based on type
-    interface RecipientData {
-      id: string;
-      email: string | null;
-      firstName: string;
-      lastName: string;
-      recipientTable: string;
-      clientId?: string;
-    }
-
-    let recipientsToProcess: RecipientData[] = [];
-
-    if (recipientType === 'staff') {
-      // Fetch staff recipients
-      const { data: staffRecipients, error: staffRecipientsError } = await supabase
-        .from("crm_bulk_send_staff_recipients")
-        .select(`
-          id,
-          staff_id,
-          status,
-          staff!inner (
-            id,
-            prov_name_f,
-            prov_name_l,
-            profiles!inner (
-              email
-            )
-          )
-        `)
-        .eq("bulk_send_id", bulkSendId)
-        .eq("status", "pending");
-
-      if (staffRecipientsError) {
-        console.error("Failed to fetch staff recipients:", staffRecipientsError);
-        await supabase
-          .from("crm_bulk_send_logs")
-          .update({ status: "failed" })
-          .eq("id", bulkSendId);
-        return;
-      }
-
-      recipientsToProcess = (staffRecipients || []).map(r => {
-        const staffData = r.staff as unknown as {
-          id: string;
-          prov_name_f: string | null;
-          prov_name_l: string | null;
-          profiles: { email: string | null } | null;
-        };
-        return {
-          id: r.id,
-          email: staffData?.profiles?.email ?? null,
-          firstName: staffData?.prov_name_f || '',
-          lastName: staffData?.prov_name_l || '',
-          recipientTable: 'crm_bulk_send_staff_recipients',
-        };
-      });
-    } else {
-      // Fetch client recipients (existing logic)
-      const { data: clientRecipients, error: recipientsError } = await supabase
-        .from("crm_bulk_send_recipients")
-        .select(`
-          id,
-          client_id,
-          status,
-          clients!inner (
-            id,
-            email,
-            pat_name_f,
-            pat_name_l,
-            pat_name_preferred
-          )
-        `)
-        .eq("bulk_send_id", bulkSendId)
-        .eq("status", "pending");
-
-      if (recipientsError) {
-        console.error("Failed to fetch recipients:", recipientsError);
-        await supabase
-          .from("crm_bulk_send_logs")
-          .update({ status: "failed" })
-          .eq("id", bulkSendId);
-        return;
-      }
-
-      recipientsToProcess = (clientRecipients || []).map(r => {
-        const clientData = r.clients as unknown as {
-          id: string;
-          email: string | null;
-          pat_name_f: string | null;
-          pat_name_l: string | null;
-          pat_name_preferred: string | null;
-        };
-        return {
-          id: r.id,
-          email: clientData?.email ?? null,
-          firstName: clientData?.pat_name_preferred || clientData?.pat_name_f || '',
-          lastName: clientData?.pat_name_l || '',
-          recipientTable: 'crm_bulk_send_recipients',
-          clientId: clientData?.id,
-        };
-      });
-    }
-
-    console.log(`Processing ${recipientsToProcess.length} recipients`);
-
-    let sentCount = 0;
-    let failedCount = 0;
-
-    // Process each recipient
-    let processedSinceHeartbeat = 0;
-    for (const recipient of recipientsToProcess) {
-      // Heartbeat every 5 recipients so a stalled/crashed run can be reconciled.
-      if (processedSinceHeartbeat >= 5) {
-        await supabase
-          .from("crm_bulk_send_logs")
-          .update({ heartbeat_at: new Date().toISOString(), sent_count: sentCount, failed_count: failedCount })
-          .eq("id", bulkSendId);
-        processedSinceHeartbeat = 0;
-      }
-      processedSinceHeartbeat++;
-
-      // Skip if no email
-      if (!recipient.email) {
-        console.log(`Skipping recipient ${recipient.id}: no email`);
-        await supabase
-          .from(recipient.recipientTable)
-          .update({
-            status: "failed",
-            error_message: "No email address",
-            sent_at: new Date().toISOString(),
-          })
-          .eq("id", recipient.id);
-        failedCount++;
-        continue;
-      }
-
-      try {
-        // Single-step: Create conversation with a reply thread (triggers SMTP send immediately)
-        // No fake "customer" thread - this prevents Gmail from quoting placeholder text
-        const conversationBody = {
-          subject: bulkSendLog.subject,
-          customer: {
-            email: recipient.email,
-            firstName: recipient.firstName,
-            lastName: recipient.lastName,
-          },
-          mailboxId: parseInt(mailboxId || "0"),
-          type: "email",
-          status: "pending",
-          threads: [
-            {
-              type: "reply", // Staff-initiated outbound - triggers SMTP delivery
-              customer: {
-                email: recipient.email,
-              },
-              text: bulkSendLog.body_html, // Actual email content
-            },
-          ],
-        };
-
-        const createResponse = await helpscoutRequest(
-          "POST",
-          "/conversations",
-          conversationBody
-        );
-
-        if (!createResponse.ok && createResponse.status !== 201) {
-          const errorText = await createResponse.text();
-          console.error(`Failed to create/send conversation for ${maskEmail(recipient.email)}:`, errorText);
-          await supabase
-            .from(recipient.recipientTable)
-            .update({
-              status: "failed",
-              error_message: `Create conversation failed: ${createResponse.status}`,
-              sent_at: new Date().toISOString(),
-            })
-            .eq("id", recipient.id);
-          failedCount++;
-          continue;
-        }
-
-        // Extract conversation ID from Location header (format: /v2/conversations/123456)
-        const locationHeader = createResponse.headers.get("Location") || createResponse.headers.get("Resource-ID");
-        const conversationId = locationHeader?.split("/").pop();
-
-        console.log(`Created and sent conversation ${conversationId || '(no id)'} to ${maskEmail(recipient.email)}`);
-        
-        await supabase
-          .from(recipient.recipientTable)
-          .update({
-            status: "sent",
-            sent_at: new Date().toISOString(),
-          })
-          .eq("id", recipient.id);
-        sentCount++;
-
-        // Log activity event for client recipients
-        if (recipient.clientId) {
-          await supabase
-            .from('crm_activity_events')
-            .insert({
-              tenant_id: bulkSendLog.tenant_id,
-              client_id: recipient.clientId,
-              event_type: 'email_sent',
-              created_by_profile_id: null,
-              metadata: {
-                source: 'bulk',
-                subject: bulkSendLog.subject,
-                helpscout_conversation_id: conversationId || null,
-              },
-            });
-        }
-
-        // Rate limiting: wait 150ms between requests
-        await new Promise((resolve) => setTimeout(resolve, 150));
-      } catch (error) {
-        console.error(`Error sending to ${maskEmail(recipient.email)}:`, error);
-        await supabase
-          .from(recipient.recipientTable)
-          .update({
-            status: "failed",
-            error_message: error instanceof Error ? error.message : "Unknown error",
-            sent_at: new Date().toISOString(),
-          })
-          .eq("id", recipient.id);
-        failedCount++;
-      }
-    }
-
-    // Update final counts and status
-    const finalStatus = failedCount === recipientsToProcess.length ? "failed" : "completed";
-    await supabase
-      .from("crm_bulk_send_logs")
-      .update({
-        status: finalStatus,
-        sent_count: sentCount,
-        failed_count: failedCount,
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", bulkSendId);
-
-    console.log(`Bulk send complete: ${sentCount} sent, ${failedCount} failed`);
-  } catch (error) {
-    console.error("Bulk send error:", error);
-    await supabase
-      .from("crm_bulk_send_logs")
-      .update({ status: "failed" })
-      .eq("id", bulkSendId);
+  const decision = await checkSuppression(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    {
+      tenantId,
+      clientId,
+      channel: "email",
+      messageClass,
+      workflow,
+      correlationId,
+    },
+  );
+  if (!decision.allowed) {
+    throw new Error(`SUPPRESSED:${decision.reason_code}`);
   }
+}
+
+async function logSent(
+  db: ReturnType<typeof createClient>,
+  tenantId: string,
+  clientId: string,
+  userId: string | null,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await db.from("crm_activity_events").insert({
+    tenant_id: tenantId,
+    client_id: clientId,
+    event_type: "email_sent",
+    created_by_profile_id: userId,
+    metadata,
+  });
+  if (error) console.error("Failed to log email_sent:", error.message);
+}
+
+async function processBulkSend(bulkSendId: string): Promise<void> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const db = createClient(supabaseUrl, serviceKey);
+  const mailboxId = Deno.env.get("HELPSCOUT_MAILBOX_ID");
+  if (!mailboxId) throw new Error("HELPSCOUT_MAILBOX_ID not configured");
+
+  const { data: log, error: logError } = await db
+    .from("crm_bulk_send_logs")
+    .select("*")
+    .eq("id", bulkSendId)
+    .single();
+  if (logError || !log) throw new Error("Bulk send log not found");
+
+  await db
+    .from("crm_bulk_send_logs")
+    .update({ status: "sending", heartbeat_at: new Date().toISOString() })
+    .eq("id", bulkSendId);
+
+  const recipientType = log.recipient_type || "client";
+  let rows: Array<{
+    recipientId: string;
+    clientId: string | null;
+    email: string | null;
+    firstName: string;
+    lastName: string;
+  }> = [];
+  let table: string;
+
+  if (recipientType === "staff") {
+    table = "crm_bulk_send_staff_recipients";
+    const { data, error } = await db
+      .from(table)
+      .select(`
+        id,
+        staff:staff_id (
+          id,
+          prov_name_f,
+          prov_name_l,
+          profiles!inner (email)
+        )
+      `)
+      .eq("bulk_send_id", bulkSendId)
+      .eq("status", "pending");
+    if (error) throw new Error(error.message);
+    rows = (data || []).map((row: any) => ({
+      recipientId: row.id,
+      clientId: null,
+      email: row.staff?.profiles?.email ?? null,
+      firstName: row.staff?.prov_name_f ?? "",
+      lastName: row.staff?.prov_name_l ?? "",
+    }));
+  } else {
+    table = "crm_bulk_send_recipients";
+    const { data, error } = await db
+      .from(table)
+      .select(`
+        id,
+        client:client_id (
+          id, email, pat_name_f, pat_name_l, pat_name_preferred
+        )
+      `)
+      .eq("bulk_send_id", bulkSendId)
+      .eq("status", "pending");
+    if (error) throw new Error(error.message);
+    rows = (data || []).map((row: any) => ({
+      recipientId: row.id,
+      clientId: row.client?.id ?? null,
+      email: row.client?.email ?? null,
+      firstName: row.client?.pat_name_preferred || row.client?.pat_name_f || "",
+      lastName: row.client?.pat_name_l || "",
+    }));
+  }
+
+  let sent = 0;
+  let failed = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    try {
+      if (!row.email) throw new Error("No email address");
+
+      if (row.clientId) {
+        await enforcePolicy(
+          row.clientId,
+          log.tenant_id,
+          "ordinary_promotional",
+          "helpscout_bulk_send",
+          bulkSendId,
+        );
+      }
+
+      const response = await hsRequest("POST", "/conversations", {
+        subject: log.subject,
+        customer: {
+          email: row.email,
+          firstName: row.firstName,
+          lastName: row.lastName,
+        },
+        mailboxId: Number(mailboxId),
+        type: "email",
+        status: "pending",
+        threads: [{
+          type: "reply",
+          customer: { email: row.email },
+          text: log.body_html,
+        }],
+      });
+      if (!response.ok && response.status !== 201) {
+        await response.text();
+        throw new Error(`HelpScout send failed: ${response.status}`);
+      }
+      const location =
+        response.headers.get("Location") || response.headers.get("Resource-ID");
+      const conversationId = location?.split("/").pop() || null;
+
+      await db
+        .from(table)
+        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .eq("id", row.recipientId);
+      sent++;
+
+      if (row.clientId) {
+        await logSent(db, log.tenant_id, row.clientId, null, {
+          source: "bulk",
+          bulk_send_id: bulkSendId,
+          conversation_id: conversationId,
+          subject: log.subject,
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      await db
+        .from(table)
+        .update({
+          status: "failed",
+          error_message: message,
+          sent_at: new Date().toISOString(),
+        })
+        .eq("id", row.recipientId);
+      failed++;
+    }
+
+    if ((i + 1) % 5 === 0 || i === rows.length - 1) {
+      await db
+        .from("crm_bulk_send_logs")
+        .update({
+          sent_count: sent,
+          failed_count: failed,
+          heartbeat_at: new Date().toISOString(),
+        })
+        .eq("id", bulkSendId);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+
+  await db
+    .from("crm_bulk_send_logs")
+    .update({
+      status: failed === rows.length && rows.length > 0 ? "failed" : "completed",
+      sent_count: sent,
+      failed_count: failed,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", bulkSendId);
+}
+
+async function verifyHelpScoutWebhook(
+  rawBody: string,
+  signature: string,
+  secret: string,
+): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"],
+  );
+  const signed = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(rawBody),
+  );
+  const expected = btoa(String.fromCharCode(...new Uint8Array(signed)));
+  return expected === signature;
+}
+
+async function handleWebhook(req: Request): Promise<Response> {
+  const secret = Deno.env.get("HELPSCOUT_WEBHOOK_SECRET");
+  if (!secret) return json({ error: "Webhook secret not configured" }, 500);
+
+  const signature = req.headers.get("X-HelpScout-Signature");
+  if (!signature) return json({ error: "Missing signature" }, 401);
+
+  const rawBody = await req.text();
+  if (!(await verifyHelpScoutWebhook(rawBody, signature, secret))) {
+    return json({ error: "Invalid signature" }, 401);
+  }
+
+  const eventType = req.headers.get("X-HelpScout-Event") || "";
+  if (!eventType.includes("customer.reply")) {
+    return json({ received: true, ignored: true });
+  }
+
+  const payload = JSON.parse(rawBody);
+  const email =
+    payload.customer?.email ||
+    payload.primaryCustomer?.email ||
+    payload._embedded?.customer?.email ||
+    payload.data?.customer?.email ||
+    payload.data?.primaryCustomer?.email;
+  if (!email) return json({ received: true, noEmail: true });
+
+  const db = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+  const { data: clients, error } = await db
+    .from("clients")
+    .select("id, tenant_id")
+    .ilike("email", normalizeEmail(email));
+  if (error) return json({ error: "Database error" }, 500);
+  if (!clients?.length) return json({ received: true, noClient: true });
+
+  let responded = 0;
+  for (const client of clients) {
+    await db.from("crm_activity_events").insert({
+      tenant_id: client.tenant_id,
+      client_id: client.id,
+      event_type: "email_received",
+      created_by_profile_id: null,
+      metadata: { source: "webhook", helpscout_event: eventType },
+    });
+
+    const { data: active } = await db
+      .from("crm_campaign_enrollments")
+      .select("id")
+      .eq("tenant_id", client.tenant_id)
+      .eq("client_id", client.id)
+      .eq("status", "active");
+    if (active?.length) {
+      await db
+        .from("crm_campaign_enrollments")
+        .update({
+          status: "responded",
+          paused_at: new Date().toISOString(),
+          pause_reason: "email_response",
+          updated_at: new Date().toISOString(),
+        })
+        .in("id", active.map((row: any) => row.id));
+      responded += active.length;
+    }
+  }
+
+  return json({ received: true, enrollmentsPaused: responded });
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  // Parse request URL early to check for webhook action
   const url = new URL(req.url);
   const action = url.searchParams.get("action");
-
-  // Handle webhook action separately (no auth required)
   if (action === "webhook") {
-    console.log("Processing HelpScout webhook");
-    return handleWebhook(req);
+    try {
+      return await handleWebhook(req);
+    } catch (error) {
+      console.error("HelpScout webhook failed:", error);
+      return json({ error: "Webhook processing failed" }, 500);
+    }
   }
 
+  let auth: Awaited<ReturnType<typeof authenticate>>;
   try {
-    // Validate JWT for all other actions
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+    auth = await authenticate(req);
+  } catch (error) {
+    return json(
+      { error: error instanceof Error ? error.message : "Unauthorized" },
+      error instanceof Error && error.message === "FORBIDDEN" ? 403 : 401,
     );
+  }
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } =
-      await supabase.auth.getClaims(token);
+  const mailboxId = Deno.env.get("HELPSCOUT_MAILBOX_ID");
 
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const userId = claimsData.claims.sub;
-    console.log("Authenticated user:", userId);
-
-    // Service client used for cross-tenant ownership checks
-    const serviceSupabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-    async function callerBelongsToTenant(tenantId: string): Promise<boolean> {
-      const { data } = await serviceSupabase
-        .from("tenant_memberships")
-        .select("tenant_id")
-        .eq("profile_id", userId)
-        .eq("tenant_id", tenantId)
-        .maybeSingle();
-      return !!data;
-    }
-
-    const mailboxId = Deno.env.get("HELPSCOUT_MAILBOX_ID");
-
-    let result: unknown;
-
-
+  try {
     switch (action) {
       case "list-conversations": {
+        const page = Math.max(Number(url.searchParams.get("page") || 1), 1);
         const status = url.searchParams.get("status") || "all";
-        const direction = url.searchParams.get("direction") || "all";
-        const requestedPage = parseInt(url.searchParams.get("page") || "1", 10);
-        
-        // Get user's tenant_id
-        const { data: membership, error: membershipError } = await supabase
-          .from("tenant_memberships")
-          .select("tenant_id")
-          .eq("profile_id", userId)
-          .maybeSingle();
-        
-        if (membershipError || !membership) {
-          console.error("Membership lookup error:", membershipError);
-          throw new Error("Could not determine tenant");
+        let endpoint = `/conversations?mailbox=${mailboxId}&page=${page}&embed=threads`;
+        if (status !== "all") endpoint += `&status=${encodeURIComponent(status)}`;
+        const response = await hsRequest("GET", endpoint);
+        if (!response.ok) {
+          await response.text();
+          throw new Error(`HelpScout list failed: ${response.status}`);
         }
-        
-        // Thread type interface
-        interface HelpScoutThread {
-          type: string;
-          createdAt?: string;
-        }
-        
-        interface HelpScoutConversationRaw {
-          id?: number;
-          primaryCustomer?: { email?: string };
-          source?: { via?: string };
-          status?: string;
-          _embedded?: {
-            threads?: HelpScoutThread[];
-          };
-        }
-        
-        interface EnrichedConversation extends Omit<HelpScoutConversationRaw, '_embedded'> {
-          client_id?: string;
-          lastMessageBy: 'customer' | 'staff';
-          needsReply: boolean;
-        }
-        
-        // Configuration for multi-page aggregation
-        const targetCount = 25; // Target conversations per virtual page
-        const maxHelpScoutPages = 10; // Safety limit to prevent infinite loops
-        const allMatchingConversations: EnrichedConversation[] = [];
-        let hsPage = 1;
-        let totalHelpScoutPages = 1;
-        let totalHelpScoutElements = 0;
-        let pagesScanned = 0;
-
-        // Cache of resolved email -> client_id across pages (avoids re-calling the
-        // client lookup RPC for emails we've already seen on earlier pages).
-        const emailToClientId = new Map<string, string>();
-        const resolvedEmails = new Set<string>(); // includes negative lookups
-        const pendingConversationsByPage: HelpScoutConversationRaw[][] = [];
-
-        console.log(`Starting multi-page scan for direction=${direction}, status=${status}`);
-
-        while (allMatchingConversations.length < targetCount && hsPage <= maxHelpScoutPages) {
-          let endpoint = `/conversations?mailbox=${mailboxId}&page=${hsPage}&embed=threads`;
-          if (status !== "all") {
-            endpoint += `&status=${status}`;
-          }
-
-          console.log(`Fetching HelpScout page ${hsPage}: ${endpoint}`);
-          const response = await helpscoutRequest("GET", endpoint);
-
-          if (!response.ok) {
-            const error = await response.text();
-            console.error("HelpScout list error:", error);
-            throw new Error(`HelpScout API error: ${response.status}`);
-          }
-
-          const hsData = await response.json();
-          const conversations: HelpScoutConversationRaw[] = hsData._embedded?.conversations || [];
-          pagesScanned++;
-
-          if (hsPage === 1) {
-            totalHelpScoutPages = hsData.page?.totalPages || 1;
-            totalHelpScoutElements = hsData.page?.totalElements || 0;
-          }
-
-          console.log(`Page ${hsPage}: got ${conversations.length} conversations`);
-
-          if (conversations.length === 0) {
-            break;
-          }
-
-          // Only look up emails we haven't resolved yet
-          const pageEmails = Array.from(
-            new Set(
-              conversations
-                .map((c) => {
-                  const raw = c.primaryCustomer?.email;
-                  return raw ? normalizeEmail(raw) : null;
-                })
-                .filter((e): e is string => Boolean(e))
-            )
-          );
-          const unresolvedEmails = pageEmails.filter((e) => !resolvedEmails.has(e));
-
-          if (unresolvedEmails.length > 0) {
-            const { data: clients, error: clientsError } = await supabase
-              .rpc("find_clients_by_emails_insensitive", {
-                p_tenant_id: membership.tenant_id,
-                p_emails: unresolvedEmails,
-              });
-
-            if (clientsError) {
-              console.error("Clients lookup error:", clientsError);
-              throw new Error("Could not fetch clients");
-            }
-
-            for (const c of (clients || []) as { id: string; email: string | null }[]) {
-              if (c.email) {
-                emailToClientId.set(normalizeEmail(c.email), c.id);
-              }
-            }
-            // Mark all queried emails resolved (positive and negative) to avoid re-querying
-            for (const e of unresolvedEmails) resolvedEmails.add(e);
-          }
-
-          console.log(`Page ${hsPage}: ${pageEmails.length} unique emails, ${unresolvedEmails.length} newly resolved, ${emailToClientId.size} cached matches total`);
-
-          for (const c of conversations) {
-            const email = c.primaryCustomer?.email ? normalizeEmail(c.primaryCustomer.email) : undefined;
-
-            if (!email || !emailToClientId.has(email)) {
-              continue;
-            }
-
-            const threads = c._embedded?.threads || [];
-            const lastRelevantThread = threads.find((t) =>
-              t.type === 'customer' || t.type === 'reply' || t.type === 'message'
-            );
-
-            let lastMessageBy: 'customer' | 'staff' = 'customer';
-            if (lastRelevantThread) {
-              lastMessageBy = lastRelevantThread.type === 'customer' ? 'customer' : 'staff';
-            }
-
-            const needsReply = c.status === 'active' && lastMessageBy === 'customer';
-
-            if (direction === "received" || direction === "inbox") {
-              if (lastMessageBy !== "customer") continue;
-            } else if (direction === "sent") {
-              if (lastMessageBy !== "staff") continue;
-            }
-
-            const { _embedded: _, ...conversationWithoutEmbedded } = c;
-            allMatchingConversations.push({
-              ...conversationWithoutEmbedded,
-              client_id: emailToClientId.get(email),
-              lastMessageBy,
-              needsReply,
-            });
-          }
-
-          console.log(`After page ${hsPage}: ${allMatchingConversations.length} matching conversations accumulated`);
-
-          if (hsPage >= totalHelpScoutPages) {
-            console.log(`Reached last HelpScout page (${hsPage}/${totalHelpScoutPages})`);
-            break;
-          }
-
-          hsPage++;
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-
-        console.log(`Multi-page scan complete: scanned ${pagesScanned} pages, found ${allMatchingConversations.length} matching conversations`);
-        
-        // Virtual pagination: slice results based on requested page
-        const pageSize = 25;
-        const startIndex = (requestedPage - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
-        const pageConversations = allMatchingConversations.slice(startIndex, endIndex);
-        const totalMatchingPages = Math.ceil(allMatchingConversations.length / pageSize) || 1;
-        
-        const debugInfo = {
-          hs_total_elements: totalHelpScoutElements,
-          hs_pages_scanned: pagesScanned,
-          total_matching_conversations: allMatchingConversations.length,
-          direction_filter: direction,
-          requested_page: requestedPage,
-        };
-
-        result = {
-          conversations: pageConversations,
-          page: {
-            size: pageSize,
-            totalElements: allMatchingConversations.length,
-            totalPages: totalMatchingPages,
-            number: requestedPage,
-          },
-          ...(pageConversations.length === 0 ? { _debug: debugInfo } : {}),
-        };
-        break;
+        const data = await response.json();
+        const conversations = data._embedded?.conversations || [];
+        const emails = Array.from(new Set(
+          conversations
+            .map((c: any) => c.primaryCustomer?.email)
+            .filter(Boolean)
+            .map(normalizeEmail),
+        ));
+        const { data: matched } = emails.length
+          ? await auth.serviceDb.rpc("find_clients_by_emails_insensitive", {
+              p_tenant_id: auth.tenantId,
+              p_emails: emails,
+            })
+          : { data: [] };
+        const byEmail = new Map(
+          (matched || []).map((row: any) => [normalizeEmail(row.email), row.id]),
+        );
+        const filtered = conversations
+          .filter((c: any) => byEmail.has(normalizeEmail(c.primaryCustomer?.email || "")))
+          .map((c: any) => ({
+            ...c,
+            client_id: byEmail.get(normalizeEmail(c.primaryCustomer.email)),
+          }));
+        return json({ ...data, _embedded: { conversations: filtered } });
       }
 
       case "get-conversation": {
-        const conversationId = url.searchParams.get("id");
-        if (!conversationId) {
-          return new Response(
-            JSON.stringify({ error: "Conversation ID required" }),
-            {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            }
-          );
-        }
-
-        const response = await helpscoutRequest(
-          "GET",
-          `/conversations/${conversationId}?embed=threads`
-        );
+        const id = url.searchParams.get("id");
+        if (!id) return json({ error: "Conversation ID required" }, 400);
+        const response = await hsRequest("GET", `/conversations/${id}?embed=threads`);
         if (!response.ok) {
-          const error = await response.text();
-          console.error("HelpScout get error:", error);
-          throw new Error(`HelpScout API error: ${response.status}`);
+          await response.text();
+          throw new Error(`HelpScout get failed: ${response.status}`);
         }
-        result = await response.json();
-        break;
+        const conversation = await response.json();
+        const customerEmail = conversation?.primaryCustomer?.email;
+        if (!customerEmail) {
+          return json({ error: "Conversation customer could not be resolved" }, 403);
+        }
+        const client = await resolveClientByEmail(
+          auth.serviceDb,
+          auth.tenantId,
+          customerEmail,
+        );
+        if (!client) {
+          return json({ error: "Conversation is not associated with a client in your tenant" }, 403);
+        }
+        return json({ ...conversation, client_id: client.id });
       }
 
       case "reply": {
-        const conversationId = url.searchParams.get("id");
-        if (!conversationId) {
-          return new Response(
-            JSON.stringify({ error: "Conversation ID required" }),
-            {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            }
-          );
-        }
-
+        const id = url.searchParams.get("id");
+        if (!id) return json({ error: "Conversation ID required" }, 400);
         const body = await req.json();
-        const { text, status, clientId } = body;
+        if (!body.text) return json({ error: "Text required" }, 400);
 
-        if (!text) {
-          return new Response(JSON.stringify({ error: "Text is required" }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        // Fetch conversation to get the primary customer ID (required by HelpScout API)
-        const convoResponse = await helpscoutRequest(
+        const conversationResponse = await hsRequest(
           "GET",
-          `/conversations/${conversationId}?fields=primaryCustomer`
+          `/conversations/${id}?fields=primaryCustomer`,
         );
-        if (!convoResponse.ok) {
-          const convoError = await convoResponse.text();
-          console.error("Failed to fetch conversation for customer ID:", convoError);
-          throw new Error(`Failed to fetch conversation: ${convoResponse.status}`);
+        if (!conversationResponse.ok) {
+          await conversationResponse.text();
+          throw new Error(`Conversation lookup failed: ${conversationResponse.status}`);
         }
-        const convoData = await convoResponse.json();
-        const primaryCustomerId = convoData?.primaryCustomer?.id;
-        if (!primaryCustomerId) {
-          throw new Error("Could not resolve primary customer for this conversation");
+        const conversation = await conversationResponse.json();
+        const customer = conversation.primaryCustomer;
+        if (!customer?.id || !customer?.email) {
+          throw new Error("Could not resolve primary customer");
         }
-
-        const replyBody: Record<string, unknown> = {
-          customer: { id: primaryCustomerId },
-          text,
-          status: status || "active",
-        };
-
-        const response = await helpscoutRequest(
-          "POST",
-          `/conversations/${conversationId}/reply`,
-          replyBody
+        const client = await resolveClientByEmail(
+          auth.serviceDb,
+          auth.tenantId,
+          customer.email,
         );
+        if (!client) return json({ error: "Client not found in tenant" }, 403);
 
+        const messageClass = (body.messageClass || "active_care") as MessageClass;
+        await enforcePolicy(client.id, auth.tenantId, messageClass, "helpscout_reply", id);
+
+        const response = await hsRequest("POST", `/conversations/${id}/reply`, {
+          customer: { id: customer.id },
+          text: body.text,
+          status: body.status || "active",
+        });
         if (!response.ok && response.status !== 201) {
-          const error = await response.text();
-          console.error("HelpScout reply error:", error);
-          throw new Error(`HelpScout API error: ${response.status}`);
+          await response.text();
+          throw new Error(`HelpScout reply failed: ${response.status}`);
         }
-
-        // Log activity event for manual reply if clientId provided
-        if (clientId) {
-          // Look up tenant from client and enforce caller belongs to it
-          const { data: clientData } = await serviceSupabase
-            .from('clients')
-            .select('tenant_id')
-            .eq('id', clientId)
-            .single();
-
-          if (clientData && await callerBelongsToTenant(clientData.tenant_id)) {
-            await serviceSupabase
-              .from('crm_activity_events')
-              .insert({
-                tenant_id: clientData.tenant_id,
-                client_id: clientId,
-                event_type: 'email_sent',
-                created_by_profile_id: userId,
-                metadata: {
-                  source: 'reply',
-                  helpscout_conversation_id: conversationId,
-                },
-              });
-          } else {
-            console.warn(`Reply activity log skipped - caller ${userId} is not in tenant for client ${clientId}`);
-          }
-        }
-
-
-        result = { success: true, conversationId };
-        break;
+        await logSent(auth.serviceDb, auth.tenantId, client.id, auth.userId, {
+          source: "reply",
+          conversation_id: id,
+          message_class: messageClass,
+        });
+        return json({ success: true, conversationId: id });
       }
 
       case "create-conversation": {
         const body = await req.json();
-        const { subject, customerEmail, customerName, text } = body;
-
-        if (!subject || !customerEmail || !text) {
-          return new Response(
-            JSON.stringify({
-              error: "Subject, customerEmail, and text are required",
-            }),
-            {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            }
-          );
+        if (!body.subject || !body.customerEmail || !body.text) {
+          return json({ error: "Subject, customerEmail, and text are required" }, 400);
         }
+        const client = await resolveClientByEmail(
+          auth.serviceDb,
+          auth.tenantId,
+          body.customerEmail,
+        );
+        if (!client) return json({ error: "Recipient is not a client in tenant" }, 403);
+        const messageClass =
+          (body.messageClass || "ordinary_promotional") as MessageClass;
+        await enforcePolicy(
+          client.id,
+          auth.tenantId,
+          messageClass,
+          "helpscout_create_conversation",
+          null,
+        );
 
-        // Resolve caller's tenant and require the target email to belong to a client
-        // in that tenant. Prevents authenticated users from sending to arbitrary emails.
-        const { data: callerMembership } = await serviceSupabase
-          .from("tenant_memberships")
-          .select("tenant_id")
-          .eq("profile_id", userId)
-          .maybeSingle();
-
-        if (!callerMembership) {
-          return new Response(
-            JSON.stringify({ error: "No tenant membership" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const normalizedTarget = normalizeEmail(customerEmail);
-        const { data: matchedClients, error: matchErr } = await serviceSupabase
-          .rpc("find_clients_by_emails_insensitive", {
-            p_tenant_id: callerMembership.tenant_id,
-            p_emails: [normalizedTarget],
-          });
-
-        if (matchErr) {
-          console.error("create-conversation client lookup error:", matchErr);
-          return new Response(
-            JSON.stringify({ error: "Client lookup failed" }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const matchedClient = (matchedClients || [])[0] as { id: string; email: string | null } | undefined;
-        if (!matchedClient) {
-          return new Response(
-            JSON.stringify({ error: "Recipient email is not a client in your tenant" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const conversationBody = {
-          subject,
+        const response = await hsRequest("POST", "/conversations", {
+          subject: body.subject,
           customer: {
-            email: customerEmail,
-            firstName: customerName?.split(" ")[0] || "",
-            lastName: customerName?.split(" ").slice(1).join(" ") || "",
+            email: body.customerEmail,
+            firstName: body.customerName?.split(" ")[0] || "",
+            lastName: body.customerName?.split(" ").slice(1).join(" ") || "",
           },
-          mailboxId: parseInt(mailboxId || "0"),
+          mailboxId: Number(mailboxId),
           type: "email",
-          status: "active",
-          threads: [
-            {
-              type: "customer",
-              customer: {
-                email: customerEmail,
-              },
-              text,
-            },
-          ],
-        };
-
-        const response = await helpscoutRequest(
-          "POST",
-          "/conversations",
-          conversationBody
-        );
-
+          status: "pending",
+          threads: [{
+            type: "reply",
+            customer: { email: body.customerEmail },
+            text: body.text,
+          }],
+        });
         if (!response.ok && response.status !== 201) {
-          const error = await response.text();
-          console.error("HelpScout create error:", error);
-          throw new Error(`HelpScout API error: ${response.status}`);
+          await response.text();
+          throw new Error(`HelpScout create failed: ${response.status}`);
         }
-
-        // Get the conversation ID from the Location header
-        const location = response.headers.get("Location");
-        const newConversationId = location?.split("/").pop();
-
-        // Log outbound email activity (mirrors reply action)
-        try {
-          await serviceSupabase.from("crm_activity_events").insert({
-            tenant_id: callerMembership.tenant_id,
-            client_id: matchedClient.id,
-            event_type: "email_sent",
-            created_by_profile_id: userId,
-            metadata: {
-              triggered_by: "create-conversation",
-              conversation_id: newConversationId,
-              subject,
-            },
-          });
-        } catch (logErr) {
-          console.error("Failed to log email_sent activity:", logErr);
-        }
-
-        result = { success: true, conversationId: newConversationId };
-        break;
-      }
-
-      case "search-customers": {
-        const email = url.searchParams.get("email");
-        if (!email) {
-          return new Response(JSON.stringify({ error: "Email is required" }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        const response = await helpscoutRequest(
-          "GET",
-          `/customers?email=${encodeURIComponent(email)}`
-        );
-        if (!response.ok) {
-          const error = await response.text();
-          console.error("HelpScout search error:", error);
-          throw new Error(`HelpScout API error: ${response.status}`);
-        }
-        result = await response.json();
-        break;
+        const location =
+          response.headers.get("Location") || response.headers.get("Resource-ID");
+        const conversationId = location?.split("/").pop() || null;
+        await logSent(auth.serviceDb, auth.tenantId, client.id, auth.userId, {
+          source: "create-conversation",
+          conversation_id: conversationId,
+          subject: body.subject,
+          message_class: messageClass,
+        });
+        return json({ success: true, conversationId });
       }
 
       case "bulk-send": {
         const bulkSendId = url.searchParams.get("bulkSendId");
-        if (!bulkSendId) {
-          return new Response(
-            JSON.stringify({ error: "bulkSendId is required" }),
-            {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            }
-          );
-        }
-
-        // Ownership check: caller must belong to the tenant that owns the job
-        const { data: bulkLog } = await serviceSupabase
+        if (!bulkSendId) return json({ error: "bulkSendId required" }, 400);
+        const { data: job } = await auth.serviceDb
           .from("crm_bulk_send_logs")
           .select("tenant_id")
           .eq("id", bulkSendId)
           .maybeSingle();
-        if (!bulkLog) {
-          return new Response(
-            JSON.stringify({ error: "Bulk send job not found" }),
-            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        if (!(await callerBelongsToTenant(bulkLog.tenant_id))) {
-          console.error(`Cross-tenant bulk-send attempt by ${userId} on job ${bulkSendId}`);
-          return new Response(
-            JSON.stringify({ error: "Forbidden" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+        if (!job) return json({ error: "Bulk send job not found" }, 404);
+        if (job.tenant_id !== auth.tenantId) return json({ error: "Forbidden" }, 403);
+        EdgeRuntime.waitUntil(processBulkSend(bulkSendId));
+        return json({ started: true, bulkSendId });
+      }
 
-
-        // Use background task for bulk sending
-        const bulkSendPromise = handleBulkSend(bulkSendId, supabase, mailboxId || "");
-        
-        // Use EdgeRuntime.waitUntil if available (Supabase edge functions)
-        if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) {
-          EdgeRuntime.waitUntil(bulkSendPromise);
-          result = { started: true, bulkSendId };
-        } else {
-          // Fallback: wait for completion (less ideal but works)
-          await bulkSendPromise;
-          result = { completed: true, bulkSendId };
+      case "search-customers": {
+        const email = url.searchParams.get("email");
+        if (!email) return json({ error: "Email required" }, 400);
+        const client = await resolveClientByEmail(
+          auth.serviceDb,
+          auth.tenantId,
+          email,
+        );
+        if (!client) return json({ error: "Email not in tenant" }, 403);
+        const response = await hsRequest(
+          "GET",
+          `/customers?email=${encodeURIComponent(email)}`,
+        );
+        if (!response.ok) {
+          await response.text();
+          throw new Error(`HelpScout search failed: ${response.status}`);
         }
-        break;
+        return json(await response.json());
       }
 
       case "test-connection": {
-        // Simple test to verify credentials work
-        const response = await helpscoutRequest("GET", `/mailboxes/${mailboxId}`);
+        const response = await hsRequest("GET", `/mailboxes/${mailboxId}`);
         if (!response.ok) {
+          await response.text();
           throw new Error("Connection test failed");
         }
         const mailbox = await response.json();
-        result = {
+        return json({
           connected: true,
           mailboxName: mailbox.name,
           mailboxEmail: mailbox.email,
-        };
-        break;
+        });
       }
 
       default:
-        return new Response(JSON.stringify({ error: "Invalid action" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json({ error: "Invalid action" }, 400);
     }
-
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (error) {
-    console.error("HelpScout proxy error:", error);
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Internal server error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    const message = error instanceof Error ? error.message : "Internal error";
+    if (message.startsWith("SUPPRESSED:")) {
+      return json({ error: "Communication suppressed", reason_code: message.slice(11) }, 403);
+    }
+    console.error("HelpScout proxy failed:", error);
+    return json({ error: message }, 500);
   }
 });
-
-// ============ WEBHOOK HANDLER ============
-// Separate handler for HelpScout webhooks (no auth required, validates signature)
-
-async function handleWebhook(req: Request): Promise<Response> {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const webhookSecret = Deno.env.get("HELPSCOUT_WEBHOOK_SECRET");
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-  try {
-    // Fail closed: webhook secret is required. Never accept unsigned webhooks.
-    if (!webhookSecret) {
-      console.error("HELPSCOUT_WEBHOOK_SECRET is not configured - refusing webhook");
-      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Get raw body for signature validation
-    const rawBody = await req.text();
-
-    const signature = req.headers.get("X-HelpScout-Signature");
-    if (!signature) {
-      console.error("Missing X-HelpScout-Signature header");
-      return new Response(JSON.stringify({ error: "Missing signature" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Compute HMAC-SHA1 of body using secret
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(webhookSecret),
-      { name: "HMAC", hash: "SHA-1" },
-      false,
-      ["sign"]
-    );
-    const signatureBytes = await crypto.subtle.sign(
-      "HMAC",
-      key,
-      encoder.encode(rawBody)
-    );
-    const computedSignature = btoa(
-      String.fromCharCode(...new Uint8Array(signatureBytes))
-    );
-
-    if (computedSignature !== signature) {
-      console.error("Invalid webhook signature");
-      return new Response(JSON.stringify({ error: "Invalid signature" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    console.log("Webhook signature validated successfully");
-
-
-    // Parse the body (we already read it as text, so parse manually)
-    const payload = JSON.parse(rawBody);
-    console.log("HelpScout webhook received:", JSON.stringify(payload).substring(0, 500));
-
-    // HelpScout sends the event type in the X-HelpScout-Event HTTP header, NOT in the JSON body.
-    // The body's "type" field is the conversation format (email, chat, phone) — a different concept.
-    const eventType = req.headers.get("X-HelpScout-Event");
-    console.log(`Webhook event type from header: ${eventType}`);
-    
-    // We only care about customer replies
-    if (!eventType?.includes("customer.reply")) {
-      console.log(`Ignoring event type: ${eventType}`);
-      return new Response(JSON.stringify({ received: true, ignored: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Extract customer email from payload
-    // HelpScout webhook structure varies, so we try multiple paths
-    const customerEmail = 
-      payload.customer?.email ||
-      payload.primaryCustomer?.email ||
-      payload._embedded?.customer?.email ||
-      payload.data?.customer?.email ||
-      payload.data?.primaryCustomer?.email;
-
-    if (!customerEmail) {
-      console.log("No customer email in webhook payload");
-      return new Response(JSON.stringify({ received: true, noEmail: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const normalizedEmail = customerEmail.trim().toLowerCase();
-    console.log(`Processing response from: ${normalizedEmail.substring(0, 3)}***`);
-
-    // Look up client by email (case-insensitive)
-    const { data: clients, error: clientError } = await supabase
-      .from("clients")
-      .select("id, tenant_id")
-      .ilike("email", normalizedEmail);
-
-    if (clientError) {
-      console.error("Error looking up client:", clientError);
-      return new Response(JSON.stringify({ error: "Database error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (!clients || clients.length === 0) {
-      console.log("No client found for email");
-      return new Response(JSON.stringify({ received: true, noClient: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Log email_received activity event for each matched client
-    for (const client of clients) {
-      await supabase
-        .from('crm_activity_events')
-        .insert({
-          tenant_id: client.tenant_id,
-          client_id: client.id,
-          event_type: 'email_received',
-          created_by_profile_id: null,
-          metadata: {
-            source: 'webhook',
-            helpscout_event: eventType,
-          },
-        });
-    }
-
-    // Check for active campaign enrollments for any matching client
-    let pausedCount = 0;
-    for (const client of clients) {
-      const { data: enrollments, error: enrollmentError } = await supabase
-        .from("crm_campaign_enrollments")
-        .select("id, campaign_id")
-        .eq("client_id", client.id)
-        .eq("status", "active");
-
-      if (enrollmentError) {
-        console.error("Error checking enrollments:", enrollmentError);
-        continue;
-      }
-
-      if (!enrollments || enrollments.length === 0) {
-        continue;
-      }
-
-      // Pause the enrollment(s)
-      for (const enrollment of enrollments) {
-        const { error: updateError } = await supabase
-          .from("crm_campaign_enrollments")
-          .update({
-            status: "responded",
-            paused_at: new Date().toISOString(),
-            pause_reason: "email_response",
-          })
-          .eq("id", enrollment.id);
-
-        if (updateError) {
-          console.error(`Failed to pause enrollment ${enrollment.id}:`, updateError);
-        } else {
-          console.log(`Paused enrollment ${enrollment.id} due to email response`);
-          pausedCount++;
-        }
-      }
-    }
-
-    return new Response(
-      JSON.stringify({ received: true, enrollmentsPaused: pausedCount }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
-  } catch (error) {
-    console.error("Webhook processing error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
-  }
-}
