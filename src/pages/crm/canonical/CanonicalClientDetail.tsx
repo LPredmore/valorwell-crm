@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useCanonicalClient, useClientMutations } from '@/hooks/canonical/useCanonicalClients';
 import { useClientAudit, useClientCommunications } from '@/hooks/canonical/useCrmData';
 import { useTasks } from '@/hooks/canonical/useCrmData';
-import { displayName, LIFECYCLE_STAGES, ENGAGEMENT_STATES, ELIGIBILITY_STATES, CONTACT_POLICIES, SERVICE_POLICIES, CARE_CADENCES } from '@/domain/canonical';
+import { displayName, LIFECYCLE_STAGES, ENGAGEMENT_STATES, ELIGIBILITY_STATES, CONTACT_POLICIES, SERVICE_POLICIES, CARE_CADENCES, type LifecycleStage, type EngagementState, type EligibilityState, type ContactPolicy, type ServicePolicy, type CareCadence } from '@/domain/canonical';
 import { LifecycleBadge, EngagementBadge, EligibilityBadge, ContactPolicyBadge, ServicePolicyBadge, AtRiskBadge } from '@/components/crm/canonical/StateBadges';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -64,17 +64,17 @@ export default function CanonicalClientDetail() {
               <CardHeader><CardTitle className="text-base">Canonical State</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <StateRow label="Lifecycle" value={client.lifecycle} options={LIFECYCLE_STAGES}
-                  onChange={v => m.updateLifecycle.mutate({ next: v as any, reason: 'manual' }, { onSuccess: () => toast.success('Lifecycle updated') })} />
+                  onChange={v => m.updateLifecycle.mutate({ next: v as LifecycleStage, reason: 'manual' }, { onSuccess: () => toast.success('Lifecycle updated') })} />
                 <StateRow label="Engagement" value={client.engagement} options={ENGAGEMENT_STATES}
-                  onChange={v => m.updateEngagement.mutate(v as any, { onSuccess: () => toast.success('Engagement updated') })} />
+                  onChange={v => m.updateEngagement.mutate(v as EngagementState, { onSuccess: () => toast.success('Engagement updated') })} />
                 <StateRow label="Eligibility" value={client.eligibility} options={ELIGIBILITY_STATES}
-                  onChange={v => m.updateEligibility.mutate({ next: v as any }, { onSuccess: () => toast.success('Eligibility updated') })} />
+                  onChange={v => m.updateEligibility.mutate({ next: v as EligibilityState }, { onSuccess: () => toast.success('Eligibility updated') })} />
                 <StateRow label="Contact Policy" value={client.contactPolicy} options={CONTACT_POLICIES}
-                  onChange={v => m.updateContactPolicy.mutate({ next: v as any, reason: 'manual' }, { onSuccess: () => toast.success('Contact policy updated') })} />
+                  onChange={v => m.updateContactPolicy.mutate({ next: v as ContactPolicy, reason: 'manual' }, { onSuccess: () => toast.success('Contact policy updated') })} />
                 <StateRow label="Service Policy" value={client.servicePolicy} options={SERVICE_POLICIES}
-                  onChange={v => m.updateServicePolicy.mutate({ next: v as any, reason: 'manual' }, { onSuccess: () => toast.success('Service policy updated') })} />
+                  onChange={v => m.updateServicePolicy.mutate({ next: v as ServicePolicy, reason: 'manual' }, { onSuccess: () => toast.success('Service policy updated') })} />
                 <StateRow label="Care Cadence" value={client.careCadence} options={CARE_CADENCES}
-                  onChange={v => m.updateCareCadence.mutate(v as any, { onSuccess: () => toast.success('Cadence updated') })} />
+                  onChange={v => m.updateCareCadence.mutate(v as CareCadence, { onSuccess: () => toast.success('Cadence updated') })} />
               </CardContent>
             </Card>
 

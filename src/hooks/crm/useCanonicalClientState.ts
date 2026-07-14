@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { useCrmAuth } from './useCrmAuth';
 import {
   CANONICAL_READ_VIEW,
@@ -36,6 +37,39 @@ export interface CanonicalReadResult<T> {
   message?: string;
 }
 
+
+type CanonicalStateRow = Database['public']['Views']['v_client_canonical_state']['Row'];
+
+function requireString(value: string | null, field: string): string {
+  if (!value) {
+    throw new Error(`Canonical state missing required ${field}`);
+  }
+  return value;
+}
+
+function toCanonicalClientState(row: CanonicalStateRow): CanonicalClientState {
+  return {
+    client_id: requireString(row.client_id, 'client_id'),
+    tenant_id: requireString(row.tenant_id, 'tenant_id'),
+    contract_version: requireString(row.contract_version, 'contract_version'),
+    lifecycle: requireString(row.lifecycle, 'lifecycle'),
+    engagement: requireString(row.engagement, 'engagement'),
+    at_risk: row.at_risk,
+    eligibility: requireString(row.eligibility, 'eligibility'),
+    eligibility_manual_review: row.eligibility_manual_review,
+    contact_policy: requireString(row.contact_policy, 'contact_policy'),
+    service_policy: requireString(row.service_policy, 'service_policy'),
+    care_cadence: row.care_cadence,
+    disposition_reason: row.disposition_reason,
+    disposition_at: row.disposition_at,
+    assigned_therapist_id: row.assigned_therapist_id,
+    next_appointment_at: row.next_appointment_at,
+    provider_demand_state: row.provider_demand_state,
+    concurrency_token: requireString(row.concurrency_token, 'concurrency_token'),
+    updated_at: row.updated_at,
+  };
+}
+
 function classifyError(message: string): CanonicalReadStatus {
   if (
     /relation .* does not exist/i.test(message) ||
@@ -60,7 +94,7 @@ export function useCanonicalClientState(clientId: string | undefined | null) {
     queryKey: ['canonical-client-state', tenantId, clientId, CONTRACT_VERSION],
     enabled: isAuthenticated && !!tenantId && !!clientId,
     queryFn: async (): Promise<CanonicalReadResult<CanonicalClientState>> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from(CANONICAL_READ_VIEW)
         .select(CANONICAL_COLUMNS)
         .eq('tenant_id', tenantId)
@@ -75,7 +109,7 @@ export function useCanonicalClientState(clientId: string | undefined | null) {
           message: error.message,
         };
       }
-      return { status: data ? 'ok' : 'empty', data: (data as CanonicalClientState) ?? null };
+      return { status: data ? 'ok' : 'empty', data: data ? toCanonicalClientState(data) : null };
     },
   });
 }
@@ -91,7 +125,7 @@ export function useCanonicalClientStates(clientIds: string[]) {
     queryKey: ['canonical-client-states', tenantId, key, CONTRACT_VERSION],
     enabled: isAuthenticated && !!tenantId && clientIds.length > 0,
     queryFn: async (): Promise<CanonicalReadResult<Record<string, CanonicalClientState>>> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from(CANONICAL_READ_VIEW)
         .select(CANONICAL_COLUMNS)
         .eq('tenant_id', tenantId)
@@ -106,8 +140,9 @@ export function useCanonicalClientStates(clientIds: string[]) {
         };
       }
       const out: Record<string, CanonicalClientState> = {};
-      for (const row of (data ?? []) as CanonicalClientState[]) {
-        out[row.client_id] = row;
+      for (const row of data ?? []) {
+        const canonical = toCanonicalClientState(row);
+        out[canonical.client_id] = canonical;
       }
       return { status: 'ok', data: out };
     },

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database, Json } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import {
   RPC,
@@ -53,10 +54,17 @@ interface BaseArgs {
   idempotency_key?: string;
 }
 
+type CanonicalRpcName = (typeof RPC)[keyof typeof RPC];
+type CanonicalRpcArgs = Database['public']['Functions'][CanonicalRpcName]['Args'];
+
+function isMutationResult(value: Json): value is MutationResult {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && 'ok' in value && typeof value.ok === 'boolean';
+}
+
 function useCanonicalRpc<TInput extends BaseArgs>(
-  rpcName: string,
+  rpcName: CanonicalRpcName,
   successMsg: string,
-  buildArgs: (input: TInput) => Record<string, unknown>,
+  buildArgs: (input: TInput) => Omit<CanonicalRpcArgs, 'p_concurrency_token' | 'p_idempotency_key' | 'p_contract_version'>,
 ) {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -68,12 +76,14 @@ function useCanonicalRpc<TInput extends BaseArgs>(
         token,
         input.idempotency_key,
       );
-      const { data, error } = await (supabase as any).rpc(rpcName, args);
+      const { data, error } = await supabase.rpc(rpcName, args as CanonicalRpcArgs);
       if (error) {
         return { ok: false, error_code: 'unknown', message: error.message };
       }
-      const result = (data ?? { ok: false, error_code: 'unknown' }) as MutationResult;
-      return result;
+      if (!isMutationResult(data)) {
+        return { ok: false, error_code: 'unknown', message: 'Unexpected RPC response' };
+      }
+      return data;
     },
     onSuccess: (result, input) => {
       if (!result.ok) {
@@ -110,7 +120,7 @@ export interface EligibilitySetArgs extends BaseArgs {
   } | null;
 }
 export interface CareCadenceSetArgs extends BaseArgs { to_cadence: string; }
-export interface AssignClinicianArgs extends BaseArgs { staff_id: string | null; }
+export interface AssignClinicianArgs extends BaseArgs { staff_id: string; }
 export interface CloseClientArgs extends BaseArgs { disposition_reason: string; }
 export type ReopenClientArgs = BaseArgs;
 

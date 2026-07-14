@@ -1,6 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import type { TasksRepository, ListTasksQuery } from '../types';
 import type { CrmTask, TaskStatus, TaskPriority, TaskType } from '@/domain/operations';
+
+type Row = Database['public']['Tables']['crm_tasks']['Row'];
 
 const TASK_STATUS_D2D: Record<TaskStatus, string> = {
   'Not Started': 'not_started', 'In Progress': 'in_progress', Waiting: 'waiting',
@@ -27,7 +30,7 @@ const COLS = `
   start_at, due_at, completed_at, recurrence, checklist, tags, created_at, updated_at
 `;
 
-function toDomain(r: any): CrmTask {
+function toDomain(r: Row): CrmTask {
   return {
     id: r.id, tenantId: r.tenant_id, title: r.title, description: r.description ?? undefined,
     clientId: r.client_id ?? undefined, staffId: r.staff_id ?? undefined,
@@ -40,8 +43,8 @@ function toDomain(r: any): CrmTask {
     createdByProfileId: r.created_by_profile_id,
     startAt: r.start_at ?? undefined, dueAt: r.due_at ?? undefined,
     completedAt: r.completed_at ?? undefined,
-    recurrence: (r.recurrence as any) ?? undefined,
-    checklist: (r.checklist as any) ?? [],
+    recurrence: r.recurrence as CrmTask['recurrence'] ?? undefined,
+    checklist: r.checklist as CrmTask['checklist'] ?? [],
     tags: r.tags ?? [],
     createdAt: r.created_at, updatedAt: r.updated_at,
   };
@@ -73,7 +76,7 @@ function toDb(patch: Partial<CrmTask>): Record<string, unknown> {
 
 export const supabaseTasksRepository: TasksRepository = {
   async list(q: ListTasksQuery): Promise<CrmTask[]> {
-    let query = (supabase as any).from('crm_tasks').select(COLS).order('due_at', { ascending: true, nullsFirst: false });
+    let query = supabase.from('crm_tasks').select(COLS).order('due_at', { ascending: true, nullsFirst: false });
     if (q.clientId) query = query.eq('client_id', q.clientId);
     if (q.ownerIds?.length) query = query.in('owner_id', q.ownerIds);
     if (q.statuses?.length) query = query.in('status', q.statuses.map(s => TASK_STATUS_D2D[s]));
@@ -97,20 +100,20 @@ export const supabaseTasksRepository: TasksRepository = {
   },
 
   async get(id) {
-    const { data, error } = await (supabase as any).from('crm_tasks').select(COLS).eq('id', id).maybeSingle();
+    const { data, error } = await supabase.from('crm_tasks').select(COLS).eq('id', id).maybeSingle();
     if (error) throw new Error(error.message);
     return data ? toDomain(data) : null;
   },
 
   async create(input) {
     const row = { ...toDb(input as Partial<CrmTask>) };
-    const { data, error } = await (supabase as any).from('crm_tasks').insert(row).select(COLS).single();
+    const { data, error } = await supabase.from('crm_tasks').insert(row).select(COLS).single();
     if (error) throw new Error(error.message);
     return toDomain(data);
   },
 
   async update(id, patch) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('crm_tasks').update(toDb(patch)).eq('id', id).select(COLS).single();
     if (error) throw new Error(error.message);
     return toDomain(data);
@@ -121,18 +124,18 @@ export const supabaseTasksRepository: TasksRepository = {
   },
 
   async reassign(ids, ownerId) {
-    const { error } = await (supabase as any).from('crm_tasks').update({ owner_id: ownerId }).in('id', ids);
+    const { error } = await supabase.from('crm_tasks').update({ owner_id: ownerId }).in('id', ids);
     if (error) throw new Error(error.message);
   },
 
   async bulkStatus(ids, status) {
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('crm_tasks').update({ status: TASK_STATUS_D2D[status] }).in('id', ids);
     if (error) throw new Error(error.message);
   },
 
   async bulkDueDate(ids, dueAt) {
-    const { error } = await (supabase as any).from('crm_tasks').update({ due_at: dueAt }).in('id', ids);
+    const { error } = await supabase.from('crm_tasks').update({ due_at: dueAt }).in('id', ids);
     if (error) throw new Error(error.message);
   },
 };
