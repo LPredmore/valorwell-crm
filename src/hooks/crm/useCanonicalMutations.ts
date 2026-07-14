@@ -62,13 +62,12 @@ function useCanonicalRpc<TInput extends BaseArgs>(
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (input: TInput): Promise<MutationResult> => {
-      assertRealToken(input.concurrency_token);
-      const args = {
-        ...buildArgs(input),
-        p_concurrency_token: input.concurrency_token,
-        p_idempotency_key: input.idempotency_key ?? newIdempotencyKey(),
-        p_contract_version: CONTRACT_VERSION,
-      };
+      const token = assertRealToken(input.concurrency_token);
+      const args = buildCanonicalRpcArgs(
+        buildArgs(input),
+        token,
+        input.idempotency_key,
+      );
       const { data, error } = await (supabase as any).rpc(rpcName, args);
       if (error) {
         return { ok: false, error_code: 'unknown', message: error.message };
