@@ -82,7 +82,7 @@ and `src/components/crm/auth/CrmMutationGate.tsx`).
   Fields marked **derived** are computed inside the view definition from
   the owning source tables. Fields marked **authoritative** are stored on
   the canonical `clients`/state tables and updated only by the RPCs in
-  A1.2–A1.9.
+  A1.2–A1.9 (nine lifecycle RPCs).
 
 - **Grants:** `GRANT SELECT ON public.v_client_canonical_state TO authenticated;`
 - **Tenant isolation:** view definition MUST filter rows to
@@ -259,7 +259,7 @@ and `src/components/crm/auth/CrmMutationGate.tsx`).
   row rather than editing.
 - **No anon access.** No broad authenticated INSERT/UPDATE/DELETE.
 - **CRM consumer:** activity timeline reads on `CanonicalClientDetail`.
-  Writes are done exclusively by A1.2–A1.9 RPCs and the edge functions
+  Writes are done exclusively by A1.2–A1.9 (nine lifecycle RPCs) RPCs and the edge functions
   listed in A1.10.
 - **Frontend implemented:** yes (read-only reads only).
 - **Verification test:** `LV-20`, `LV-21`.
