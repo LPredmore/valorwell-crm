@@ -1,14 +1,44 @@
 import { useReports } from '@/hooks/canonical/useCrmData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
+
+const PENDING_VIEWS = [
+  'v_crm_reports_funnel',
+  'v_crm_reports_at_risk',
+  'v_crm_reports_campaigns',
+  'v_crm_reports_tasks',
+  'v_crm_reports_exceptions',
+];
 
 export default function CanonicalReports() {
   const r = useReports();
+  const anyMissing =
+    !r.funnel.data || !r.atRisk.data || !r.campaign.data || !r.task.data || !r.exception.data;
   return (
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
         <p className="text-sm text-muted-foreground">Canonical operational reporting</p>
       </div>
+
+      {anyMissing && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Backend views pending</AlertTitle>
+          <AlertDescription className="text-xs">
+            One or more report read-models are not deployed yet. Panels below render empty
+            state until the following views ship:
+            <ul className="mt-1 list-disc pl-4 font-mono">
+              {PENDING_VIEWS.map((v) => (
+                <li key={v}>{v}</li>
+              ))}
+            </ul>
+            See <code>docs/crm-backend-delivery-request.md</code> (A2).
+          </AlertDescription>
+        </Alert>
+      )}
+
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
