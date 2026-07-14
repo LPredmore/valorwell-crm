@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { PolicyAwareComposer } from '@/components/crm/canonical/PolicyAwareComposer';
+import { CrmMutationGate } from '@/components/crm/auth/CrmMutationGate';
 
 export default function CanonicalInbox() {
   const [channel, setChannel] = useState<'sms' | 'email'>('sms');
@@ -24,9 +25,11 @@ export default function CanonicalInbox() {
             <Button variant={channel === 'sms' ? 'secondary' : 'ghost'} size="sm" onClick={() => setChannel('sms')}>SMS</Button>
             <Button variant={channel === 'email' ? 'secondary' : 'ghost'} size="sm" onClick={() => setChannel('email')}>Email</Button>
           </div>
-          <Button size="sm" className="gap-2" onClick={() => setComposerOpen(true)} disabled={!firstClientId}>
-            <Plus className="h-4 w-4" /> Compose
-          </Button>
+          <CrmMutationGate>
+            <Button size="sm" className="gap-2" onClick={() => setComposerOpen(true)} disabled={!firstClientId}>
+              <Plus className="h-4 w-4" /> Compose
+            </Button>
+          </CrmMutationGate>
         </div>
       </div>
 
