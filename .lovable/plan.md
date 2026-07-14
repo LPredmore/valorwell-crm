@@ -1,199 +1,130 @@
-# ValorWell CRM — Pre-Supabase Application Implementation
+## CRM-Only Re-scope and Completion Plan
 
-**Approach:** Full frontend overhaul built against a mock data provider.
-No Supabase reads/writes for new features. Legacy pat_status code paths
-left untouched but no new work depends on them.
+This plan drops platform-wide items (clinical, claims, ERA, payroll, provider lifecycle, billing execution) from the CRM blocker list and finishes every CRM-side task that does not require a missing backend contract. Unavailable CRM-required contracts stay fail-closed with a structured `CONTRACT_NOT_DEPLOYED` state — no simulations, no fallbacks to `pat_status`, no direct protected-table writes.
 
-## Batch 1 — Foundation (COMPLETE)
+---
 
-Shipped:
+### A. CRM-only required contract list
 
-- `src/domain/canonical.ts` — Canonical client model: Lifecycle, Engagement,
-  Eligibility, ContactPolicy, ServicePolicy, CareCadence, Risk, Closure.
-  Independent of Supabase types.
-- `src/domain/operations.ts` — Task, Exception, Campaign, Enrollment,
-  Communication, Staff, Audit, CommunicationPolicyResult.
-- `src/repositories/types.ts` — `CrmDataProvider` interface. Every future
-  Supabase adapter must satisfy this.
-- `src/mocks/dataset.ts` — Realistic mock dataset: 120 clients across every
-  lifecycle stage / engagement / eligibility / contact-policy / service-policy
-  combination; 6 staff; 3 campaigns; 40 tasks; 24 exceptions; messages inc.
-  a `STOP` inbound.
-- `src/repositories/mock/index.ts` — In-memory mock provider implementing
-  every method with subscribe-emit so mock mutations feel real. Includes
-  end-to-end REMOVE-keyword handling and communication policy evaluator.
-- `src/services/dataProvider.ts` — Single switch selecting mock provider.
-- `src/hooks/canonical/useCanonicalClients.ts` — Query + mutation hooks for
-  every canonical client state change.
-- `src/hooks/canonical/useCrmData.ts` — Query hooks for tasks, exceptions,
-  campaigns, enrollments, staff, audit, communications, reports.
-- `docs/supabase-integration-contract.md` — Handoff contract for the future
-  Supabase phase. Describes the required entities, queries, mutations,
-  events, reports, policy evaluator, error shape, pagination, RLS,
-  idempotency, and audit expectations.
-- `src/test/mock-provider.test.ts` — 13 passing tests covering canonical
-  client workflows, communication policy (DNC + critical override), REMOVE
-  keyword, task lifecycle, exception resolution, campaign enrollment/cancel,
-  and report rendering.
+Grouped by launch-criticality. Each entry ties to a real CRM consumer file.
 
-## Batch 2 — Pages & UI (COMPLETE)
+**A1. Required for CRM launch**
 
-Shipped canonical pages (all under `/crm/canonical/*`):
-Dashboard, Clients (table + kanban + filters), ClientDetail (7 tabs incl.
-mutations), Tasks (11 saved views + bulk), Exceptions, Campaigns list +
-per-campaign detail with enrollments (pause/resume/cancel/restart) and step
-inspector, Inbox with policy-aware composer, Staff, Reports, and global
-Search. All bound to the mock provider — zero Supabase reads/writes.
-Communications composer runs the policy evaluator on open and blocks/warns
-based on suppression code before send.
+| # | Contract | Kind | Signature | CRM consumer | Grants | Caller role | RLS | Idempotent | Emits | Status |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | `v_client_canonical_state` | view | columns per `CanonicalClientState` (contract v1) | `useCanonicalClientState(s)`, kanban, client detail, badges | SELECT to `authenticated` | admin/staff of tenant | tenant scoped | n/a | n/a | **MISSING** |
+| 2 | `crm_transition_lifecycle` | rpc | `(client_id uuid, to_stage text, reason text, idempotency_key uuid, contract_version text) → MutationResult` | `useTransitionLifecycle` | EXECUTE to `authenticated` | admin/staff | callee checks `crm_has_role` + tenant | yes | audit: `lifecycle_changed` | **MISSING** |
+| 3 | `crm_set_engagement` | rpc | `(client_id, to_state, reason, idempotency_key, contract_version)` | `useSetEngagement` | EXECUTE authenticated | admin/staff | yes | yes | `engagement_changed` | **MISSING** |
+| 4 | `crm_set_contact_policy` | rpc | `(client_id, policy, reason, idempotency_key, contract_version)` | `useSetContactPolicy`, DNC toggle | EXECUTE authenticated | admin/staff | yes | yes | `contact_policy_changed` | **MISSING** |
+| 5 | `crm_set_service_policy` | rpc | same shape | `useSetServicePolicy` | " | admin/staff | yes | yes | `service_policy_changed` | **MISSING** |
+| 6 | `crm_set_eligibility` | rpc | `(client_id, state, manual_review jsonb, reason, idempotency_key, contract_version)` | `useSetEligibility` | " | admin/staff | yes | yes | `eligibility_changed` | **MISSING** |
+| 7 | `crm_set_care_cadence` | rpc | `(client_id, cadence, reason, idempotency_key, contract_version)` | `useSetCareCadence` | " | admin/staff | yes | yes | `care_cadence_changed` | **MISSING** |
+| 8 | `crm_assign_clinician` | rpc | `(client_id, staff_id, reason, idempotency_key, contract_version)` | assign action | " | admin/staff | yes | yes | `clinician_assigned` | **MISSING** |
+| 9 | `crm_close_client` / `crm_reopen_client` | rpc | `(client_id, disposition_reason, reason, idempotency_key, contract_version)` | close/reopen actions | " | admin/staff | yes | yes | `closed`/`reopened` | **MISSING** |
+| 10 | `crm_evaluate_communication_policy` | rpc | `(client_id, channel, message_class) → { allowed, reason, code }` | `PolicyAwareComposer`, `useBulkSend`, `useBulkSms`, campaign-scheduler | EXECUTE authenticated + service_role | admin/staff | tenant scoped read | n/a | n/a | **MISSING (server-side authority)** |
+| 11 | `helpscout-proxy` edge fn (send path must call #10) | edge | existing | `useReplyToConversation`, bulk email | n/a | admin/staff JWT | n/a | send-time guard | `email_suppressed` on block | **PARTIAL — needs suppression call server-side** |
+| 12 | `ringcentral-sms` edge fn (send path must call #10) | edge | existing | `useBulkSms`, campaign step SMS | n/a | admin/staff JWT | n/a | send-time guard | `sms_suppressed` on block | **PARTIAL — same** |
+| 13 | `crm_activity_events` insert via edge fn only | policy | no direct client insert of protected event types | activity timeline | INSERT to `service_role` only for protected classes | n/a | tenant scoped read | n/a | n/a | **NEEDS lockdown** |
+| 14 | `crm_client_state_audit` | table | already CRM-owned | audit displays | already granted | admin read | tenant scoped | n/a | n/a | DELIVERED |
+| 15 | `crm_tasks`, `crm_exceptions`, `crm_idempotency_keys`, `crm_client_canonical_meta` | tables | CRM-owned | tasks/exceptions pages | already granted | admin/staff | tenant scoped | n/a | n/a | DELIVERED |
 
-## Explicit non-goals for this phase
+**A2. Required only for a later CRM feature (not launch-blocking)**
 
-- No Supabase reads/writes for new features.
-- No ClickUp client/staff sync.
-- No `supabase as any` shortcuts.
-- No "backend unavailable" placeholder messaging.
-- No mutation of existing `pat_status` code paths.
+- `crm_bulk_enroll_campaign` rpc — bulk enrollment tooling; today enrollment goes through existing enrollment edge fn.
+- `v_crm_reports_funnel`, `v_crm_reports_engagement`, `v_crm_reports_closure`, `v_crm_reports_campaigns`, `v_crm_reports_tasks`, `v_crm_reports_exceptions` — read models for Reports page. Reports can ship with "requires backend view" empty states.
+- `crm_reengage_client` rpc — optional re-engagement helper.
 
-## Workstream 2 — Canonical Supabase surface (COMPLETE)
+**A3. Not a CRM blocker (owned by other apps)**
 
-Live in Supabase (additive, no changes to existing shared columns):
-- `crm_client_canonical_meta` — CRM-only per-client meta: concurrency token, risk_reason, at_risk_marked_at. RLS: tenant admin/staff read.
-- `crm_client_state_audit` — append-only audit of every canonical state change (dimension enum, from→to, reason, disposition_reason, actor, correlation_id, source). RLS: tenant admin/staff read.
-- `crm_idempotency_keys` — 24h de-dup for canonical writes. RLS: actor-scoped read.
-- `v_client_canonical_state` — single canonical read model joining `clients` + meta, exposing concurrency_token.
-- `crm_has_role(user, tenant)` helper — checks user_roles ∈ (admin,staff) AND tenant_memberships membership.
-- RPCs (all admin/staff gated, concurrency-checked, audited, idempotent):
-  `transition_client_lifecycle`, `set_client_engagement_state`,
-  `set_client_contact_policy`, `set_client_service_policy`,
-  `set_client_eligibility_state`, `set_client_care_cadence`,
-  `set_client_disposition`.
+Removed from CRM blocker list — these appeared in the global register but no CRM file consumes them:
 
-Frontend still on mock provider. Next: implement the Supabase adapter for `ClientsRepository` reading from `v_client_canonical_state` and writing through these RPCs, then flip `useMock`.
+- All `staff_*` credentialing tables (licenses, malpractice, CAQH, education, work history, certifications, disclosures, payer enrollments)
+- Provider lifecycle: `provider_*`, `vaccn_*`
+- Clinical: `appointment_clinical_notes`, `client_treatment_plans`, `client_safety_plans`, all assessments (`client_phq9_*`, `gad7`, `pcl5`), `client_history_*`
+- Insurance/eligibility internals: `client_insurance*`, `eligibility_checks` details, `client_diagnoses`
+- Billing/RCM: `claims`, `claim_*`, `era*`, `payment_allocations`, `client_charges`, `client_payments`, `client_payment_links`, `client_payment_methods`
+- Payroll: all `payroll_*`
+- Practice config: `practice_info`, `practice_locations`, `services`, `cpt_codes`, `place_of_service`
+- Scheduling internals: `appointments`, `appointment_series`, `appointment_exceptions`, calendar sync tables
+- Forms platform: `form_*`, `consent_templates`
+- Backend contract registry itself: `backend_contract_*`
+- Cross-app mirrors: `clickup_client_mirror_state`, `crm_clickup_*` (UI already retired)
 
-## Workstream 3 — Supabase ClientsRepository adapter (COMPLETE)
+These stay in the shared backend and are out of scope for CRM completion.
 
-- `src/repositories/supabase/clients.ts` — real adapter:
-  - Reads directly from `public.clients` (identity, contact, canonical dims,
-    tags, activity) with server-side filtering/sorting/pagination.
-  - Concurrency tokens fetched from `v_client_canonical_state`.
-  - Writes route through the 7 canonical RPCs (lifecycle, engagement,
-    contact/service policy, eligibility, care cadence, disposition, reopen).
-  - Uses the domain ↔ db mappers only — no `pat_status`.
-- `src/repositories/supabase/index.ts` — hybrid provider (Supabase for
-  clients, mock for the rest until their tables/RPCs ship).
-- `src/services/dataProvider.ts` — default flipped to Supabase; opt out
-  with `VITE_USE_MOCK_DATA=true`.
+---
 
-Assignment RPCs and manual risk override intentionally throw — pending
-Workstream 4 (assignments) and Workstream 5 (risk RPCs).
+### B. Contracts removed from CRM blocker list
 
-## Workstream 4/5 — Assignment + Risk RPCs (COMPLETE)
+Everything in A3 above. Rationale: no file under `src/pages/crm/**`, `src/components/crm/**`, `src/hooks/crm/**`, `src/hooks/canonical/**`, `src/repositories/**`, or CRM-owned edge functions (`helpscout-proxy`, `ringcentral-sms`, `campaign-scheduler`) reads or writes those tables. They belong to `valorwell-clients`, `valorwell-staff`, `valorwell-billing`, and `valorwell-credentialing`.
 
-- New Supabase RPCs: `assign_client_clinician`, `set_client_risk` — both
-  admin/staff gated, concurrency-checked, idempotent, audited.
-- `set_client_risk` also updates `crm_client_canonical_meta.risk_reason` and
-  `at_risk_marked_at`.
-- Adapter wired: `assignClinician` and `updateRisk` now hit the RPCs.
-- `assignOperationsOwner` still throws — no operations-owner column exists
-  on `clients` and adding one would be non-additive. Handled at UI level.
+---
 
-## Workstream 6 — Tasks & Exceptions on Supabase (COMPLETE)
+### C. CRM work already completed despite backend blockers
 
-Migration:
-- New enums: `crm_task_status_enum`, `crm_task_priority_enum`,
-  `crm_task_type_enum`, `crm_exception_type_enum`,
-  `crm_exception_severity_enum`, `crm_exception_status_enum`.
-- New tables: `crm_tasks`, `crm_exceptions` — tenant-scoped, RLS on with
-  admin/staff read/write policies, updated_at triggers, useful indexes.
+- Canonical domain model, contracts v1, and mock provider (WS1–2).
+- Supabase repositories for clients, tasks, exceptions, staff, audit, campaigns, communications, reports (WS3–10) — fail-closed when canonical view/RPCs missing.
+- CRM-owned tables + RLS + grants: `crm_tasks`, `crm_exceptions`, `crm_client_canonical_meta`, `crm_client_state_audit`, `crm_idempotency_keys`.
+- ClickUp UI + edge function retirement.
+- Contract version constant wired through every canonical hook.
+- Unit tests green (17/17).
+- Shared suppression helper (`supabase/functions/_shared/suppression.ts`).
 
-Adapters:
-- `src/repositories/supabase/tasks.ts` — full TasksRepository against
-  `crm_tasks` with domain ↔ db enum mappers, filter/sort/paged list, and
-  bulk mutations.
-- `src/repositories/supabase/exceptions.ts` — full ExceptionsRepository,
-  including `createTaskFromException` which inserts a linked `crm_tasks`
-  row inheriting client/campaign/owner and severity → priority mapping.
-- `src/repositories/supabase/index.ts` — hybrid provider now serves
-  clients, tasks, and exceptions from Supabase.
+---
 
-## Workstream 7 — Staff & Audit adapters (COMPLETE)
+### C-next. CRM work to execute in this pass (no missing backend needed)
 
-- `src/repositories/supabase/staff.ts` — reads `staff` joined with `profiles`
-  (email) and `user_roles` (role); computes caseload from
-  `clients.primary_staff_id` and open-task counts from `crm_tasks`; maps
-  `prov_accepting_new_clients` + `prov_max_clients` to availability.
-- `src/repositories/supabase/audit.ts` — reads `crm_client_state_audit`
-  per client and maps dimension → human event label.
-- Hybrid provider now serves clients, tasks, exceptions, staff, and audit
-  from Supabase. Remaining on mock: communications, reports.
+1. **Route cutover to canonical pages.** Point `/crm/clients`, `/crm/clients/:id`, `/crm/campaigns`, `/crm/inbox`, `/crm/reports`, `/crm/staff`, `/crm/tasks` (new), `/crm/exceptions` (new) at the Canonical* pages in `App.tsx`. Retire legacy pages by re-exporting canonical.
+2. **Kill `pat_status` reads/writes in CRM code paths.**
+   - `useClients` / `useClientsByStatus`: drop `pat_status` filter/order; use canonical batch read for status column.
+   - `ClientKanban*`, `ClientTable`, `StatusBadge`, `useUpdateClientStatus`, `useBulkUpdateStatus`: switch to `useTransitionLifecycle` and canonical lifecycle labels.
+   - Delete `useUpdateClientStatus`/`useBulkUpdateStatus` legacy paths that update `clients.pat_status` directly; replace with lifecycle RPC calls that render `CONTRACT_NOT_DEPLOYED` toast until RPC ships.
+3. **At Risk read-only enforcement.** Remove any UI that toggles `at_risk`; render as computed badge from canonical state only.
+4. **DNC / suppression presentation.** Add unified `SuppressionBanner` and gate composer send buttons on `crm_evaluate_communication_policy` result; fail closed with clear reason when RPC missing.
+5. **Server-side suppression enforcement.** Update `helpscout-proxy` and `ringcentral-sms` send handlers to invoke suppression evaluation (via shared helper) before dispatch and to persist `suppressed` audit event on block. No client-side-only guard.
+6. **Authorization-aware UI.** Hide/disable mutating controls when `useCrmAuth().role` is not `admin`/`staff`; show read-only variants otherwise.
+7. **Contract-version handling.** Surface active contract version in Settings → About; block mutations when server returns `contract_version_mismatch`.
+8. **Loading / error / empty states.** Every canonical hook renders skeleton → error card with `CONTRACT_NOT_DEPLOYED` code → empty state, replacing silent `null` fallbacks currently in `useCanonicalClientState(s)`.
+9. **Audit displays.** Wire `crm_client_state_audit` reader to the client detail Activity tab; group by correlation id.
+10. **Reports.** Keep page mounted; each panel shows "Backend view pending: <view name>" empty state until A2 views ship. No fake numbers.
+11. **Direct protected-table writes.** Remove any remaining `supabase.from('clients').update(...)` calls on protected columns (`pat_status`, `assigned_therapist_id`, `contact_policy`, `service_policy`, `care_cadence`, `at_risk`, eligibility). Grep-verify zero matches under `src/`.
+12. **Tests.** Extend Vitest suite: mock-provider canonical flow, legacy-assertion guard (no `pat_status` string in CRM src), authorization gating, suppression fail-closed. All must pass against currently delivered contracts.
+13. **Retire dead code.** Delete legacy `Clients.tsx`, `ClientDetail.tsx`, `Campaigns.tsx`, `Inbox.tsx`, `Reports.tsx`, `Staff.tsx` after canonical routes are live and referenced.
+14. **Deliver A CRM-specific backend delivery request** (`docs/crm-backend-delivery-request.md`) containing the A1/A2 tables above with signatures, grants, RLS, idempotency, events, consumer file, verification test, and current blocker detail.
 
-## Workstream 8 — Campaigns adapter (COMPLETE)
+---
 
-- `src/repositories/supabase/campaigns.ts` — full CampaignsRepository over
-  `crm_campaigns` + `crm_campaign_steps` + `crm_campaign_enrollments` +
-  `crm_campaign_triggers`. Aggregates enrolled/active/completed/failed
-  metrics from enrollments; derives entry conditions from triggers;
-  maps `is_active` → status. Enroll/pause/resume/cancel/restart go
-  directly to `crm_campaign_enrollments`.
-- Steps are read-only in this pass — campaign editor step CRUD is a
-  later workstream once the step schema is finalized.
-- Hybrid provider now covers clients, tasks, exceptions, staff, audit,
-  and campaigns. Remaining on mock: communications, reports.
+### D. CRM files/actions that will remain blocked after this pass
 
-## Workstream 9 — Communications adapter (COMPLETE)
+Blocked strictly on A1 backend delivery (`v_client_canonical_state` + `crm_*` RPCs + `crm_evaluate_communication_policy`):
 
-- `src/repositories/supabase/communications.ts` — unified per-client
-  timeline from `crm_inbound_sms_logs`, `crm_bulk_sms_recipients`,
-  `crm_conversation_links` + `crm_conversation_cache`, and `messages`.
-  `listThreads('sms'|'email')` aggregates the latest message per thread.
-- `send` delegates to existing `ringcentral-sms` / `helpscout-proxy`
-  edge functions; internal notes insert into `messages` directly.
-- `evaluatePolicy` reuses the canonical client (contact/service policy,
-  lifecycle, channel availability) via the Supabase clients adapter.
-- `ingestInbound` is a pass-through — inbound persistence remains owned
-  by the RingCentral and HelpScout webhook edge functions.
-- Hybrid provider now covers everything except reports.
+- `src/hooks/crm/useCanonicalClientState.ts` — returns fail-closed until view ships.
+- `src/hooks/crm/useCanonicalMutations.ts` — all six mutation hooks fail-closed.
+- `src/components/crm/canonical/PolicyAwareComposer.tsx` — send disabled until policy RPC ships.
+- `src/pages/crm/canonical/CanonicalReports.tsx` — panels blocked until A2 views ship.
+- `supabase/functions/helpscout-proxy` and `ringcentral-sms` — final send-path enforcement requires policy RPC.
+- Authenticated E2E RLS proofs — require live RPCs + a signed-in admin/staff session (external Supabase, sandbox cannot mint).
 
-## Workstream 10 — Reports adapter (COMPLETE)
+Nothing else remains CRM-blocked.
 
-- `src/repositories/supabase/reports.ts` — every report aggregation now
-  computed live from Supabase:
-  - `journeyFunnel` — counts per lifecycle stage with median days from
-    `created_at` → `lifecycle_stage_changed_at`.
-  - `atRiskMetrics` — pulls `clients.at_risk`/`at_risk_since` + reasons
-    from `crm_client_canonical_meta.risk_reason` and overdue
-    interventions from `crm_tasks` where type = risk_intervention.
-  - `engagementMetrics` — counts by engagement state + median days
-    since `last_contact_at`.
-  - `closureMetrics` — grouped by mapped closure reason.
-  - `campaignPerformance` — enrollments joined with
-    `crm_campaign_step_logs` for sent/delivered/suppressed/failed;
-    step→campaign resolved via `crm_campaign_steps`.
-  - `taskPerformance` — open/overdue counts, per-owner breakdown,
-    average completion hours from `completed_at - created_at`.
-  - `exceptionMetrics` — by type/severity, open vs resolved, mean
-    resolution hours from `updated_at - created_at`.
-- `supabaseDataProvider` no longer wraps the mock provider — every
-  repository is Supabase-backed.
+---
 
-## Status
+### E. Commit SHA + F. Build/type/lint/test results
 
-All 10 workstreams complete. The CRM's `CrmDataProvider` interface is
-fully backed by Supabase (tables, canonical RPCs, and edge functions).
-The mock provider remains available via `VITE_USE_MOCK_DATA=true` for
-local development and tests.
+Reported at end of the execution pass — not available until code changes land. Plan mode produces no commits.
 
-## Workstream 11 — ClickUp retirement (COMPLETE)
+---
 
-- DB triggers `trg_clients_clickup_sync` and `trg_enrollment_clickup_sync`
-  dropped; helper functions `trg_clients_clickup_sync`,
-  `trg_enrollment_clickup_sync`, and `trg_enqueue_clickup_sync` removed.
-- No ClickUp cron jobs existed; nothing scheduled to remove.
-- Edge function `supabase/functions/clickup-sync/` deleted along with its
-  `[functions.clickup-sync]` entry in `supabase/config.toml`.
-- UI removed: `ClickUpSyncRow` on the client detail card and the
-  `ClickUpConfigPanel` on the settings page.
-- Historical `clickup_client_mirror_state`, `crm_clickup_field_map`, and
-  `crm_clickup_sync_runs` tables kept for audit — nothing writes to them
-  anymore.
+### Execution order once approved
+
+1. Route cutover + legacy page retirement.
+2. `pat_status` and protected-column write removal (grep-clean).
+3. Fail-closed hook states + `SuppressionBanner` + composer gating.
+4. Auth-aware UI gating + contract version surface.
+5. Server-side suppression enforcement in `helpscout-proxy` + `ringcentral-sms`.
+6. Audit reader wiring + Reports empty states.
+7. `docs/crm-backend-delivery-request.md`.
+8. Extend Vitest suite; run typecheck + lint + tests.
+9. Report commit SHA + results.
+
+No shared backend migrations. No changes to other Lovable projects. No temporary substitutes.
