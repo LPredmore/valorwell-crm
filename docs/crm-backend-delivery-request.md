@@ -168,17 +168,27 @@ and `src/components/crm/auth/CrmMutationGate.tsx`).
 - **Frontend implemented:** yes (wired through generic canonical mutation gate).
 - **Verification test:** `LV-13`.
 
-### A1.9 `public.crm_close_client` + `public.crm_reopen_client` — RPCs
+### A1.9a `public.crm_close_client` — RPC
 
-- **Inputs:**
-  - `crm_close_client(p_client_id uuid, p_disposition_reason text, p_reason text, p_concurrency_token text, p_idempotency_key uuid, p_contract_version text) returns jsonb`
-  - `crm_reopen_client(p_client_id uuid, p_reason text, p_concurrency_token text, p_idempotency_key uuid, p_contract_version text) returns jsonb`
-- **Behavior:** close sets lifecycle to `Closed`, `disposition_reason`, `disposition_at=now()`; reopen restores lifecycle to prior stage (or `Registration` if unknown), clears disposition fields.
-- Audit event types: `closed`, `reopened`.
-- Policy otherwise identical to A1.2.
-- **CRM consumer:** close/reopen buttons on `CanonicalClientDetail`.
+- **Input:** `crm_close_client(p_client_id uuid, p_disposition_reason text, p_reason text, p_concurrency_token text, p_idempotency_key uuid, p_contract_version text) returns jsonb`
+- **Return:** `MutationResult`.
+- **Behavior:** sets lifecycle to `Closed`, sets `disposition_reason`, sets `disposition_at=now()`.
+- **Audit event type:** `closed`.
+- Role / tenancy / grants / idempotency policy identical to A1.2.
+- **CRM consumer:** close button on `CanonicalClientDetail` (via `useCanonicalMutations`).
 - **Frontend implemented:** yes.
-- **Verification test:** `LV-14`, `LV-15`.
+- **Verification test:** `LV-14`.
+
+### A1.9b `public.crm_reopen_client` — RPC
+
+- **Input:** `crm_reopen_client(p_client_id uuid, p_reason text, p_concurrency_token text, p_idempotency_key uuid, p_contract_version text) returns jsonb`
+- **Return:** `MutationResult`.
+- **Behavior:** restores lifecycle to the prior non-Closed stage recorded on the last `closed` audit event (or `Registration` if unknown), clears `disposition_reason` and `disposition_at`.
+- **Audit event type:** `reopened`.
+- Role / tenancy / grants / idempotency policy identical to A1.2.
+- **CRM consumer:** reopen button on `CanonicalClientDetail`.
+- **Frontend implemented:** yes.
+- **Verification test:** `LV-15`.
 
 ### A1.10 `public.crm_evaluate_communication_policy` — RPC
 
