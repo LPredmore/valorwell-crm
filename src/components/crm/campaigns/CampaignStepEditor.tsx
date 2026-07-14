@@ -126,6 +126,7 @@ export function CampaignStepEditor({
                 <Select
                   value={step.channel}
                   onValueChange={(value: 'email' | 'sms') => onChange({ channel: value })}
+                  disabled={!canMutate}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -143,6 +144,7 @@ export function CampaignStepEditor({
                   min={0}
                   value={step.delay_days}
                   onChange={(e) => onChange({ delay_days: parseInt(e.target.value) || 0 })}
+                  disabled={!canMutate}
                 />
               </div>
               <div className="space-y-2">
@@ -153,6 +155,7 @@ export function CampaignStepEditor({
                   max={23}
                   value={step.delay_hours}
                   onChange={(e) => onChange({ delay_hours: parseInt(e.target.value) || 0 })}
+                  disabled={!canMutate}
                 />
               </div>
             </div>
