@@ -49,7 +49,7 @@ function classifyError(message: string): CanonicalReadStatus {
 
 /**
  * Reads the authoritative canonical state for a client.
- * Never reads pat_status. Never derives lifecycle/engagement/at-risk client-side.
+ * Never reads legacy status columns. Never derives lifecycle/engagement/at-risk client-side.
  * Fail-closed: returns explicit CONTRACT_NOT_DEPLOYED status when the backend
  * view is missing, instead of silently returning null.
  */
