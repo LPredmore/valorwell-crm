@@ -199,124 +199,129 @@ export const supabaseClientsRepository: ClientsRepository = {
     return data ? rowToCanonical(data) : null;
   },
 
-  async updateLifecycle(id, next, reason) {
-    const tenant_id = await tenantOf(id);
+  async updateLifecycle(id, next, reason, note) {
     const concurrency_token = await fetchConcurrencyToken(id);
-    await callRpc('transition_client_lifecycle', {
-      client_id: id,
-      tenant_id,
-      to_stage: mapDomainLifecycleToDb(next),
-      reason,
-      concurrency_token,
-      contract_version: CONTRACT_VERSION,
+    await callRpc('crm_transition_lifecycle', {
+      p_client_id: id,
+      p_to_stage: mapDomainLifecycleToDb(next),
+      p_reason: note ? `${reason} — ${note}` : reason,
+      p_disposition_reason: null,
+      p_concurrency_token: concurrency_token,
+      p_idempotency_key: crypto.randomUUID(),
+      p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
   },
 
   async updateEngagement(id, next) {
-    const tenant_id = await tenantOf(id);
     const concurrency_token = await fetchConcurrencyToken(id);
-    await callRpc('set_client_engagement_state', {
-      client_id: id, tenant_id,
-      to_state: mapDomainEngagementToDb(next),
-      reason: 'ui_update',
-      concurrency_token, contract_version: CONTRACT_VERSION,
+    await callRpc('crm_set_engagement', {
+      p_client_id: id,
+      p_to_state: mapDomainEngagementToDb(next),
+      p_reason: 'ui_update',
+      p_concurrency_token: concurrency_token,
+      p_idempotency_key: crypto.randomUUID(),
+      p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
   },
 
   async updateEligibility(id, next, note) {
-    const tenant_id = await tenantOf(id);
     const concurrency_token = await fetchConcurrencyToken(id);
-    await callRpc('set_client_eligibility_state', {
-      client_id: id, tenant_id,
-      to_state: mapDomainEligibilityToDb(next),
-      reason: note ?? 'ui_update',
-      concurrency_token, contract_version: CONTRACT_VERSION,
+    await callRpc('crm_set_eligibility', {
+      p_client_id: id,
+      p_to_state: mapDomainEligibilityToDb(next),
+      p_manual_review: null,
+      p_reason: note ?? 'ui_update',
+      p_concurrency_token: concurrency_token,
+      p_idempotency_key: crypto.randomUUID(),
+      p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
   },
 
   async updateContactPolicy(id, next, reason) {
-    const tenant_id = await tenantOf(id);
     const concurrency_token = await fetchConcurrencyToken(id);
-    await callRpc('set_client_contact_policy', {
-      client_id: id, tenant_id,
-      to_policy: mapDomainContactPolicyToDb(next),
-      reason, concurrency_token, contract_version: CONTRACT_VERSION,
+    await callRpc('crm_set_contact_policy', {
+      p_client_id: id,
+      p_to_policy: mapDomainContactPolicyToDb(next),
+      p_reason: reason,
+      p_concurrency_token: concurrency_token,
+      p_idempotency_key: crypto.randomUUID(),
+      p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
   },
 
   async updateServicePolicy(id, next, reason) {
-    const tenant_id = await tenantOf(id);
     const concurrency_token = await fetchConcurrencyToken(id);
-    await callRpc('set_client_service_policy', {
-      client_id: id, tenant_id,
-      to_policy: mapDomainServicePolicyToDb(next),
-      reason, concurrency_token, contract_version: CONTRACT_VERSION,
+    await callRpc('crm_set_service_policy', {
+      p_client_id: id,
+      p_to_policy: mapDomainServicePolicyToDb(next),
+      p_reason: reason,
+      p_concurrency_token: concurrency_token,
+      p_idempotency_key: crypto.randomUUID(),
+      p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
   },
 
   async updateCareCadence(id, next) {
-    const tenant_id = await tenantOf(id);
     const concurrency_token = await fetchConcurrencyToken(id);
-    await callRpc('set_client_care_cadence', {
-      client_id: id, tenant_id,
-      to_cadence: mapDomainCareCadenceToDb(next),
-      reason: 'ui_update',
-      concurrency_token, contract_version: CONTRACT_VERSION,
+    await callRpc('crm_set_care_cadence', {
+      p_client_id: id,
+      p_to_cadence: mapDomainCareCadenceToDb(next),
+      p_reason: 'ui_update',
+      p_concurrency_token: concurrency_token,
+      p_idempotency_key: crypto.randomUUID(),
+      p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
   },
 
-  async updateRisk(id, next) {
-    const tenant_id = await tenantOf(id);
-    const concurrency_token = await fetchConcurrencyToken(id);
-    await callRpc('set_client_risk', {
-      client_id: id, tenant_id,
-      at_risk: next.atRisk,
-      risk_reason: next.reasons?.[0] ?? null,
-      reason: next.reasons?.join('; ') ?? 'ui_update',
-      concurrency_token, contract_version: CONTRACT_VERSION,
-    });
-    return reload(id);
+  async updateRisk() {
+    // Risk state is derived server-side; no client-facing RPC exists on
+    // contract 1.0.1. Fail-closed rather than silently no-op.
+    throw new Error(
+      'updateRisk: risk state is derived server-side under contract 1.0.1 and cannot be set from the CRM UI',
+    );
   },
 
   async close(id, info) {
-    const tenant_id = await tenantOf(id);
     const concurrency_token = await fetchConcurrencyToken(id);
     if (!info.closureReason) throw new Error('closureReason is required to close a client');
-    await callRpc('set_client_disposition', {
-      client_id: id, tenant_id,
-      disposition_reason: mapDomainClosureReasonToDb(info.closureReason),
-      reason: info.notes ?? 'ui_close',
-      concurrency_token, contract_version: CONTRACT_VERSION,
+    await callRpc('crm_close_client', {
+      p_client_id: id,
+      p_disposition_reason: mapDomainClosureReasonToDb(info.closureReason),
+      p_reason: info.notes ?? 'ui_close',
+      p_concurrency_token: concurrency_token,
+      p_idempotency_key: crypto.randomUUID(),
+      p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
   },
 
   async reopen(id, reason) {
-    const tenant_id = await tenantOf(id);
     const concurrency_token = await fetchConcurrencyToken(id);
-    await callRpc('transition_client_lifecycle', {
-      client_id: id, tenant_id,
-      to_stage: 'intake',
-      reason,
-      concurrency_token, contract_version: CONTRACT_VERSION,
+    await callRpc('crm_reopen_client', {
+      p_client_id: id,
+      p_reason: reason,
+      p_concurrency_token: concurrency_token,
+      p_idempotency_key: crypto.randomUUID(),
+      p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
   },
 
   async assignClinician(id, staffId) {
-    const tenant_id = await tenantOf(id);
     const concurrency_token = await fetchConcurrencyToken(id);
-    await callRpc('assign_client_clinician', {
-      client_id: id, tenant_id,
-      staff_id: staffId,
-      reason: 'ui_assign',
-      concurrency_token, contract_version: CONTRACT_VERSION,
+    await callRpc('crm_assign_clinician', {
+      p_client_id: id,
+      p_staff_id: staffId,
+      p_reason: 'ui_assign',
+      p_concurrency_token: concurrency_token,
+      p_idempotency_key: crypto.randomUUID(),
+      p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
   },
@@ -325,3 +330,4 @@ export const supabaseClientsRepository: ClientsRepository = {
     throw new Error('assignOperationsOwner: no operations-owner column exists on clients yet');
   },
 };
+
