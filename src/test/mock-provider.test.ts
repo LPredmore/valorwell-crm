@@ -112,6 +112,13 @@ describe('mock data provider — reports render data', () => {
     expect(funnel?.rows.every(row => typeof row.current_count === 'number')).toBe(true);
   });
 
+  it('preserves non-applicable engagement measurements as null', async () => {
+    const engagement = await mockDataProvider.reports.engagementMetrics(tenantId);
+    const nonNormal = engagement?.rows.filter(row => row.engagement !== 'normal') ?? [];
+    expect(nonNormal.length).toBeGreaterThan(0);
+    expect(nonNormal.every(row => row.avg_days_to_normal === null)).toBe(true);
+  });
+
   it('implements all six canonical report contracts for the selected tenant', async () => {
     const reports = await Promise.all([
       mockDataProvider.reports.journeyFunnel(tenantId),
