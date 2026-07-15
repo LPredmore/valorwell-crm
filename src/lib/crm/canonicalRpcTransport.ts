@@ -72,12 +72,12 @@ export function isRetryableSupabaseRpcError(error: RpcErrorLike): boolean {
 export function buildCanonicalRpcArgs<T extends Record<string, unknown>>(
   base: T,
   concurrencyToken: string,
-  idempotencyKey: string,
+  idempotencyKey: string | undefined,
 ): T & { p_concurrency_token: string; p_idempotency_key: string; p_contract_version: string } {
   return {
     ...base,
     p_concurrency_token: concurrencyToken,
-    p_idempotency_key: idempotencyKey,
+    p_idempotency_key: idempotencyKey ?? newIdempotencyKey(),
     p_contract_version: CONTRACT_VERSION,
   };
 }

@@ -38,8 +38,11 @@ jobs:
       - name: Lint
         run: npx eslint src --max-warnings=0
 
-      - name: Type-check
-        run: npx tsc --noEmit
+      - name: Type-check application
+        run: npx tsc --noEmit --project tsconfig.app.json
+
+      - name: Type-check tooling
+        run: npx tsc --noEmit --project tsconfig.node.json
 
       - name: Test
         run: npm test

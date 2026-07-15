@@ -38,12 +38,7 @@ export interface ListClientsQuery {
   servicePolicy?: ServicePolicy[];
   atRisk?: boolean;
   assignedClinicianIds?: string[];
-  assignedOperationsOwnerIds?: string[];
   states?: string[];
-  payers?: string[];
-  campaignIds?: string[];
-  tags?: string[];
-  hasOpenTasks?: boolean;
   page?: number;
   pageSize?: number;
   sortBy?: keyof CanonicalClient;

@@ -167,11 +167,22 @@ export function composeFilterSortAndPageClients(
   return { rows: rows.slice(from, from + pageSize), total, page, pageSize };
 }
 
-async function fetchAllRows<T>(buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
+const CLIENT_LIST_CANDIDATE_ROW_LIMIT = 10_000;
+
+async function fetchAllRows<T>(
+  buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  sourceName: string,
+): Promise<T[]> {
+  // Interim correctness-first materialization guard pending a combined backend
+  // read model. Throwing is safer than silently truncating and returning a
+  // false total/page when a tenant exceeds the candidate limit.
   const all: T[] = [];
   const size = 1000;
   for (let from = 0; ; from += size) {
-    const { data, error } = await buildQuery(from, from + size - 1);
+    if (from >= CLIENT_LIST_CANDIDATE_ROW_LIMIT) {
+      throw new Error(`${sourceName} candidate row limit exceeded (${CLIENT_LIST_CANDIDATE_ROW_LIMIT}); a combined backend CRM client read model is required`);
+    }
+    const { data, error } = await buildQuery(from, Math.min(from + size - 1, CLIENT_LIST_CANDIDATE_ROW_LIMIT - 1));
     if (error) throw new Error(error.message);
     const rows = data ?? [];
     all.push(...rows);
@@ -256,8 +267,8 @@ export const supabaseClientsRepository: ClientsRepository = {
     }
 
     const [canonicalRows, clientRows] = await Promise.all([
-      fetchAllRows<CanonicalStateRow>((from, to) => canonicalQuery.range(from, to)),
-      fetchAllRows<ClientRow>((from, to) => clientsQuery.range(from, to)),
+      fetchAllRows<CanonicalStateRow>((from, to) => canonicalQuery.range(from, to), 'canonical client state'),
+      fetchAllRows<ClientRow>((from, to) => clientsQuery.range(from, to), 'client identity'),
     ]);
 
     return composeFilterSortAndPageClients(canonicalRows, clientRows, q);

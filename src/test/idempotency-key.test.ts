@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildCanonicalRpcArgs,
   newIdempotencyKey,
-} from '@/hooks/crm/useCanonicalMutations';
+} from '@/lib/crm/canonicalRpcTransport';
 import { CONTRACT_VERSION } from '@/lib/crm/contracts';
 
 describe('canonical RPC idempotency-key handling', () => {

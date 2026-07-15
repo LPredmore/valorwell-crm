@@ -29,14 +29,8 @@ interface BaseArgs {
   idempotency_key?: string;
 }
 
-const logicalActionKeys = new WeakMap<BaseArgs, string>();
-
 export function idempotencyKeyForLogicalAction<TInput extends BaseArgs>(input: TInput): string {
-  const existing = logicalActionKeys.get(input);
-  if (existing) return existing;
-  const created = input.idempotency_key ?? newIdempotencyKey();
-  logicalActionKeys.set(input, created);
-  return created;
+  return input.idempotency_key ?? newIdempotencyKey();
 }
 
 function useCanonicalRpc<Name extends CanonicalRpcName, TInput extends BaseArgs>(

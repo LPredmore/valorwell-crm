@@ -105,6 +105,14 @@ describe('supabaseClientsRepository.list query composition', () => {
     expect(result.rows.map((row) => row.id)).toEqual(['1']);
   });
 
+
+
+  it('throws instead of silently truncating when canonical candidates exceed the safety limit', async () => {
+    canonicalRows = Array.from({ length: 10_001 }, (_, index) => canonical(String(index + 1)));
+    clientRows = [];
+    await expect(supabaseClientsRepository.list({ page: 1, pageSize: 50 })).rejects.toThrow('canonical client state candidate row limit exceeded');
+  });
+
   it('reuses one idempotency key across a real repository mutation retry and does not retry business failures', async () => {
     rpc.mockImplementation(async (_name, args) => {
       rpcPayloads.push(args);

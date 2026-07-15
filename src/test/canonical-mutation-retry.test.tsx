@@ -51,6 +51,25 @@ describe('canonical mutation retry idempotency', () => {
     expect((payloads[2] as Record<string, unknown>).p_idempotency_key).not.toBe((payloads[0] as Record<string, unknown>).p_idempotency_key);
   });
 
+
+
+  it('uses a new idempotency key when the same input object is reused for a later action', async () => {
+    const payloads: unknown[] = [];
+    rpc.mockImplementation(async (_name, args) => {
+      payloads.push(args);
+      return { data: { ok: true }, error: null } as never;
+    });
+
+    const input = { client_id: 'c1', to_state: 'normal', reason: 'ui', concurrency_token: 'tok-1' };
+    const { result } = renderHook(() => useSetEngagement(), { wrapper });
+    result.current.mutate(input);
+    await waitFor(() => expect(payloads).toHaveLength(1));
+    result.current.mutate(input);
+    await waitFor(() => expect(payloads).toHaveLength(2));
+
+    expect((payloads[1] as Record<string, unknown>).p_idempotency_key).not.toBe((payloads[0] as Record<string, unknown>).p_idempotency_key);
+  });
+
   it('does not retry backend ok:false business results', async () => {
     rpc.mockResolvedValue({ data: { ok: false, error_code: 'invalid_transition', message: 'Nope' }, error: null } as never);
     const { result } = renderHook(() => useSetEngagement(), { wrapper });

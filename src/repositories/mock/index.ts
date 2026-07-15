@@ -32,12 +32,7 @@ function matchClient(c: CanonicalClient, q: ListClientsQuery): boolean {
   if (q.servicePolicy?.length && !q.servicePolicy.includes(c.servicePolicy)) return false;
   if (q.atRisk !== undefined && c.risk.atRisk !== q.atRisk) return false;
   if (q.assignedClinicianIds?.length && (!c.assignedClinicianId || !q.assignedClinicianIds.includes(c.assignedClinicianId))) return false;
-  if (q.assignedOperationsOwnerIds?.length && (!c.assignedOperationsOwnerId || !q.assignedOperationsOwnerIds.includes(c.assignedOperationsOwnerId))) return false;
   if (q.states?.length && (!c.state || !q.states.includes(c.state))) return false;
-  if (q.payers?.length && (!c.payer || !q.payers.includes(c.payer))) return false;
-  if (q.campaignIds?.length && (!c.activeCampaignId || !q.campaignIds.includes(c.activeCampaignId))) return false;
-  if (q.tags?.length && !q.tags.some(t => c.tags.includes(t))) return false;
-  if (q.hasOpenTasks && c.openTaskCount === 0) return false;
   return true;
 }
 
