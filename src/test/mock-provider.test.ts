@@ -102,17 +102,27 @@ describe('mock data provider — campaigns', () => {
 });
 
 describe('mock data provider — reports render data', () => {
-  it('returns a funnel with all lifecycle stages', async () => {
-    const funnel = await mockDataProvider.reports.journeyFunnel();
-    expect(funnel.length).toBe(8);
-    expect(funnel.every(r => typeof r.count === 'number')).toBe(true);
+  const tenantId = 'tenant-valorwell';
+
+  it('returns tenant-scoped weekly funnel rows with canonical metrics', async () => {
+    const funnel = await mockDataProvider.reports.journeyFunnel(tenantId);
+    expect(funnel?.tenantId).toBe(tenantId);
+    expect(funnel?.bucketStart).toBe('2026-07-06');
+    expect(funnel?.rows.length).toBeGreaterThan(0);
+    expect(funnel?.rows.every(row => typeof row.current_count === 'number')).toBe(true);
   });
-  it('returns engagement counts summing to client total', async () => {
-    const [{ counts }, all] = await Promise.all([
-      mockDataProvider.reports.engagementMetrics(),
-      mockDataProvider.clients.list({ pageSize: 500 }),
+
+  it('implements all six canonical report contracts for the selected tenant', async () => {
+    const reports = await Promise.all([
+      mockDataProvider.reports.journeyFunnel(tenantId),
+      mockDataProvider.reports.engagementMetrics(tenantId),
+      mockDataProvider.reports.closureMetrics(tenantId),
+      mockDataProvider.reports.campaignPerformance(tenantId),
+      mockDataProvider.reports.taskPerformance(tenantId),
+      mockDataProvider.reports.exceptionMetrics(tenantId),
     ]);
-    const sum = counts.Engaged + counts.Warm + counts.Cold + counts['Went Dark'];
-    expect(sum).toBe(all.total);
+    expect(reports.every(report => report?.tenantId === tenantId)).toBe(true);
+    expect(reports.every(report => report?.bucketStart === '2026-07-06')).toBe(true);
+    expect(reports.every(report => report && report.rows.length > 0)).toBe(true);
   });
 });

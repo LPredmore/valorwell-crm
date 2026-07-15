@@ -21,6 +21,7 @@ import type {
   AuditEvent,
   CommunicationPolicyResult,
 } from '@/domain/operations';
+import type { Tables } from '@/integrations/supabase/types';
 
 export interface Paged<T> {
   rows: T[];
@@ -138,38 +139,59 @@ export interface AuditRepository {
   listForClient(clientId: string): Promise<AuditEvent[]>;
 }
 
+export interface ReportBucket<Row> {
+  tenantId: string;
+  bucketStart: string;
+  bucketEnd: string | null;
+  rows: Row[];
+}
+
+type WithSafeReportNumbers<Row, Keys extends keyof Row> = Omit<Row, Keys> & {
+  [Key in Keys]-?: Exclude<Row[Key], null>;
+};
+
+export type FunnelReportRow = WithSafeReportNumbers<
+  Tables<'v_crm_reports_funnel'>,
+  'entered_count' | 'exited_count' | 'current_count' | 'median_days_in_stage'
+>;
+
+export type EngagementReportRow = WithSafeReportNumbers<
+  Tables<'v_crm_reports_engagement'>,
+  'current_count' | 'entered_count' | 'avg_days_to_normal'
+>;
+
+export type ClosureReportRow = WithSafeReportNumbers<
+  Tables<'v_crm_reports_closure'>,
+  'closed_count' | 'reopened_count' | 'net_closed'
+>;
+
+export type CampaignReportRow = WithSafeReportNumbers<
+  Tables<'v_crm_reports_campaigns'>,
+  | 'enrolled_count'
+  | 'completed_count'
+  | 'cancelled_count'
+  | 'responded_count'
+  | 'suppressed_count'
+  | 'failed_count'
+>;
+
+export type TaskReportRow = WithSafeReportNumbers<
+  Tables<'v_crm_reports_tasks'>,
+  'open_count' | 'completed_count' | 'overdue_count' | 'median_hours_to_complete'
+>;
+
+export type ExceptionReportRow = WithSafeReportNumbers<
+  Tables<'v_crm_reports_exceptions'>,
+  'raised_count' | 'resolved_count' | 'open_count' | 'median_hours_to_resolve'
+>;
+
 export interface ReportsRepository {
-  journeyFunnel(): Promise<{ stage: LifecycleStage; count: number; medianDays: number }[]>;
-  atRiskMetrics(): Promise<{
-    totalAtRisk: number;
-    newlyAtRisk: number;
-    resolved: number;
-    averageDaysAtRisk: number;
-    byReason: { reason: string; count: number }[];
-    byStage: { stage: LifecycleStage; count: number }[];
-    overdueInterventions: number;
-  }>;
-  engagementMetrics(): Promise<{
-    counts: Record<EngagementState, number>;
-    reengagementRate: number;
-    medianDaysSinceLastContact: number;
-  }>;
-  closureMetrics(): Promise<{ reason: string; count: number }[]>;
-  campaignPerformance(): Promise<
-    { campaignId: string; name: string; enrolled: number; sent: number; delivered: number; responded: number; completed: number; suppressed: number; failed: number; optedOut: number }[]
-  >;
-  taskPerformance(): Promise<{
-    open: number;
-    overdue: number;
-    avgCompletionHours: number;
-    byOwner: { ownerId: string; open: number; overdue: number }[];
-  }>;
-  exceptionMetrics(): Promise<{
-    byType: { type: string; count: number }[];
-    bySeverity: { severity: string; count: number }[];
-    openVsResolved: { open: number; resolved: number };
-    avgResolutionHours: number;
-  }>;
+  journeyFunnel(tenantId: string): Promise<ReportBucket<FunnelReportRow> | null>;
+  engagementMetrics(tenantId: string): Promise<ReportBucket<EngagementReportRow> | null>;
+  closureMetrics(tenantId: string): Promise<ReportBucket<ClosureReportRow> | null>;
+  campaignPerformance(tenantId: string): Promise<ReportBucket<CampaignReportRow> | null>;
+  taskPerformance(tenantId: string): Promise<ReportBucket<TaskReportRow> | null>;
+  exceptionMetrics(tenantId: string): Promise<ReportBucket<ExceptionReportRow> | null>;
 }
 
 export interface CrmDataProvider {
