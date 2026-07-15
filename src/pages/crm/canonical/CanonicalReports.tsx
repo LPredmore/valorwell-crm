@@ -127,7 +127,7 @@ export default function CanonicalReports() {
                     <td className={td}>{formatEngagementState(row.engagement)}</td>
                     <td className={numberTd}>{row.current_count}</td>
                     <td className={numberTd}>{row.entered_count}</td>
-                    <td className={numberTd}>{row.avg_days_to_normal}</td>
+                    <td className={numberTd}>{row.avg_days_to_normal ?? '—'}</td>
                   </tr>
                 ))}</tbody>
               </table>
