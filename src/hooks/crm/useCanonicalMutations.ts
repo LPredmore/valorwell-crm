@@ -55,28 +55,39 @@ interface BaseArgs {
 }
 
 type CanonicalRpcName = (typeof RPC)[keyof typeof RPC];
-type CanonicalRpcArgs = Database['public']['Functions'][CanonicalRpcName]['Args'];
+type CanonicalRpcArgsByName = {
+  [RPC.transitionLifecycle]: Database['public']['Functions']['crm_transition_lifecycle']['Args'];
+  [RPC.setEngagement]: Database['public']['Functions']['crm_set_engagement']['Args'];
+  [RPC.setContactPolicy]: Database['public']['Functions']['crm_set_contact_policy']['Args'];
+  [RPC.setServicePolicy]: Database['public']['Functions']['crm_set_service_policy']['Args'];
+  [RPC.setEligibility]: Database['public']['Functions']['crm_set_eligibility']['Args'];
+  [RPC.setCareCadence]: Database['public']['Functions']['crm_set_care_cadence']['Args'];
+  [RPC.assignClinician]: Database['public']['Functions']['crm_assign_clinician']['Args'];
+  [RPC.closeClient]: Database['public']['Functions']['crm_close_client']['Args'];
+  [RPC.reopenClient]: Database['public']['Functions']['crm_reopen_client']['Args'];
+};
 
 function isMutationResult(value: Json): value is MutationResult {
   return typeof value === 'object' && value !== null && !Array.isArray(value) && 'ok' in value && typeof value.ok === 'boolean';
 }
 
-function useCanonicalRpc<TInput extends BaseArgs>(
-  rpcName: CanonicalRpcName,
+function useCanonicalRpc<Name extends CanonicalRpcName, TInput extends BaseArgs>(
+  rpcName: Name,
   successMsg: string,
-  buildArgs: (input: TInput) => Omit<CanonicalRpcArgs, 'p_concurrency_token' | 'p_idempotency_key' | 'p_contract_version'>,
+  buildArgs: (input: TInput) => Omit<CanonicalRpcArgsByName[Name], 'p_concurrency_token' | 'p_idempotency_key' | 'p_contract_version'>,
 ) {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (input: TInput): Promise<MutationResult> => {
       const token = assertRealToken(input.concurrency_token);
+      input.idempotency_key ??= newIdempotencyKey();
       const args = buildCanonicalRpcArgs(
         buildArgs(input),
         token,
         input.idempotency_key,
-      );
-      const { data, error } = await supabase.rpc(rpcName, args as CanonicalRpcArgs);
+      ) as CanonicalRpcArgsByName[Name];
+      const { data, error } = await supabase.rpc(rpcName, args);
       if (error) {
         return { ok: false, error_code: 'unknown', message: error.message };
       }
@@ -125,7 +136,7 @@ export interface CloseClientArgs extends BaseArgs { disposition_reason: string; 
 export type ReopenClientArgs = BaseArgs;
 
 export const useTransitionLifecycle = () =>
-  useCanonicalRpc<LifecycleTransitionArgs>(RPC.transitionLifecycle, 'Lifecycle updated', (i) => ({
+  useCanonicalRpc<typeof RPC.transitionLifecycle, LifecycleTransitionArgs>(RPC.transitionLifecycle, 'Lifecycle updated', (i) => ({
     p_client_id: i.client_id,
     p_to_stage: i.to_stage,
     p_reason: i.reason,
@@ -133,28 +144,28 @@ export const useTransitionLifecycle = () =>
   }));
 
 export const useSetEngagement = () =>
-  useCanonicalRpc<EngagementSetArgs>(RPC.setEngagement, 'Engagement updated', (i) => ({
+  useCanonicalRpc<typeof RPC.setEngagement, EngagementSetArgs>(RPC.setEngagement, 'Engagement updated', (i) => ({
     p_client_id: i.client_id,
     p_to_state: i.to_state,
     p_reason: i.reason,
   }));
 
 export const useSetContactPolicy = () =>
-  useCanonicalRpc<ContactPolicySetArgs>(RPC.setContactPolicy, 'Contact policy updated', (i) => ({
+  useCanonicalRpc<typeof RPC.setContactPolicy, ContactPolicySetArgs>(RPC.setContactPolicy, 'Contact policy updated', (i) => ({
     p_client_id: i.client_id,
     p_to_policy: i.to_policy,
     p_reason: i.reason,
   }));
 
 export const useSetServicePolicy = () =>
-  useCanonicalRpc<ServicePolicySetArgs>(RPC.setServicePolicy, 'Service policy updated', (i) => ({
+  useCanonicalRpc<typeof RPC.setServicePolicy, ServicePolicySetArgs>(RPC.setServicePolicy, 'Service policy updated', (i) => ({
     p_client_id: i.client_id,
     p_to_policy: i.to_policy,
     p_reason: i.reason,
   }));
 
 export const useSetEligibility = () =>
-  useCanonicalRpc<EligibilitySetArgs>(RPC.setEligibility, 'Eligibility updated', (i) => ({
+  useCanonicalRpc<typeof RPC.setEligibility, EligibilitySetArgs>(RPC.setEligibility, 'Eligibility updated', (i) => ({
     p_client_id: i.client_id,
     p_to_state: i.to_state,
     p_manual_review: i.manual_review ?? null,
@@ -162,28 +173,28 @@ export const useSetEligibility = () =>
   }));
 
 export const useSetCareCadence = () =>
-  useCanonicalRpc<CareCadenceSetArgs>(RPC.setCareCadence, 'Care cadence updated', (i) => ({
+  useCanonicalRpc<typeof RPC.setCareCadence, CareCadenceSetArgs>(RPC.setCareCadence, 'Care cadence updated', (i) => ({
     p_client_id: i.client_id,
     p_to_cadence: i.to_cadence,
     p_reason: i.reason,
   }));
 
 export const useAssignClinician = () =>
-  useCanonicalRpc<AssignClinicianArgs>(RPC.assignClinician, 'Clinician assignment updated', (i) => ({
+  useCanonicalRpc<typeof RPC.assignClinician, AssignClinicianArgs>(RPC.assignClinician, 'Clinician assignment updated', (i) => ({
     p_client_id: i.client_id,
     p_staff_id: i.staff_id,
     p_reason: i.reason,
   }));
 
 export const useCloseClient = () =>
-  useCanonicalRpc<CloseClientArgs>(RPC.closeClient, 'Client closed', (i) => ({
+  useCanonicalRpc<typeof RPC.closeClient, CloseClientArgs>(RPC.closeClient, 'Client closed', (i) => ({
     p_client_id: i.client_id,
     p_disposition_reason: i.disposition_reason,
     p_reason: i.reason,
   }));
 
 export const useReopenClient = () =>
-  useCanonicalRpc<ReopenClientArgs>(RPC.reopenClient, 'Client reopened', (i) => ({
+  useCanonicalRpc<typeof RPC.reopenClient, ReopenClientArgs>(RPC.reopenClient, 'Client reopened', (i) => ({
     p_client_id: i.client_id,
     p_reason: i.reason,
   }));

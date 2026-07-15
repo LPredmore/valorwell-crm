@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Database, Json } from '@/integrations/supabase/types';
 import type {
   ClientsRepository, ListClientsQuery, Paged,
 } from '../types';
@@ -18,45 +19,67 @@ const CLIENT_SELECT = `
   id, tenant_id,
   pat_name_f, pat_name_m, pat_name_l, pat_name_preferred,
   email, phone, pat_state, pat_dob,
-  primary_staff_id, tags,
-  lifecycle_stage, lifecycle_stage_changed_at,
-  engagement_state, engagement_state_changed_at,
-  eligibility_state, eligibility_state_changed_at,
-  contact_policy, contact_policy_changed_at,
-  service_policy, service_policy_changed_at,
-  care_cadence, care_cadence_changed_at,
-  at_risk, at_risk_since,
-  closure_reason, closed_at,
+  tags,
   last_contact_at, last_contact_channel, last_contact_direction,
   created_at, updated_at
 `;
 
 
 
-function tokenFor(id: string, updatedAt: string | null | undefined): string {
-  // Deterministic pseudo-uuid derived from id+updated_at; matches the SQL
-  // COALESCE fallback in v_client_canonical_state.
-  // We ask the view for the actual concurrency_token (which may come from meta).
-  return `${id}:${updatedAt ?? ''}`;
+type ClientRow = {
+  id: string; tenant_id: string; pat_name_f: string | null; pat_name_m: string | null;
+  pat_name_l: string | null; pat_name_preferred: string | null; email: string | null;
+  phone: string | null; pat_state: string | null; pat_dob: string | null; tags: unknown;
+  last_contact_at: string | null; last_contact_channel: string | null; last_contact_direction: string | null;
+  created_at: string; updated_at: string;
+};
+
+type CanonicalStateRow = Database['public']['Views']['v_client_canonical_state']['Row'];
+
+type CanonicalRpcName =
+  | 'crm_transition_lifecycle'
+  | 'crm_set_engagement'
+  | 'crm_set_contact_policy'
+  | 'crm_set_service_policy'
+  | 'crm_set_eligibility'
+  | 'crm_set_care_cadence'
+  | 'crm_assign_clinician'
+  | 'crm_close_client'
+  | 'crm_reopen_client';
+
+type CanonicalRpcArgsByName = {
+  [K in CanonicalRpcName]: Database['public']['Functions'][K]['Args'];
+};
+
+function requireCanonicalValue<T>(value: T | null | undefined, field: string): T {
+  if (value === null || value === undefined || value === '') {
+    throw new Error(`Canonical state unavailable: ${field}`);
+  }
+  return value;
 }
 
-async function fetchConcurrencyToken(clientId: string): Promise<string> {
-  const { data, error } = await supabase
-    .from('v_client_canonical_state')
-    .select('concurrency_token')
-    .eq('client_id', clientId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data?.concurrency_token) throw new Error('Concurrency token unavailable');
-  return data.concurrency_token as string;
+function parseAtRisk(value: Json | null): { atRisk: boolean; atRiskSince?: string; reasons: string[] } {
+  if (typeof value === 'boolean') return { atRisk: value, reasons: [] };
+  if (typeof value === 'object' && value && !Array.isArray(value)) {
+    const record = value as Record<string, Json>;
+    return {
+      atRisk: record.at_risk === true || record.value === true,
+      atRiskSince: typeof record.since === 'string' ? record.since : undefined,
+      reasons: Array.isArray(record.reasons) ? record.reasons.filter((r): r is string => typeof r === 'string') : [],
+    };
+  }
+  return { atRisk: false, reasons: [] };
 }
 
-function rowToCanonical(row: Row): CanonicalClient {
+function rowToCanonical(row: ClientRow, state: CanonicalStateRow): CanonicalClient {
+  if (state.client_id !== row.id) throw new Error('Canonical state unavailable: client_id mismatch');
   const tagsArr: string[] = Array.isArray(row.tags)
-    ? row.tags
+    ? row.tags.filter((tag): tag is string => typeof tag === 'string')
     : typeof row.tags === 'string' && row.tags
-      ? row.tags.split(',').map((s: string) => s.trim()).filter(Boolean)
+      ? row.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
       : [];
+  const risk = parseAtRisk(state.at_risk);
+  const dispositionReason = state.disposition_reason;
   return {
     id: row.id,
     tenantId: row.tenant_id,
@@ -68,31 +91,21 @@ function rowToCanonical(row: Row): CanonicalClient {
     email: row.email ?? undefined,
     phone: row.phone ?? undefined,
     state: row.pat_state ?? undefined,
-    assignedClinicianId: row.primary_staff_id ?? undefined,
+    assignedClinicianId: state.assigned_therapist_id ?? undefined,
     assignedOperationsOwnerId: undefined,
-    lifecycle: mapDbLifecycleToDomain(row.lifecycle_stage),
-    engagement: mapDbEngagementToDomain(row.engagement_state),
-    eligibility: mapDbEligibilityToDomain(row.eligibility_state),
-    contactPolicy: mapDbContactPolicyToDomain(row.contact_policy),
-    servicePolicy: mapDbServicePolicyToDomain(row.service_policy),
-    careCadence: mapDbCareCadenceToDomain(row.care_cadence),
-    risk: {
-      atRisk: !!row.at_risk,
-      atRiskSince: row.at_risk_since ?? undefined,
-      reasons: [],
-    },
-    closure: row.closure_reason
-      ? {
-          closureReason: mapDbClosureReasonToDomain(row.closure_reason),
-          closedAt: row.closed_at ?? undefined,
-        }
+    lifecycle: mapDbLifecycleToDomain(requireCanonicalValue(state.lifecycle, 'lifecycle')),
+    engagement: mapDbEngagementToDomain(requireCanonicalValue(state.engagement, 'engagement')),
+    eligibility: mapDbEligibilityToDomain(requireCanonicalValue(state.eligibility, 'eligibility')),
+    contactPolicy: mapDbContactPolicyToDomain(requireCanonicalValue(state.contact_policy, 'contact_policy')),
+    servicePolicy: mapDbServicePolicyToDomain(requireCanonicalValue(state.service_policy, 'service_policy')),
+    careCadence: mapDbCareCadenceToDomain(requireCanonicalValue(state.care_cadence, 'care_cadence')),
+    risk,
+    closure: dispositionReason
+      ? { closureReason: mapDbClosureReasonToDomain(dispositionReason), closedAt: state.disposition_at ?? undefined }
       : undefined,
     lastContactAt: row.last_contact_at ?? undefined,
     lastContactChannel: row.last_contact_channel ?? undefined,
-    lastContactDirection:
-      row.last_contact_direction === 'sent' ? 'outbound'
-      : row.last_contact_direction === 'received' ? 'inbound'
-      : undefined,
+    lastContactDirection: row.last_contact_direction === 'sent' ? 'outbound' : row.last_contact_direction === 'received' ? 'inbound' : undefined,
     openTaskCount: 0,
     tags: tagsArr,
     createdAt: row.created_at,
@@ -100,9 +113,20 @@ function rowToCanonical(row: Row): CanonicalClient {
   };
 }
 
-async function callRpc(
-  name: string,
-  args: Record<string, unknown>,
+async function fetchCanonicalState(clientId: string): Promise<CanonicalStateRow> {
+  const { data, error } = await supabase.from('v_client_canonical_state').select('*').eq('client_id', clientId).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Canonical state unavailable');
+  return data;
+}
+
+async function fetchConcurrencyToken(clientId: string): Promise<string> {
+  return requireCanonicalValue((await fetchCanonicalState(clientId)).concurrency_token, 'concurrency_token');
+}
+
+async function callRpc<Name extends CanonicalRpcName>(
+  name: Name,
+  args: CanonicalRpcArgsByName[Name],
 ): Promise<void> {
   const { data, error } = await supabase.rpc(name, args);
   if (error) throw new Error(error.message);
@@ -119,7 +143,7 @@ async function reload(id: string): Promise<CanonicalClient> {
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error('Client not found');
-  return rowToCanonical(data);
+  return rowToCanonical(data, await fetchCanonicalState(id));
 }
 
 async function tenantOf(id: string): Promise<string> {
@@ -137,28 +161,42 @@ export const supabaseClientsRepository: ClientsRepository = {
   async list(q: ListClientsQuery): Promise<Paged<CanonicalClient>> {
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 50;
-    let query = supabase
-      .from('clients')
-      .select(CLIENT_SELECT, { count: 'exact' });
+    let canonicalQuery = supabase
+      .from('v_client_canonical_state')
+      .select('*', { count: 'exact' });
 
     if (q.lifecycle?.length) {
-      query = query.in('lifecycle_stage', q.lifecycle.map(mapDomainLifecycleToDb));
+      canonicalQuery = canonicalQuery.in('lifecycle', q.lifecycle.map(mapDomainLifecycleToDb));
     }
     if (q.engagement?.length) {
-      query = query.in('engagement_state', q.engagement.map(mapDomainEngagementToDb));
+      canonicalQuery = canonicalQuery.in('engagement', q.engagement.map(mapDomainEngagementToDb));
     }
     if (q.eligibility?.length) {
-      query = query.in('eligibility_state', q.eligibility.map(mapDomainEligibilityToDb));
+      canonicalQuery = canonicalQuery.in('eligibility', q.eligibility.map(mapDomainEligibilityToDb));
     }
     if (q.contactPolicy?.length) {
-      query = query.in('contact_policy', q.contactPolicy.map(mapDomainContactPolicyToDb));
+      canonicalQuery = canonicalQuery.in('contact_policy', q.contactPolicy.map(mapDomainContactPolicyToDb));
     }
     if (q.servicePolicy?.length) {
-      query = query.in('service_policy', q.servicePolicy.map(mapDomainServicePolicyToDb));
+      canonicalQuery = canonicalQuery.in('service_policy', q.servicePolicy.map(mapDomainServicePolicyToDb));
     }
-    if (q.atRisk !== undefined) query = query.eq('at_risk', q.atRisk);
+    if (q.atRisk !== undefined) canonicalQuery = canonicalQuery.eq('at_risk->>at_risk', String(q.atRisk));
+    if (q.assignedClinicianIds?.length) canonicalQuery = canonicalQuery.in('assigned_therapist_id', q.assignedClinicianIds);
+
+    const from = (page - 1) * pageSize;
+    canonicalQuery = canonicalQuery.order('updated_at', { ascending: q.sortDir === 'asc' }).range(from, from + pageSize - 1);
+
+    const { data: canonicalRows, count, error: canonicalError } = await canonicalQuery;
+    if (canonicalError) throw new Error(canonicalError.message);
+    const canonicalById = new Map((canonicalRows ?? []).map((row) => [requireCanonicalValue(row.client_id, 'client_id'), row]));
+    const ids = [...canonicalById.keys()];
+
+    let query = supabase
+      .from('clients')
+      .select(CLIENT_SELECT)
+      .in('id', ids);
+
     if (q.states?.length) query = query.in('pat_state', q.states);
-    if (q.assignedClinicianIds?.length) query = query.in('primary_staff_id', q.assignedClinicianIds);
 
     if (q.search && q.search.trim()) {
       const s = q.search.trim().replace(/[,()]/g, ' ');
@@ -176,13 +214,10 @@ export const supabaseClientsRepository: ClientsRepository = {
     } as Record<string, string>)[q.sortBy as string] ?? 'updated_at';
     query = query.order(sortCol, { ascending: q.sortDir === 'asc' });
 
-    const from = (page - 1) * pageSize;
-    query = query.range(from, from + pageSize - 1);
-
-    const { data, count, error } = await query;
+    const { data, error } = ids.length ? await query : { data: [], error: null };
     if (error) throw new Error(error.message);
     return {
-      rows: (data ?? []).map(rowToCanonical),
+      rows: (data ?? []).map((row) => rowToCanonical(row, canonicalById.get(row.id)!)),
       total: count ?? 0,
       page,
       pageSize,
@@ -196,7 +231,7 @@ export const supabaseClientsRepository: ClientsRepository = {
       .eq('id', id)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return data ? rowToCanonical(data) : null;
+    return data ? rowToCanonical(data, await fetchCanonicalState(id)) : null;
   },
 
   async updateLifecycle(id, next, reason, note) {
