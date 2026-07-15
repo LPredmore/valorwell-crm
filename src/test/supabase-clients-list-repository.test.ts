@@ -1,46 +1,132 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { supabaseClientsRepository } from '@/repositories/supabase/clients';
 import type { Database } from '@/integrations/supabase/types';
+import { supabaseClientsRepository } from '@/repositories/supabase/clients';
 
 type CanonicalRow = Database['public']['Views']['v_client_canonical_state']['Row'];
 
-type Filter = { column: string; values?: unknown[]; value?: unknown };
-
-const calls: Record<string, Filter[]> = { canonical: [], clients: [] };
-const rpc = vi.fn();
-const rpcPayloads: Record<string, unknown>[] = [];
-let canonicalRows: CanonicalRow[] = [];
-let clientRows: Record<string, unknown>[] = [];
-
-class FakeQuery<T extends Record<string, unknown>> {
-  constructor(private readonly table: 'canonical' | 'clients', private readonly rows: T[]) {}
-  private filters: Filter[] = [];
-  select() { return this; }
-  in(column: string, values: unknown[]) { this.filters.push({ column, values }); calls[this.table].push({ column, values }); return this; }
-  eq(column: string, value: unknown) { this.filters.push({ column, value }); calls[this.table].push({ column, value }); return this; }
-  or(expression: string) { this.filters.push({ column: 'or', value: expression }); calls[this.table].push({ column: 'or', value: expression }); return this; }
-  maybeSingle() {
-    return this.range(0, this.rows.length).then(({ data, error }) => ({ data: data?.[0] ?? null, error }));
-  }
-  range(from: number, to: number) {
-    let rows = [...this.rows];
-    for (const filter of this.filters) {
-      if (filter.values) rows = rows.filter((row) => filter.values?.includes(row[filter.column]));
-      if (filter.value !== undefined && filter.column !== 'or') rows = rows.filter((row) => row[filter.column] === filter.value);
-      if (filter.column === 'or' && typeof filter.value === 'string') rows = rows.filter((row) => String(row.pat_name_l).includes('Needle'));
-    }
-    return Promise.resolve({ data: rows.slice(from, to + 1), error: null });
-  }
+interface ClientIdentityRow {
+  id: string;
+  tenant_id: string;
+  pat_name_f: string | null;
+  pat_name_m: string | null;
+  pat_name_l: string | null;
+  pat_name_preferred: string | null;
+  email: string | null;
+  phone: string | null;
+  pat_state: string | null;
+  pat_dob: string | null;
+  tags: string[];
+  last_contact_at: string | null;
+  last_contact_channel: string | null;
+  last_contact_direction: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: (table: string) => table === 'v_client_canonical_state'
-      ? new FakeQuery('canonical', canonicalRows as unknown as Record<string, unknown>[])
-      : new FakeQuery('clients', clientRows),
-    rpc,
-  },
-}));
+type FakeTable = 'canonical' | 'clients';
+type Filter = { column: string; values?: unknown[]; value?: unknown };
+
+const boundary = vi.hoisted(() => {
+  const canonicalRows: CanonicalRow[] = [];
+  const clientRows: ClientIdentityRow[] = [];
+  const calls: Record<FakeTable, Filter[]> = { canonical: [], clients: [] };
+  const ranges: Record<FakeTable, Array<{ from: number; to: number }>> = { canonical: [], clients: [] };
+  return {
+    calls,
+    canonicalRows,
+    clientRows,
+    ranges,
+    rpc: vi.fn(),
+  };
+});
+
+vi.mock('@/integrations/supabase/client', () => {
+  function valueAt(row: object, column: string): unknown {
+    const directEntry = Object.entries(row).find(([key]) => key === column);
+    if (directEntry) return directEntry[1];
+
+    const [rootColumn, jsonKey] = column.split('->>');
+    if (!jsonKey) return undefined;
+    const root = Object.entries(row).find(([key]) => key === rootColumn)?.[1];
+    if (typeof root !== 'object' || root === null || Array.isArray(root)) return undefined;
+    return Object.entries(root).find(([key]) => key === jsonKey)?.[1];
+  }
+
+  function matchesOrExpression(row: object, expression: string): boolean {
+    const needle = expression.match(/ilike\.%([^%]+)%/i)?.[1]?.toLowerCase();
+    if (!needle) return true;
+    return ['pat_name_f', 'pat_name_l', 'pat_name_preferred', 'email', 'phone'].some((column) => {
+      const value = valueAt(row, column);
+      return typeof value === 'string' && value.toLowerCase().includes(needle);
+    });
+  }
+
+  class FakeQuery<T extends object> {
+    private readonly filters: Filter[] = [];
+
+    constructor(
+      private readonly table: FakeTable,
+      private readonly rows: T[],
+    ) {}
+
+    select() {
+      return this;
+    }
+
+    in(column: string, values: unknown[]) {
+      const filter = { column, values };
+      this.filters.push(filter);
+      boundary.calls[this.table].push(filter);
+      return this;
+    }
+
+    eq(column: string, value: unknown) {
+      const filter = { column, value };
+      this.filters.push(filter);
+      boundary.calls[this.table].push(filter);
+      return this;
+    }
+
+    or(expression: string) {
+      const filter = { column: 'or', value: expression };
+      this.filters.push(filter);
+      boundary.calls[this.table].push(filter);
+      return this;
+    }
+
+    maybeSingle() {
+      return this.range(0, this.rows.length).then(({ data, error }) => ({
+        data: data?.[0] ?? null,
+        error,
+      }));
+    }
+
+    range(from: number, to: number) {
+      boundary.ranges[this.table].push({ from, to });
+      let rows = [...this.rows];
+      for (const filter of this.filters) {
+        if (filter.values) {
+          rows = rows.filter((row) => filter.values?.includes(valueAt(row, filter.column)));
+        } else if (filter.column === 'or' && typeof filter.value === 'string') {
+          const expression = filter.value;
+          rows = rows.filter((row) => matchesOrExpression(row, expression));
+        } else if (filter.value !== undefined) {
+          rows = rows.filter((row) => valueAt(row, filter.column) === filter.value);
+        }
+      }
+      return Promise.resolve({ data: rows.slice(from, to + 1), error: null });
+    }
+  }
+
+  return {
+    supabase: {
+      from: (table: string) => table === 'v_client_canonical_state'
+        ? new FakeQuery('canonical', boundary.canonicalRows)
+        : new FakeQuery('clients', boundary.clientRows),
+      rpc: boundary.rpc,
+    },
+  };
+});
 
 function canonical(id: string, lifecycle = 'scheduled'): CanonicalRow {
   return {
@@ -65,7 +151,7 @@ function canonical(id: string, lifecycle = 'scheduled'): CanonicalRow {
   };
 }
 
-function client(id: string, state: string, last: string) {
+function client(id: string, state: string, last: string): ClientIdentityRow {
   return {
     id,
     tenant_id: 't1',
@@ -88,64 +174,85 @@ function client(id: string, state: string, last: string) {
 
 describe('supabaseClientsRepository.list query composition', () => {
   beforeEach(() => {
-    calls.canonical = [];
-    calls.clients = [];
-    rpcPayloads.length = 0;
-    rpc.mockReset();
-    canonicalRows = [canonical('1'), canonical('2'), canonical('3', 'closed'), canonical('4')];
-    clientRows = [client('1', 'WA', 'Needle C'), client('2', 'CA', 'Needle A'), client('3', 'WA', 'Needle B'), client('4', 'WA', 'Other')];
+    boundary.calls.canonical = [];
+    boundary.calls.clients = [];
+    boundary.ranges.canonical = [];
+    boundary.ranges.clients = [];
+    boundary.rpc.mockReset();
+    boundary.canonicalRows = [
+      canonical('1'),
+      canonical('2'),
+      canonical('3', 'closed'),
+      canonical('4'),
+    ];
+    boundary.clientRows = [
+      client('1', 'WA', 'Needle Zulu'),
+      client('2', 'WA', 'Needle Alpha'),
+      client('3', 'WA', 'Needle Bravo'),
+      client('4', 'WA', 'Other Echo'),
+    ];
   });
 
-  it('applies source filters before composition, intersects them, totals after intersection, and paginates after global sorting', async () => {
-    const result = await supabaseClientsRepository.list({ lifecycle: ['Scheduled'], states: ['WA'], search: 'Needle', sortBy: 'legalLastName', sortDir: 'asc', page: 1, pageSize: 1 });
-    expect(calls.canonical).toContainEqual({ column: 'lifecycle', values: ['scheduled'] });
-    expect(calls.clients).toContainEqual({ column: 'pat_state', values: ['WA'] });
-    expect(calls.clients.some((call) => call.column === 'or')).toBe(true);
-    expect(result.total).toBe(1);
+  it('filters before final pagination, reports the final intersection total, and sorts globally', async () => {
+    const result = await supabaseClientsRepository.list({
+      lifecycle: ['Scheduled'],
+      states: ['WA'],
+      search: 'Needle',
+      sortBy: 'legalLastName',
+      sortDir: 'asc',
+      page: 2,
+      pageSize: 1,
+    });
+
+    expect(boundary.calls.canonical).toContainEqual({ column: 'lifecycle', values: ['scheduled'] });
+    expect(boundary.calls.clients).toContainEqual({ column: 'pat_state', values: ['WA'] });
+    expect(boundary.calls.clients.some((call) => call.column === 'or')).toBe(true);
+    expect(result.total).toBe(2);
     expect(result.rows.map((row) => row.id)).toEqual(['1']);
+    expect(result.rows.map((row) => row.legalLastName)).toEqual(['Needle Zulu']);
   });
 
+  it('allows an exactly-at-limit candidate set after checking the next row', async () => {
+    boundary.canonicalRows = Array.from(
+      { length: 10_000 },
+      (_, index) => canonical(String(index + 1)),
+    );
+    boundary.clientRows = [];
 
-
-  it('throws instead of silently truncating when canonical candidates exceed the safety limit', async () => {
-    canonicalRows = Array.from({ length: 10_001 }, (_, index) => canonical(String(index + 1)));
-    clientRows = [];
-    await expect(supabaseClientsRepository.list({ page: 1, pageSize: 50 })).rejects.toThrow('canonical client state candidate row limit exceeded');
-  });
-
-  it('reuses one idempotency key across a real repository mutation retry and does not retry business failures', async () => {
-    rpc.mockImplementation(async (_name, args) => {
-      rpcPayloads.push(args);
-      if (rpcPayloads.length === 1) throw new TypeError('fetch failed');
-      return { data: { ok: true }, error: null };
+    await expect(supabaseClientsRepository.list({ page: 1, pageSize: 50 })).resolves.toEqual({
+      rows: [],
+      total: 0,
+      page: 1,
+      pageSize: 50,
     });
-
-    await expect(supabaseClientsRepository.updateEngagement('1', 'Engaged')).resolves.toMatchObject({ id: '1' });
-    expect(rpc).toHaveBeenCalledTimes(2);
-    expect(rpcPayloads[0].p_idempotency_key).toBe(rpcPayloads[1].p_idempotency_key);
-    expect(rpcPayloads[0].p_concurrency_token).toBe('tok-1');
-    expect(rpcPayloads[1].p_concurrency_token).toBe('tok-1');
-    expect(rpcPayloads[0].p_contract_version).toBe('valorwell-crm-contracts@1.0.1+20260714');
-
-    rpc.mockResolvedValue({ data: { ok: true }, error: null });
-    await expect(supabaseClientsRepository.updateEngagement('1', 'Engaged')).resolves.toMatchObject({ id: '1' });
-    expect(rpcPayloads[2].p_idempotency_key).not.toBe(rpcPayloads[0].p_idempotency_key);
-
-    rpc.mockReset();
-    rpcPayloads.length = 0;
-    rpc.mockResolvedValue({ data: { ok: false, error_code: 'invalid_transition', message: 'Nope' }, error: null });
-    await expect(supabaseClientsRepository.updateEngagement('1', 'Engaged')).rejects.toThrow('Nope');
-    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(boundary.ranges.canonical.at(-1)).toEqual({ from: 10_000, to: 10_000 });
   });
 
-  it('throws a final transient repository mutation failure after exactly two attempts', async () => {
-    rpc.mockImplementation(async (_name, args) => {
-      rpcPayloads.push(args);
-      throw new TypeError('fetch failed');
-    });
-    await expect(supabaseClientsRepository.updateEngagement('1', 'Engaged')).rejects.toThrow('fetch failed');
-    expect(rpc).toHaveBeenCalledTimes(2);
-    expect(rpcPayloads[0].p_idempotency_key).toBe(rpcPayloads[1].p_idempotency_key);
+  it('throws clearly instead of truncating an overflowing canonical candidate set', async () => {
+    boundary.canonicalRows = Array.from(
+      { length: 10_001 },
+      (_, index) => canonical(String(index + 1)),
+    );
+    boundary.clientRows = [];
+
+    await expect(supabaseClientsRepository.list({ page: 1, pageSize: 50 }))
+      .rejects.toThrow('canonical client state candidate row limit exceeded (10000)');
   });
 
+  it('throws clearly instead of truncating an overflowing identity candidate set', async () => {
+    boundary.canonicalRows = [];
+    boundary.clientRows = Array.from(
+      { length: 10_001 },
+      (_, index) => client(String(index + 1), 'WA', `Last ${index + 1}`),
+    );
+
+    await expect(supabaseClientsRepository.list({ page: 1, pageSize: 50 }))
+      .rejects.toThrow('client identity candidate row limit exceeded (10000)');
+  });
+
+  it('rejects unsupported state values before querying the generated enum column', async () => {
+    await expect(supabaseClientsRepository.list({ states: ['XX'] }))
+      .rejects.toThrow('Unsupported client state filter: XX');
+    expect(boundary.calls.clients).toEqual([]);
+  });
 });

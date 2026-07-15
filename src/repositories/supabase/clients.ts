@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Database, Json } from '@/integrations/supabase/types';
+import { Constants, type Database, type Json } from '@/integrations/supabase/types';
 import type {
   ClientsRepository, ListClientsQuery, Paged,
 } from '../types';
@@ -42,6 +42,28 @@ type ClientRow = {
 };
 
 type CanonicalStateRow = Database['public']['Views']['v_client_canonical_state']['Row'];
+type ClientStateCode = Database['public']['Enums']['state_code_enum'];
+type LastContactChannel = NonNullable<CanonicalClient['lastContactChannel']>;
+
+const CLIENT_STATE_CODES: ReadonlySet<string> = new Set(Constants.public.Enums.state_code_enum);
+const LAST_CONTACT_CHANNELS: ReadonlySet<string> = new Set(['email', 'sms', 'phone', 'note']);
+
+function isClientStateCode(value: string): value is ClientStateCode {
+  return CLIENT_STATE_CODES.has(value);
+}
+
+function requireClientStateCodes(values: string[]): ClientStateCode[] {
+  const states = values.filter(isClientStateCode);
+  if (states.length !== values.length) {
+    const invalidStates = values.filter((value) => !isClientStateCode(value));
+    throw new Error(`Unsupported client state filter: ${invalidStates.join(', ')}`);
+  }
+  return states;
+}
+
+function isLastContactChannel(value: string): value is LastContactChannel {
+  return LAST_CONTACT_CHANNELS.has(value);
+}
 
 function requireCanonicalValue<T>(value: T | null | undefined, field: string): T {
   if (value === null || value === undefined || value === '') {
@@ -96,7 +118,9 @@ function rowToCanonical(row: ClientRow, state: CanonicalStateRow): CanonicalClie
       ? { closureReason: mapDbClosureReasonToDomain(dispositionReason), closedAt: state.disposition_at ?? undefined }
       : undefined,
     lastContactAt: row.last_contact_at ?? undefined,
-    lastContactChannel: row.last_contact_channel ?? undefined,
+    lastContactChannel: row.last_contact_channel && isLastContactChannel(row.last_contact_channel)
+      ? row.last_contact_channel
+      : undefined,
     lastContactDirection: row.last_contact_direction === 'sent' ? 'outbound' : row.last_contact_direction === 'received' ? 'inbound' : undefined,
     openTaskCount: 0,
     tags: tagsArr,
@@ -179,10 +203,15 @@ async function fetchAllRows<T>(
   const all: T[] = [];
   const size = 1000;
   for (let from = 0; ; from += size) {
-    if (from >= CLIENT_LIST_CANDIDATE_ROW_LIMIT) {
-      throw new Error(`${sourceName} candidate row limit exceeded (${CLIENT_LIST_CANDIDATE_ROW_LIMIT}); a combined backend CRM client read model is required`);
+    if (from === CLIENT_LIST_CANDIDATE_ROW_LIMIT) {
+      const { data, error } = await buildQuery(from, from);
+      if (error) throw new Error(error.message);
+      if ((data ?? []).length > 0) {
+        throw new Error(`${sourceName} candidate row limit exceeded (${CLIENT_LIST_CANDIDATE_ROW_LIMIT}); a combined backend CRM client read model is required`);
+      }
+      break;
     }
-    const { data, error } = await buildQuery(from, Math.min(from + size - 1, CLIENT_LIST_CANDIDATE_ROW_LIMIT - 1));
+    const { data, error } = await buildQuery(from, from + size - 1);
     if (error) throw new Error(error.message);
     const rows = data ?? [];
     all.push(...rows);
@@ -206,7 +235,11 @@ async function callRpc<Name extends CanonicalRpcName>(
   name: Name,
   args: CanonicalRpcArgsByName[Name],
 ): Promise<void> {
-  const result = await callCanonicalRpcWithRetry(supabase.rpc, name, args);
+  const result = await callCanonicalRpcWithRetry(
+    (rpcName, rpcArgs) => supabase.rpc(rpcName, rpcArgs),
+    name,
+    args,
+  );
   if (!result.ok) throw new Error(result.message ?? result.error_code ?? 'Canonical write refused');
 }
 
@@ -242,6 +275,7 @@ async function tenantOf(id: string): Promise<string> {
 
 export const supabaseClientsRepository: ClientsRepository = {
   async list(q: ListClientsQuery): Promise<Paged<CanonicalClient>> {
+    const stateCodes = q.states?.length ? requireClientStateCodes(q.states) : undefined;
     let canonicalQuery = supabase
       .from('v_client_canonical_state')
       .select('*');
@@ -258,7 +292,7 @@ export const supabaseClientsRepository: ClientsRepository = {
       .from('clients')
       .select(CLIENT_SELECT);
 
-    if (q.states?.length) clientsQuery = clientsQuery.in('pat_state', q.states);
+    if (stateCodes?.length) clientsQuery = clientsQuery.in('pat_state', stateCodes);
     if (q.search && q.search.trim()) {
       const s = q.search.trim().replace(/[,()]/g, ' ');
       clientsQuery = clientsQuery.or(
@@ -380,6 +414,7 @@ export const supabaseClientsRepository: ClientsRepository = {
 
   async close(id, info) {
     const concurrency_token = await fetchConcurrencyToken(id);
+    const idempotency_key = newIdempotencyKey();
     if (!info.closureReason) throw new Error('closureReason is required to close a client');
     await callRpc('crm_close_client', {
       p_client_id: id,

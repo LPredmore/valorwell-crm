@@ -15,11 +15,13 @@ function walk(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-const FILES = walk('src').filter(
-  (f) =>
-    !f.endsWith('src/integrations/supabase/types.ts') &&
-    !f.includes('/test/'),
-);
+const FILES = walk('src').filter((file) => {
+  const normalizedPath = file.replace(/\\/g, '/');
+  return (
+    !normalizedPath.endsWith('src/integrations/supabase/types.ts') &&
+    !normalizedPath.includes('/test/')
+  );
+});
 
 const PROTECTED_COLUMNS = [
   'pat_status',

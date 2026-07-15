@@ -459,7 +459,7 @@ export default function CampaignEditor() {
                   </Select>
                 </div>
 
-                {triggerStatus && SYSTEM_MANAGED_STATUSES.includes(triggerStatus) && (
+                {triggerStatus && SYSTEM_MANAGED_STATUSES.some((status) => status === triggerStatus) && (
                   <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
                     <AlertTriangle className="h-4 w-4 text-amber-600" />
                     <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs">

@@ -1,13 +1,29 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
+import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 import type { CampaignsRepository } from '../types';
 import type {
   Campaign, CampaignEnrollment, CampaignStep, CampaignStatus,
 } from '@/domain/operations';
 
-type CampaignRow = Database['public']['Tables']['crm_campaigns']['Row'];
-type CampaignStepRow = Database['public']['Tables']['crm_campaign_steps']['Row'];
-type EnrollmentRow = Database['public']['Tables']['crm_campaign_enrollments']['Row'];
+type CampaignRow = Tables<'crm_campaigns'>;
+type CampaignInsert = TablesInsert<'crm_campaigns'>;
+type CampaignUpdate = TablesUpdate<'crm_campaigns'>;
+type CampaignStepRow = Tables<'crm_campaign_steps'>;
+type EnrollmentRow = Pick<
+  Tables<'crm_campaign_enrollments'>,
+  | 'id'
+  | 'campaign_id'
+  | 'client_id'
+  | 'tenant_id'
+  | 'status'
+  | 'current_step'
+  | 'pause_reason'
+  | 'enrolled_at'
+  | 'completed_at'
+  | 'enrolled_by_profile_id'
+  | 'created_at'
+  | 'updated_at'
+>;
 
 const CAMPAIGN_COLS = `
   id, tenant_id, name, description, is_active,
@@ -80,16 +96,10 @@ async function loadSteps(campaignIds: string[]): Promise<Map<string, CampaignSte
 async function loadMetrics(campaignIds: string[]): Promise<Map<string, Campaign['metrics']>> {
   const map = new Map<string, Campaign['metrics']>();
   if (!campaignIds.length) return map;
-  const [enrRes, logRes] = await Promise.all([
-    supabase
-      .from('crm_campaign_enrollments')
-      .select('campaign_id, status')
-      .in('campaign_id', campaignIds),
-    supabase
-      .from('crm_campaign_step_logs')
-      .select('step_id, status, enrollment_id')
-      .in('step_id', []), // filled below via join through steps
-  ]);
+  const enrRes = await supabase
+    .from('crm_campaign_enrollments')
+    .select('campaign_id, status')
+    .in('campaign_id', campaignIds);
   if (enrRes.error) throw new Error(enrRes.error.message);
   const init = (): Campaign['metrics'] => ({
     enrolled: 0, active: 0, completed: 0, responseRate: 0, suppressed: 0, failed: 0,
@@ -215,7 +225,7 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
   },
 
   async create(input) {
-    const row: Record<string, unknown> = {
+    const row: CampaignInsert = {
       tenant_id: input.tenantId,
       name: input.name,
       description: input.description ?? input.purpose ?? null,
@@ -231,7 +241,7 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
   },
 
   async update(id, patch) {
-    const out: Record<string, unknown> = {};
+    const out: CampaignUpdate = {};
     if (patch.name !== undefined) out.name = patch.name;
     if (patch.description !== undefined) out.description = patch.description ?? null;
     if (patch.status !== undefined) out.is_active = patch.status === 'Active';

@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import type { CommunicationsRepository } from '../types';
 import type { CommunicationMessage, CommunicationPolicyResult } from '@/domain/operations';
 import { supabaseClientsRepository } from './clients';
@@ -17,9 +18,13 @@ import { supabaseClientsRepository } from './clients';
  * edge functions — this adapter does not duplicate their delivery logic.
  */
 
-type Row = Record<string, string | number | boolean | null>;
+type BulkSmsRow = Tables<'crm_bulk_sms_recipients'>;
+type ConversationCacheRow = Tables<'crm_conversation_cache'>;
+type ConversationLinkRow = Tables<'crm_conversation_links'>;
+type InboundSmsRow = Tables<'crm_inbound_sms_logs'>;
+type MessageRow = Tables<'messages'>;
 
-function rowInboundSms(r: Row, tenantId: string): CommunicationMessage {
+function rowInboundSms(r: InboundSmsRow, tenantId: string): CommunicationMessage {
   return {
     id: `insms-${r.id}`,
     tenantId,
@@ -35,7 +40,7 @@ function rowInboundSms(r: Row, tenantId: string): CommunicationMessage {
   };
 }
 
-function rowBulkSms(r: Row, tenantId: string): CommunicationMessage {
+function rowBulkSms(r: BulkSmsRow, tenantId: string): CommunicationMessage {
   const status: CommunicationMessage['status'] =
     r.status === 'sent' ? 'sent' :
     r.status === 'failed' ? 'failed' :
@@ -56,7 +61,11 @@ function rowBulkSms(r: Row, tenantId: string): CommunicationMessage {
   };
 }
 
-function rowEmailThread(link: Row, cache: Row | undefined, tenantId: string): CommunicationMessage {
+function rowEmailThread(
+  link: ConversationLinkRow,
+  cache: ConversationCacheRow | undefined,
+  tenantId: string,
+): CommunicationMessage {
   return {
     id: `email-${link.helpscout_conversation_id}`,
     tenantId,
@@ -73,7 +82,7 @@ function rowEmailThread(link: Row, cache: Row | undefined, tenantId: string): Co
   };
 }
 
-function rowInternal(r: Row): CommunicationMessage {
+function rowInternal(r: MessageRow): CommunicationMessage {
   return {
     id: `msg-${r.id}`,
     tenantId: r.tenant_id,
@@ -116,19 +125,19 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
         .order('created_at', { ascending: false }).limit(200),
     ]);
 
-    const convoIds = (links.data ?? []).map((l: Row) => l.helpscout_conversation_id);
-    let cacheById = new Map<string, Row>();
+    const convoIds = (links.data ?? []).map((link) => link.helpscout_conversation_id);
+    let cacheById = new Map<string, ConversationCacheRow>();
     if (convoIds.length) {
       const { data: cacheRows } = await supabase
         .from('crm_conversation_cache').select('*').in('helpscout_conversation_id', convoIds);
-      cacheById = new Map((cacheRows ?? []).map((c: Row) => [c.helpscout_conversation_id, c]));
+      cacheById = new Map((cacheRows ?? []).map((cache) => [cache.helpscout_conversation_id, cache]));
     }
 
     const out: CommunicationMessage[] = [
-      ...(inbound.data ?? []).map((r: Row) => rowInboundSms(r, tenantId)),
-      ...(bulk.data ?? []).map((r: Row) => rowBulkSms(r, tenantId)),
-      ...(links.data ?? []).map((r: Row) => rowEmailThread(r, cacheById.get(r.helpscout_conversation_id), tenantId)),
-      ...(internal.data ?? []).map((r: Row) => rowInternal(r)),
+      ...(inbound.data ?? []).map((row) => rowInboundSms(row, tenantId)),
+      ...(bulk.data ?? []).map((row) => rowBulkSms(row, tenantId)),
+      ...(links.data ?? []).map((row) => rowEmailThread(row, cacheById.get(row.helpscout_conversation_id), tenantId)),
+      ...(internal.data ?? []).map((row) => rowInternal(row)),
     ];
     return out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   },
@@ -144,8 +153,8 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
           .select('*').order('sent_at', { ascending: false, nullsFirst: false }).limit(500),
       ]);
       const all = [
-        ...(inbound.data ?? []).map((r: Row) => rowInboundSms(r, r.tenant_id ?? '')),
-        ...(bulk.data ?? []).map((r: Row) => rowBulkSms(r, r.tenant_id ?? '')),
+        ...(inbound.data ?? []).map((row) => rowInboundSms(row, row.tenant_id ?? '')),
+        ...(bulk.data ?? []).map((row) => rowBulkSms(row, row.tenant_id)),
       ];
       const byThread = new Map<string, CommunicationMessage>();
       for (const m of all) {
@@ -160,18 +169,18 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
       .select('*')
       .order('last_thread_at', { ascending: false, nullsFirst: false })
       .limit(500);
-    return (data ?? []).map((c: Row) => ({
-      id: `email-${c.helpscout_conversation_id}`,
-      tenantId: c.tenant_id,
+    return (data ?? []).map((cache) => ({
+      id: `email-${cache.helpscout_conversation_id}`,
+      tenantId: cache.tenant_id,
       channel: 'email' as const,
-      direction: (c.needs_reply ? 'inbound' : 'outbound') as CommunicationMessage['direction'],
-      from: c.customer_email ?? '',
-      to: c.customer_email ?? '',
-      subject: c.subject ?? undefined,
-      body: c.preview_text ?? '',
+      direction: cache.needs_reply ? 'inbound' as const : 'outbound' as const,
+      from: cache.customer_email ?? '',
+      to: cache.customer_email ?? '',
+      subject: cache.subject ?? undefined,
+      body: cache.preview_text ?? '',
       status: 'delivered' as const,
-      threadId: `email:${c.helpscout_conversation_id}`,
-      createdAt: c.last_thread_at ?? c.cached_at,
+      threadId: `email:${cache.helpscout_conversation_id}`,
+      createdAt: cache.last_thread_at ?? cache.cached_at,
     }));
   },
 

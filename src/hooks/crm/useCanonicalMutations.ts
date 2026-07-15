@@ -6,6 +6,7 @@ import {
   buildCanonicalRpcArgs,
   callCanonicalRpcWithRetry,
   newIdempotencyKey,
+  type CanonicalRpcCaller,
   type CanonicalRpcArgsByName,
   type CanonicalRpcName,
 } from '@/lib/crm/canonicalRpcTransport';
@@ -33,6 +34,8 @@ export function idempotencyKeyForLogicalAction<TInput extends BaseArgs>(input: T
   return input.idempotency_key ?? newIdempotencyKey();
 }
 
+const callSupabaseCanonicalRpc: CanonicalRpcCaller = (name, args) => supabase.rpc(name, args);
+
 function useCanonicalRpc<Name extends CanonicalRpcName, TInput extends BaseArgs>(
   rpcName: Name,
   successMsg: string,
@@ -48,7 +51,7 @@ function useCanonicalRpc<Name extends CanonicalRpcName, TInput extends BaseArgs>
         token,
         idempotencyKeyForLogicalAction(input),
       ) as CanonicalRpcArgsByName[Name];
-      return callCanonicalRpcWithRetry(supabase.rpc, rpcName, args);
+      return callCanonicalRpcWithRetry(callSupabaseCanonicalRpc, rpcName, args);
     },
     retry: false,
     onError: (error) => {
