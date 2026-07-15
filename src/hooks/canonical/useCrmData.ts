@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dataProvider } from '@/services/dataProvider';
 import type { ListTasksQuery } from '@/repositories/types';
 import type { TaskStatus, CrmTask } from '@/domain/operations';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 
 const taskKeys = { all: ['crm-tasks'] as const, list: (q: ListTasksQuery) => ['crm-tasks', 'list', q] as const };
 
@@ -64,13 +65,39 @@ export function useMessageThreads(channel: 'sms' | 'email') {
 }
 
 export function useReports() {
+  const { tenantId, isAuthenticated } = useCrmAuth();
+  const enabled = isAuthenticated && !!tenantId;
+
   return {
-    funnel: useQuery({ queryKey: ['report-funnel'], queryFn: () => dataProvider.reports.journeyFunnel() }),
-    atRisk: useQuery({ queryKey: ['report-at-risk'], queryFn: () => dataProvider.reports.atRiskMetrics() }),
-    engagement: useQuery({ queryKey: ['report-engagement'], queryFn: () => dataProvider.reports.engagementMetrics() }),
-    closure: useQuery({ queryKey: ['report-closure'], queryFn: () => dataProvider.reports.closureMetrics() }),
-    campaign: useQuery({ queryKey: ['report-campaign'], queryFn: () => dataProvider.reports.campaignPerformance() }),
-    task: useQuery({ queryKey: ['report-task'], queryFn: () => dataProvider.reports.taskPerformance() }),
-    exception: useQuery({ queryKey: ['report-exception'], queryFn: () => dataProvider.reports.exceptionMetrics() }),
+    funnel: useQuery({
+      queryKey: ['report-funnel', tenantId],
+      queryFn: () => dataProvider.reports.journeyFunnel(tenantId),
+      enabled,
+    }),
+    engagement: useQuery({
+      queryKey: ['report-engagement', tenantId],
+      queryFn: () => dataProvider.reports.engagementMetrics(tenantId),
+      enabled,
+    }),
+    closure: useQuery({
+      queryKey: ['report-closure', tenantId],
+      queryFn: () => dataProvider.reports.closureMetrics(tenantId),
+      enabled,
+    }),
+    campaign: useQuery({
+      queryKey: ['report-campaign', tenantId],
+      queryFn: () => dataProvider.reports.campaignPerformance(tenantId),
+      enabled,
+    }),
+    task: useQuery({
+      queryKey: ['report-task', tenantId],
+      queryFn: () => dataProvider.reports.taskPerformance(tenantId),
+      enabled,
+    }),
+    exception: useQuery({
+      queryKey: ['report-exception', tenantId],
+      queryFn: () => dataProvider.reports.exceptionMetrics(tenantId),
+      enabled,
+    }),
   };
 }

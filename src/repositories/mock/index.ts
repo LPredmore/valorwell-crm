@@ -247,75 +247,85 @@ export const mockDataProvider: CrmDataProvider = {
   },
 
   reports: {
-    async journeyFunnel() {
+    async journeyFunnel(tenantId) {
       await wait();
-      const stages = ['Registration','Intake','Matching','Matched','Scheduled','Early Care','Established Care','Closed'] as const;
-      return stages.map(stage => ({
-        stage, count: clients.filter(c => c.lifecycle === stage).length,
-        medianDays: 3 + stages.indexOf(stage) * 4,
-      }));
-    },
-    async atRiskMetrics() {
-      await wait();
-      const atRisk = clients.filter(c => c.risk.atRisk);
       return {
-        totalAtRisk: atRisk.length, newlyAtRisk: Math.round(atRisk.length * 0.3),
-        resolved: 12, averageDaysAtRisk: 8,
-        byReason: [{ reason: 'Missed appointments', count: Math.round(atRisk.length * 0.6) }, { reason: 'No response', count: Math.round(atRisk.length * 0.4) }],
-        byStage: [{ stage: 'Early Care', count: 3 }, { stage: 'Established Care', count: 2 }],
-        overdueInterventions: 5,
+        tenantId,
+        bucketStart: '2026-07-06',
+        bucketEnd: '2026-07-13',
+        rows: [
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', stage: 'registration', entered_count: 18, exited_count: 12, current_count: 24, median_days_in_stage: 3 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', stage: 'intake', entered_count: 12, exited_count: 8, current_count: 16, median_days_in_stage: 6 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', stage: 'matching', entered_count: 8, exited_count: 5, current_count: 11, median_days_in_stage: 9 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', stage: 'scheduled', entered_count: 5, exited_count: 3, current_count: 8, median_days_in_stage: 4 },
+        ],
       };
     },
-    async engagementMetrics() {
+
+    async engagementMetrics(tenantId) {
       await wait();
-      const counts = { Engaged: 0, Warm: 0, Cold: 0, 'Went Dark': 0 } as Record<'Engaged'|'Warm'|'Cold'|'Went Dark', number>;
-      clients.forEach(c => { counts[c.engagement] += 1; });
-      return { counts, reengagementRate: 0.24, medianDaysSinceLastContact: 6 };
-    },
-    async closureMetrics() {
-      return [
-        { reason: 'Completed Treatment Plan', count: 24 },
-        { reason: 'Client Request', count: 11 },
-        { reason: 'Insurance Termination', count: 6 },
-        { reason: 'Lost Contact', count: 9 },
-      ];
-    },
-    async campaignPerformance() {
-      return campaigns.map(c => ({
-        campaignId: c.id, name: c.name,
-        enrolled: c.metrics.enrolled, sent: c.metrics.enrolled + 40, delivered: c.metrics.enrolled + 30,
-        responded: Math.round(c.metrics.enrolled * c.metrics.responseRate),
-        completed: c.metrics.completed, suppressed: c.metrics.suppressed, failed: c.metrics.failed,
-        optedOut: Math.round(c.metrics.enrolled * 0.03),
-      }));
-    },
-    async taskPerformance() {
-      const open = tasks.filter(t => t.status !== 'Completed' && t.status !== 'Canceled').length;
-      const overdue = tasks.filter(t => t.dueAt && new Date(t.dueAt).getTime() < Date.now() && t.status !== 'Completed').length;
-      const byOwnerMap = new Map<string, { open: number; overdue: number }>();
-      tasks.forEach(t => {
-        if (!t.ownerId) return;
-        const rec = byOwnerMap.get(t.ownerId) ?? { open: 0, overdue: 0 };
-        if (t.status !== 'Completed' && t.status !== 'Canceled') rec.open += 1;
-        if (t.dueAt && new Date(t.dueAt).getTime() < Date.now() && t.status !== 'Completed') rec.overdue += 1;
-        byOwnerMap.set(t.ownerId, rec);
-      });
-      return { open, overdue, avgCompletionHours: 18, byOwner: Array.from(byOwnerMap.entries()).map(([ownerId, v]) => ({ ownerId, ...v })) };
-    },
-    async exceptionMetrics() {
-      const byType = new Map<string, number>();
-      const bySev = new Map<string, number>();
-      let open = 0, resolved = 0;
-      exceptions.forEach(e => {
-        byType.set(e.type, (byType.get(e.type) ?? 0) + 1);
-        bySev.set(e.severity, (bySev.get(e.severity) ?? 0) + 1);
-        if (e.status === 'Open' || e.status === 'In Review') open += 1;
-        if (e.status === 'Resolved') resolved += 1;
-      });
       return {
-        byType: Array.from(byType.entries()).map(([type, count]) => ({ type, count })),
-        bySeverity: Array.from(bySev.entries()).map(([severity, count]) => ({ severity, count })),
-        openVsResolved: { open, resolved }, avgResolutionHours: 14,
+        tenantId,
+        bucketStart: '2026-07-06',
+        bucketEnd: '2026-07-13',
+        rows: [
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', engagement: 'normal', current_count: 48, entered_count: 14, avg_days_to_normal: 0 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', engagement: 'unresponsive_warm', current_count: 9, entered_count: 4, avg_days_to_normal: 6 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', engagement: 'unresponsive_cold', current_count: 5, entered_count: 2, avg_days_to_normal: 12 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', engagement: 'went_dark', current_count: 3, entered_count: 1, avg_days_to_normal: 18 },
+        ],
+      };
+    },
+
+    async closureMetrics(tenantId) {
+      await wait();
+      return {
+        tenantId,
+        bucketStart: '2026-07-06',
+        bucketEnd: '2026-07-13',
+        rows: [
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', disposition_reason: 'completed_care', closed_count: 6, reopened_count: 1, net_closed: 5 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', disposition_reason: 'other', closed_count: 3, reopened_count: 0, net_closed: 3 },
+        ],
+      };
+    },
+
+    async campaignPerformance(tenantId) {
+      await wait();
+      return {
+        tenantId,
+        bucketStart: '2026-07-06',
+        bucketEnd: '2026-07-13',
+        rows: [
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', campaign_id: 'camp-1', enrolled_count: 30, completed_count: 18, cancelled_count: 2, responded_count: 11, suppressed_count: 3, failed_count: 1 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', campaign_id: 'camp-2', enrolled_count: 22, completed_count: 12, cancelled_count: 1, responded_count: 7, suppressed_count: 2, failed_count: 0 },
+        ],
+      };
+    },
+
+    async taskPerformance(tenantId) {
+      await wait();
+      return {
+        tenantId,
+        bucketStart: '2026-07-06',
+        bucketEnd: '2026-07-13',
+        rows: [
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', assignee_id: 'staff-1', open_count: 7, completed_count: 12, overdue_count: 2, median_hours_to_complete: 18 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', assignee_id: null, open_count: 3, completed_count: 1, overdue_count: 1, median_hours_to_complete: 24 },
+        ],
+      };
+    },
+
+    async exceptionMetrics(tenantId) {
+      await wait();
+      return {
+        tenantId,
+        bucketStart: '2026-07-06',
+        bucketEnd: '2026-07-13',
+        rows: [
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', exception_type: 'communication_suppressed', raised_count: 8, resolved_count: 6, open_count: 2, median_hours_to_resolve: 14 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', exception_type: 'eligibility_verification_failed', raised_count: 5, resolved_count: 3, open_count: 2, median_hours_to_resolve: 20 },
+        ],
       };
     },
   },
