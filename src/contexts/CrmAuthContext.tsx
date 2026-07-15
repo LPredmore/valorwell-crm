@@ -1,8 +1,7 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { CrmAuthContext as CrmAuthContextType } from '@/lib/crm/types';
-
-const CrmAuthCtx = createContext<CrmAuthContextType | null>(null);
+import { CrmAuthCtx } from '@/contexts/crmAuthContextValue';
 
 export function CrmAuthProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<CrmAuthContextType>({
@@ -100,12 +99,4 @@ export function CrmAuthProvider({ children }: { children: ReactNode }) {
       {children}
     </CrmAuthCtx.Provider>
   );
-}
-
-export function useCrmAuth(): CrmAuthContextType {
-  const ctx = useContext(CrmAuthCtx);
-  if (!ctx) {
-    throw new Error('useCrmAuth must be used within a CrmAuthProvider');
-  }
-  return ctx;
 }

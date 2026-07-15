@@ -42,7 +42,7 @@ export function SignatureSelect({ value, onChange, className }: SignatureSelectP
 }
 
 /** Hook to get the default signature ID */
-export function useDefaultSignatureId(): string {
+function useDefaultSignatureId(): string {
   const { data: signatures } = useEmailSignatures();
   const defaultSig = signatures?.find((s) => s.is_default);
   return defaultSig?.id || 'none';

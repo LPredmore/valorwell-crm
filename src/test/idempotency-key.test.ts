@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildCanonicalRpcArgs,
   newIdempotencyKey,
-} from '@/hooks/crm/useCanonicalMutations';
+} from '@/lib/crm/canonicalRpcTransport';
 import { CONTRACT_VERSION } from '@/lib/crm/contracts';
 
 describe('canonical RPC idempotency-key handling', () => {
@@ -28,5 +28,26 @@ describe('canonical RPC idempotency-key handling', () => {
     const seen = new Set<string>();
     for (let i = 0; i < 50; i++) seen.add(newIdempotencyKey());
     expect(seen.size).toBe(50);
+  });
+});
+
+describe('logical retry idempotency behavior', () => {
+  it('reuses one logical action key across a retry and uses a new key for a later action', async () => {
+    const payloads: Record<string, unknown>[] = [];
+    const logicalActionKey = newIdempotencyKey();
+    const attempt = async () => {
+      const payload = buildCanonicalRpcArgs({ p_client_id: 'c1' }, 'tok', logicalActionKey);
+      payloads.push(payload);
+      if (payloads.length === 1) throw new TypeError('fetch failed');
+      return { ok: true };
+    };
+
+    await expect(attempt()).rejects.toThrow('fetch failed');
+    await expect(attempt()).resolves.toEqual({ ok: true });
+
+    const laterAction = buildCanonicalRpcArgs({ p_client_id: 'c1' }, 'tok', newIdempotencyKey());
+    expect(payloads[0].p_idempotency_key).toBe(logicalActionKey);
+    expect(payloads[1].p_idempotency_key).toBe(logicalActionKey);
+    expect(laterAction.p_idempotency_key).not.toBe(logicalActionKey);
   });
 });

@@ -1,8 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import type { AuditRepository } from '../types';
 import type { AuditEvent } from '@/domain/operations';
 
-type Row = Record<string, string | number | null>;
+type AuditRow = Tables<'crm_client_state_audit'>;
 
 function eventTypeFor(dimension: string): string {
   switch (dimension) {
@@ -19,7 +20,7 @@ function eventTypeFor(dimension: string): string {
   }
 }
 
-function rowToEvent(r: Row): AuditEvent {
+function rowToEvent(r: AuditRow): AuditEvent {
   return {
     id: r.id,
     tenantId: r.tenant_id,

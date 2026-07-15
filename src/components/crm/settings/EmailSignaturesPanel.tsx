@@ -123,7 +123,11 @@ export function EmailSignaturesPanel() {
 
       setForm((f) => ({ ...f, image_url: urlData.publicUrl }));
     } catch (err: unknown) {
-      toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
+      toast({
+        title: 'Upload failed',
+        description: err instanceof Error ? err.message : 'An unknown error occurred',
+        variant: 'destructive',
+      });
     } finally {
       setUploading(false);
     }

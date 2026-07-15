@@ -40,9 +40,9 @@ export type DispositionReason =
 
 export interface AtRiskState {
   at_risk: boolean;
-  evaluated_at: string;
-  recommended_next_action: string | null;
-  event_version: string;
+  evaluated_at?: string;
+  recommended_next_action?: string | null;
+  event_version?: string;
 }
 
 export interface ManualReviewContext {

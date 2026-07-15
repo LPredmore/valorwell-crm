@@ -8,7 +8,7 @@ import { mockClients, mockCampaigns, mockEnrollments, mockTasks, mockExceptions,
 // In-memory mutable stores so mock mutations feel real across the session.
 let clients: CanonicalClient[] = [...mockClients];
 let tasks: CrmTask[] = [...mockTasks];
-let exceptions: OperationalException[] = [...mockExceptions];
+const exceptions: OperationalException[] = [...mockExceptions];
 let campaigns: Campaign[] = [...mockCampaigns];
 let enrollments: CampaignEnrollment[] = [...mockEnrollments];
 let messages: CommunicationMessage[] = [...mockMessages];
@@ -32,12 +32,7 @@ function matchClient(c: CanonicalClient, q: ListClientsQuery): boolean {
   if (q.servicePolicy?.length && !q.servicePolicy.includes(c.servicePolicy)) return false;
   if (q.atRisk !== undefined && c.risk.atRisk !== q.atRisk) return false;
   if (q.assignedClinicianIds?.length && (!c.assignedClinicianId || !q.assignedClinicianIds.includes(c.assignedClinicianId))) return false;
-  if (q.assignedOperationsOwnerIds?.length && (!c.assignedOperationsOwnerId || !q.assignedOperationsOwnerIds.includes(c.assignedOperationsOwnerId))) return false;
   if (q.states?.length && (!c.state || !q.states.includes(c.state))) return false;
-  if (q.payers?.length && (!c.payer || !q.payers.includes(c.payer))) return false;
-  if (q.campaignIds?.length && (!c.activeCampaignId || !q.campaignIds.includes(c.activeCampaignId))) return false;
-  if (q.tags?.length && !q.tags.some(t => c.tags.includes(t))) return false;
-  if (q.hasOpenTasks && c.openTaskCount === 0) return false;
   return true;
 }
 
@@ -77,7 +72,7 @@ export const mockDataProvider: CrmDataProvider = {
     async updateRisk(id, next) { return patch(id, c => ({ ...c, risk: next })); },
     async close(id, info) { return patch(id, c => ({ ...c, lifecycle: 'Closed', closure: info })); },
     async reopen(id) { return patch(id, c => ({ ...c, lifecycle: 'Intake', closure: undefined })); },
-    async assignClinician(id, staffId) { return patch(id, c => ({ ...c, assignedClinicianId: staffId ?? undefined })); },
+    async assignClinician(id, staffId) { if (!staffId?.trim()) throw new Error('assignClinician: staffId is required'); return patch(id, c => ({ ...c, assignedClinicianId: staffId })); },
     async assignOperationsOwner(id, staffId) { return patch(id, c => ({ ...c, assignedOperationsOwnerId: staffId ?? undefined })); },
   },
 

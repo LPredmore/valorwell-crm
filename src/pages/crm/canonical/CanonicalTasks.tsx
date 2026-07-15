@@ -37,7 +37,7 @@ export default function CanonicalTasks() {
   const mut = useTaskMutations();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const toggle = (id: string) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggle = (id: string) => setSelected(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const clear = () => setSelected(new Set());
 
   return (

@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import type { StaffRepository } from '../types';
 import type { StaffMember } from '@/domain/operations';
 
@@ -9,7 +10,21 @@ const STAFF_SELECT = `
   prov_max_clients
 `;
 
-type Row = Record<string, string | number | null>;
+type StaffRow = Pick<
+  Tables<'staff'>,
+  | 'id'
+  | 'tenant_id'
+  | 'profile_id'
+  | 'prov_name_f'
+  | 'prov_name_m'
+  | 'prov_name_l'
+  | 'prov_name_for_clients'
+  | 'prov_phone'
+  | 'prov_state'
+  | 'prov_status'
+  | 'prov_accepting_new_clients'
+  | 'prov_max_clients'
+>;
 
 function mapRole(role: string | undefined): StaffMember['role'] {
   if (role === 'admin') return 'admin';
@@ -26,9 +41,9 @@ function mapStatus(s: string | null | undefined): StaffMember['status'] {
   return 'Active';
 }
 
-async function buildStaff(rows: Row[]): Promise<StaffMember[]> {
+async function buildStaff(rows: StaffRow[]): Promise<StaffMember[]> {
   if (!rows.length) return [];
-  const profileIds = Array.from(new Set(rows.map((r) => r.profile_id).filter(Boolean)));
+  const profileIds = Array.from(new Set(rows.map((r) => r.profile_id)));
   const staffIds = rows.map((r) => r.id);
 
   const [profilesRes, rolesRes, caseloadRes, tasksRes] = await Promise.all([
@@ -49,7 +64,7 @@ async function buildStaff(rows: Row[]): Promise<StaffMember[]> {
   for (const r of rolesRes.data ?? []) {
     // prefer higher-privilege roles
     const existing = roleByProfile.get(r.user_id);
-    const next = r.role as string;
+    const next = r.role;
     if (!existing || next === 'admin') roleByProfile.set(r.user_id, next);
   }
   const caseload = new Map<string, number>();

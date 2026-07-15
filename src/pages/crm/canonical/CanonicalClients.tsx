@@ -1,11 +1,19 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCanonicalClients } from '@/hooks/canonical/useCanonicalClients';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { LIFECYCLE_STAGES, ENGAGEMENT_STATES, ELIGIBILITY_STATES, displayName, type LifecycleStage, type EngagementState } from '@/domain/canonical';
+import {
+  LIFECYCLE_STAGES,
+  ENGAGEMENT_STATES,
+  ELIGIBILITY_STATES,
+  displayName,
+  type LifecycleStage,
+  type EngagementState,
+  type EligibilityState,
+} from '@/domain/canonical';
 import { LifecycleBadge, EngagementBadge, EligibilityBadge, ContactPolicyBadge, AtRiskBadge } from '@/components/crm/canonical/StateBadges';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,15 +25,17 @@ export default function CanonicalClients() {
   const [search, setSearch] = useState('');
   const lifecycle = params.getAll('lifecycle') as LifecycleStage[];
   const engagement = params.getAll('engagement') as EngagementState[];
+  const eligibility = params.getAll('eligibility') as EligibilityState[];
   const atRisk = params.get('atRisk') === '1' ? true : undefined;
 
-  const query = useMemo(() => ({
+  const query = {
     search: search || undefined,
     lifecycle: lifecycle.length ? lifecycle : undefined,
     engagement: engagement.length ? engagement : undefined,
+    eligibility: eligibility.length ? eligibility : undefined,
     atRisk,
     pageSize: 200,
-  }), [search, lifecycle.join(','), engagement.join(','), atRisk]);
+  };
 
   const { data, isLoading } = useCanonicalClients(query);
 
@@ -59,7 +69,7 @@ export default function CanonicalClients() {
         </div>
         <FilterMenu label="Lifecycle" options={LIFECYCLE_STAGES} selected={lifecycle} onToggle={v => toggleParam('lifecycle', v)} />
         <FilterMenu label="Engagement" options={ENGAGEMENT_STATES} selected={engagement} onToggle={v => toggleParam('engagement', v)} />
-        <FilterMenu label="Eligibility" options={ELIGIBILITY_STATES} selected={params.getAll('eligibility')} onToggle={v => toggleParam('eligibility', v)} />
+        <FilterMenu label="Eligibility" options={ELIGIBILITY_STATES} selected={eligibility} onToggle={v => toggleParam('eligibility', v)} />
         <Button
           variant={atRisk ? 'default' : 'outline'} size="sm"
           onClick={() => { if (atRisk) params.delete('atRisk'); else params.set('atRisk', '1'); setParams(params); }}

@@ -1,28 +1,41 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
+import type { Json, Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 import type { TasksRepository, ListTasksQuery } from '../types';
 import type { CrmTask, TaskStatus, TaskPriority, TaskType } from '@/domain/operations';
 
-type Row = Database['public']['Tables']['crm_tasks']['Row'];
+type Row = Tables<'crm_tasks'>;
+type TaskInsert = TablesInsert<'crm_tasks'>;
+type TaskUpdate = TablesUpdate<'crm_tasks'>;
+type TaskDbStatus = Row['status'];
+type TaskDbPriority = Row['priority'];
+type TaskDbType = Row['type'];
 
-const TASK_STATUS_D2D: Record<TaskStatus, string> = {
+const TASK_STATUS_D2D: Record<TaskStatus, TaskDbStatus> = {
   'Not Started': 'not_started', 'In Progress': 'in_progress', Waiting: 'waiting',
   Blocked: 'blocked', Completed: 'completed', Canceled: 'canceled',
 };
-const TASK_STATUS_B2D: Record<string, TaskStatus> = Object.fromEntries(
-  Object.entries(TASK_STATUS_D2D).map(([d, db]) => [db, d as TaskStatus]),
-);
-const TASK_PRIO_D2D: Record<TaskPriority, string> = { Low: 'low', Normal: 'normal', High: 'high', Urgent: 'urgent' };
-const TASK_PRIO_B2D: Record<string, TaskPriority> = { low: 'Low', normal: 'Normal', high: 'High', urgent: 'Urgent' };
-const TASK_TYPE_D2D: Record<TaskType, string> = {
+const TASK_STATUS_B2D: Record<TaskDbStatus, TaskStatus> = {
+  not_started: 'Not Started', in_progress: 'In Progress', waiting: 'Waiting',
+  blocked: 'Blocked', completed: 'Completed', canceled: 'Canceled',
+};
+const TASK_PRIO_D2D: Record<TaskPriority, TaskDbPriority> = {
+  Low: 'low', Normal: 'normal', High: 'high', Urgent: 'urgent',
+};
+const TASK_PRIO_B2D: Record<TaskDbPriority, TaskPriority> = {
+  low: 'Low', normal: 'Normal', high: 'High', urgent: 'Urgent',
+};
+const TASK_TYPE_D2D: Record<TaskType, TaskDbType> = {
   'Client Follow-Up': 'client_follow_up', 'Staff Follow-Up': 'staff_follow_up',
   'Campaign Exception': 'campaign_exception', 'Eligibility Review': 'eligibility_review',
   'Match Review': 'match_review', Documentation: 'documentation',
   'Risk Intervention': 'risk_intervention', General: 'general',
 };
-const TASK_TYPE_B2D: Record<string, TaskType> = Object.fromEntries(
-  Object.entries(TASK_TYPE_D2D).map(([d, db]) => [db, d as TaskType]),
-);
+const TASK_TYPE_B2D: Record<TaskDbType, TaskType> = {
+  client_follow_up: 'Client Follow-Up', staff_follow_up: 'Staff Follow-Up',
+  campaign_exception: 'Campaign Exception', eligibility_review: 'Eligibility Review',
+  match_review: 'Match Review', documentation: 'Documentation',
+  risk_intervention: 'Risk Intervention', general: 'General',
+};
 
 const COLS = `
   id, tenant_id, title, description, client_id, staff_id, campaign_id, exception_id,
@@ -43,15 +56,52 @@ function toDomain(r: Row): CrmTask {
     createdByProfileId: r.created_by_profile_id,
     startAt: r.start_at ?? undefined, dueAt: r.due_at ?? undefined,
     completedAt: r.completed_at ?? undefined,
-    recurrence: r.recurrence as CrmTask['recurrence'] ?? undefined,
-    checklist: r.checklist as CrmTask['checklist'] ?? [],
+    recurrence: recurrenceFromDb(r.recurrence),
+    checklist: checklistFromDb(r.checklist),
     tags: r.tags ?? [],
     createdAt: r.created_at, updatedAt: r.updated_at,
   };
 }
 
-function toDb(patch: Partial<CrmTask>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
+function recurrenceFromDb(value: string | null): CrmTask['recurrence'] {
+  switch (value?.toLowerCase()) {
+    case 'none': return 'None';
+    case 'daily': return 'Daily';
+    case 'weekly': return 'Weekly';
+    case 'monthly': return 'Monthly';
+    default: return undefined;
+  }
+}
+
+function isJsonObject(value: Json): value is { [key: string]: Json | undefined } {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function checklistFromDb(value: Json): CrmTask['checklist'] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (
+      !isJsonObject(item)
+      || typeof item.id !== 'string'
+      || typeof item.label !== 'string'
+      || typeof item.done !== 'boolean'
+    ) {
+      return [];
+    }
+    return [{ id: item.id, label: item.label, done: item.done }];
+  });
+}
+
+function checklistToDb(value: CrmTask['checklist']): Json {
+  return value.map((item) => ({ id: item.id, label: item.label, done: item.done }));
+}
+
+function isTaskType(value: string): value is TaskType {
+  return Object.prototype.hasOwnProperty.call(TASK_TYPE_D2D, value);
+}
+
+function toDb(patch: Partial<CrmTask>): TaskUpdate {
+  const out: TaskUpdate = {};
   if (patch.title !== undefined) out.title = patch.title;
   if (patch.description !== undefined) out.description = patch.description ?? null;
   if (patch.clientId !== undefined) out.client_id = patch.clientId ?? null;
@@ -67,11 +117,20 @@ function toDb(patch: Partial<CrmTask>): Record<string, unknown> {
   if (patch.dueAt !== undefined) out.due_at = patch.dueAt ?? null;
   if (patch.completedAt !== undefined) out.completed_at = patch.completedAt ?? null;
   if (patch.recurrence !== undefined) out.recurrence = patch.recurrence ?? null;
-  if (patch.checklist !== undefined) out.checklist = patch.checklist;
+  if (patch.checklist !== undefined) out.checklist = checklistToDb(patch.checklist);
   if (patch.tags !== undefined) out.tags = patch.tags;
   if (patch.tenantId !== undefined) out.tenant_id = patch.tenantId;
   if (patch.createdByProfileId !== undefined) out.created_by_profile_id = patch.createdByProfileId;
   return out;
+}
+
+function toInsert(input: Parameters<TasksRepository['create']>[0]): TaskInsert {
+  return {
+    ...toDb(input),
+    tenant_id: input.tenantId,
+    title: input.title,
+    created_by_profile_id: input.createdByProfileId,
+  };
 }
 
 export const supabaseTasksRepository: TasksRepository = {
@@ -82,7 +141,11 @@ export const supabaseTasksRepository: TasksRepository = {
     if (q.statuses?.length) query = query.in('status', q.statuses.map(s => TASK_STATUS_D2D[s]));
     if (q.dueBefore) query = query.lte('due_at', q.dueBefore);
     if (q.dueAfter) query = query.gte('due_at', q.dueAfter);
-    if (q.types?.length) query = query.in('type', q.types.map(t => TASK_TYPE_D2D[t as TaskType]).filter(Boolean));
+    if (q.types?.length) {
+      const types = q.types.filter(isTaskType).map((type) => TASK_TYPE_D2D[type]);
+      if (!types.length) return [];
+      query = query.in('type', types);
+    }
     if (q.search) {
       const s = q.search.replace(/[,()]/g, ' ');
       query = query.or(`title.ilike.%${s}%,description.ilike.%${s}%`);
@@ -106,7 +169,7 @@ export const supabaseTasksRepository: TasksRepository = {
   },
 
   async create(input) {
-    const row = { ...toDb(input as Partial<CrmTask>) };
+    const row = toInsert(input);
     const { data, error } = await supabase.from('crm_tasks').insert(row).select(COLS).single();
     if (error) throw new Error(error.message);
     return toDomain(data);

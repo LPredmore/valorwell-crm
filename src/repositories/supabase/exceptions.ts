@@ -1,18 +1,21 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Database, Json } from '@/integrations/supabase/types';
+import type { Json, Tables } from '@/integrations/supabase/types';
 import type { ExceptionsRepository } from '../types';
 import type {
-  OperationalException, ExceptionStatus, ExceptionSeverity, ExceptionType, CrmTask,
+  OperationalException, ExceptionStatus, ExceptionSeverity, ExceptionType, CrmTask, TaskPriority,
 } from '@/domain/operations';
+import { supabaseTasksRepository } from './tasks';
 
-type ExceptionRow = Database['public']['Tables']['crm_exceptions']['Row'];
+type ExceptionRow = Tables<'crm_exceptions'>;
+type ExceptionDbStatus = ExceptionRow['status'];
+type ResolutionHistoryEntry = OperationalException['resolutionHistory'][number];
 
-const STATUS_D2D: Record<ExceptionStatus, string> = {
+const STATUS_D2D: Record<ExceptionStatus, ExceptionDbStatus> = {
   Open: 'open', 'In Review': 'in_review', Resolved: 'resolved', Dismissed: 'dismissed',
 };
-const STATUS_B2D: Record<string, ExceptionStatus> = Object.fromEntries(
-  Object.entries(STATUS_D2D).map(([d, db]) => [db, d as ExceptionStatus]),
-);
+const STATUS_B2D: Record<ExceptionDbStatus, ExceptionStatus> = {
+  open: 'Open', in_review: 'In Review', resolved: 'Resolved', dismissed: 'Dismissed',
+};
 const SEVERITY_B2D: Record<string, ExceptionSeverity> = {
   low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical',
 };
@@ -49,7 +52,7 @@ function toDomain(r: ExceptionRow): OperationalException {
     createdAt: r.created_at, dueAt: r.due_at ?? undefined,
     lastActivityAt: r.last_activity_at,
     summary: r.summary, recommendedResolution: r.recommended_resolution ?? undefined,
-    resolutionHistory: jsonArray(r.resolution_history),
+    resolutionHistory: parseResolutionHistory(r.resolution_history),
   };
 }
 
@@ -57,9 +60,34 @@ function jsonArray(value: Json | null): Json[] {
   return Array.isArray(value) ? value : [];
 }
 
+function isJsonObject(value: Json): value is { [key: string]: Json | undefined } {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseResolutionHistory(value: Json | null): ResolutionHistoryEntry[] {
+  return jsonArray(value).flatMap((entry) => {
+    if (!isJsonObject(entry) || typeof entry.at !== 'string' || typeof entry.action !== 'string') {
+      return [];
+    }
+    const byProfileId = typeof entry.byProfileId === 'string' ? entry.byProfileId : undefined;
+    const note = typeof entry.note === 'string' ? entry.note : undefined;
+    return [{
+      at: entry.at,
+      action: entry.action,
+      ...(byProfileId !== undefined ? { byProfileId } : {}),
+      ...(note !== undefined ? { note } : {}),
+    }];
+  });
+}
+
 async function updateStatus(id: string, status: ExceptionStatus, note?: string) {
   const { data: cur } = await supabase.from('crm_exceptions').select('resolution_history').eq('id', id).maybeSingle();
-  const history = [...jsonArray(cur?.resolution_history ?? null), { at: new Date().toISOString(), action: status, note }];
+  const historyEntry: Json = {
+    at: new Date().toISOString(),
+    action: status,
+    ...(note !== undefined ? { note } : {}),
+  };
+  const history: Json = [...jsonArray(cur?.resolution_history ?? null), historyEntry];
   const { data, error } = await supabase.from('crm_exceptions')
     .update({ status: STATUS_D2D[status], resolution_history: history, last_activity_at: new Date().toISOString() })
     .eq('id', id).select(COLS).single();
@@ -96,28 +124,25 @@ export const supabaseExceptionsRepository: ExceptionsRepository = {
     if (eErr) throw new Error(eErr.message);
     if (!exc) throw new Error('Exception not found');
     const { data: uid } = await supabase.auth.getUser();
-    const insert = {
-      tenant_id: exc.tenant_id,
+    const createdByProfileId = uid.user?.id;
+    if (!createdByProfileId) throw new Error('Authenticated user required to create an exception task');
+    const priority: TaskPriority =
+      exc.severity === 'critical' ? 'Urgent' : exc.severity === 'high' ? 'High' : 'Normal';
+    return supabaseTasksRepository.create({
+      tenantId: exc.tenant_id,
       title: `Resolve: ${exc.summary}`,
-      description: exc.recommended_resolution ?? null,
-      client_id: exc.client_id,
-      campaign_id: exc.campaign_id,
-      exception_id: exc.id,
-      type: 'campaign_exception',
-      priority: exc.severity === 'critical' ? 'urgent' : exc.severity === 'high' ? 'high' : 'normal',
-      status: 'not_started',
-      owner_id: exc.owner_id,
-      created_by_profile_id: uid?.user?.id,
-    };
-    const { data, error } = await supabase.from('crm_tasks').insert(insert).select('*').single();
-    if (error) throw new Error(error.message);
-    return {
-      id: data.id, tenantId: data.tenant_id, title: data.title, description: data.description ?? undefined,
-      clientId: data.client_id ?? undefined, campaignId: data.campaign_id ?? undefined,
-      exceptionId: data.exception_id ?? undefined, type: 'Campaign Exception',
-      priority: 'Normal', status: 'Not Started', ownerId: data.owner_id ?? undefined,
-      collaboratorIds: [], createdByProfileId: data.created_by_profile_id,
-      checklist: [], tags: [], createdAt: data.created_at, updatedAt: data.updated_at,
-    } as CrmTask;
+      description: exc.recommended_resolution ?? undefined,
+      clientId: exc.client_id ?? undefined,
+      campaignId: exc.campaign_id ?? undefined,
+      exceptionId: exc.id,
+      type: 'Campaign Exception',
+      priority,
+      status: 'Not Started',
+      ownerId: exc.owner_id ?? undefined,
+      collaboratorIds: [],
+      createdByProfileId,
+      checklist: [],
+      tags: [],
+    });
   },
 };
