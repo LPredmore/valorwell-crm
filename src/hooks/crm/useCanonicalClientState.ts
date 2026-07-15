@@ -29,22 +29,36 @@ export interface CanonicalReadResult<T> {
 type CanonicalStateRow = Database['public']['Views']['v_client_canonical_state']['Row'];
 
 function requireString(value: string | null, field: string): string {
-  if (!value) {
+  if (typeof value !== 'string' || !value) {
     throw new Error(`Canonical state missing required ${field}`);
   }
+  return value;
+}
+
+function optionalString(value: unknown, field: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') throw new Error(`Canonical state has invalid ${field} payload`);
   return value;
 }
 
 function parseLifecycle(value: string | null): LifecycleStage {
   switch (requireString(value, 'lifecycle')) {
     case 'Lead': return 'Lead';
+    case 'registration':
     case 'Registration': return 'Registration';
+    case 'intake':
     case 'Intake': return 'Intake';
+    case 'matching':
     case 'Matching': return 'Matching';
+    case 'matched':
     case 'Matched': return 'Matched';
+    case 'scheduled':
     case 'Scheduled': return 'Scheduled';
+    case 'early_care':
     case 'Early Care': return 'Early Care';
+    case 'established_care':
     case 'Established Care': return 'Established Care';
+    case 'closed':
     case 'Closed': return 'Closed';
     default: throw new Error(`Canonical state has invalid lifecycle: ${value}`);
   }
@@ -52,9 +66,13 @@ function parseLifecycle(value: string | null): LifecycleStage {
 
 function parseEngagement(value: string | null): EngagementState {
   switch (requireString(value, 'engagement')) {
+    case 'normal':
     case 'Normal': return 'Normal';
+    case 'unresponsive_warm':
     case 'Unresponsive Warm': return 'Unresponsive Warm';
+    case 'unresponsive_cold':
     case 'Unresponsive Cold': return 'Unresponsive Cold';
+    case 'went_dark':
     case 'Went Dark': return 'Went Dark';
     default: throw new Error(`Canonical state has invalid engagement: ${value}`);
   }
@@ -62,9 +80,13 @@ function parseEngagement(value: string | null): EngagementState {
 
 function parseEligibility(value: string | null): EligibilityState {
   switch (requireString(value, 'eligibility')) {
+    case 'eligible':
     case 'Eligible': return 'Eligible';
+    case 'coverage_issue':
     case 'Coverage Issue': return 'Coverage Issue';
+    case 'manual_review':
     case 'Manual Review': return 'Manual Review';
+    case 'unknown':
     case 'Unknown': return 'Unknown';
     default: throw new Error(`Canonical state has invalid eligibility: ${value}`);
   }
@@ -72,7 +94,9 @@ function parseEligibility(value: string | null): EligibilityState {
 
 function parseContactPolicy(value: string | null): ContactPolicy {
   switch (requireString(value, 'contact_policy')) {
+    case 'normal':
     case 'Normal': return 'Normal';
+    case 'do_not_contact':
     case 'Do Not Contact': return 'Do Not Contact';
     default: throw new Error(`Canonical state has invalid contact policy: ${value}`);
   }
@@ -80,7 +104,9 @@ function parseContactPolicy(value: string | null): ContactPolicy {
 
 function parseServicePolicy(value: string | null): ServicePolicy {
   switch (requireString(value, 'service_policy')) {
+    case 'normal':
     case 'Normal': return 'Normal';
+    case 'service_blocked':
     case 'Service Blocked': return 'Service Blocked';
     default: throw new Error(`Canonical state has invalid service policy: ${value}`);
   }
@@ -88,8 +114,10 @@ function parseServicePolicy(value: string | null): ServicePolicy {
 
 function parseCareCadence(value: string | null): CareCadence {
   switch (requireString(value, 'care_cadence')) {
-    case 'regular': return 'regular';
-    case 'as_needed': return 'as_needed';
+    case 'regular':
+    case 'Regular': return 'regular';
+    case 'as_needed':
+    case 'As Needed': return 'as_needed';
     default: throw new Error(`Canonical state has invalid care cadence: ${value}`);
   }
 }
@@ -97,12 +125,19 @@ function parseCareCadence(value: string | null): CareCadence {
 function parseDispositionReason(value: string | null): DispositionReason | null {
   switch (value) {
     case null: return null;
+    case 'not_the_right_time':
     case 'Not the Right Time': return 'Not the Right Time';
+    case 'found_somewhere_else':
     case 'Found Somewhere Else': return 'Found Somewhere Else';
+    case 'completed_care':
     case 'Completed Care': return 'Completed Care';
+    case 'paused_care':
     case 'Paused Care': return 'Paused Care';
+    case 'administrative':
     case 'Administrative': return 'Administrative';
+    case 'went_dark':
     case 'Went Dark': return 'Went Dark';
+    case 'other':
     case 'Other': return 'Other';
     default: throw new Error(`Canonical state has invalid disposition reason: ${value}`);
   }
@@ -113,24 +148,21 @@ function parseAtRisk(value: CanonicalStateRow['at_risk']): AtRiskState {
     throw new Error('Canonical state has invalid at_risk payload');
   }
   const atRisk = value.at_risk;
-  const evaluatedAt = value.evaluated_at;
-  const recommendedNextActionValue = value.recommended_next_action;
-  const eventVersion = value.event_version;
-  if (
-    typeof atRisk !== 'boolean' ||
-    typeof evaluatedAt !== 'string' ||
-    (recommendedNextActionValue !== null && typeof recommendedNextActionValue !== 'string') ||
-    typeof eventVersion !== 'string'
-  ) {
+  if (typeof atRisk !== 'boolean') {
     throw new Error('Canonical state has invalid at_risk payload');
   }
-  const recommendedNextAction = typeof recommendedNextActionValue === 'string' ? recommendedNextActionValue : null;
-  return {
-    at_risk: atRisk,
-    evaluated_at: evaluatedAt,
-    recommended_next_action: recommendedNextAction,
-    event_version: eventVersion,
-  };
+  const evaluatedAt = optionalString(value.evaluated_at, 'at_risk.evaluated_at');
+  const eventVersion = optionalString(value.event_version, 'at_risk.event_version');
+  const recommendedNextActionValue = value.recommended_next_action;
+  if (recommendedNextActionValue !== undefined && recommendedNextActionValue !== null && typeof recommendedNextActionValue !== 'string') {
+    throw new Error('Canonical state has invalid at_risk.recommended_next_action payload');
+  }
+  const parsed: AtRiskState = { at_risk: atRisk };
+  if (typeof evaluatedAt === 'string') parsed.evaluated_at = evaluatedAt;
+  if (recommendedNextActionValue === null) parsed.recommended_next_action = null;
+  if (typeof recommendedNextActionValue === 'string') parsed.recommended_next_action = recommendedNextActionValue;
+  if (typeof eventVersion === 'string') parsed.event_version = eventVersion;
+  return parsed;
 }
 
 function parseManualReview(value: CanonicalStateRow['eligibility_manual_review']): ManualReviewContext | null {
@@ -166,7 +198,7 @@ function parseProviderDemandState(
   }
 }
 
-function toCanonicalClientState(row: CanonicalStateRow): CanonicalClientState {
+export function toCanonicalClientState(row: CanonicalStateRow): CanonicalClientState {
   return {
     client_id: requireString(row.client_id, 'client_id'),
     tenant_id: requireString(row.tenant_id, 'tenant_id'),
@@ -189,15 +221,29 @@ function toCanonicalClientState(row: CanonicalStateRow): CanonicalClientState {
   };
 }
 
-function classifyError(message: string): CanonicalReadStatus {
+export function classifyError(message: string): CanonicalReadStatus | null {
   if (
     /relation .* does not exist/i.test(message) ||
     /could not find the table/i.test(message) ||
-    /PGRST20[12]/i.test(message)
+    /could not find the view/i.test(message) ||
+    /schema cache.*(table|view)/i.test(message) ||
+    /PGRST205/i.test(message)
   ) {
     return 'CONTRACT_NOT_DEPLOYED';
   }
-  return 'CONTRACT_NOT_DEPLOYED';
+  return null;
+}
+
+export function resolveCanonicalRead(
+  data: CanonicalStateRow | null,
+  error: { message: string } | null,
+): CanonicalReadResult<CanonicalClientState> {
+  if (error) {
+    const status = classifyError(error.message);
+    if (status) return { status, data: null, message: error.message };
+    throw new Error(error.message);
+  }
+  return { status: data ? 'ok' : 'empty', data: data ? toCanonicalClientState(data) : null };
 }
 
 /**
@@ -220,15 +266,8 @@ export function useCanonicalClientState(clientId: string | undefined | null) {
         .eq('client_id', clientId)
         .maybeSingle();
 
-      if (error) {
-        console.warn(`[canonical] ${CANONICAL_READ_VIEW} unavailable:`, error.message);
-        return {
-          status: classifyError(error.message),
-          data: null,
-          message: error.message,
-        };
-      }
-      return { status: data ? 'ok' : 'empty', data: data ? toCanonicalClientState(data) : null };
+      if (error) console.warn(`[canonical] ${CANONICAL_READ_VIEW} unavailable:`, error.message);
+      return resolveCanonicalRead(data, error);
     },
   });
 }
@@ -252,11 +291,9 @@ export function useCanonicalClientStates(clientIds: string[]) {
 
       if (error) {
         console.warn(`[canonical] ${CANONICAL_READ_VIEW} unavailable:`, error.message);
-        return {
-          status: classifyError(error.message),
-          data: null,
-          message: error.message,
-        };
+        const status = classifyError(error.message);
+        if (status) return { status, data: null, message: error.message };
+        throw new Error(error.message);
       }
       const out: Record<string, CanonicalClientState> = {};
       for (const row of data ?? []) {
