@@ -1,3 +1,8 @@
+import {
+  mapDbClosureReasonToDomain,
+  mapDbEngagementToDomain,
+  mapDbLifecycleToDomain,
+} from '@/domain/canonical';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import {
@@ -56,6 +61,27 @@ const MAX_REPORT_PAGES = 100;
 
 function safeNumber(value: number | null): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function validateReportDimension(
+  report: ReportName,
+  view: ReportViewName,
+  dimension: string,
+  value: string | null,
+  validate: (candidate: string) => unknown,
+): void {
+  if (value === null) return;
+
+  try {
+    validate(value);
+  } catch {
+    throw new ReportQueryError(
+      report,
+      view,
+      'query-failed',
+      `${view} returned unsupported ${dimension} value: ${value}`,
+    );
+  }
 }
 
 export function selectLatestBucket<Row extends BucketedViewRow>(
@@ -154,13 +180,22 @@ export const supabaseReportsRepository: ReportsRepository = {
     return mapLatestBucket<FunnelViewRow, FunnelReportRow>(
       tenantId,
       rows,
-      (row) => ({
-        ...row,
-        entered_count: safeNumber(row.entered_count),
-        exited_count: safeNumber(row.exited_count),
-        current_count: safeNumber(row.current_count),
-        median_days_in_stage: safeNumber(row.median_days_in_stage),
-      }),
+      (row) => {
+        validateReportDimension(
+          'funnel',
+          'v_crm_reports_funnel',
+          'lifecycle stage',
+          row.stage,
+          mapDbLifecycleToDomain,
+        );
+        return {
+          ...row,
+          entered_count: safeNumber(row.entered_count),
+          exited_count: safeNumber(row.exited_count),
+          current_count: safeNumber(row.current_count),
+          median_days_in_stage: safeNumber(row.median_days_in_stage),
+        };
+      },
       (row) => row.stage ?? '',
     );
   },
@@ -188,12 +223,20 @@ export const supabaseReportsRepository: ReportsRepository = {
     return mapLatestBucket<EngagementViewRow, EngagementReportRow>(
       tenantId,
       rows,
-      (row) => ({
-        ...row,
-        current_count: safeNumber(row.current_count),
-        entered_count: safeNumber(row.entered_count),
-        avg_days_to_normal: safeNumber(row.avg_days_to_normal),
-      }),
+      (row) => {
+        validateReportDimension(
+          'engagement',
+          'v_crm_reports_engagement',
+          'engagement state',
+          row.engagement,
+          mapDbEngagementToDomain,
+        );
+        return {
+          ...row,
+          current_count: safeNumber(row.current_count),
+          entered_count: safeNumber(row.entered_count),
+        };
+      },
       (row) => row.engagement ?? '',
     );
   },
@@ -221,12 +264,21 @@ export const supabaseReportsRepository: ReportsRepository = {
     return mapLatestBucket<ClosureViewRow, ClosureReportRow>(
       tenantId,
       rows,
-      (row) => ({
-        ...row,
-        closed_count: safeNumber(row.closed_count),
-        reopened_count: safeNumber(row.reopened_count),
-        net_closed: safeNumber(row.net_closed),
-      }),
+      (row) => {
+        validateReportDimension(
+          'closure',
+          'v_crm_reports_closure',
+          'closure disposition',
+          row.disposition_reason === 'unspecified' ? null : row.disposition_reason,
+          mapDbClosureReasonToDomain,
+        );
+        return {
+          ...row,
+          closed_count: safeNumber(row.closed_count),
+          reopened_count: safeNumber(row.reopened_count),
+          net_closed: safeNumber(row.net_closed),
+        };
+      },
       (row) => row.disposition_reason ?? '',
     );
   },

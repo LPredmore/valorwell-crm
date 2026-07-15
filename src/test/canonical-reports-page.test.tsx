@@ -82,7 +82,7 @@ function readyQueries(): MockReportQueries {
       engagement: 'normal',
       current_count: 20,
       entered_count: 6,
-      avg_days_to_normal: 2,
+      avg_days_to_normal: null,
     }])),
     closure: query(bucket<ClosureReportRow>([{
       ...period,
@@ -142,6 +142,7 @@ describe('CanonicalReports', () => {
     expect(screen.getByText('Engaged')).toBeInTheDocument();
     expect(screen.getByText('Completed Care')).toBeInTheDocument();
     expect(screen.getByText('Integration Failure')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText('completed_care')).not.toBeInTheDocument();
     expect(screen.queryByText(['At', 'Risk Overview'].join('-'))).not.toBeInTheDocument();
   });

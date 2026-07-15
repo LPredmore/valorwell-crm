@@ -157,7 +157,7 @@ export type FunnelReportRow = WithSafeReportNumbers<
 
 export type EngagementReportRow = WithSafeReportNumbers<
   Tables<'v_crm_reports_engagement'>,
-  'current_count' | 'entered_count' | 'avg_days_to_normal'
+  'current_count' | 'entered_count'
 >;
 
 export type ClosureReportRow = WithSafeReportNumbers<

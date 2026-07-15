@@ -164,7 +164,7 @@ function seedRows() {
     { ...common('tenant-a', '2026-07-06'), stage: 'intake', entered_count: 8, exited_count: null, current_count: null, median_days_in_stage: null },
   ];
   boundary.rows.v_crm_reports_engagement = [
-    { ...common('tenant-a', '2026-07-06'), engagement: 'normal', current_count: null, entered_count: 4, avg_days_to_normal: 2.5 },
+    { ...common('tenant-a', '2026-07-06'), engagement: 'unresponsive_warm', current_count: null, entered_count: 4, avg_days_to_normal: null },
   ];
   boundary.rows.v_crm_reports_closure = [
     { ...common('tenant-a', '2026-07-06'), disposition_reason: 'completed_care', closed_count: 6, reopened_count: null, net_closed: 5 },
@@ -225,7 +225,7 @@ describe('Supabase reports repository', () => {
     expect(selected?.rows.map(row => row.id)).toEqual(['b', 'a']);
   });
 
-  it('normalizes nullable numerics and preserves every authentic view field', async () => {
+  it('normalizes count metrics while preserving nullable measurements', async () => {
     const [funnel, engagement, closure, campaigns, tasks, exceptions] = await Promise.all([
       supabaseReportsRepository.journeyFunnel('tenant-a'),
       supabaseReportsRepository.engagementMetrics('tenant-a'),
@@ -240,7 +240,7 @@ describe('Supabase reports repository', () => {
       stage: 'intake', entered_count: 8, exited_count: 0, current_count: 0, median_days_in_stage: 0,
     });
     expect(engagement?.rows[0]).toMatchObject({
-      engagement: 'normal', current_count: 0, entered_count: 4, avg_days_to_normal: 2.5,
+      engagement: 'unresponsive_warm', current_count: 0, entered_count: 4, avg_days_to_normal: null,
     });
     expect(closure?.rows[0]).toMatchObject({
       disposition_reason: 'completed_care', closed_count: 6, reopened_count: 0, net_closed: 5,
@@ -256,6 +256,51 @@ describe('Supabase reports repository', () => {
     expect(exceptions?.rows[0]).toMatchObject({
       exception_type: 'integration_failure', raised_count: 5, resolved_count: 3,
       open_count: 0, median_hours_to_resolve: 8.25,
+    });
+  });
+
+  it('fails closed with report-specific errors for unsupported canonical dimensions', async () => {
+    boundary.rows.v_crm_reports_funnel = [{
+      ...common('tenant-a', '2026-07-06'),
+      stage: 'legacy_stage',
+      entered_count: 1,
+      exited_count: 0,
+      current_count: 1,
+      median_days_in_stage: 2,
+    }];
+    await expect(supabaseReportsRepository.journeyFunnel('tenant-a')).rejects.toMatchObject({
+      kind: 'query-failed',
+      report: 'funnel',
+      view: 'v_crm_reports_funnel',
+      message: expect.stringContaining('unsupported lifecycle stage value: legacy_stage'),
+    });
+
+    boundary.rows.v_crm_reports_engagement = [{
+      ...common('tenant-a', '2026-07-06'),
+      engagement: 'legacy_engagement',
+      current_count: 1,
+      entered_count: 1,
+      avg_days_to_normal: null,
+    }];
+    await expect(supabaseReportsRepository.engagementMetrics('tenant-a')).rejects.toMatchObject({
+      kind: 'query-failed',
+      report: 'engagement',
+      view: 'v_crm_reports_engagement',
+      message: expect.stringContaining('unsupported engagement state value: legacy_engagement'),
+    });
+
+    boundary.rows.v_crm_reports_closure = [{
+      ...common('tenant-a', '2026-07-06'),
+      disposition_reason: 'legacy_disposition',
+      closed_count: 1,
+      reopened_count: 0,
+      net_closed: 1,
+    }];
+    await expect(supabaseReportsRepository.closureMetrics('tenant-a')).rejects.toMatchObject({
+      kind: 'query-failed',
+      report: 'closure',
+      view: 'v_crm_reports_closure',
+      message: expect.stringContaining('unsupported closure disposition value: legacy_disposition'),
     });
   });
 
