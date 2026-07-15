@@ -14,6 +14,13 @@ import {
   mapDbClosureReasonToDomain, mapDomainClosureReasonToDb,
 } from '@/domain/canonical';
 import { CONTRACT_VERSION } from '@/lib/crm/contracts';
+import {
+  buildCanonicalRpcArgs,
+  callCanonicalRpcWithRetry,
+  newIdempotencyKey,
+  type CanonicalRpcArgsByName,
+  type CanonicalRpcName,
+} from '@/lib/crm/canonicalRpcTransport';
 
 const CLIENT_SELECT = `
   id, tenant_id,
@@ -35,21 +42,6 @@ type ClientRow = {
 };
 
 type CanonicalStateRow = Database['public']['Views']['v_client_canonical_state']['Row'];
-
-type CanonicalRpcName =
-  | 'crm_transition_lifecycle'
-  | 'crm_set_engagement'
-  | 'crm_set_contact_policy'
-  | 'crm_set_service_policy'
-  | 'crm_set_eligibility'
-  | 'crm_set_care_cadence'
-  | 'crm_assign_clinician'
-  | 'crm_close_client'
-  | 'crm_reopen_client';
-
-type CanonicalRpcArgsByName = {
-  [K in CanonicalRpcName]: Database['public']['Functions'][K]['Args'];
-};
 
 function requireCanonicalValue<T>(value: T | null | undefined, field: string): T {
   if (value === null || value === undefined || value === '') {
@@ -178,7 +170,7 @@ export function composeFilterSortAndPageClients(
 async function fetchAllRows<T>(buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
   const all: T[] = [];
   const size = 1000;
-  for (let from = 0; from < 100_000; from += size) {
+  for (let from = 0; ; from += size) {
     const { data, error } = await buildQuery(from, from + size - 1);
     if (error) throw new Error(error.message);
     const rows = data ?? [];
@@ -203,11 +195,16 @@ async function callRpc<Name extends CanonicalRpcName>(
   name: Name,
   args: CanonicalRpcArgsByName[Name],
 ): Promise<void> {
-  const { data, error } = await supabase.rpc(name, args);
-  if (error) throw new Error(error.message);
-  if (data && data.ok === false) {
-    throw new Error(data.message ?? data.error_code ?? 'Canonical write refused');
-  }
+  const result = await callCanonicalRpcWithRetry(supabase.rpc, name, args);
+  if (!result.ok) throw new Error(result.message ?? result.error_code ?? 'Canonical write refused');
+}
+
+function rpcArgs<Name extends CanonicalRpcName>(
+  base: Omit<CanonicalRpcArgsByName[Name], 'p_concurrency_token' | 'p_idempotency_key' | 'p_contract_version'>,
+  concurrencyToken: string,
+  idempotencyKey: string,
+): CanonicalRpcArgsByName[Name] {
+  return buildCanonicalRpcArgs(base, concurrencyToken, idempotencyKey) as CanonicalRpcArgsByName[Name];
 }
 
 async function reload(id: string): Promise<CanonicalClient> {
@@ -278,13 +275,14 @@ export const supabaseClientsRepository: ClientsRepository = {
 
   async updateLifecycle(id, next, reason, note) {
     const concurrency_token = await fetchConcurrencyToken(id);
+    const idempotency_key = newIdempotencyKey();
     await callRpc('crm_transition_lifecycle', {
       p_client_id: id,
       p_to_stage: mapDomainLifecycleToDb(next),
       p_reason: note ? `${reason} — ${note}` : reason,
       p_disposition_reason: null,
       p_concurrency_token: concurrency_token,
-      p_idempotency_key: crypto.randomUUID(),
+      p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
@@ -292,12 +290,13 @@ export const supabaseClientsRepository: ClientsRepository = {
 
   async updateEngagement(id, next) {
     const concurrency_token = await fetchConcurrencyToken(id);
+    const idempotency_key = newIdempotencyKey();
     await callRpc('crm_set_engagement', {
       p_client_id: id,
       p_to_state: mapDomainEngagementToDb(next),
       p_reason: 'ui_update',
       p_concurrency_token: concurrency_token,
-      p_idempotency_key: crypto.randomUUID(),
+      p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
@@ -305,13 +304,14 @@ export const supabaseClientsRepository: ClientsRepository = {
 
   async updateEligibility(id, next, note) {
     const concurrency_token = await fetchConcurrencyToken(id);
+    const idempotency_key = newIdempotencyKey();
     await callRpc('crm_set_eligibility', {
       p_client_id: id,
       p_to_state: mapDomainEligibilityToDb(next),
       p_manual_review: null,
       p_reason: note ?? 'ui_update',
       p_concurrency_token: concurrency_token,
-      p_idempotency_key: crypto.randomUUID(),
+      p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
@@ -319,12 +319,13 @@ export const supabaseClientsRepository: ClientsRepository = {
 
   async updateContactPolicy(id, next, reason) {
     const concurrency_token = await fetchConcurrencyToken(id);
+    const idempotency_key = newIdempotencyKey();
     await callRpc('crm_set_contact_policy', {
       p_client_id: id,
       p_to_policy: mapDomainContactPolicyToDb(next),
       p_reason: reason,
       p_concurrency_token: concurrency_token,
-      p_idempotency_key: crypto.randomUUID(),
+      p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
@@ -332,12 +333,13 @@ export const supabaseClientsRepository: ClientsRepository = {
 
   async updateServicePolicy(id, next, reason) {
     const concurrency_token = await fetchConcurrencyToken(id);
+    const idempotency_key = newIdempotencyKey();
     await callRpc('crm_set_service_policy', {
       p_client_id: id,
       p_to_policy: mapDomainServicePolicyToDb(next),
       p_reason: reason,
       p_concurrency_token: concurrency_token,
-      p_idempotency_key: crypto.randomUUID(),
+      p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
@@ -345,12 +347,13 @@ export const supabaseClientsRepository: ClientsRepository = {
 
   async updateCareCadence(id, next) {
     const concurrency_token = await fetchConcurrencyToken(id);
+    const idempotency_key = newIdempotencyKey();
     await callRpc('crm_set_care_cadence', {
       p_client_id: id,
       p_to_cadence: mapDomainCareCadenceToDb(next),
       p_reason: 'ui_update',
       p_concurrency_token: concurrency_token,
-      p_idempotency_key: crypto.randomUUID(),
+      p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
@@ -372,7 +375,7 @@ export const supabaseClientsRepository: ClientsRepository = {
       p_disposition_reason: mapDomainClosureReasonToDb(info.closureReason),
       p_reason: info.notes ?? 'ui_close',
       p_concurrency_token: concurrency_token,
-      p_idempotency_key: crypto.randomUUID(),
+      p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
@@ -380,11 +383,12 @@ export const supabaseClientsRepository: ClientsRepository = {
 
   async reopen(id, reason) {
     const concurrency_token = await fetchConcurrencyToken(id);
+    const idempotency_key = newIdempotencyKey();
     await callRpc('crm_reopen_client', {
       p_client_id: id,
       p_reason: reason,
       p_concurrency_token: concurrency_token,
-      p_idempotency_key: crypto.randomUUID(),
+      p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);
@@ -393,12 +397,13 @@ export const supabaseClientsRepository: ClientsRepository = {
   async assignClinician(id, staffId) {
     if (!staffId?.trim()) throw new Error('assignClinician: staffId is required by the canonical RPC contract');
     const concurrency_token = await fetchConcurrencyToken(id);
+    const idempotency_key = newIdempotencyKey();
     await callRpc('crm_assign_clinician', {
       p_client_id: id,
       p_staff_id: staffId,
       p_reason: 'ui_assign',
       p_concurrency_token: concurrency_token,
-      p_idempotency_key: crypto.randomUUID(),
+      p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
     return reload(id);

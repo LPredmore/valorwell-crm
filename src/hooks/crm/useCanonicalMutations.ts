@@ -1,50 +1,26 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Database, Json } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
+import { RPC, type MutationResult } from '@/lib/crm/contracts';
 import {
-  RPC,
-  CONTRACT_VERSION,
-  type MutationResult,
-} from '@/lib/crm/contracts';
+  buildCanonicalRpcArgs,
+  callCanonicalRpcWithRetry,
+  isRetryableRpcTransportError,
+  newIdempotencyKey,
+  type CanonicalRpcArgsByName,
+  type CanonicalRpcName,
+} from '@/lib/crm/canonicalRpcTransport';
 
 /**
  * All CRM lifecycle mutations route through the nine live RPCs published on
- * contract `valorwell-crm-contracts@1.0.1+20260714`. Every call:
- *   - sends the exact contract version constant (fail-closed on mismatch),
- *   - sends a real concurrency token pulled from v_client_canonical_state
- *     by the caller (never the literal string "auto"),
- *   - sends a fresh client-generated idempotency key so retries are safe,
- *   - never reports success unless the RPC returned `{ ok: true }`.
+ * contract `valorwell-crm-contracts@1.0.1+20260714`.
  */
-
-export function newIdempotencyKey(): string {
-  return crypto.randomUUID();
-}
 
 export function assertRealToken(token: string | null | undefined): string {
   if (!token || token === 'auto') {
     throw new Error('Concurrency token unavailable — refusing to send "auto"');
   }
   return token;
-}
-
-/**
- * Pure builder for canonical RPC args. Exposed for idempotency-key tests:
- * a caller-provided key must be forwarded verbatim (retry safety); an
- * absent key must produce a fresh UUID per invocation (new-action safety).
- */
-export function buildCanonicalRpcArgs(
-  base: Record<string, unknown>,
-  concurrencyToken: string,
-  idempotencyKey: string | undefined,
-): Record<string, unknown> {
-  return {
-    ...base,
-    p_concurrency_token: concurrencyToken,
-    p_idempotency_key: idempotencyKey ?? newIdempotencyKey(),
-    p_contract_version: CONTRACT_VERSION,
-  };
 }
 
 interface BaseArgs {
@@ -64,33 +40,6 @@ export function idempotencyKeyForLogicalAction<TInput extends BaseArgs>(input: T
   return created;
 }
 
-export function isRetryableRpcTransportError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  const message = error.message.toLowerCase();
-  return error instanceof TypeError
-    || message.includes('fetch failed')
-    || message.includes('network')
-    || message.includes('timeout')
-    || message.includes('temporarily unavailable');
-}
-
-type CanonicalRpcName = (typeof RPC)[keyof typeof RPC];
-type CanonicalRpcArgsByName = {
-  [RPC.transitionLifecycle]: Database['public']['Functions']['crm_transition_lifecycle']['Args'];
-  [RPC.setEngagement]: Database['public']['Functions']['crm_set_engagement']['Args'];
-  [RPC.setContactPolicy]: Database['public']['Functions']['crm_set_contact_policy']['Args'];
-  [RPC.setServicePolicy]: Database['public']['Functions']['crm_set_service_policy']['Args'];
-  [RPC.setEligibility]: Database['public']['Functions']['crm_set_eligibility']['Args'];
-  [RPC.setCareCadence]: Database['public']['Functions']['crm_set_care_cadence']['Args'];
-  [RPC.assignClinician]: Database['public']['Functions']['crm_assign_clinician']['Args'];
-  [RPC.closeClient]: Database['public']['Functions']['crm_close_client']['Args'];
-  [RPC.reopenClient]: Database['public']['Functions']['crm_reopen_client']['Args'];
-};
-
-function isMutationResult(value: Json): value is MutationResult {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) && 'ok' in value && typeof value.ok === 'boolean';
-}
-
 function useCanonicalRpc<Name extends CanonicalRpcName, TInput extends BaseArgs>(
   rpcName: Name,
   successMsg: string,
@@ -106,20 +55,7 @@ function useCanonicalRpc<Name extends CanonicalRpcName, TInput extends BaseArgs>
         token,
         idempotencyKeyForLogicalAction(input),
       ) as CanonicalRpcArgsByName[Name];
-      let response: Awaited<ReturnType<typeof supabase.rpc>>;
-      try {
-        response = await supabase.rpc(rpcName, args);
-      } catch (error) {
-        throw error instanceof Error ? error : new Error(String(error));
-      }
-      const { data, error } = response;
-      if (error) {
-        return { ok: false, error_code: 'unknown', message: error.message };
-      }
-      if (!isMutationResult(data)) {
-        return { ok: false, error_code: 'unknown', message: 'Unexpected RPC response' };
-      }
-      return data;
+      return callCanonicalRpcWithRetry(supabase.rpc, rpcName, args);
     },
     retry: (failureCount, error) => failureCount < 1 && isRetryableRpcTransportError(error),
     onError: (error) => {

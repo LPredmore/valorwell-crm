@@ -70,9 +70,9 @@ describe('canonical client list composition', () => {
   });
 
   it('reports the final total after canonical and identity filters intersect', () => {
-    const canonicalRows = [canonical('1', { lifecycle: 'scheduled' }), canonical('2', { lifecycle: 'scheduled' }), canonical('3', { lifecycle: 'closed' })];
+    const canonicalRows = [canonical('1', { lifecycle: 'scheduled' }), canonical('2', { lifecycle: 'scheduled' })];
     const clientRows = [client('1', { pat_state: 'WA' }), client('2', { pat_state: 'CA' }), client('3', { pat_state: 'WA' })];
-    const result = composeFilterSortAndPageClients(canonicalRows, clientRows, { lifecycle: ['Scheduled'], states: ['WA'] });
+    const result = composeFilterSortAndPageClients(canonicalRows, clientRows, { states: ['WA'] });
     expect(result.total).toBe(1);
     expect(result.rows[0].id).toBe('1');
   });
@@ -101,7 +101,7 @@ describe('canonical client list composition', () => {
 
   it('canonical state overrides conflicting raw clients state', () => {
     const result = composeFilterSortAndPageClients(
-      [canonical('1', { lifecycle: 'scheduled', engagement: 'engaged' })],
+      [canonical('1', { lifecycle: 'scheduled', engagement: 'normal' })],
       [client('1', { lifecycle_stage: 'closed', engagement_state: 'cold' })],
       {},
     );

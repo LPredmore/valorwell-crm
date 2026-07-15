@@ -1,7 +1,8 @@
 import { Outlet, Navigate } from 'react-router-dom';
 import { CrmSidebar } from './CrmSidebar';
 import { CrmHeader } from './CrmHeader';
-import { CrmAuthProvider, useCrmAuth } from '@/contexts/CrmAuthContext';
+import { CrmAuthProvider } from '@/contexts/CrmAuthContext';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { Loader2 } from 'lucide-react';
 
 function CrmLayoutInner() {

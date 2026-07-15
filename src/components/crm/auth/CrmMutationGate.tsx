@@ -21,8 +21,3 @@ export function CrmMutationGate({
   if (!allow.includes(role as 'admin' | 'staff')) return <>{readOnlyFallback}</>;
   return <>{children}</>;
 }
-
-export function useCanMutate(allow: Array<'admin' | 'staff'> = ['admin', 'staff']): boolean {
-  const { role, isAuthenticated } = useCrmAuth();
-  return isAuthenticated && allow.includes(role as 'admin' | 'staff');
-}

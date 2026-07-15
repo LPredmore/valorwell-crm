@@ -11,7 +11,7 @@ import type { CommunicationPolicyResult } from '@/domain/operations';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { SuppressionBanner } from './SuppressionBanner';
-import { useCanMutate } from '@/components/crm/auth/CrmMutationGate';
+import { useCanMutate } from '@/hooks/crm/useCanMutate';
 
 type MessageClass = 'ordinary_campaign_follow_up' | 'critical_operational' | 'transactional' | 'manual';
 

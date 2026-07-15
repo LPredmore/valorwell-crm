@@ -8,7 +8,7 @@ import { mockClients, mockCampaigns, mockEnrollments, mockTasks, mockExceptions,
 // In-memory mutable stores so mock mutations feel real across the session.
 let clients: CanonicalClient[] = [...mockClients];
 let tasks: CrmTask[] = [...mockTasks];
-let exceptions: OperationalException[] = [...mockExceptions];
+const exceptions: OperationalException[] = [...mockExceptions];
 let campaigns: Campaign[] = [...mockCampaigns];
 let enrollments: CampaignEnrollment[] = [...mockEnrollments];
 let messages: CommunicationMessage[] = [...mockMessages];
