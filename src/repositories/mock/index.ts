@@ -270,9 +270,9 @@ export const mockDataProvider: CrmDataProvider = {
         bucketEnd: '2026-07-13',
         rows: [
           { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', engagement: 'normal', current_count: 48, entered_count: 14, avg_days_to_normal: 0 },
-          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', engagement: 'unresponsive_warm', current_count: 9, entered_count: 4, avg_days_to_normal: 6 },
-          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', engagement: 'unresponsive_cold', current_count: 5, entered_count: 2, avg_days_to_normal: 12 },
-          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', engagement: 'went_dark', current_count: 3, entered_count: 1, avg_days_to_normal: 18 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', engagement: 'unresponsive_warm', current_count: 9, entered_count: 4, avg_days_to_normal: null },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', engagement: 'unresponsive_cold', current_count: 5, entered_count: 2, avg_days_to_normal: null },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', engagement: 'went_dark', current_count: 3, entered_count: 1, avg_days_to_normal: null },
         ],
       };
     },
