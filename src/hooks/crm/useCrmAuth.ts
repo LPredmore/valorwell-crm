@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { CrmAuthCtx } from '@/contexts/CrmAuthContext';
+import { CrmAuthCtx } from '@/contexts/crmAuthContextValue';
 import type { CrmAuthContext as CrmAuthContextType } from '@/lib/crm/types';
 
 export function useCrmAuth(): CrmAuthContextType {

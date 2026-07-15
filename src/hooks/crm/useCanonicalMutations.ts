@@ -5,7 +5,6 @@ import { RPC, type MutationResult } from '@/lib/crm/contracts';
 import {
   buildCanonicalRpcArgs,
   callCanonicalRpcWithRetry,
-  isRetryableRpcTransportError,
   newIdempotencyKey,
   type CanonicalRpcArgsByName,
   type CanonicalRpcName,
@@ -57,7 +56,7 @@ function useCanonicalRpc<Name extends CanonicalRpcName, TInput extends BaseArgs>
       ) as CanonicalRpcArgsByName[Name];
       return callCanonicalRpcWithRetry(supabase.rpc, rpcName, args);
     },
-    retry: (failureCount, error) => failureCount < 1 && isRetryableRpcTransportError(error),
+    retry: false,
     onError: (error) => {
       toast({
         title: 'Change failed',

@@ -7,6 +7,8 @@ type CanonicalRow = Database['public']['Views']['v_client_canonical_state']['Row
 type Filter = { column: string; values?: unknown[]; value?: unknown };
 
 const calls: Record<string, Filter[]> = { canonical: [], clients: [] };
+const rpc = vi.fn();
+const rpcPayloads: Record<string, unknown>[] = [];
 let canonicalRows: CanonicalRow[] = [];
 let clientRows: Record<string, unknown>[] = [];
 
@@ -17,10 +19,14 @@ class FakeQuery<T extends Record<string, unknown>> {
   in(column: string, values: unknown[]) { this.filters.push({ column, values }); calls[this.table].push({ column, values }); return this; }
   eq(column: string, value: unknown) { this.filters.push({ column, value }); calls[this.table].push({ column, value }); return this; }
   or(expression: string) { this.filters.push({ column: 'or', value: expression }); calls[this.table].push({ column: 'or', value: expression }); return this; }
+  maybeSingle() {
+    return this.range(0, this.rows.length).then(({ data, error }) => ({ data: data?.[0] ?? null, error }));
+  }
   range(from: number, to: number) {
     let rows = [...this.rows];
     for (const filter of this.filters) {
       if (filter.values) rows = rows.filter((row) => filter.values?.includes(row[filter.column]));
+      if (filter.value !== undefined && filter.column !== 'or') rows = rows.filter((row) => row[filter.column] === filter.value);
       if (filter.column === 'or' && typeof filter.value === 'string') rows = rows.filter((row) => String(row.pat_name_l).includes('Needle'));
     }
     return Promise.resolve({ data: rows.slice(from, to + 1), error: null });
@@ -32,7 +38,7 @@ vi.mock('@/integrations/supabase/client', () => ({
     from: (table: string) => table === 'v_client_canonical_state'
       ? new FakeQuery('canonical', canonicalRows as unknown as Record<string, unknown>[])
       : new FakeQuery('clients', clientRows),
-    rpc: vi.fn(),
+    rpc,
   },
 }));
 
@@ -84,6 +90,8 @@ describe('supabaseClientsRepository.list query composition', () => {
   beforeEach(() => {
     calls.canonical = [];
     calls.clients = [];
+    rpcPayloads.length = 0;
+    rpc.mockReset();
     canonicalRows = [canonical('1'), canonical('2'), canonical('3', 'closed'), canonical('4')];
     clientRows = [client('1', 'WA', 'Needle C'), client('2', 'CA', 'Needle A'), client('3', 'WA', 'Needle B'), client('4', 'WA', 'Other')];
   });
@@ -96,4 +104,40 @@ describe('supabaseClientsRepository.list query composition', () => {
     expect(result.total).toBe(1);
     expect(result.rows.map((row) => row.id)).toEqual(['1']);
   });
+
+  it('reuses one idempotency key across a real repository mutation retry and does not retry business failures', async () => {
+    rpc.mockImplementation(async (_name, args) => {
+      rpcPayloads.push(args);
+      if (rpcPayloads.length === 1) throw new TypeError('fetch failed');
+      return { data: { ok: true }, error: null };
+    });
+
+    await expect(supabaseClientsRepository.updateEngagement('1', 'Engaged')).resolves.toMatchObject({ id: '1' });
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpcPayloads[0].p_idempotency_key).toBe(rpcPayloads[1].p_idempotency_key);
+    expect(rpcPayloads[0].p_concurrency_token).toBe('tok-1');
+    expect(rpcPayloads[1].p_concurrency_token).toBe('tok-1');
+    expect(rpcPayloads[0].p_contract_version).toBe('valorwell-crm-contracts@1.0.1+20260714');
+
+    rpc.mockResolvedValue({ data: { ok: true }, error: null });
+    await expect(supabaseClientsRepository.updateEngagement('1', 'Engaged')).resolves.toMatchObject({ id: '1' });
+    expect(rpcPayloads[2].p_idempotency_key).not.toBe(rpcPayloads[0].p_idempotency_key);
+
+    rpc.mockReset();
+    rpcPayloads.length = 0;
+    rpc.mockResolvedValue({ data: { ok: false, error_code: 'invalid_transition', message: 'Nope' }, error: null });
+    await expect(supabaseClientsRepository.updateEngagement('1', 'Engaged')).rejects.toThrow('Nope');
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws a final transient repository mutation failure after exactly two attempts', async () => {
+    rpc.mockImplementation(async (_name, args) => {
+      rpcPayloads.push(args);
+      throw new TypeError('fetch failed');
+    });
+    await expect(supabaseClientsRepository.updateEngagement('1', 'Engaged')).rejects.toThrow('fetch failed');
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpcPayloads[0].p_idempotency_key).toBe(rpcPayloads[1].p_idempotency_key);
+  });
+
 });

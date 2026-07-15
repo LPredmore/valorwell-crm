@@ -92,7 +92,7 @@ export async function callCanonicalRpcWithRetry<Name extends CanonicalRpcName>(
     try {
       const { data, error } = await rpc(name, args);
       if (error) {
-        if (attempt === 0 && isRetryableSupabaseRpcError(error)) {
+        if (isRetryableSupabaseRpcError(error)) {
           throw new RetryableCanonicalTransportError(error.message);
         }
         return { ok: false, error_code: error.code ?? 'unknown', message: error.message };

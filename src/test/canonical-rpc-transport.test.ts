@@ -22,6 +22,20 @@ describe('canonical RPC transport retry classification', () => {
     expect(rpc).toHaveBeenCalledTimes(2);
   });
 
+
+
+  it('throws final transient transport failures after exactly one retry', async () => {
+    const rpc = vi.fn().mockRejectedValue(new TypeError('fetch failed'));
+    await expect(callCanonicalRpcWithRetry(rpc, 'crm_set_engagement', args)).rejects.toThrow('fetch failed');
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws final returned retryable transport errors after exactly one retry', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { message: 'network timeout' } });
+    await expect(callCanonicalRpcWithRetry(rpc, 'crm_set_engagement', args)).rejects.toThrow('network timeout');
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
   it('does not retry returned nonretryable database errors', async () => {
     const rpc = vi.fn().mockResolvedValue({ data: null, error: { code: '42501', message: 'permission denied' } });
     await expect(callCanonicalRpcWithRetry(rpc, 'crm_set_engagement', args)).resolves.toMatchObject({ ok: false, error_code: '42501' });
