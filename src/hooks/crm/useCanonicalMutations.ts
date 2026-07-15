@@ -54,6 +54,26 @@ interface BaseArgs {
   idempotency_key?: string;
 }
 
+const logicalActionKeys = new WeakMap<BaseArgs, string>();
+
+export function idempotencyKeyForLogicalAction<TInput extends BaseArgs>(input: TInput): string {
+  const existing = logicalActionKeys.get(input);
+  if (existing) return existing;
+  const created = input.idempotency_key ?? newIdempotencyKey();
+  logicalActionKeys.set(input, created);
+  return created;
+}
+
+export function isRetryableRpcTransportError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return error instanceof TypeError
+    || message.includes('fetch failed')
+    || message.includes('network')
+    || message.includes('timeout')
+    || message.includes('temporarily unavailable');
+}
+
 type CanonicalRpcName = (typeof RPC)[keyof typeof RPC];
 type CanonicalRpcArgsByName = {
   [RPC.transitionLifecycle]: Database['public']['Functions']['crm_transition_lifecycle']['Args'];
@@ -81,13 +101,18 @@ function useCanonicalRpc<Name extends CanonicalRpcName, TInput extends BaseArgs>
   return useMutation({
     mutationFn: async (input: TInput): Promise<MutationResult> => {
       const token = assertRealToken(input.concurrency_token);
-      input.idempotency_key ??= newIdempotencyKey();
       const args = buildCanonicalRpcArgs(
         buildArgs(input),
         token,
-        input.idempotency_key,
+        idempotencyKeyForLogicalAction(input),
       ) as CanonicalRpcArgsByName[Name];
-      const { data, error } = await supabase.rpc(rpcName, args);
+      let response: Awaited<ReturnType<typeof supabase.rpc>>;
+      try {
+        response = await supabase.rpc(rpcName, args);
+      } catch (error) {
+        throw error instanceof Error ? error : new Error(String(error));
+      }
+      const { data, error } = response;
       if (error) {
         return { ok: false, error_code: 'unknown', message: error.message };
       }
@@ -95,6 +120,14 @@ function useCanonicalRpc<Name extends CanonicalRpcName, TInput extends BaseArgs>
         return { ok: false, error_code: 'unknown', message: 'Unexpected RPC response' };
       }
       return data;
+    },
+    retry: (failureCount, error) => failureCount < 1 && isRetryableRpcTransportError(error),
+    onError: (error) => {
+      toast({
+        title: 'Change failed',
+        description: error instanceof Error ? error.message : 'Network request failed',
+        variant: 'destructive',
+      });
     },
     onSuccess: (result, input) => {
       if (!result.ok) {

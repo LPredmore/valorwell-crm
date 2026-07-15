@@ -15,10 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-gate:
-    name: Required - type-check and build
+  verify:
+    name: Required - lint, type-check, test, and build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Check out repository
@@ -31,60 +31,16 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps --no-audit --no-fund
+        run: npm install --no-audit --no-fund
+
+      - name: Lint
+        run: npx eslint src --max-warnings=0
 
       - name: Type-check
         run: npx tsc --noEmit
 
-      - name: Build
-        run: npm run build
-
-  quality-advisory:
-    name: Advisory - lint and tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    continue-on-error: true
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps --no-audit --no-fund
-
-      - name: Lint
-        id: lint
-        continue-on-error: true
-        run: npm run lint
-
       - name: Test
-        id: test
-        continue-on-error: true
         run: npm test
 
-      - name: Publish quality summary
-        if: always()
-        run: |
-          {
-            echo "## Advisory quality checks"
-            echo "| Check | Result |"
-            echo "|---|---|"
-            echo "| Lint | ${{ steps.lint.outcome }} |"
-            echo "| Test | ${{ steps.test.outcome }} |"
-            echo ""
-            echo "These checks are visible but temporarily non-blocking while existing repository debt is cleaned up."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Flag lint debt
-        if: always() && steps.lint.outcome != 'success'
-        run: exit 1
-
-      - name: Flag test debt
-        if: always() && steps.test.outcome != 'success'
-        run: exit 1
+      - name: Build
+        run: npm run build

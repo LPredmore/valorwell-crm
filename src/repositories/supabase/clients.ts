@@ -113,6 +113,81 @@ function rowToCanonical(row: ClientRow, state: CanonicalStateRow): CanonicalClie
   };
 }
 
+
+type ClientListSortKey = keyof CanonicalClient | undefined;
+
+function compareNullable(a: string | number | boolean | undefined, b: string | number | boolean | undefined): number {
+  if (a === b) return 0;
+  if (a === undefined) return 1;
+  if (b === undefined) return -1;
+  return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+}
+
+function sortValue(client: CanonicalClient, sortBy: ClientListSortKey): string | number | boolean | undefined {
+  switch (sortBy) {
+    case 'legalLastName': return client.legalLastName;
+    case 'legalFirstName': return client.legalFirstName;
+    case 'createdAt': return client.createdAt;
+    case 'lastContactAt': return client.lastContactAt;
+    case 'lifecycle': return client.lifecycle;
+    case 'engagement': return client.engagement;
+    case 'eligibility': return client.eligibility;
+    case 'contactPolicy': return client.contactPolicy;
+    case 'servicePolicy': return client.servicePolicy;
+    case 'careCadence': return client.careCadence;
+    case 'updatedAt':
+    default: return client.updatedAt;
+  }
+}
+
+export function composeFilterSortAndPageClients(
+  canonicalRows: CanonicalStateRow[],
+  clientRows: ClientRow[],
+  q: ListClientsQuery,
+): Paged<CanonicalClient> {
+  const page = q.page ?? 1;
+  const pageSize = q.pageSize ?? 50;
+  const canonicalById = new Map<string, CanonicalStateRow>();
+  for (const row of canonicalRows) {
+    const id = requireCanonicalValue(row.client_id, 'client_id');
+    canonicalById.set(id, row);
+  }
+  const search = q.search?.trim().toLowerCase();
+  const rows = clientRows
+    .filter((row) => canonicalById.has(row.id))
+    .filter((row) => !q.states?.length || (row.pat_state !== null && q.states.includes(row.pat_state)))
+    .filter((row) => {
+      if (!search) return true;
+      return [row.pat_name_f, row.pat_name_l, row.pat_name_preferred, row.email, row.phone]
+        .some((value) => value?.toLowerCase().includes(search));
+    })
+    .map((row) => rowToCanonical(row, canonicalById.get(row.id)!));
+
+  rows.sort((a, b) => {
+    const direction = q.sortDir === 'asc' ? 1 : -1;
+    const primary = compareNullable(sortValue(a, q.sortBy), sortValue(b, q.sortBy));
+    if (primary !== 0) return primary * direction;
+    return a.id.localeCompare(b.id);
+  });
+
+  const total = rows.length;
+  const from = (page - 1) * pageSize;
+  return { rows: rows.slice(from, from + pageSize), total, page, pageSize };
+}
+
+async function fetchAllRows<T>(buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
+  const all: T[] = [];
+  const size = 1000;
+  for (let from = 0; from < 100_000; from += size) {
+    const { data, error } = await buildQuery(from, from + size - 1);
+    if (error) throw new Error(error.message);
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < size) break;
+  }
+  return all;
+}
+
 async function fetchCanonicalState(clientId: string): Promise<CanonicalStateRow> {
   const { data, error } = await supabase.from('v_client_canonical_state').select('*').eq('client_id', clientId).maybeSingle();
   if (error) throw new Error(error.message);
@@ -159,69 +234,36 @@ async function tenantOf(id: string): Promise<string> {
 
 export const supabaseClientsRepository: ClientsRepository = {
   async list(q: ListClientsQuery): Promise<Paged<CanonicalClient>> {
-    const page = q.page ?? 1;
-    const pageSize = q.pageSize ?? 50;
     let canonicalQuery = supabase
       .from('v_client_canonical_state')
-      .select('*', { count: 'exact' });
+      .select('*');
 
-    if (q.lifecycle?.length) {
-      canonicalQuery = canonicalQuery.in('lifecycle', q.lifecycle.map(mapDomainLifecycleToDb));
-    }
-    if (q.engagement?.length) {
-      canonicalQuery = canonicalQuery.in('engagement', q.engagement.map(mapDomainEngagementToDb));
-    }
-    if (q.eligibility?.length) {
-      canonicalQuery = canonicalQuery.in('eligibility', q.eligibility.map(mapDomainEligibilityToDb));
-    }
-    if (q.contactPolicy?.length) {
-      canonicalQuery = canonicalQuery.in('contact_policy', q.contactPolicy.map(mapDomainContactPolicyToDb));
-    }
-    if (q.servicePolicy?.length) {
-      canonicalQuery = canonicalQuery.in('service_policy', q.servicePolicy.map(mapDomainServicePolicyToDb));
-    }
+    if (q.lifecycle?.length) canonicalQuery = canonicalQuery.in('lifecycle', q.lifecycle.map(mapDomainLifecycleToDb));
+    if (q.engagement?.length) canonicalQuery = canonicalQuery.in('engagement', q.engagement.map(mapDomainEngagementToDb));
+    if (q.eligibility?.length) canonicalQuery = canonicalQuery.in('eligibility', q.eligibility.map(mapDomainEligibilityToDb));
+    if (q.contactPolicy?.length) canonicalQuery = canonicalQuery.in('contact_policy', q.contactPolicy.map(mapDomainContactPolicyToDb));
+    if (q.servicePolicy?.length) canonicalQuery = canonicalQuery.in('service_policy', q.servicePolicy.map(mapDomainServicePolicyToDb));
     if (q.atRisk !== undefined) canonicalQuery = canonicalQuery.eq('at_risk->>at_risk', String(q.atRisk));
     if (q.assignedClinicianIds?.length) canonicalQuery = canonicalQuery.in('assigned_therapist_id', q.assignedClinicianIds);
 
-    const from = (page - 1) * pageSize;
-    canonicalQuery = canonicalQuery.order('updated_at', { ascending: q.sortDir === 'asc' }).range(from, from + pageSize - 1);
-
-    const { data: canonicalRows, count, error: canonicalError } = await canonicalQuery;
-    if (canonicalError) throw new Error(canonicalError.message);
-    const canonicalById = new Map((canonicalRows ?? []).map((row) => [requireCanonicalValue(row.client_id, 'client_id'), row]));
-    const ids = [...canonicalById.keys()];
-
-    let query = supabase
+    let clientsQuery = supabase
       .from('clients')
-      .select(CLIENT_SELECT)
-      .in('id', ids);
+      .select(CLIENT_SELECT);
 
-    if (q.states?.length) query = query.in('pat_state', q.states);
-
+    if (q.states?.length) clientsQuery = clientsQuery.in('pat_state', q.states);
     if (q.search && q.search.trim()) {
       const s = q.search.trim().replace(/[,()]/g, ' ');
-      query = query.or(
+      clientsQuery = clientsQuery.or(
         `pat_name_f.ilike.%${s}%,pat_name_l.ilike.%${s}%,pat_name_preferred.ilike.%${s}%,email.ilike.%${s}%,phone.ilike.%${s}%`,
       );
     }
 
-    const sortCol = ({
-      updatedAt: 'updated_at',
-      createdAt: 'created_at',
-      lastContactAt: 'last_contact_at',
-      legalLastName: 'pat_name_l',
-      legalFirstName: 'pat_name_f',
-    } as Record<string, string>)[q.sortBy as string] ?? 'updated_at';
-    query = query.order(sortCol, { ascending: q.sortDir === 'asc' });
+    const [canonicalRows, clientRows] = await Promise.all([
+      fetchAllRows<CanonicalStateRow>((from, to) => canonicalQuery.range(from, to)),
+      fetchAllRows<ClientRow>((from, to) => clientsQuery.range(from, to)),
+    ]);
 
-    const { data, error } = ids.length ? await query : { data: [], error: null };
-    if (error) throw new Error(error.message);
-    return {
-      rows: (data ?? []).map((row) => rowToCanonical(row, canonicalById.get(row.id)!)),
-      total: count ?? 0,
-      page,
-      pageSize,
-    };
+    return composeFilterSortAndPageClients(canonicalRows, clientRows, q);
   },
 
   async get(id: string) {
@@ -349,6 +391,7 @@ export const supabaseClientsRepository: ClientsRepository = {
   },
 
   async assignClinician(id, staffId) {
+    if (!staffId?.trim()) throw new Error('assignClinician: staffId is required by the canonical RPC contract');
     const concurrency_token = await fetchConcurrencyToken(id);
     await callRpc('crm_assign_clinician', {
       p_client_id: id,
