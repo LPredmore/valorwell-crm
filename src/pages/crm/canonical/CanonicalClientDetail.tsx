@@ -116,9 +116,9 @@ export default function CanonicalClientDetail() {
         <TabsContent value="journey">
           <Card><CardContent className="p-4 text-sm space-y-2">
             <div className="text-muted-foreground">Lifecycle journey (from audit)</div>
-            {audit.data?.filter(a => a.eventType === 'lifecycle_updated').length ? (
+            {audit.data?.filter(a => a.eventType === 'lifecycle_stage').length ? (
               <ol className="space-y-1">
-                {audit.data?.filter(a => a.eventType === 'lifecycle_updated').map(a => (
+                {audit.data?.filter(a => a.eventType === 'lifecycle_stage').map(a => (
                   <li key={a.id} className="text-sm">
                     <span className="text-muted-foreground">{new Date(a.createdAt).toLocaleString()}</span>
                     {' — '}<span className="font-medium">{a.previousValue}</span> → <span className="font-medium">{a.newValue}</span>
