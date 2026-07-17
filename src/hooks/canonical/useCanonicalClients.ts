@@ -42,8 +42,12 @@ export function useClientMutations(id: string) {
       onSuccess: invalidate,
     }),
     updateEligibility: useMutation({
-      mutationFn: (p: { next: EligibilityState; note?: string }) =>
-        dataProvider.clients.updateEligibility(id, p.next, p.note),
+      mutationFn: (p: {
+        next: EligibilityState;
+        note?: string;
+        manualReview?: { owner: string; next_action: string; review_due_at: string } | null;
+      }) =>
+        dataProvider.clients.updateEligibility(id, p.next, p.note, p.manualReview ?? null),
       onSuccess: invalidate,
     }),
     updateContactPolicy: useMutation({
