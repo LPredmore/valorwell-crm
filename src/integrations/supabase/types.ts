@@ -16230,6 +16230,10 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_allowed_lifecycle_transitions: {
+        Args: { p_client_id: string }
+        Returns: Json
+      }
       crm_apply_remove: {
         Args: {
           p_client_id: string

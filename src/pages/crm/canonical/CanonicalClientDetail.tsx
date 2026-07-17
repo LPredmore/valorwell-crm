@@ -2,8 +2,9 @@ import { useParams, Link } from 'react-router-dom';
 import { useCanonicalClient, useClientMutations } from '@/hooks/canonical/useCanonicalClients';
 import { useClientAudit, useClientCommunications } from '@/hooks/canonical/useCrmData';
 import { useTasks } from '@/hooks/canonical/useCrmData';
-import { displayName, LIFECYCLE_STAGES, ENGAGEMENT_STATES, ELIGIBILITY_STATES, CONTACT_POLICIES, SERVICE_POLICIES, CARE_CADENCES, type LifecycleStage, type EngagementState, type EligibilityState, type ContactPolicy, type ServicePolicy, type CareCadence } from '@/domain/canonical';
+import { displayName, ENGAGEMENT_STATES, ELIGIBILITY_STATES, CONTACT_POLICIES, SERVICE_POLICIES, CARE_CADENCES, type EngagementState, type EligibilityState, type ContactPolicy, type ServicePolicy, type CareCadence } from '@/domain/canonical';
 import { LifecycleBadge, EngagementBadge, EligibilityBadge, ContactPolicyBadge, ServicePolicyBadge, AtRiskBadge } from '@/components/crm/canonical/StateBadges';
+import { LifecycleControl } from '@/components/crm/canonical/LifecycleControl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -63,8 +64,10 @@ export default function CanonicalClientDetail() {
             <Card>
               <CardHeader><CardTitle className="text-base">Canonical State</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <StateRow label="Lifecycle" value={client.lifecycle} options={LIFECYCLE_STAGES}
-                  onChange={v => m.updateLifecycle.mutate({ next: v as LifecycleStage, reason: 'manual' }, { onSuccess: () => toast.success('Lifecycle updated') })} />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground w-32">Lifecycle</span>
+                  <div className="flex-1"><LifecycleControl clientId={id} currentStage={client.lifecycle} /></div>
+                </div>
                 <StateRow label="Engagement" value={client.engagement} options={ENGAGEMENT_STATES}
                   onChange={v => m.updateEngagement.mutate(v as EngagementState, { onSuccess: () => toast.success('Engagement updated') })} />
                 <StateRow label="Eligibility" value={client.eligibility} options={ELIGIBILITY_STATES}
