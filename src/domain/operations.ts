@@ -198,6 +198,7 @@ export interface CommunicationMessage {
   status: 'queued' | 'sent' | 'delivered' | 'failed' | 'suppressed' | 'received';
   suppressionReason?: string;
   campaignId?: string;
+  messageClass?: CanonicalMessageClass;
   threadId: string;
   createdAt: string;
 }
