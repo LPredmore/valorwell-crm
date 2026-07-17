@@ -272,17 +272,26 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
         status: 'sent',
       };
     }
-    // Internal note
-    const { data, error } = await supabase.from('messages').insert({
-      tenant_id: msg.tenantId,
+    // Internal note — canonical crm_notes storage.
+    if (!msg.clientId) throw new Error('clientId is required for internal note');
+    const { data: { user }, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !user) throw new Error('Not authenticated');
+
+    // Verify the client belongs to a tenant this user can operate in.
+    const { data: clientRow, error: clientErr } = await supabase
+      .from('clients').select('tenant_id').eq('id', msg.clientId).maybeSingle();
+    if (clientErr) throw new Error(clientErr.message);
+    if (!clientRow?.tenant_id) throw new Error('Client not found');
+
+    const { data, error } = await supabase.from('crm_notes').insert({
+      tenant_id: clientRow.tenant_id,
       client_id: msg.clientId,
-      staff_id: msg.from,
-      sender_id: msg.from,
-      sender_type: 'staff',
-      body: msg.body,
+      created_by_profile_id: user.id,
+      note_type: 'internal',
+      note_content: msg.body,
     }).select('*').single();
     if (error) throw new Error(error.message);
-    return rowInternal(data);
+    return rowCrmNote(data);
   },
 
   async evaluatePolicy({ clientId, channel, messageClass }): Promise<CommunicationPolicyResult> {
