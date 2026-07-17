@@ -49,7 +49,7 @@ Rewrite the notes repo/hook:
 - Insert into `crm_notes` with `note_type='internal'`, no hardcoded emails/tenant strings.
 - Surface in the timeline distinctly from external comms.
 
-## Phase 5 — Patient selector in Communications (req §5)
+## Phase 5 — Patient selector in Communications (req §5) ✅
 
 - New `<ClientPicker>` (search across `pat_name_preferred | pat_name_f/l | email | phone`, tenant-scoped, canonical clients).
 - `CanonicalInbox` composer requires explicit selection; Send disabled until picked; resets on channel change / close.
