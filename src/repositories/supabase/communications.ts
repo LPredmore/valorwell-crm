@@ -83,18 +83,18 @@ function rowEmailThread(
   };
 }
 
-function rowInternal(r: MessageRow): CommunicationMessage {
+function rowCrmNote(r: CrmNoteRow): CommunicationMessage {
   return {
-    id: `msg-${r.id}`,
+    id: `note-${r.id}`,
     tenantId: r.tenant_id,
-    clientId: r.client_id,
+    clientId: r.client_id ?? undefined,
     channel: 'note',
-    direction: r.sender_type === 'client' ? 'inbound' : 'outbound',
-    from: r.sender_id,
-    to: r.sender_type === 'client' ? r.staff_id : r.client_id,
-    body: r.body,
+    direction: 'outbound',
+    from: r.created_by_profile_id,
+    to: r.client_id ?? '',
+    body: r.note_content,
     status: 'delivered',
-    threadId: `note:${r.client_id}`,
+    threadId: `note:${r.client_id ?? r.id}`,
     createdAt: r.created_at,
   };
 }
