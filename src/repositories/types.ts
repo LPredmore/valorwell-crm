@@ -116,10 +116,10 @@ export interface CampaignsRepository {
   update(id: string, patch: Partial<Campaign>): Promise<Campaign>;
   enrollments(campaignId: string): Promise<CampaignEnrollment[]>;
   enroll(campaignId: string, clientIds: string[]): Promise<CampaignEnrollment[]>;
-  pauseEnrollment(enrollmentId: string): Promise<CampaignEnrollment>;
-  resumeEnrollment(enrollmentId: string): Promise<CampaignEnrollment>;
+  pauseEnrollment(enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
+  resumeEnrollment(enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
   cancelEnrollment(enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
-  restartEnrollment(enrollmentId: string): Promise<CampaignEnrollment>;
+  restartEnrollment(enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
 }
 
 export interface CommunicationsRepository {

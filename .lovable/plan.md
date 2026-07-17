@@ -122,13 +122,13 @@ Dialog `<EligibilityManualReviewDialog>` on `CanonicalClientDetail` captures rea
 - **Idempotency guard**: `createTaskFromException` now checks `crm_tasks` for any non-terminal task with `exception_id = id` and returns it instead of inserting a duplicate. Linked task carries `exception_id`, `client_id`, `campaign_id`, `type='Campaign Exception'`, `priority` mapped from severity (Critical→Urgent, High→High, else Normal), and `created_by_profile_id` from `auth.getUser()`.
 - 86/86 tests pass.
 
-## Phase 18 — Remove obsolete/competing paths (req §18)
+## Phase 18 — Remove obsolete/competing paths (req §18) ✅
 
-Ripgrep sweep + delete:
-- Any direct frontend update of canonical state columns, `primary_staff_id`, enrollments/step_logs.
-- Legacy `pat_status` CRM mutations, hardcoded tenant/sender strings, fabricated success returns.
-- Duplicate client/campaign/comms implementations. One active implementation per workflow.
-- Ensure no legacy route stays reachable.
+- Repository `pauseEnrollment` / `resumeEnrollment` / `cancelEnrollment` / `restartEnrollment` in `src/repositories/supabase/campaigns.ts` no longer perform direct `crm_campaign_enrollments` UPDATEs. All four now route through the canonical RPCs (`crm_pause_enrollment`, `crm_resume_enrollment`, `crm_cancel_enrollment`, `crm_restart_enrollment`) via a shared `enrollmentActionRpc` helper that enforces a fresh `p_idempotency_key` and a ≥3-char `p_reason`, then re-fetches the enrollment row for the return payload.
+- `CampaignsRepository` signatures updated so `pause/resume/restart` now require a `reason: string`; mock provider aligned.
+- `CanonicalCampaignDetail` action buttons prompt for a reason before every state change and pass it through; no hardcoded "Manually canceled" default anymore.
+- Ripgrep confirms: no `.update({ pat_status | primary_staff_id | assigned_therapist_id | contact_policy | service_policy | care_cadence })` writes in `src/` (only `types.ts`, tests, and canonical read-only mappers reference these columns). Direct enrollment / step_log inserts only exist inside the RPC wrappers.
+- 86/86 tests pass.
 
 ## Phase 19 — Real-Patient onboarding compatibility (req §19)
 

@@ -307,39 +307,42 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
   },
 
 
-  async pauseEnrollment(enrollmentId) {
-    const { data, error } = await supabase
-      .from('crm_campaign_enrollments')
-      .update({ status: 'paused', paused_at: new Date().toISOString() })
-      .eq('id', enrollmentId).select(ENROLL_COLS).single();
-    if (error) throw new Error(error.message);
-    return enrollmentToDomain(data, new Map());
+  async pauseEnrollment(enrollmentId, reason) {
+    return await enrollmentActionRpc('crm_pause_enrollment', enrollmentId, reason);
   },
 
-  async resumeEnrollment(enrollmentId) {
-    const { data, error } = await supabase
-      .from('crm_campaign_enrollments')
-      .update({ status: 'active', pause_reason: null, paused_at: null })
-      .eq('id', enrollmentId).select(ENROLL_COLS).single();
-    if (error) throw new Error(error.message);
-    return enrollmentToDomain(data, new Map());
+  async resumeEnrollment(enrollmentId, reason) {
+    return await enrollmentActionRpc('crm_resume_enrollment', enrollmentId, reason);
   },
 
   async cancelEnrollment(enrollmentId, reason) {
-    const { data, error } = await supabase
-      .from('crm_campaign_enrollments')
-      .update({ status: 'canceled', pause_reason: reason, completed_at: new Date().toISOString() })
-      .eq('id', enrollmentId).select(ENROLL_COLS).single();
-    if (error) throw new Error(error.message);
-    return enrollmentToDomain(data, new Map());
+    return await enrollmentActionRpc('crm_cancel_enrollment', enrollmentId, reason);
   },
 
-  async restartEnrollment(enrollmentId) {
-    const { data, error } = await supabase
-      .from('crm_campaign_enrollments')
-      .update({ status: 'active', current_step: 0, completed_at: null, pause_reason: null, paused_at: null })
-      .eq('id', enrollmentId).select(ENROLL_COLS).single();
-    if (error) throw new Error(error.message);
-    return enrollmentToDomain(data, new Map());
+  async restartEnrollment(enrollmentId, reason) {
+    return await enrollmentActionRpc('crm_restart_enrollment', enrollmentId, reason);
   },
 };
+
+async function enrollmentActionRpc(
+  rpcName: string,
+  enrollmentId: string,
+  reason: string,
+): Promise<CampaignEnrollment> {
+  if (!reason || reason.trim().length < 3) {
+    throw new Error('A reason (min 3 chars) is required for enrollment state changes.');
+  }
+  const rpc = (supabase as unknown as {
+    rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+  }).rpc;
+  const { error } = await rpc(rpcName, {
+    p_enrollment_id: enrollmentId,
+    p_reason: reason,
+    p_idempotency_key: crypto.randomUUID(),
+  });
+  if (error) throw new Error(error.message);
+  const { data: row, error: fetchErr } = await supabase
+    .from('crm_campaign_enrollments').select(ENROLL_COLS).eq('id', enrollmentId).single();
+  if (fetchErr) throw new Error(fetchErr.message);
+  return enrollmentToDomain(row, new Map());
+}
