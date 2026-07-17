@@ -237,7 +237,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
       }
 
       const { helpscoutApi } = await import('@/lib/crm/helpscout-api');
-      const customerName = [client.firstName, client.lastName].filter(Boolean).join(' ').trim() || undefined;
+      const customerName = displayName(client) || undefined;
       let result: { success: boolean; conversationId: string | null };
       try {
         result = await helpscoutApi<{ success: boolean; conversationId: string | null }>(
