@@ -15728,6 +15728,30 @@ export type Database = {
         }
         Returns: string
       }
+      _crm_enrollment_tenant_check: {
+        Args: { p_enrollment_id: string }
+        Returns: {
+          campaign_id: string
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          current_step: number
+          enrolled_at: string
+          enrolled_by_profile_id: string | null
+          id: string
+          pause_reason: string | null
+          paused_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crm_campaign_enrollments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       _crm_ensure_meta: {
         Args: { _client_id: string; _tenant_id: string }
         Returns: string
@@ -15738,6 +15762,19 @@ export type Database = {
       }
       _crm_idem_store: {
         Args: { _actor: string; _key: string; _op: string; _result: Json }
+        Returns: undefined
+      }
+      _crm_idempotency_claim: {
+        Args: {
+          p_key: string
+          p_operation: string
+          p_target_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      _crm_idempotency_record: {
+        Args: { p_key: string; p_operation: string; p_result: Json }
         Returns: undefined
       }
       _crm_lifecycle_from_label: {
@@ -16226,6 +16263,14 @@ export type Database = {
           old_status: Database["public"]["Enums"]["pat_status_enum"]
         }[]
       }
+      crm_cancel_enrollment: {
+        Args: {
+          p_enrollment_id: string
+          p_idempotency_key?: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       crm_close_client: {
         Args: {
           p_client_id: string
@@ -16261,11 +16306,43 @@ export type Database = {
             Returns: boolean
           }
         | { Args: { _tenant_id: string; _user_id: string }; Returns: boolean }
+      crm_mark_enrollment_responded: {
+        Args: {
+          p_enrollment_id: string
+          p_idempotency_key?: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      crm_pause_enrollment: {
+        Args: {
+          p_enrollment_id: string
+          p_idempotency_key?: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       crm_reopen_client: {
         Args: {
           p_client_id: string
           p_concurrency_token?: string
           p_contract_version?: string
+          p_idempotency_key?: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      crm_restart_enrollment: {
+        Args: {
+          p_enrollment_id: string
+          p_idempotency_key?: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      crm_resume_enrollment: {
+        Args: {
+          p_enrollment_id: string
           p_idempotency_key?: string
           p_reason: string
         }
@@ -17443,6 +17520,15 @@ export type Database = {
         }
         Returns: Json
       }
+      submit_website_bty_submission: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
+      submit_website_clinician_application: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
+      submit_website_ocs_inquiry: { Args: { p_payload: Json }; Returns: Json }
       transition_client_lifecycle:
         | {
             Args: {
@@ -17629,6 +17715,16 @@ export type Database = {
           p_source_record_key?: string
           p_veteran_affiliated: boolean
           p_website: string
+        }
+        Returns: string
+      }
+      website_upsert_provider_applicant: {
+        Args: {
+          p_contact_id: string
+          p_payload: Json
+          p_source: string
+          p_source_record_key?: string
+          p_status?: Database["public"]["Enums"]["provider_applicant_status_enum"]
         }
         Returns: string
       }
