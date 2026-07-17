@@ -105,16 +105,16 @@ export default function CanonicalCampaignDetail() {
                     <TableCell className="text-right">
                       <div className="inline-flex gap-1">
                         {e.status === 'Active' && (
-                          <Button size="sm" variant="ghost" onClick={() => pause.mutate(e.id)} title="Pause"><Pause className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => { const r = promptReason('pause'); if (r) pause.mutate({ eid: e.id, reason: r }); }} title="Pause"><Pause className="h-4 w-4" /></Button>
                         )}
                         {e.status === 'Paused' && (
-                          <Button size="sm" variant="ghost" onClick={() => resume.mutate(e.id)} title="Resume"><Play className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => { const r = promptReason('resume'); if (r) resume.mutate({ eid: e.id, reason: r }); }} title="Resume"><Play className="h-4 w-4" /></Button>
                         )}
                         {(e.status === 'Active' || e.status === 'Paused') && (
-                          <Button size="sm" variant="ghost" onClick={() => cancel.mutate(e.id)} title="Cancel"><XCircle className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => { const r = promptReason('cancel'); if (r) cancel.mutate({ eid: e.id, reason: r }); }} title="Cancel"><XCircle className="h-4 w-4" /></Button>
                         )}
                         {(e.status === 'Canceled' || e.status === 'Completed' || e.status === 'Failed') && (
-                          <Button size="sm" variant="ghost" onClick={() => restart.mutate(e.id)} title="Restart"><RotateCcw className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => { const r = promptReason('restart'); if (r) restart.mutate({ eid: e.id, reason: r }); }} title="Restart"><RotateCcw className="h-4 w-4" /></Button>
                         )}
                       </div>
                     </TableCell>
