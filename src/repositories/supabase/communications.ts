@@ -121,8 +121,8 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
         .from('crm_conversation_links')
         .select('*').eq('client_id', clientId).limit(200),
       supabase
-        .from('messages')
-        .select('*').eq('client_id', clientId)
+        .from('crm_notes')
+        .select('*').eq('client_id', clientId).eq('note_type', 'internal')
         .order('created_at', { ascending: false }).limit(200),
     ]);
 
@@ -138,7 +138,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
       ...(inbound.data ?? []).map((row) => rowInboundSms(row, tenantId)),
       ...(bulk.data ?? []).map((row) => rowBulkSms(row, tenantId)),
       ...(links.data ?? []).map((row) => rowEmailThread(row, cacheById.get(row.helpscout_conversation_id), tenantId)),
-      ...(internal.data ?? []).map((row) => rowInternal(row)),
+      ...(internal.data ?? []).map((row) => rowCrmNote(row)),
     ];
     return out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   },
