@@ -20,10 +20,14 @@ export default function CanonicalCampaignDetail() {
   const clientMap = new Map((clientsPage?.rows ?? []).map((c) => [c.id, c] as const));
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['crm-enrollments', id] });
-  const pause = useMutation({ mutationFn: (eid: string) => dataProvider.campaigns.pauseEnrollment(eid), onSuccess: invalidate });
-  const resume = useMutation({ mutationFn: (eid: string) => dataProvider.campaigns.resumeEnrollment(eid), onSuccess: invalidate });
-  const cancel = useMutation({ mutationFn: (eid: string) => dataProvider.campaigns.cancelEnrollment(eid, 'Manually canceled'), onSuccess: invalidate });
-  const restart = useMutation({ mutationFn: (eid: string) => dataProvider.campaigns.restartEnrollment(eid), onSuccess: invalidate });
+  const promptReason = (verb: string) => {
+    const r = window.prompt(`Reason to ${verb} this enrollment (min 3 chars):`, '');
+    return r && r.trim().length >= 3 ? r.trim() : null;
+  };
+  const pause = useMutation({ mutationFn: ({ eid, reason }: { eid: string; reason: string }) => dataProvider.campaigns.pauseEnrollment(eid, reason), onSuccess: invalidate });
+  const resume = useMutation({ mutationFn: ({ eid, reason }: { eid: string; reason: string }) => dataProvider.campaigns.resumeEnrollment(eid, reason), onSuccess: invalidate });
+  const cancel = useMutation({ mutationFn: ({ eid, reason }: { eid: string; reason: string }) => dataProvider.campaigns.cancelEnrollment(eid, reason), onSuccess: invalidate });
+  const restart = useMutation({ mutationFn: ({ eid, reason }: { eid: string; reason: string }) => dataProvider.campaigns.restartEnrollment(eid, reason), onSuccess: invalidate });
 
   const [tab, setTab] = useState<'steps' | 'enrollments'>('enrollments');
 
