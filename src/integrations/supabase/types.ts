@@ -16381,6 +16381,17 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: Json
       }
+      crm_set_at_risk: {
+        Args: {
+          p_at_risk: boolean
+          p_client_id: string
+          p_concurrency_token?: string
+          p_contract_version?: string
+          p_idempotency_key?: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       crm_set_care_cadence: {
         Args: {
           p_client_id: string
