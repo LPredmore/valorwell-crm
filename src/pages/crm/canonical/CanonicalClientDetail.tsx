@@ -42,7 +42,7 @@ export default function CanonicalClientDetail() {
             <AtRiskBadge r={client.risk} />
           </div>
         </div>
-        <div className="text-right text-sm text-muted-foreground">
+        
         <div className="flex flex-col items-end gap-2 text-sm text-muted-foreground">
           <div className="text-right">
             <div>{client.email ?? '—'}</div>
