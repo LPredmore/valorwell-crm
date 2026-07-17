@@ -8,6 +8,7 @@ import { LifecycleControl } from '@/components/crm/canonical/LifecycleControl';
 import { CloseClientDialog } from '@/components/crm/canonical/CloseClientDialog';
 import { ReopenClientDialog } from '@/components/crm/canonical/ReopenClientDialog';
 import { EligibilityManualReviewDialog } from '@/components/crm/canonical/EligibilityManualReviewDialog';
+import { AssignClinicianDialog } from '@/components/crm/canonical/AssignClinicianDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -91,6 +92,10 @@ export default function CanonicalClientDetail() {
                   onChange={v => m.updateServicePolicy.mutate({ next: v as ServicePolicy, reason: 'manual' }, { onSuccess: () => toast.success('Service policy updated') })} />
                 <StateRow label="Care Cadence" value={client.careCadence} options={CARE_CADENCES}
                   onChange={v => m.updateCareCadence.mutate(v as CareCadence, { onSuccess: () => toast.success('Cadence updated') })} />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground w-32">Clinician</span>
+                  <div className="flex-1"><AssignClinicianDialog client={client} /></div>
+                </div>
               </CardContent>
             </Card>
 

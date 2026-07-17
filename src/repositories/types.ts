@@ -63,7 +63,7 @@ export interface ClientsRepository {
   updateRisk(id: string, next: RiskState): Promise<CanonicalClient>;
   close(id: string, info: ClosureInfo): Promise<CanonicalClient>;
   reopen(id: string, reason: string): Promise<CanonicalClient>;
-  assignClinician(id: string, staffId: string): Promise<CanonicalClient>;
+  assignClinician(id: string, staffId: string, reason?: string): Promise<CanonicalClient>;
   assignOperationsOwner(id: string, staffId: string | null): Promise<CanonicalClient>;
 }
 

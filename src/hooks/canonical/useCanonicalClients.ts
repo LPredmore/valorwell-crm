@@ -77,7 +77,8 @@ export function useClientMutations(id: string) {
       onSuccess: invalidate,
     }),
     assignClinician: useMutation({
-      mutationFn: (staffId: string) => dataProvider.clients.assignClinician(id, staffId),
+      mutationFn: (p: { staffId: string; reason: string }) =>
+        dataProvider.clients.assignClinician(id, p.staffId, p.reason),
       onSuccess: invalidate,
     }),
     assignOperationsOwner: useMutation({

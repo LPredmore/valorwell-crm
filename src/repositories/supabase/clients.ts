@@ -443,14 +443,16 @@ export const supabaseClientsRepository: ClientsRepository = {
     return reload(id);
   },
 
-  async assignClinician(id, staffId) {
+  async assignClinician(id, staffId, reason) {
     if (!staffId?.trim()) throw new Error('assignClinician: staffId is required by the canonical RPC contract');
+    const trimmedReason = reason?.trim() ?? '';
+    if (trimmedReason.length < 3) throw new Error('assignClinician: reason must be at least 3 characters');
     const concurrency_token = await fetchConcurrencyToken(id);
     const idempotency_key = newIdempotencyKey();
     await callRpc('crm_assign_clinician', {
       p_client_id: id,
       p_staff_id: staffId,
-      p_reason: 'ui_assign',
+      p_reason: trimmedReason,
       p_concurrency_token: concurrency_token,
       p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
