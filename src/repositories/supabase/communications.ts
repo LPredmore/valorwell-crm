@@ -191,9 +191,8 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
     // the CrmDataProvider can send without knowing the transport.
     if (msg.channel === 'sms') {
       if (!msg.clientId) throw new Error('clientId is required for SMS send');
-      const { data, error } = await supabase.functions.invoke('ringcentral-sms', {
+      const { data, error } = await supabase.functions.invoke('crm-send-client-sms', {
         body: {
-          action: 'send-individual',
           clientId: msg.clientId,
           body: msg.body,
           campaignId: msg.campaignId,
