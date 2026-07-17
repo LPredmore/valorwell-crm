@@ -6,6 +6,7 @@ import { displayName, ENGAGEMENT_STATES, ELIGIBILITY_STATES, CONTACT_POLICIES, S
 import { LifecycleBadge, EngagementBadge, EligibilityBadge, ContactPolicyBadge, ServicePolicyBadge, AtRiskBadge } from '@/components/crm/canonical/StateBadges';
 import { LifecycleControl } from '@/components/crm/canonical/LifecycleControl';
 import { CloseClientDialog } from '@/components/crm/canonical/CloseClientDialog';
+import { ReopenClientDialog } from '@/components/crm/canonical/ReopenClientDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -50,6 +51,7 @@ export default function CanonicalClientDetail() {
             <div>{client.state ?? '—'} · {client.payer ?? '—'}</div>
           </div>
           {client.lifecycle !== 'Closed' && <CloseClientDialog clientId={id} />}
+          {client.lifecycle === 'Closed' && <ReopenClientDialog clientId={id} />}
         </div>
       </div>
 

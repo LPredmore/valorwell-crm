@@ -90,9 +90,9 @@ Backend migration:
 
 Dedicated `<CloseClientDialog>` on `CanonicalClientDetail`: disposition picker uses the exact `CLOSURE_REASONS` contract vocabulary, required reason (min 3 chars), optional notes, "what closing does" explainer, then calls `dataProvider.clients.close` which invokes `crm_close_client` with a fresh concurrency token, fresh idempotency key, and contract version. Lifecycle dropdown no longer offers Closed (routed here via `use_close_client`). Close button is hidden when the client is already Closed.
 
-## Phase 12 — Reopen Client (req §12)
+## Phase 12 — Reopen Client (req §12) ✅
 
-Reopen action visible only when `lifecycle='Closed'`. Reason required. Calls `crm_reopen_client`. Preserves historical closure event. No auto-restart of cancelled campaigns.
+Reopen action visible only when `lifecycle='Closed'`. Reason required (min 3 chars). Calls `crm_reopen_client` via `dataProvider.clients.reopen`. Preserves historical closure event. No auto-restart of cancelled campaigns.
 
 ## Phase 13 — Eligibility Manual Review dialog (req §13)
 

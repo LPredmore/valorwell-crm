@@ -17040,6 +17040,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_therapist_crm_bundle: {
+        Args: { p_bundle: Json; p_token: string }
+        Returns: Json
+      }
       is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
