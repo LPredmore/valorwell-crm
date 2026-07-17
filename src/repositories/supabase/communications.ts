@@ -3,6 +3,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import type { CommunicationsRepository } from '../types';
 import type { CommunicationMessage, CommunicationPolicyResult } from '@/domain/operations';
 import { supabaseClientsRepository } from './clients';
+import { displayName } from '@/domain/canonical';
 
 /**
  * Supabase-backed communications adapter.
@@ -213,21 +214,59 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
     if (msg.channel === 'email') {
       if (!msg.clientId) throw new Error('clientId is required for email send');
       if (!msg.subject) throw new Error('subject is required for email send');
+
+      // Recipient email MUST come from canonical client record — operator
+      // cannot substitute a different address. msg.to is ignored.
+      const client = await supabaseClientsRepository.get(msg.clientId);
+      if (!client) throw new Error('Client not found');
+      if (!client.email) {
+        return { ...msg, id: `email-${Date.now()}`, createdAt: new Date().toISOString(), status: 'failed', suppressionReason: 'INVALID_EMAIL' };
+      }
+
+      const messageClass = msg.campaignId ? 'ordinary_campaign_follow_up' : 'manual';
+
+      // Server-side policy evaluation before send.
+      const policy = await this.evaluatePolicy({ clientId: msg.clientId, channel: 'email', messageClass });
+      if (!policy.allowed) {
+        return {
+          ...msg,
+          id: `email-${Date.now()}`,
+          createdAt: new Date().toISOString(),
+          status: 'suppressed',
+          suppressionReason: policy.suppressionCode ?? policy.reasons.join('; '),
+        };
+      }
+
       const { helpscoutApi } = await import('@/lib/crm/helpscout-api');
-      const result = await helpscoutApi<{ success: boolean; conversationId: string | null }>(
-        'create-conversation',
-        {
-          method: 'POST',
-          body: {
-            subject: msg.subject,
-            customerEmail: msg.to,
-            text: msg.body,
-            messageClass: 'ordinary_promotional',
+      const customerName = displayName(client) || undefined;
+      let result: { success: boolean; conversationId: string | null };
+      try {
+        result = await helpscoutApi<{ success: boolean; conversationId: string | null }>(
+          'create-conversation',
+          {
+            method: 'POST',
+            body: {
+              subject: msg.subject,
+              customerEmail: client.email,
+              customerName,
+              text: msg.body,
+              messageClass,
+            },
           },
-        },
-      );
+        );
+      } catch (e) {
+        return {
+          ...msg,
+          to: client.email,
+          id: `email-${Date.now()}`,
+          createdAt: new Date().toISOString(),
+          status: 'failed',
+          suppressionReason: e instanceof Error ? e.message : 'PROVIDER_FAILURE',
+        };
+      }
       return {
         ...msg,
+        to: client.email,
         id: result.conversationId ? `email-${result.conversationId}` : `email-${Date.now()}`,
         createdAt: new Date().toISOString(),
         status: 'sent',
