@@ -224,7 +224,10 @@ export interface AuditEvent {
   id: string;
   tenantId: string;
   clientId?: string;
+  /** Stable machine identifier (matches crm_client_state_audit.dimension). */
   eventType: string;
+  /** Human-readable label derived from eventType — safe to change without breaking filters. */
+  eventLabel: string;
   previousValue?: string | null;
   newValue?: string | null;
   actor: { profileId?: string; label: string; automated: boolean };
