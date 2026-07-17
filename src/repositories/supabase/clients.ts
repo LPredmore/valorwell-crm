@@ -347,13 +347,16 @@ export const supabaseClientsRepository: ClientsRepository = {
     return reload(id);
   },
 
-  async updateEligibility(id, next, note) {
+  async updateEligibility(id, next, note, manualReview) {
+    if (next === 'Manual Review' && !manualReview) {
+      throw new Error('Manual Review requires an owner, next action, and review due date.');
+    }
     const concurrency_token = await fetchConcurrencyToken(id);
     const idempotency_key = newIdempotencyKey();
     await callRpc('crm_set_eligibility', {
       p_client_id: id,
       p_to_state: mapDomainEligibilityToDb(next),
-      p_manual_review: null,
+      p_manual_review: manualReview ?? null,
       p_reason: note ?? 'ui_update',
       p_concurrency_token: concurrency_token,
       p_idempotency_key: idempotency_key,
