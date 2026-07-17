@@ -57,7 +57,7 @@ export default function CanonicalExceptions() {
                       >
                         <SelectTrigger className="h-8 w-40"><SelectValue placeholder="Unassigned" /></SelectTrigger>
                         <SelectContent>
-                          {staffOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                          {staffOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     ) : (staffOptions.find(s => s.id === e.ownerId)?.name ?? '—')}
