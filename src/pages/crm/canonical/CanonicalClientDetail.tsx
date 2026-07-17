@@ -64,8 +64,10 @@ export default function CanonicalClientDetail() {
             <Card>
               <CardHeader><CardTitle className="text-base">Canonical State</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <StateRow label="Lifecycle" value={client.lifecycle} options={LIFECYCLE_STAGES}
-                  onChange={v => m.updateLifecycle.mutate({ next: v as LifecycleStage, reason: 'manual' }, { onSuccess: () => toast.success('Lifecycle updated') })} />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground w-32">Lifecycle</span>
+                  <div className="flex-1"><LifecycleControl clientId={id} currentStage={client.lifecycle} /></div>
+                </div>
                 <StateRow label="Engagement" value={client.engagement} options={ENGAGEMENT_STATES}
                   onChange={v => m.updateEngagement.mutate(v as EngagementState, { onSuccess: () => toast.success('Engagement updated') })} />
                 <StateRow label="Eligibility" value={client.eligibility} options={ELIGIBILITY_STATES}
