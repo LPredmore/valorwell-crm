@@ -458,10 +458,89 @@ Deno.serve(async (req) => {
   if (claimsError || !claimsData?.claims?.sub) return json({ error: "Invalid token" }, 401);
 
   const body = await req.json();
+  const db = createClient(supabaseUrl, serviceRoleKey);
+
+  // ---- Individual SMS send ----------------------------------------------
+  if (body.action === "send-individual") {
+    const clientId = typeof body.clientId === "string" ? body.clientId : null;
+    const text = typeof body.body === "string" ? body.body.trim() : "";
+    if (!clientId || !text) return json({ error: "clientId and body required" }, 400);
+    const messageClass = (body.messageClass as MessageClass | undefined) ??
+      "necessary_scheduling";
+
+    const { data: client, error: clientErr } = await db
+      .from("clients")
+      .select("id, tenant_id, phone")
+      .eq("id", clientId)
+      .maybeSingle();
+    if (clientErr || !client) return json({ error: "Client not found" }, 404);
+
+    const { data: membership } = await db
+      .from("tenant_memberships")
+      .select("tenant_id")
+      .eq("profile_id", claimsData.claims.sub)
+      .eq("tenant_id", client.tenant_id)
+      .maybeSingle();
+    if (!membership) return json({ error: "Forbidden" }, 403);
+
+    const normalized = normalizePhoneNumber(client.phone);
+    if (!normalized.valid || !normalized.normalized) {
+      return json({ error: normalized.error ?? "Invalid phone" }, 400);
+    }
+
+    const decision = await checkSuppression(supabaseUrl, serviceRoleKey, {
+      tenantId: client.tenant_id,
+      clientId: client.id,
+      channel: "sms",
+      messageClass,
+      workflow: "ringcentral_individual_sms",
+      correlationId: body.correlationId ?? null,
+      campaignId: body.campaignId ?? null,
+    });
+    if (!decision.allowed) {
+      return json({
+        error: "Communication suppressed",
+        reason_code: decision.reason_code,
+        policy_version: decision.policy_version,
+      }, 403);
+    }
+
+    let token: string;
+    try { token = await getAccessToken(); }
+    catch (e) { return json({ error: (e as Error).message }, 502); }
+
+    let result = await sendSms(token, normalized.normalized, text);
+    if (result.rateLimited) {
+      await sleep(RATE_LIMIT_RETRY_DELAY_MS);
+      result = await sendSms(token, normalized.normalized, text);
+    }
+    if (!result.success) {
+      return json({ error: result.error ?? "SMS send failed" }, 502);
+    }
+
+    const sentAt = new Date().toISOString();
+    await db.from("crm_activity_events").insert({
+      tenant_id: client.tenant_id,
+      client_id: client.id,
+      event_type: "sms_sent",
+      created_by_profile_id: claimsData.claims.sub,
+      metadata: {
+        source: "individual",
+        workflow: "ringcentral_individual_sms",
+        message_class: messageClass,
+        to_phone: normalized.normalized,
+        body: text,
+        campaign_id: body.campaignId ?? null,
+      },
+    });
+
+    return json({ success: true, sentAt, to: normalized.normalized });
+  }
+
+  // ---- Bulk SMS dispatch (default) --------------------------------------
   const bulkSmsId = body.bulkSmsId;
   if (!bulkSmsId) return json({ error: "Missing bulkSmsId" }, 400);
 
-  const db = createClient(supabaseUrl, serviceRoleKey);
   const { data: log } = await db
     .from("crm_bulk_sms_logs")
     .select("tenant_id")
