@@ -134,100 +134,44 @@ export function useEnrollClients() {
     mutationFn: async ({
       campaignId,
       clientIds,
+      reason,
     }: {
       campaignId: string;
       clientIds: string[];
-    }): Promise<{ enrolled: number; skipped: number }> => {
+      reason?: string;
+    }): Promise<{ enrolled: number; skipped: number; suppressed: number; results: Array<Record<string, unknown>> }> => {
       if (!tenantId || !userId) throw new Error('Not authenticated');
 
-      // Check for existing active enrollments
-      const { data: existingEnrollments } = await supabase
-        .from('crm_campaign_enrollments')
-        .select('client_id')
-        .in('client_id', clientIds)
-        .eq('tenant_id', tenantId)
-        .eq('status', 'active');
-
-      const alreadyEnrolledIds = new Set(existingEnrollments?.map(e => e.client_id) || []);
-      const toEnroll = clientIds.filter(id => !alreadyEnrolledIds.has(id));
-
-      if (toEnroll.length === 0) {
-        return { enrolled: 0, skipped: clientIds.length };
-      }
-
-      // Get first active step for this campaign
-      const { data: firstStep } = await supabase
-        .from('crm_campaign_steps')
-        .select('id, delay_days, delay_hours, channel')
-        .eq('campaign_id', campaignId)
-        .eq('is_active', true)
-        .order('step_order', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      const enrollments = toEnroll.map(clientId => ({
-        campaign_id: campaignId,
-        client_id: clientId,
-        tenant_id: tenantId,
-        current_step: 0,
-        status: 'active' as const,
-        enrolled_at: new Date().toISOString(),
-        enrolled_by_profile_id: userId,
-      }));
-
-      // Insert enrollments and get the created records
-      const { data: createdEnrollments, error } = await supabase
-        .from('crm_campaign_enrollments')
-        .insert(enrollments)
-        .select('id, client_id');
-
+      const rpc = (supabase as unknown as {
+        rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+      }).rpc;
+      const { data, error } = await rpc('crm_enroll_clients_in_campaign', {
+        p_campaign_id: campaignId,
+        p_client_ids: clientIds,
+        p_reason: reason ?? 'manual_enrollment',
+        p_idempotency_key: crypto.randomUUID(),
+        p_contract_version: 'valorwell-crm-contracts@1.0.1+20260714',
+      });
       if (error) throw error;
 
-      // Schedule the first step for each enrollment
-      if (firstStep && createdEnrollments && createdEnrollments.length > 0) {
-        const now = new Date();
-        const scheduledFor = new Date(now);
-        scheduledFor.setDate(scheduledFor.getDate() + (firstStep.delay_days || 0));
-        scheduledFor.setHours(scheduledFor.getHours() + (firstStep.delay_hours || 0));
-
-        const stepLogs = createdEnrollments.map(enrollment => ({
-          enrollment_id: enrollment.id,
-          step_id: firstStep.id,
-          tenant_id: tenantId,
-          client_id: enrollment.client_id,
-          scheduled_for: scheduledFor.toISOString(),
-          status: 'scheduled' as const,
-          channel: firstStep.channel,
-        }));
-
-        const { error: stepLogError } = await supabase
-          .from('crm_campaign_step_logs')
-          .insert(stepLogs);
-
-        if (stepLogError) {
-          console.error('Failed to schedule first step:', stepLogError);
-          // Don't throw - enrollment succeeded, step scheduling is secondary
-        }
-      }
-
-      return { enrolled: toEnroll.length, skipped: alreadyEnrolledIds.size };
+      const results = Array.isArray(data) ? (data as Array<Record<string, unknown>>) : [];
+      const enrolled = results.filter((r) => r.status === 'enrolled').length;
+      const suppressed = results.filter((r) => r.status === 'suppressed').length;
+      const skipped = results.filter((r) => r.status === 'skipped').length;
+      return { enrolled, skipped, suppressed, results };
     },
     onSuccess: (result, { campaignId }) => {
       queryClient.invalidateQueries({ queryKey: ['crm-campaign-enrollments', campaignId] });
       queryClient.invalidateQueries({ queryKey: ['crm-campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['crm-client-enrollment'] });
-      
-      if (result.skipped > 0) {
-        toast({
-          title: 'Clients enrolled',
-          description: `${result.enrolled} enrolled, ${result.skipped} skipped (already in a campaign)`,
-        });
-      } else {
-        toast({
-          title: 'Clients enrolled',
-          description: `${result.enrolled} client${result.enrolled !== 1 ? 's' : ''} enrolled successfully.`,
-        });
-      }
+
+      const parts: string[] = [`${result.enrolled} enrolled`];
+      if (result.skipped) parts.push(`${result.skipped} skipped`);
+      if (result.suppressed) parts.push(`${result.suppressed} suppressed by policy`);
+      toast({
+        title: 'Enrollment complete',
+        description: parts.join(', '),
+      });
     },
     onError: (error) => {
       toast({
@@ -238,6 +182,7 @@ export function useEnrollClients() {
     },
   });
 }
+
 
 /**
  * Update enrollment status (pause, resume, cancel)

@@ -15547,6 +15547,16 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_enroll_clients_in_campaign: {
+        Args: {
+          p_campaign_id: string
+          p_client_ids: string[]
+          p_contract_version: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       crm_evaluate_communication_policy: {
         Args: {
           p_channel: string

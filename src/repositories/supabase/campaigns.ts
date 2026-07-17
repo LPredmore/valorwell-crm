@@ -282,21 +282,30 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
   },
 
   async enroll(campaignId, clientIds) {
-    const { data: camp, error: campErr } = await supabase
-      .from('crm_campaigns').select('tenant_id').eq('id', campaignId).single();
-    if (campErr) throw new Error(campErr.message);
-    const rows = clientIds.map((cid) => ({
-      campaign_id: campaignId,
-      client_id: cid,
-      tenant_id: camp.tenant_id,
-      status: 'active',
-      current_step: 0,
-    }));
-    const { data, error } = await supabase
-      .from('crm_campaign_enrollments').insert(rows).select(ENROLL_COLS);
+    if (!clientIds.length) return [];
+    // Untyped RPC call (types.ts regenerates post-migration).
+    const rpc = (supabase as unknown as {
+      rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+    }).rpc;
+    const { data, error } = await rpc('crm_enroll_clients_in_campaign', {
+      p_campaign_id: campaignId,
+      p_client_ids: clientIds,
+      p_reason: 'manual_enrollment',
+      p_idempotency_key: crypto.randomUUID(),
+      p_contract_version: 'valorwell-crm-contracts@1.0.1+20260714',
+    });
     if (error) throw new Error(error.message);
-    return (data ?? []).map((r) => enrollmentToDomain(r, new Map()));
+    const results = Array.isArray(data) ? (data as Array<Record<string, unknown>>) : [];
+    const enrolledIds = results
+      .filter((r) => r.status === 'enrolled' && typeof r.enrollment_id === 'string')
+      .map((r) => r.enrollment_id as string);
+    if (!enrolledIds.length) return [];
+    const { data: rows, error: fetchErr } = await supabase
+      .from('crm_campaign_enrollments').select(ENROLL_COLS).in('id', enrolledIds);
+    if (fetchErr) throw new Error(fetchErr.message);
+    return (rows ?? []).map((r) => enrollmentToDomain(r, new Map()));
   },
+
 
   async pauseEnrollment(enrollmentId) {
     const { data, error } = await supabase
