@@ -70,7 +70,7 @@ Backend migration:
 - New trigger on `crm_client_state_audit` (post-insert) → `crm_process_canonical_campaign_triggers(client_id, tenant_id, event)` that matches active triggers, checks policy, prevents duplicate active enrollment, atomically creates enrollment + first step log, writes activity event, idempotent per `(client_id, campaign_id, event_hash)`.
 - Data migration: remap existing `Registered/Matching/Waitlist` campaigns to canonical dimensions. `Interested` and any ambiguous legacy campaign flagged `is_manual_only=true` (new boolean) and shown in UI as Manual.
 
-## Phase 8 — Atomic manual enrollment RPC (req §8)
+## Phase 8 — Atomic manual enrollment RPC (req §8) ✅
 
 - New RPC `crm_enroll_clients_in_campaign(p_campaign_id, p_client_ids[], p_reason, p_idempotency_key, p_contract_version)` returning `jsonb[]` of per-client results. Transactional: enrollment + first step in one tx; policy-checked; tenant-checked; idempotent.
 - Frontend enrollment UI switches to this RPC. Remove every direct insert into `crm_campaign_enrollments` / `crm_campaign_step_logs` from `src/hooks/crm/*` and `src/repositories/supabase/campaigns.ts`.
