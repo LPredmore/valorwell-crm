@@ -223,7 +223,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
         return { ...msg, id: `email-${Date.now()}`, createdAt: new Date().toISOString(), status: 'failed', suppressionReason: 'INVALID_EMAIL' };
       }
 
-      const messageClass = msg.campaignId ? 'ordinary_campaign_follow_up' : 'manual';
+      const messageClass = (msg.messageClass ?? (msg.campaignId ? 'ordinary_campaign_follow_up' : 'necessary_scheduling'));
 
       // Server-side policy evaluation before send.
       const policy = await this.evaluatePolicy({ clientId: msg.clientId, channel: 'email', messageClass });
