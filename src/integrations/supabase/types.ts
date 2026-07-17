@@ -846,6 +846,138 @@ export type Database = {
           },
         ]
       }
+      billing_appointment_exclusions: {
+        Row: {
+          appointment_id: string
+          excluded_at: string
+          excluded_by_profile_id: string | null
+          id: string
+          reason: string | null
+          revoked_at: string | null
+          revoked_by_profile_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          appointment_id: string
+          excluded_at?: string
+          excluded_by_profile_id?: string | null
+          id?: string
+          reason?: string | null
+          revoked_at?: string | null
+          revoked_by_profile_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          appointment_id?: string
+          excluded_at?: string
+          excluded_by_profile_id?: string | null
+          id?: string
+          reason?: string | null
+          revoked_at?: string | null
+          revoked_by_profile_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      billing_audit_events: {
+        Row: {
+          actor_profile_id: string | null
+          actor_staff_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          subject_id: string | null
+          subject_type: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          actor_staff_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          subject_id?: string | null
+          subject_type: string
+          tenant_id: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          actor_staff_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          subject_id?: string | null
+          subject_type?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      billing_reconciliation_findings: {
+        Row: {
+          claim_id: string | null
+          claim_line_id: string | null
+          created_at: string
+          details: Json | null
+          era_id: string | null
+          era_service_line_id: string | null
+          finding_type: string
+          id: string
+          official_era_value: Json | null
+          payment_source_row_id: string | null
+          report_value: Json | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          claim_id?: string | null
+          claim_line_id?: string | null
+          created_at?: string
+          details?: Json | null
+          era_id?: string | null
+          era_service_line_id?: string | null
+          finding_type: string
+          id?: string
+          official_era_value?: Json | null
+          payment_source_row_id?: string | null
+          report_value?: Json | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          claim_id?: string | null
+          claim_line_id?: string | null
+          created_at?: string
+          details?: Json | null
+          era_id?: string | null
+          era_service_line_id?: string | null
+          finding_type?: string
+          id?: string
+          official_era_value?: Json | null
+          payment_source_row_id?: string | null
+          report_value?: Json | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       calendar_sync_log: {
         Row: {
           appointment_id: string
@@ -1227,6 +1359,8 @@ export type Database = {
           charge_amount: number
           claim_id: string
           created_at: string
+          era_reconciliation_status: Database["public"]["Enums"]["claim_line_era_reconciliation_status"]
+          financial_payment_status: Database["public"]["Enums"]["claim_line_financial_status"]
           id: string
           mod1: string | null
           mod2: string | null
@@ -1250,6 +1384,8 @@ export type Database = {
           charge_amount: number
           claim_id: string
           created_at?: string
+          era_reconciliation_status?: Database["public"]["Enums"]["claim_line_era_reconciliation_status"]
+          financial_payment_status?: Database["public"]["Enums"]["claim_line_financial_status"]
           id?: string
           mod1?: string | null
           mod2?: string | null
@@ -1273,6 +1409,8 @@ export type Database = {
           charge_amount?: number
           claim_id?: string
           created_at?: string
+          era_reconciliation_status?: Database["public"]["Enums"]["claim_line_era_reconciliation_status"]
+          financial_payment_status?: Database["public"]["Enums"]["claim_line_financial_status"]
           id?: string
           mod1?: string | null
           mod2?: string | null
@@ -1426,33 +1564,60 @@ export type Database = {
           claim_ids: string[]
           client_action_id: string
           created_at: string
+          external_finalized_at: string | null
+          external_response_snapshot: Json | null
+          external_started_at: string | null
           id: string
+          last_reconciled_at: string | null
           requested_by_profile_id: string | null
           result: Json | null
+          single_claim_id: string | null
           status: string
+          submission_state:
+            | Database["public"]["Enums"]["claim_submission_state"]
+            | null
           tenant_id: string
+          uncertain_reason: string | null
           updated_at: string
         }
         Insert: {
           claim_ids: string[]
           client_action_id: string
           created_at?: string
+          external_finalized_at?: string | null
+          external_response_snapshot?: Json | null
+          external_started_at?: string | null
           id?: string
+          last_reconciled_at?: string | null
           requested_by_profile_id?: string | null
           result?: Json | null
+          single_claim_id?: string | null
           status?: string
+          submission_state?:
+            | Database["public"]["Enums"]["claim_submission_state"]
+            | null
           tenant_id: string
+          uncertain_reason?: string | null
           updated_at?: string
         }
         Update: {
           claim_ids?: string[]
           client_action_id?: string
           created_at?: string
+          external_finalized_at?: string | null
+          external_response_snapshot?: Json | null
+          external_started_at?: string | null
           id?: string
+          last_reconciled_at?: string | null
           requested_by_profile_id?: string | null
           result?: Json | null
+          single_claim_id?: string | null
           status?: string
+          submission_state?:
+            | Database["public"]["Enums"]["claim_submission_state"]
+            | null
           tenant_id?: string
+          uncertain_reason?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -7463,6 +7628,57 @@ export type Database = {
           },
         ]
       }
+      era_report_reconciliation_links: {
+        Row: {
+          created_at: string
+          discrepancy: Json | null
+          era_service_line_id: string
+          id: string
+          linked_at: string
+          payment_source_row_id: string
+          reconciliation_status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          discrepancy?: Json | null
+          era_service_line_id: string
+          id?: string
+          linked_at?: string
+          payment_source_row_id: string
+          reconciliation_status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          discrepancy?: Json | null
+          era_service_line_id?: string
+          id?: string
+          linked_at?: string
+          payment_source_row_id?: string
+          reconciliation_status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "era_report_reconciliation_links_era_service_line_id_fkey"
+            columns: ["era_service_line_id"]
+            isOneToOne: false
+            referencedRelation: "era_service_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "era_report_reconciliation_links_payment_source_row_id_fkey"
+            columns: ["payment_source_row_id"]
+            isOneToOne: false
+            referencedRelation: "payment_source_rows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       era_service_line_copay_reconciliation: {
         Row: {
           auto_created_charge: boolean
@@ -7549,6 +7765,8 @@ export type Database = {
           procedure_code: string | null
           service_date_from: string | null
           service_date_to: string | null
+          source_record_hash: string | null
+          source_system: string | null
           tenant_id: string
           units: number | null
           updated_at: string
@@ -7571,6 +7789,8 @@ export type Database = {
           procedure_code?: string | null
           service_date_from?: string | null
           service_date_to?: string | null
+          source_record_hash?: string | null
+          source_system?: string | null
           tenant_id: string
           units?: number | null
           updated_at?: string
@@ -7593,6 +7813,8 @@ export type Database = {
           procedure_code?: string | null
           service_date_from?: string | null
           service_date_to?: string | null
+          source_record_hash?: string | null
+          source_system?: string | null
           tenant_id?: string
           units?: number | null
           updated_at?: string
@@ -7630,37 +7852,59 @@ export type Database = {
       }
       eras: {
         Row: {
+          committed_at: string | null
           created_at: string
           id: string
+          import_status: Database["public"]["Enums"]["era_import_status"] | null
           payer_id: string | null
           payer_name: string | null
           payment_date: string | null
           payment_reference: string | null
           practice_id: string
+          source_era_id: string | null
+          source_record_hash: string | null
+          source_system: string | null
+          superseded_by_era_id: string | null
           tenant_id: string
           total_payment_amount: number | null
           updated_at: string
         }
         Insert: {
+          committed_at?: string | null
           created_at?: string
           id?: string
+          import_status?:
+            | Database["public"]["Enums"]["era_import_status"]
+            | null
           payer_id?: string | null
           payer_name?: string | null
           payment_date?: string | null
           payment_reference?: string | null
           practice_id: string
+          source_era_id?: string | null
+          source_record_hash?: string | null
+          source_system?: string | null
+          superseded_by_era_id?: string | null
           tenant_id: string
           total_payment_amount?: number | null
           updated_at?: string
         }
         Update: {
+          committed_at?: string | null
           created_at?: string
           id?: string
+          import_status?:
+            | Database["public"]["Enums"]["era_import_status"]
+            | null
           payer_id?: string | null
           payer_name?: string | null
           payment_date?: string | null
           payment_reference?: string | null
           practice_id?: string
+          source_era_id?: string | null
+          source_record_hash?: string | null
+          source_system?: string | null
+          superseded_by_era_id?: string | null
           tenant_id?: string
           total_payment_amount?: number | null
           updated_at?: string
@@ -8651,6 +8895,236 @@ export type Database = {
           },
         ]
       }
+      payment_source_documents: {
+        Row: {
+          ambiguous_row_count: number
+          committed_at: string | null
+          created_at: string
+          document_type: string
+          duplicate_row_count: number
+          error_count: number
+          file_sha256: string
+          filename: string
+          id: string
+          import_status: Database["public"]["Enums"]["payment_source_document_status"]
+          imported_row_count: number
+          matched_row_count: number
+          payer_id: string | null
+          practice_id: string | null
+          raw_metadata: Json
+          report_date: string | null
+          source_system: string
+          source_system_value: string | null
+          storage_path: string | null
+          tenant_id: string
+          total_rows_reported: number | null
+          unmatched_row_count: number
+          updated_at: string
+          uploaded_at: string
+          uploaded_by: string | null
+          vendor_id: string | null
+        }
+        Insert: {
+          ambiguous_row_count?: number
+          committed_at?: string | null
+          created_at?: string
+          document_type: string
+          duplicate_row_count?: number
+          error_count?: number
+          file_sha256: string
+          filename: string
+          id?: string
+          import_status?: Database["public"]["Enums"]["payment_source_document_status"]
+          imported_row_count?: number
+          matched_row_count?: number
+          payer_id?: string | null
+          practice_id?: string | null
+          raw_metadata?: Json
+          report_date?: string | null
+          source_system: string
+          source_system_value?: string | null
+          storage_path?: string | null
+          tenant_id: string
+          total_rows_reported?: number | null
+          unmatched_row_count?: number
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          vendor_id?: string | null
+        }
+        Update: {
+          ambiguous_row_count?: number
+          committed_at?: string | null
+          created_at?: string
+          document_type?: string
+          duplicate_row_count?: number
+          error_count?: number
+          file_sha256?: string
+          filename?: string
+          id?: string
+          import_status?: Database["public"]["Enums"]["payment_source_document_status"]
+          imported_row_count?: number
+          matched_row_count?: number
+          payer_id?: string | null
+          practice_id?: string | null
+          raw_metadata?: Json
+          report_date?: string | null
+          source_system?: string
+          source_system_value?: string | null
+          storage_path?: string | null
+          tenant_id?: string
+          total_rows_reported?: number | null
+          unmatched_row_count?: number
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          vendor_id?: string | null
+        }
+        Relationships: []
+      }
+      payment_source_rows: {
+        Row: {
+          amount_discrepancy_notes: string | null
+          certified_amount: number | null
+          check_eft_date: string | null
+          check_number: string | null
+          created_at: string
+          discount_amount: number | null
+          dismissed_at: string | null
+          dismissed_by: string | null
+          dismissed_reason: string | null
+          id: string
+          interest_amount: number | null
+          invoice_number: string | null
+          manually_matched_at: string | null
+          manually_matched_by: string | null
+          match_confidence: number | null
+          match_method: string | null
+          match_state: Database["public"]["Enums"]["payment_source_row_state"]
+          matched_claim_id: string | null
+          matched_claim_line_id: string | null
+          matched_client_id: string | null
+          payer_id: string | null
+          payment_amount: number | null
+          payment_doc_number: string | null
+          po_number: string | null
+          posted_payment_id: string | null
+          raw_row: Json
+          reconciliation_notes: string | null
+          reconciliation_state: string | null
+          row_number: number | null
+          service_date: string | null
+          source_document_id: string
+          source_row_hash: string | null
+          source_system: string
+          source_system_value: string | null
+          tenant_id: string
+          updated_at: string
+          vendor_code: string | null
+          vendor_id: string | null
+          vet_name_first_prefix: string | null
+          vet_name_last_norm: string | null
+          vet_name_raw: string | null
+          zero_payment_flag: string | null
+        }
+        Insert: {
+          amount_discrepancy_notes?: string | null
+          certified_amount?: number | null
+          check_eft_date?: string | null
+          check_number?: string | null
+          created_at?: string
+          discount_amount?: number | null
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          dismissed_reason?: string | null
+          id?: string
+          interest_amount?: number | null
+          invoice_number?: string | null
+          manually_matched_at?: string | null
+          manually_matched_by?: string | null
+          match_confidence?: number | null
+          match_method?: string | null
+          match_state?: Database["public"]["Enums"]["payment_source_row_state"]
+          matched_claim_id?: string | null
+          matched_claim_line_id?: string | null
+          matched_client_id?: string | null
+          payer_id?: string | null
+          payment_amount?: number | null
+          payment_doc_number?: string | null
+          po_number?: string | null
+          posted_payment_id?: string | null
+          raw_row?: Json
+          reconciliation_notes?: string | null
+          reconciliation_state?: string | null
+          row_number?: number | null
+          service_date?: string | null
+          source_document_id: string
+          source_row_hash?: string | null
+          source_system: string
+          source_system_value?: string | null
+          tenant_id: string
+          updated_at?: string
+          vendor_code?: string | null
+          vendor_id?: string | null
+          vet_name_first_prefix?: string | null
+          vet_name_last_norm?: string | null
+          vet_name_raw?: string | null
+          zero_payment_flag?: string | null
+        }
+        Update: {
+          amount_discrepancy_notes?: string | null
+          certified_amount?: number | null
+          check_eft_date?: string | null
+          check_number?: string | null
+          created_at?: string
+          discount_amount?: number | null
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          dismissed_reason?: string | null
+          id?: string
+          interest_amount?: number | null
+          invoice_number?: string | null
+          manually_matched_at?: string | null
+          manually_matched_by?: string | null
+          match_confidence?: number | null
+          match_method?: string | null
+          match_state?: Database["public"]["Enums"]["payment_source_row_state"]
+          matched_claim_id?: string | null
+          matched_claim_line_id?: string | null
+          matched_client_id?: string | null
+          payer_id?: string | null
+          payment_amount?: number | null
+          payment_doc_number?: string | null
+          po_number?: string | null
+          posted_payment_id?: string | null
+          raw_row?: Json
+          reconciliation_notes?: string | null
+          reconciliation_state?: string | null
+          row_number?: number | null
+          service_date?: string | null
+          source_document_id?: string
+          source_row_hash?: string | null
+          source_system?: string
+          source_system_value?: string | null
+          tenant_id?: string
+          updated_at?: string
+          vendor_code?: string | null
+          vendor_id?: string | null
+          vet_name_first_prefix?: string | null
+          vet_name_last_norm?: string | null
+          vet_name_raw?: string | null
+          zero_payment_flag?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_source_rows_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "payment_source_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payroll_appointment_log: {
         Row: {
           appointment_id: string
@@ -8942,6 +9416,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "payroll_line_items_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_recipients_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "payroll_line_items_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
@@ -9165,14 +9646,61 @@ export type Database = {
           },
         ]
       }
+      payroll_reconciliation_findings: {
+        Row: {
+          created_at: string
+          details: Json
+          finding_type: string
+          id: string
+          payroll_line_item_id: string | null
+          payroll_payment_attempt_id: string | null
+          payroll_run_id: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          finding_type: string
+          id?: string
+          payroll_line_item_id?: string | null
+          payroll_payment_attempt_id?: string | null
+          payroll_run_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          finding_type?: string
+          id?: string
+          payroll_line_item_id?: string | null
+          payroll_payment_attempt_id?: string | null
+          payroll_run_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          tenant_id?: string | null
+        }
+        Relationships: []
+      }
       payroll_runs: {
         Row: {
           created_at: string
           error_message: string | null
+          external_reference: string | null
           id: string
           period_end: string
           period_start: string
           processed_at: string | null
+          run_type: string
           staff_approval_deadline: string | null
           staff_paid_count: number
           staff_skipped_count: number
@@ -9187,10 +9715,12 @@ export type Database = {
         Insert: {
           created_at?: string
           error_message?: string | null
+          external_reference?: string | null
           id?: string
           period_end: string
           period_start: string
           processed_at?: string | null
+          run_type?: string
           staff_approval_deadline?: string | null
           staff_paid_count?: number
           staff_skipped_count?: number
@@ -9205,10 +9735,12 @@ export type Database = {
         Update: {
           created_at?: string
           error_message?: string | null
+          external_reference?: string | null
           id?: string
           period_end?: string
           period_start?: string
           processed_at?: string | null
+          run_type?: string
           staff_approval_deadline?: string | null
           staff_paid_count?: number
           staff_skipped_count?: number
@@ -11230,6 +11762,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      security_password_remediation_log: {
+        Row: {
+          had_plaintext: boolean
+          id: string
+          notes: string | null
+          nulled_at: string
+          plaintext_length: number
+          profile_id: string
+          reset_email_completed_at: string | null
+          reset_email_requested_at: string | null
+        }
+        Insert: {
+          had_plaintext: boolean
+          id?: string
+          notes?: string | null
+          nulled_at?: string
+          plaintext_length: number
+          profile_id: string
+          reset_email_completed_at?: string | null
+          reset_email_requested_at?: string | null
+        }
+        Update: {
+          had_plaintext?: boolean
+          id?: string
+          notes?: string | null
+          nulled_at?: string
+          plaintext_length?: number
+          profile_id?: string
+          reset_email_completed_at?: string | null
+          reset_email_requested_at?: string | null
+        }
+        Relationships: []
       }
       services: {
         Row: {
@@ -13628,6 +14193,19 @@ export type Database = {
       }
     }
     Views: {
+      champva_payment_totals: {
+        Row: {
+          ambiguous_rows: number | null
+          discrepant_rows: number | null
+          era_paid_total: number | null
+          period_month: string | null
+          posted_rows: number | null
+          report_paid_total: number | null
+          tenant_id: string | null
+          unmatched_rows: number | null
+        }
+        Relationships: []
+      }
       claim_line_balances: {
         Row: {
           claim_id: string | null
@@ -14124,6 +14702,84 @@ export type Database = {
           },
         ]
       }
+      payroll_recipients_safe: {
+        Row: {
+          account_nickname: string | null
+          account_number_last4: string | null
+          account_type: string | null
+          created_at: string | null
+          deposit_addr_1: string | null
+          deposit_addr_2: string | null
+          deposit_city: string | null
+          deposit_state: Database["public"]["Enums"]["state_code_enum"] | null
+          deposit_zip: string | null
+          id: string | null
+          is_active: boolean | null
+          mercury_account_id: string | null
+          mercury_recipient_id: string | null
+          recipient_name: string | null
+          routing_number_last4: string | null
+          staff_id: string | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_nickname?: string | null
+          account_number_last4?: string | null
+          account_type?: string | null
+          created_at?: string | null
+          deposit_addr_1?: string | null
+          deposit_addr_2?: string | null
+          deposit_city?: string | null
+          deposit_state?: Database["public"]["Enums"]["state_code_enum"] | null
+          deposit_zip?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          mercury_account_id?: string | null
+          mercury_recipient_id?: string | null
+          recipient_name?: string | null
+          routing_number_last4?: string | null
+          staff_id?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_nickname?: string | null
+          account_number_last4?: string | null
+          account_type?: string | null
+          created_at?: string | null
+          deposit_addr_1?: string | null
+          deposit_addr_2?: string | null
+          deposit_city?: string | null
+          deposit_state?: Database["public"]["Enums"]["state_code_enum"] | null
+          deposit_zip?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          mercury_account_id?: string | null
+          mercury_recipient_id?: string | null
+          recipient_name?: string | null
+          routing_number_last4?: string | null
+          staff_id?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_recipients_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_recipients_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_client_canonical_state: {
         Row: {
           assigned_therapist_id: string | null
@@ -14257,6 +14913,10 @@ export type Database = {
       }
     }
     Functions: {
+      _authorize_staff_calendar_access: {
+        Args: { p_staff_id: string }
+        Returns: boolean
+      }
       _crm_authorize_client_write: {
         Args: { _client_id: string; _concurrency_token: string }
         Returns: {
@@ -14358,10 +15018,24 @@ export type Database = {
         Args: { _v: Database["public"]["Enums"]["client_service_policy_enum"] }
         Returns: string
       }
-      acknowledge_client_insurance_deferment: {
-        Args: { p_client_id: string; p_eligibility_check_id: string }
-        Returns: Json
+      _payroll_line_authorize: {
+        Args: { _line_id: string }
+        Returns: {
+          admin_approval_status: string
+          mercury_status: string
+          payroll_run_id: string
+          staff_approval_status: string
+          tenant_id: string
+          updated_at: string
+        }[]
       }
+      _require_current_client_id: { Args: never; Returns: string }
+      acknowledge_client_insurance_deferment:
+        | {
+            Args: { p_client_id: string; p_eligibility_check_id: string }
+            Returns: Json
+          }
+        | { Args: { p_eligibility_check_id: string }; Returns: Json }
       admin_override_client_state: {
         Args: {
           p_actor_profile_id?: string
@@ -14391,10 +15065,9 @@ export type Database = {
         }
         Returns: Json
       }
-      advance_client_intake_if_ready: {
-        Args: { p_client_id: string }
-        Returns: Json
-      }
+      advance_client_intake_if_ready:
+        | { Args: never; Returns: Json }
+        | { Args: { p_client_id: string }; Returns: Json }
       approve_payroll_line_item: {
         Args: {
           p_dispute_reason?: string
@@ -14457,17 +15130,29 @@ export type Database = {
         }
         Returns: Json
       }
-      check_assessments_due: {
-        Args: { p_client_id: string }
-        Returns: {
-          assessment_type: string
-          days_since_last: number
-          is_due: boolean
-          last_completed_at: string
-          next_due_at: string
-          recurrence_days: number
-        }[]
-      }
+      check_assessments_due:
+        | {
+            Args: never
+            Returns: {
+              assessment_type: string
+              days_since_last: number
+              is_due: boolean
+              last_completed_at: string
+              next_due_at: string
+              recurrence_days: number
+            }[]
+          }
+        | {
+            Args: { p_client_id: string }
+            Returns: {
+              assessment_type: string
+              days_since_last: number
+              is_due: boolean
+              last_completed_at: string
+              next_due_at: string
+              recurrence_days: number
+            }[]
+          }
       check_staff_availability: {
         Args: { p_end: string; p_staff_id: string; p_start: string }
         Returns: boolean
@@ -14485,27 +15170,48 @@ export type Database = {
           tenant_id: string
         }[]
       }
-      client_closure: {
-        Args: {
-          p_client_action_id: string
-          p_client_id: string
-          p_confirmed: boolean
-          p_disposition: string
-          p_prior_version: number
-          p_reason: string
-        }
-        Returns: Json
-      }
-      client_correction: {
-        Args: {
-          p_client_action_id: string
-          p_client_id: string
-          p_patch: Json
-          p_prior_version: number
-          p_reason: string
-        }
-        Returns: Json
-      }
+      client_closure:
+        | {
+            Args: {
+              p_client_action_id: string
+              p_client_id: string
+              p_confirmed: boolean
+              p_disposition: string
+              p_prior_version: number
+              p_reason: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_client_action_id: string
+              p_confirmed: boolean
+              p_disposition: string
+              p_prior_version: number
+              p_reason: string
+            }
+            Returns: Json
+          }
+      client_correction:
+        | {
+            Args: {
+              p_client_action_id: string
+              p_client_id: string
+              p_patch: Json
+              p_prior_version: number
+              p_reason: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_client_action_id: string
+              p_patch: Json
+              p_prior_version: number
+              p_reason: string
+            }
+            Returns: Json
+          }
       client_lifecycle_transition_source_allowed: {
         Args: {
           p_current: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
@@ -14514,25 +15220,45 @@ export type Database = {
         }
         Returns: boolean
       }
-      client_reactivation: {
-        Args: {
-          p_client_action_id: string
-          p_client_id: string
-          p_prior_version: number
-          p_reason: string
-        }
-        Returns: Json
-      }
-      client_reassign: {
-        Args: {
-          p_client_action_id: string
-          p_client_id: string
-          p_new_staff_id: string
-          p_prior_version: number
-          p_reason: string
-        }
-        Returns: Json
-      }
+      client_portal_fetch_authenticated_context: { Args: never; Returns: Json }
+      client_reactivation:
+        | {
+            Args: {
+              p_client_action_id: string
+              p_client_id: string
+              p_prior_version: number
+              p_reason: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_client_action_id: string
+              p_prior_version: number
+              p_reason: string
+            }
+            Returns: Json
+          }
+      client_reassign:
+        | {
+            Args: {
+              p_client_action_id: string
+              p_client_id: string
+              p_new_staff_id: string
+              p_prior_version: number
+              p_reason: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_client_action_id: string
+              p_new_staff_id: string
+              p_prior_version: number
+              p_reason: string
+            }
+            Returns: Json
+          }
       client_state_engine_authorize: {
         Args: {
           p_actor_profile_id: string
@@ -14570,16 +15296,42 @@ export type Database = {
         }
         Returns: Json
       }
-      complete_client_registration: {
+      commit_champva_payment_report_rows: {
+        Args: { p_document: Json; p_rows: Json; p_tenant_id: string }
+        Returns: Json
+      }
+      commit_claimmd_era: {
         Args: {
-          p_client_id: string
-          p_goals: string
-          p_marital_status?: string
-          p_referral_source: string
-          p_ssn?: string
+          p_adjustments?: Json
+          p_claims?: Json
+          p_header: Json
+          p_service_lines?: Json
+          p_source_era_id: string
+          p_source_record_hash: string
+          p_tenant_id: string
         }
         Returns: Json
       }
+      complete_client_registration:
+        | {
+            Args: {
+              p_client_id: string
+              p_goals: string
+              p_marital_status?: string
+              p_referral_source: string
+              p_ssn?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_goals: string
+              p_marital_status: string
+              p_referral_source: string
+              p_ssn: string
+            }
+            Returns: Json
+          }
       confirm_accepting_status: {
         Args: { p_client_action_id: string }
         Returns: Json
@@ -14609,6 +15361,10 @@ export type Database = {
           p_staff_id: string
           p_start_at: string
         }
+        Returns: Json
+      }
+      create_claim_draft: {
+        Args: { p_client_action_id?: string; p_payload: Json }
         Returns: Json
       }
       create_client_account: {
@@ -14679,6 +15435,10 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      create_corrected_claim: {
+        Args: { p_client_action_id: string; p_original_claim_id: string }
+        Returns: Json
+      }
       create_recurring_appointment_series: {
         Args: {
           p_client_action_id: string
@@ -14856,6 +15616,19 @@ export type Database = {
         }
         Returns: Json
       }
+      current_client_id: { Args: never; Returns: string }
+      dismiss_champva_row: {
+        Args: { p_reason: string; p_row_id: string }
+        Returns: undefined
+      }
+      document_appointment: {
+        Args: {
+          p_appointment_id: string
+          p_client_action_id: string
+          p_prior_version: number
+        }
+        Returns: Json
+      }
       evaluate_intake_screening: {
         Args: { p_client_id: string }
         Returns: undefined
@@ -14863,6 +15636,18 @@ export type Database = {
       execute_payroll_payment: {
         Args: { p_client_action_id: string; p_payroll_run_id: string }
         Returns: Json
+      }
+      execute_payroll_payment_v2: {
+        Args: {
+          p_actor_profile_id: string
+          p_client_action_id: string
+          p_payroll_run_id: string
+        }
+        Returns: Json
+      }
+      finalize_claim_submission: {
+        Args: { p_request_id: string; p_result?: Json; p_status: string }
+        Returns: undefined
       }
       find_clients_by_emails_insensitive: {
         Args: { p_emails: string[]; p_tenant_id: string }
@@ -14875,6 +15660,35 @@ export type Database = {
         Args: { p_format?: string; p_timestamp: string; p_timezone: string }
         Returns: string
       }
+      generate_payroll_run:
+        | {
+            Args: {
+              p_appointment_logs: Json
+              p_line_items: Json
+              p_period_end: string
+              p_period_start: string
+              p_staff_approval_deadline: string
+              p_tenant_id: string
+              p_totals: Json
+              p_triggered_by: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_appointment_logs: Json
+              p_external_reference?: string
+              p_line_items: Json
+              p_period_end: string
+              p_period_start: string
+              p_run_type?: string
+              p_staff_approval_deadline: string
+              p_tenant_id: string
+              p_totals: Json
+              p_triggered_by: string
+            }
+            Returns: Json
+          }
       get_assigned_clients: { Args: never; Returns: Json }
       get_available_appointment_slots:
         | {
@@ -14903,6 +15717,7 @@ export type Database = {
               slot_start_utc: string
             }[]
           }
+      get_billing_identity_context: { Args: never; Returns: Json }
       get_claim_line_pr_breakdown: {
         Args: { p_claim_line_id: string }
         Returns: Json
@@ -14962,87 +15777,178 @@ export type Database = {
               videoroom_url: string
             }[]
           }
-      get_client_balance_summary: {
-        Args: { p_client_id: string }
+      get_client_appointments_display_self: {
+        Args: { p_days_ahead?: number; p_target_timezone?: string }
         Returns: {
-          claim_count: number
-          newest_service_date: string
-          oldest_service_date: string
-          remaining_balance: number
-          total_paid: number
-          total_responsibility: number
+          display_date: string
+          display_end_time: string
+          display_time: string
+          display_timezone: string
+          end_at: string
+          id: string
+          is_telehealth: boolean
+          is_today: boolean
+          location_name: string
+          service_duration: number
+          service_id: string
+          service_name: string
+          staff_id: string
+          start_at: string
+          status: Database["public"]["Enums"]["appointment_status_enum"]
+          tenant_id: string
+          therapist_name: string
+          videoroom_url: string
         }[]
       }
+      get_client_balance_summary:
+        | {
+            Args: never
+            Returns: {
+              claim_count: number
+              newest_service_date: string
+              oldest_service_date: string
+              remaining_balance: number
+              total_paid: number
+              total_responsibility: number
+            }[]
+          }
+        | {
+            Args: { p_client_id: string }
+            Returns: {
+              claim_count: number
+              newest_service_date: string
+              oldest_service_date: string
+              remaining_balance: number
+              total_paid: number
+              total_responsibility: number
+            }[]
+          }
       get_client_canonical_state: {
         Args: { p_client_id: string }
         Returns: Json
       }
-      get_client_care_readiness: {
-        Args: { p_client_id: string }
-        Returns: {
-          care_requirements_complete: boolean
-          client_id: string
-          emergency_contact_complete: boolean
-          evidence: Json
-          insurance_pathway_ready: boolean
-          intake_complete: boolean
-          intake_form_complete: boolean
-          is_minor: boolean
-          lifecycle_stage: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
-          missing_gates: string[]
-          pathway_code: string
-          payer_order_clear: boolean
-          registration_complete: boolean
-          required_consents_complete: boolean
-          service_allowed: boolean
-          tenant_id: string
-          therapist_selection_ready: boolean
-        }[]
-      }
+      get_client_care_readiness:
+        | {
+            Args: never
+            Returns: {
+              care_requirements_complete: boolean
+              client_id: string
+              emergency_contact_complete: boolean
+              evidence: Json
+              insurance_pathway_ready: boolean
+              intake_complete: boolean
+              intake_form_complete: boolean
+              is_minor: boolean
+              lifecycle_stage: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+              missing_gates: string[]
+              pathway_code: string
+              payer_order_clear: boolean
+              registration_complete: boolean
+              required_consents_complete: boolean
+              service_allowed: boolean
+              tenant_id: string
+              therapist_selection_ready: boolean
+            }[]
+          }
+        | {
+            Args: { p_client_id: string }
+            Returns: {
+              care_requirements_complete: boolean
+              client_id: string
+              emergency_contact_complete: boolean
+              evidence: Json
+              insurance_pathway_ready: boolean
+              intake_complete: boolean
+              intake_form_complete: boolean
+              is_minor: boolean
+              lifecycle_stage: Database["public"]["Enums"]["client_lifecycle_stage_enum"]
+              missing_gates: string[]
+              pathway_code: string
+              payer_order_clear: boolean
+              registration_complete: boolean
+              required_consents_complete: boolean
+              service_allowed: boolean
+              tenant_id: string
+              therapist_selection_ready: boolean
+            }[]
+          }
       get_client_claim_line_breakdown: {
         Args: { p_claim_line_id: string }
         Returns: Json
       }
-      get_client_insurance_eligibility_status: {
-        Args: { p_client_id: string }
-        Returns: Json
-      }
-      get_client_outstanding_items: {
-        Args: { p_client_id: string }
-        Returns: {
-          amount: number
-          description: string
-          item_id: string
-          item_type: string
-          paid: number
-          remaining: number
-          service_date: string
-          tenant_id: string
-        }[]
-      }
+      get_client_insurance_eligibility_status:
+        | { Args: never; Returns: Json }
+        | { Args: { p_client_id: string }; Returns: Json }
+      get_client_outstanding_items:
+        | {
+            Args: never
+            Returns: {
+              amount: number
+              description: string
+              item_id: string
+              item_type: string
+              paid: number
+              remaining: number
+              service_date: string
+              tenant_id: string
+            }[]
+          }
+        | {
+            Args: { p_client_id: string }
+            Returns: {
+              amount: number
+              description: string
+              item_id: string
+              item_type: string
+              paid: number
+              remaining: number
+              service_date: string
+              tenant_id: string
+            }[]
+          }
       get_documented_session_status: {
         Args: { p_appointment_id: string }
         Returns: Json
       }
-      get_eligible_therapists_for_client: {
-        Args: { p_client_id: string }
-        Returns: {
-          id: string
-          licenses: Json
-          pathway_code: string
-          prov_bio: string
-          prov_image_url: string
-          prov_max_client_age: number
-          prov_min_client_age: number
-          prov_name_f: string
-          prov_name_for_clients: string
-          prov_name_l: string
-          prov_scheduling_interval_minutes: number
-          prov_self_scheduling_enabled: boolean
-          prov_treatment_approaches: string[]
-          scheduling_branch: string
-        }[]
-      }
+      get_eligible_therapists_for_client:
+        | {
+            Args: never
+            Returns: {
+              id: string
+              licenses: Json
+              pathway_code: string
+              prov_bio: string
+              prov_image_url: string
+              prov_max_client_age: number
+              prov_min_client_age: number
+              prov_name_f: string
+              prov_name_for_clients: string
+              prov_name_l: string
+              prov_scheduling_interval_minutes: number
+              prov_self_scheduling_enabled: boolean
+              prov_treatment_approaches: string[]
+              scheduling_branch: string
+            }[]
+          }
+        | {
+            Args: { p_client_id: string }
+            Returns: {
+              id: string
+              licenses: Json
+              pathway_code: string
+              prov_bio: string
+              prov_image_url: string
+              prov_max_client_age: number
+              prov_min_client_age: number
+              prov_name_f: string
+              prov_name_for_clients: string
+              prov_name_l: string
+              prov_scheduling_interval_minutes: number
+              prov_self_scheduling_enabled: boolean
+              prov_treatment_approaches: string[]
+              scheduling_branch: string
+            }[]
+          }
       get_now_in_timezone: {
         Args: { p_timezone?: string }
         Returns: {
@@ -15054,6 +15960,7 @@ export type Database = {
           today_date: string
         }[]
       }
+      get_permitted_client_actions: { Args: never; Returns: Json }
       get_provider_calculated_capacity: {
         Args: { p_staff_id: string }
         Returns: Json
@@ -15168,63 +16075,130 @@ export type Database = {
               staff_name: string
             }[]
           }
-      get_staff_calendar_appointments: {
-        Args: { p_from_date?: string; p_staff_id: string; p_to_date?: string }
-        Returns: {
-          client_id: string
-          client_legal_name: string
-          client_name: string
-          clinician_name: string
-          created_at: string
-          display_date: string
-          display_end_time: string
-          display_time: string
-          display_timezone: string
-          end_at: string
-          end_hour: number
-          end_minute: number
-          id: string
-          is_telehealth: boolean
-          location_name: string
-          series_id: string
-          service_id: string
-          service_name: string
-          staff_id: string
-          start_at: string
-          start_day: number
-          start_hour: number
-          start_minute: number
-          start_month: number
-          start_year: number
-          status: string
-          tenant_id: string
-          time_zone: string
-          updated_at: string
-          videoroom_url: string
-        }[]
-      }
-      get_staff_calendar_blocks: {
-        Args: { p_from_date?: string; p_staff_id: string }
-        Returns: {
-          end_at: string
-          end_day: number
-          end_hour: number
-          end_minute: number
-          end_month: number
-          end_year: number
-          id: string
-          source: string
-          staff_id: string
-          start_at: string
-          start_day: number
-          start_hour: number
-          start_minute: number
-          start_month: number
-          start_year: number
-          summary: string
-        }[]
-      }
+      get_staff_calendar_appointments:
+        | {
+            Args: { p_from_date?: string; p_to_date?: string }
+            Returns: {
+              client_id: string
+              client_legal_name: string
+              client_name: string
+              clinician_name: string
+              created_at: string
+              display_date: string
+              display_end_time: string
+              display_time: string
+              display_timezone: string
+              end_at: string
+              end_hour: number
+              end_minute: number
+              id: string
+              is_telehealth: boolean
+              location_name: string
+              series_id: string
+              service_id: string
+              service_name: string
+              staff_id: string
+              start_at: string
+              start_day: number
+              start_hour: number
+              start_minute: number
+              start_month: number
+              start_year: number
+              status: string
+              tenant_id: string
+              time_zone: string
+              updated_at: string
+              videoroom_url: string
+            }[]
+          }
+        | {
+            Args: {
+              p_from_date?: string
+              p_staff_id: string
+              p_to_date?: string
+            }
+            Returns: {
+              client_id: string
+              client_legal_name: string
+              client_name: string
+              clinician_name: string
+              created_at: string
+              display_date: string
+              display_end_time: string
+              display_time: string
+              display_timezone: string
+              end_at: string
+              end_hour: number
+              end_minute: number
+              id: string
+              is_telehealth: boolean
+              location_name: string
+              series_id: string
+              service_id: string
+              service_name: string
+              staff_id: string
+              start_at: string
+              start_day: number
+              start_hour: number
+              start_minute: number
+              start_month: number
+              start_year: number
+              status: string
+              tenant_id: string
+              time_zone: string
+              updated_at: string
+              videoroom_url: string
+            }[]
+          }
+      get_staff_calendar_blocks:
+        | {
+            Args: { p_from_date?: string }
+            Returns: {
+              end_at: string
+              end_day: number
+              end_hour: number
+              end_minute: number
+              end_month: number
+              end_year: number
+              id: string
+              source: string
+              staff_id: string
+              start_at: string
+              start_day: number
+              start_hour: number
+              start_minute: number
+              start_month: number
+              start_year: number
+              summary: string
+            }[]
+          }
+        | {
+            Args: { p_from_date?: string; p_staff_id: string }
+            Returns: {
+              end_at: string
+              end_day: number
+              end_hour: number
+              end_minute: number
+              end_month: number
+              end_year: number
+              id: string
+              source: string
+              staff_id: string
+              start_at: string
+              start_day: number
+              start_hour: number
+              start_minute: number
+              start_month: number
+              start_year: number
+              summary: string
+            }[]
+          }
       get_staff_id_for_user: { Args: { p_user_id: string }; Returns: string }
+      get_staff_operating_context: { Args: never; Returns: Json }
+      has_billing_role: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -15232,7 +16206,100 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_tenant_admin: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_tenant_member: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      manual_match_champva_row: {
+        Args: { p_claim_line_id: string; p_row_id: string }
+        Returns: Json
+      }
+      mark_appointment_not_billable: {
+        Args: {
+          p_appointment_id: string
+          p_client_action_id?: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
       mark_at_risk_clients: { Args: { p_tenant_id: string }; Returns: number }
+      match_champva_payment_rows: {
+        Args: { p_document_id: string }
+        Returns: Json
+      }
+      payroll_admin_approve_line: {
+        Args: {
+          p_client_action_id?: string
+          p_line_item_id: string
+          p_prior_updated_at: string
+        }
+        Returns: Json
+      }
+      payroll_admin_bulk_approve_run: {
+        Args: { p_client_action_id?: string; p_payroll_run_id: string }
+        Returns: Json
+      }
+      payroll_admin_reject_line: {
+        Args: {
+          p_client_action_id?: string
+          p_line_item_id: string
+          p_prior_updated_at: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      payroll_admin_reset_line_for_retry: {
+        Args: { p_client_action_id?: string; p_line_item_id: string }
+        Returns: Json
+      }
+      payroll_admin_resolve_dispute: {
+        Args: {
+          p_client_action_id?: string
+          p_decision: string
+          p_line_item_id: string
+          p_notes: string
+          p_prior_updated_at: string
+        }
+        Returns: Json
+      }
+      payroll_staff_approve_line: {
+        Args: {
+          p_client_action_id?: string
+          p_line_item_id: string
+          p_prior_updated_at: string
+        }
+        Returns: Json
+      }
+      payroll_staff_dispute_line: {
+        Args: {
+          p_client_action_id?: string
+          p_line_item_id: string
+          p_prior_updated_at: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      post_champva_report_evidence: {
+        Args: { p_document_id: string }
+        Returns: Json
+      }
+      recompute_claim_line_financial_state: {
+        Args: { p_claim_line_id: string }
+        Returns: undefined
+      }
+      reconcile_claim_line_evidence: {
+        Args: { p_claim_line_id: string }
+        Returns: undefined
+      }
+      reconcile_payroll_line_items_from_attempts: {
+        Args: { p_payroll_run_id: string }
+        Returns: Json
+      }
       reconcile_stalled_bulk_jobs: { Args: never; Returns: undefined }
       record_client_eligibility_result: {
         Args: {
@@ -15250,6 +16317,24 @@ export type Database = {
           p_response_message?: string
           p_result_metadata?: Json
           p_service_date?: string
+        }
+        Returns: Json
+      }
+      record_payroll_payment_result: {
+        Args: {
+          p_attempt_ended_at: string
+          p_attempt_started_at: string
+          p_body_preview: string
+          p_duration_ms: number
+          p_error_class: string
+          p_error_message: string
+          p_execution_log_id: string
+          p_idempotency_key: string
+          p_line_item_id: string
+          p_mercury_transaction_id: string
+          p_new_status: string
+          p_proxy_content_type: string
+          p_proxy_http_status: number
         }
         Returns: Json
       }
@@ -15291,6 +16376,10 @@ export type Database = {
         }
         Returns: Json
       }
+      request_client_reactivation: {
+        Args: { p_idempotency_key: string; p_reason: string }
+        Returns: Json
+      }
       reschedule_appointment: {
         Args: {
           p_appointment_id: string
@@ -15299,6 +16388,30 @@ export type Database = {
           p_new_start_at: string
           p_prior_version: number
           p_reason: string
+        }
+        Returns: Json
+      }
+      reserve_claim_batch: {
+        Args: {
+          p_claim_ids: string[]
+          p_client_action_id: string
+          p_requested_by?: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      reserve_era_source_aware: {
+        Args: {
+          p_payer_id: string
+          p_payer_name: string
+          p_payment_date: string
+          p_payment_reference: string
+          p_practice_id: string
+          p_source_era_id: string
+          p_source_record_hash: string
+          p_source_system: string
+          p_tenant_id: string
+          p_total_payment_amount: number
         }
         Returns: Json
       }
@@ -15312,10 +16425,13 @@ export type Database = {
         }
         Returns: Json
       }
-      select_therapist_for_client: {
-        Args: { p_client_id: string; p_staff_id: string }
-        Returns: Json
+      resolve_reconciliation_finding: {
+        Args: { p_finding_id: string; p_note: string; p_resolution: string }
+        Returns: undefined
       }
+      select_therapist_for_client:
+        | { Args: { p_client_id: string; p_staff_id: string }; Returns: Json }
+        | { Args: { p_staff_id: string }; Returns: Json }
       set_client_at_risk: {
         Args: {
           p_actor_profile_id?: string
@@ -15531,6 +16647,10 @@ export type Database = {
         }
         Returns: Json
       }
+      stage_claimmd_era_replacement: {
+        Args: { p_new_source_record_hash: string; p_source_era_id: string }
+        Returns: Json
+      }
       start_client_journey_exception: {
         Args: {
           p_client_action_id: string
@@ -15542,6 +16662,32 @@ export type Database = {
       }
       submit_claim: {
         Args: { p_claim_id: string; p_client_action_id: string }
+        Returns: Json
+      }
+      submit_claims_finalize: {
+        Args: {
+          p_new_state: Database["public"]["Enums"]["claim_submission_state"]
+          p_request_id: string
+          p_response?: Json
+          p_uncertain_reason?: string
+        }
+        Returns: Json
+      }
+      submit_claims_reconcile: {
+        Args: {
+          p_final_state: Database["public"]["Enums"]["claim_submission_state"]
+          p_request_id: string
+          p_response?: Json
+        }
+        Returns: Json
+      }
+      submit_claims_reserve: {
+        Args: {
+          p_claim_ids: string[]
+          p_client_action_id: string
+          p_requested_by?: string
+          p_tenant_id: string
+        }
         Returns: Json
       }
       transition_client_lifecycle:
@@ -15670,16 +16816,26 @@ export type Database = {
         }
         Returns: Json
       }
-      upsert_client_emergency_contact: {
-        Args: {
-          p_client_id: string
-          p_email?: string
-          p_name: string
-          p_phone: string
-          p_relationship: string
-        }
-        Returns: Json
-      }
+      upsert_client_emergency_contact:
+        | {
+            Args: {
+              p_client_id: string
+              p_email?: string
+              p_name: string
+              p_phone: string
+              p_relationship: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_email: string
+              p_name: string
+              p_phone: string
+              p_relationship: string
+            }
+            Returns: Json
+          }
     }
     Enums: {
       accept_assign_enum: "Y" | "N"
@@ -15693,6 +16849,30 @@ export type Database = {
         | "cancelled"
         | "late_cancel/noshow"
         | "draft"
+      claim_line_era_reconciliation_status:
+        | "none"
+        | "pending_official_era"
+        | "reconciled"
+        | "discrepancy"
+      claim_line_financial_status:
+        | "unpaid"
+        | "payment_reported"
+        | "partially_paid"
+        | "paid_pending_adjudication"
+        | "paid"
+        | "overpaid"
+        | "underpaid"
+      claim_submission_state:
+        | "reserved"
+        | "submission_pending"
+        | "external_submission_started"
+        | "external_submission_accepted"
+        | "external_submission_rejected"
+        | "finalization_pending"
+        | "submitted"
+        | "uncertain"
+        | "failed_retryable"
+        | "failed_final"
       client_care_cadence_enum: "regular" | "as_needed"
       client_closure_reason_enum:
         | "not_the_right_time"
@@ -15791,6 +16971,15 @@ export type Database = {
         | "documentation"
         | "risk_intervention"
         | "general"
+      era_import_status:
+        | "reserved"
+        | "importing"
+        | "complete"
+        | "complete_with_reconciliation_issues"
+        | "failed_retryable"
+        | "failed_final"
+        | "replacement_staged"
+        | "superseded"
       form_type_enum: "signup" | "intake" | "session_notes"
       gad7_severity_enum: "minimal" | "mild" | "moderate" | "severe"
       gender_identity_enum:
@@ -15834,6 +17023,22 @@ export type Database = {
         | "At Risk"
         | "Legacy - Has Therapist Available"
         | "Legacy - No Therapist Available"
+      payment_source_document_status:
+        | "uploaded"
+        | "previewed"
+        | "committing"
+        | "complete"
+        | "complete_with_findings"
+        | "failed"
+      payment_source_row_state:
+        | "unmatched"
+        | "ambiguous"
+        | "auto_matched"
+        | "manually_matched"
+        | "posted"
+        | "superseded_by_era"
+        | "discrepancy"
+        | "skipped_duplicate"
       phq9_severity_enum:
         | "minimal"
         | "mild"
@@ -16116,6 +17321,33 @@ export const Constants = {
         "late_cancel/noshow",
         "draft",
       ],
+      claim_line_era_reconciliation_status: [
+        "none",
+        "pending_official_era",
+        "reconciled",
+        "discrepancy",
+      ],
+      claim_line_financial_status: [
+        "unpaid",
+        "payment_reported",
+        "partially_paid",
+        "paid_pending_adjudication",
+        "paid",
+        "overpaid",
+        "underpaid",
+      ],
+      claim_submission_state: [
+        "reserved",
+        "submission_pending",
+        "external_submission_started",
+        "external_submission_accepted",
+        "external_submission_rejected",
+        "finalization_pending",
+        "submitted",
+        "uncertain",
+        "failed_retryable",
+        "failed_final",
+      ],
       client_care_cadence_enum: ["regular", "as_needed"],
       client_closure_reason_enum: [
         "not_the_right_time",
@@ -16226,6 +17458,16 @@ export const Constants = {
         "risk_intervention",
         "general",
       ],
+      era_import_status: [
+        "reserved",
+        "importing",
+        "complete",
+        "complete_with_reconciliation_issues",
+        "failed_retryable",
+        "failed_final",
+        "replacement_staged",
+        "superseded",
+      ],
       form_type_enum: ["signup", "intake", "session_notes"],
       gad7_severity_enum: ["minimal", "mild", "moderate", "severe"],
       gender_identity_enum: [
@@ -16272,6 +17514,24 @@ export const Constants = {
         "At Risk",
         "Legacy - Has Therapist Available",
         "Legacy - No Therapist Available",
+      ],
+      payment_source_document_status: [
+        "uploaded",
+        "previewed",
+        "committing",
+        "complete",
+        "complete_with_findings",
+        "failed",
+      ],
+      payment_source_row_state: [
+        "unmatched",
+        "ambiguous",
+        "auto_matched",
+        "manually_matched",
+        "posted",
+        "superseded_by_era",
+        "discrepancy",
+        "skipped_duplicate",
       ],
       phq9_severity_enum: [
         "minimal",
