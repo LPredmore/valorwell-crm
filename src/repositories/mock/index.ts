@@ -72,7 +72,7 @@ export const mockDataProvider: CrmDataProvider = {
     async updateRisk(id, next) { return patch(id, c => ({ ...c, risk: next })); },
     async close(id, info) { return patch(id, c => ({ ...c, lifecycle: 'Closed', closure: info })); },
     async reopen(id) { return patch(id, c => ({ ...c, lifecycle: 'Intake', closure: undefined })); },
-    async assignClinician(id, staffId) { if (!staffId?.trim()) throw new Error('assignClinician: staffId is required'); return patch(id, c => ({ ...c, assignedClinicianId: staffId })); },
+    async assignClinician(id, staffId, _reason) { if (!staffId?.trim()) throw new Error('assignClinician: staffId is required'); return patch(id, c => ({ ...c, assignedClinicianId: staffId })); },
     async assignOperationsOwner(id, staffId) { return patch(id, c => ({ ...c, assignedOperationsOwnerId: staffId ?? undefined })); },
   },
 
