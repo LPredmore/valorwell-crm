@@ -23,7 +23,7 @@ type BulkSmsRow = Tables<'crm_bulk_sms_recipients'>;
 type ConversationCacheRow = Tables<'crm_conversation_cache'>;
 type ConversationLinkRow = Tables<'crm_conversation_links'>;
 type InboundSmsRow = Tables<'crm_inbound_sms_logs'>;
-type MessageRow = Tables<'messages'>;
+type CrmNoteRow = Tables<'crm_notes'>;
 
 function rowInboundSms(r: InboundSmsRow, tenantId: string): CommunicationMessage {
   return {
@@ -83,18 +83,18 @@ function rowEmailThread(
   };
 }
 
-function rowInternal(r: MessageRow): CommunicationMessage {
+function rowCrmNote(r: CrmNoteRow): CommunicationMessage {
   return {
-    id: `msg-${r.id}`,
+    id: `note-${r.id}`,
     tenantId: r.tenant_id,
-    clientId: r.client_id,
+    clientId: r.client_id ?? undefined,
     channel: 'note',
-    direction: r.sender_type === 'client' ? 'inbound' : 'outbound',
-    from: r.sender_id,
-    to: r.sender_type === 'client' ? r.staff_id : r.client_id,
-    body: r.body,
+    direction: 'outbound',
+    from: r.created_by_profile_id,
+    to: r.client_id ?? '',
+    body: r.note_content,
     status: 'delivered',
-    threadId: `note:${r.client_id}`,
+    threadId: `note:${r.client_id ?? r.id}`,
     createdAt: r.created_at,
   };
 }
@@ -121,8 +121,8 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
         .from('crm_conversation_links')
         .select('*').eq('client_id', clientId).limit(200),
       supabase
-        .from('messages')
-        .select('*').eq('client_id', clientId)
+        .from('crm_notes')
+        .select('*').eq('client_id', clientId).eq('note_type', 'internal')
         .order('created_at', { ascending: false }).limit(200),
     ]);
 
@@ -138,7 +138,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
       ...(inbound.data ?? []).map((row) => rowInboundSms(row, tenantId)),
       ...(bulk.data ?? []).map((row) => rowBulkSms(row, tenantId)),
       ...(links.data ?? []).map((row) => rowEmailThread(row, cacheById.get(row.helpscout_conversation_id), tenantId)),
-      ...(internal.data ?? []).map((row) => rowInternal(row)),
+      ...(internal.data ?? []).map((row) => rowCrmNote(row)),
     ];
     return out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   },
@@ -272,17 +272,26 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
         status: 'sent',
       };
     }
-    // Internal note
-    const { data, error } = await supabase.from('messages').insert({
-      tenant_id: msg.tenantId,
+    // Internal note — canonical crm_notes storage.
+    if (!msg.clientId) throw new Error('clientId is required for internal note');
+    const { data: { user }, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !user) throw new Error('Not authenticated');
+
+    // Verify the client belongs to a tenant this user can operate in.
+    const { data: clientRow, error: clientErr } = await supabase
+      .from('clients').select('tenant_id').eq('id', msg.clientId).maybeSingle();
+    if (clientErr) throw new Error(clientErr.message);
+    if (!clientRow?.tenant_id) throw new Error('Client not found');
+
+    const { data, error } = await supabase.from('crm_notes').insert({
+      tenant_id: clientRow.tenant_id,
       client_id: msg.clientId,
-      staff_id: msg.from,
-      sender_id: msg.from,
-      sender_type: 'staff',
-      body: msg.body,
+      created_by_profile_id: user.id,
+      note_type: 'internal',
+      note_content: msg.body,
     }).select('*').single();
     if (error) throw new Error(error.message);
-    return rowInternal(data);
+    return rowCrmNote(data);
   },
 
   async evaluatePolicy({ clientId, channel, messageClass }): Promise<CommunicationPolicyResult> {
