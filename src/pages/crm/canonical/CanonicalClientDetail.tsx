@@ -51,6 +51,7 @@ export default function CanonicalClientDetail() {
             <div>{client.state ?? '—'} · {client.payer ?? '—'}</div>
           </div>
           {client.lifecycle !== 'Closed' && <CloseClientDialog clientId={id} />}
+          {client.lifecycle === 'Closed' && <ReopenClientDialog clientId={id} />}
         </div>
       </div>
 
