@@ -5,6 +5,7 @@ import { useTasks } from '@/hooks/canonical/useCrmData';
 import { displayName, ENGAGEMENT_STATES, ELIGIBILITY_STATES, CONTACT_POLICIES, SERVICE_POLICIES, CARE_CADENCES, type EngagementState, type EligibilityState, type ContactPolicy, type ServicePolicy, type CareCadence } from '@/domain/canonical';
 import { LifecycleBadge, EngagementBadge, EligibilityBadge, ContactPolicyBadge, ServicePolicyBadge, AtRiskBadge } from '@/components/crm/canonical/StateBadges';
 import { LifecycleControl } from '@/components/crm/canonical/LifecycleControl';
+import { CloseClientDialog } from '@/components/crm/canonical/CloseClientDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -41,10 +42,14 @@ export default function CanonicalClientDetail() {
             <AtRiskBadge r={client.risk} />
           </div>
         </div>
-        <div className="text-right text-sm text-muted-foreground">
-          <div>{client.email ?? '—'}</div>
-          <div>{client.phone ?? '—'}</div>
-          <div>{client.state ?? '—'} · {client.payer ?? '—'}</div>
+        
+        <div className="flex flex-col items-end gap-2 text-sm text-muted-foreground">
+          <div className="text-right">
+            <div>{client.email ?? '—'}</div>
+            <div>{client.phone ?? '—'}</div>
+            <div>{client.state ?? '—'} · {client.payer ?? '—'}</div>
+          </div>
+          {client.lifecycle !== 'Closed' && <CloseClientDialog clientId={id} />}
         </div>
       </div>
 

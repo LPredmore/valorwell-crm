@@ -86,9 +86,9 @@ Backend migration:
 - New RPC `crm_allowed_lifecycle_transitions(p_client_id)` returning valid next stages + reason-why-not for blocked ones (single source of truth).
 - `CanonicalClientDetail` lifecycle control queries this RPC via `useAllowedLifecycleTransitions`, renders only allowed transitions (Closed hidden — routed to Phase 11 Close dialog), requires a reason (min 3 chars) in a confirmation dialog, and refetches allowed transitions + client state on `concurrency_conflict`.
 
-## Phase 11 — Close Client dialog (req §11)
+## Phase 11 — Close Client dialog (req §11) ✅
 
-Dedicated Close dialog: disposition picker (exact contract vocabulary), reason, optional notes, "what closing does" explainer, then `crm_close_client` with real concurrency token + fresh idempotency + contract version. Lifecycle dropdown no longer offers Closed.
+Dedicated `<CloseClientDialog>` on `CanonicalClientDetail`: disposition picker uses the exact `CLOSURE_REASONS` contract vocabulary, required reason (min 3 chars), optional notes, "what closing does" explainer, then calls `dataProvider.clients.close` which invokes `crm_close_client` with a fresh concurrency token, fresh idempotency key, and contract version. Lifecycle dropdown no longer offers Closed (routed here via `use_close_client`). Close button is hidden when the client is already Closed.
 
 ## Phase 12 — Reopen Client (req §12)
 
