@@ -26,6 +26,7 @@ export default function CanonicalClientDetail() {
   const audit = useClientAudit(id);
   const comms = useClientCommunications(id);
   const tasks = useTasks({ clientId: id });
+  const [editingTask, setEditingTask] = useState<CrmTask | null>(null);
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Loading…</div>;
   if (!client) return <div className="p-6">Client not found.</div>;
