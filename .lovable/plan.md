@@ -1,130 +1,153 @@
-## CRM-Only Re-scope and Completion Plan
+# CRM Production-Workflow Correction — Implementation Plan
 
-This plan drops platform-wide items (clinical, claims, ERA, payroll, provider lifecycle, billing execution) from the CRM blocker list and finishes every CRM-side task that does not require a missing backend contract. Unavailable CRM-required contracts stay fail-closed with a structured `CONTRACT_NOT_DEPLOYED` state — no simulations, no fallbacks to `pat_status`, no direct protected-table writes.
+Scope: make the CRM functionally ready for one controlled live test Patient, using only the existing canonical contracts and additive backend changes. Delivered in sequenced phases so each migration and edge-function change is reviewable before the next lands.
+
+## Phase 0 — Discovery (no writes)
+
+Before any change I will confirm current state with read-only tool calls:
+
+- `supabase--read_query` — list all `crm_*` RPC signatures + grants, RLS on `crm_tasks`, `crm_exceptions`, `crm_campaign_enrollments`, `crm_campaign_step_logs`, `crm_notes`, `crm_activity_events`, `crm_campaign_triggers`, `crm_client_state_audit`; enum values for lifecycle/engagement/eligibility/policy/cadence; existing `enroll_campaign_on_status_change` trigger definition; current `crm_campaign_triggers` columns.
+- `code--view` — the active hooks/repos/pages listed in each phase to confirm the exact broken call sites before rewriting.
+- `supabase--edge_function_logs` + repo diff — confirm deployed `ringcentral-sms` and `helpscout-proxy` source matches `supabase/functions/*`; if drift, resync repo first.
+
+Findings that change any phase below will be reported before I execute that phase.
+
+## Phase 1 — Server-authoritative CRM operating context (req §1)
+
+Backend (one additive migration):
+- New enum `crm_capability_role` = `crm_admin | crm_operator | crm_readonly | crm_none`.
+- New table `crm_user_capabilities(profile_id, tenant_id, crm_role, granted_by, granted_at)` — additive, tenant-scoped, RLS: self-select + service_role write.
+- RPC `public.get_crm_operating_context()` returns JSON `{profile_id, current_tenant_id, available_tenants[], crm_role, capabilities{mutate, communicate, manage_campaigns, report}, contract_version}`. Resolves current tenant from `crm_user_capabilities` first, then falls back to `tenant_memberships` only when a single row exists; otherwise returns `available_tenants` and `current_tenant_id = null` so the UI must pick.
+- Seed: every existing `user_roles.role IN ('admin','staff')` profile gets a matching `crm_user_capabilities` row (`admin -> crm_admin`, `staff -> crm_operator`) per tenant they already have membership in. No sibling app changed.
+
+Frontend:
+- Rewrite `CrmAuthProvider` to call `get_crm_operating_context()`, expose `capabilities`, `availableTenants`, `switchTenant(tenantId)`.
+- Replace `useCanMutate` and `CrmMutationGate` with capability-driven checks.
+- Add a tenant switcher in `CrmHeader` shown only when >1 tenant.
+- Fail closed everywhere when context resolution errors.
+
+## Phase 2 — Individual SMS (req §2)
+
+Backend: new edge function `crm-send-client-sms` (leaves `ringcentral-sms` bulk/webhook untouched). Validates JWT → resolves operating context → loads client + phone → calls `crm_evaluate_communication_policy` → sends via RingCentral → writes `crm_activity_events` + communication row. Returns stable `sent|suppressed|invalid_phone|unauthorized|provider_failure`. Accepts only the whitelisted `messageClass` vocabulary.
+
+Frontend: `src/repositories/supabase/communications.ts` `sendSms` now invokes `crm-send-client-sms`. Remove the `ringcentral-sms` individual-send call path.
+
+## Phase 3 — Individual HelpScout email (req §3)
+
+Frontend/repo fix only (edge function already correct):
+- Rewrite email send path to call `helpscout-proxy?action=create-conversation` with `{subject, customerEmail, customerName, text, messageClass}`.
+- Always resolve recipient email from the canonical client record — operator cannot substitute a different address.
+- Call policy evaluator first; map results to stable enum.
+- Reply path uses `?action=reply&conversationId=…`.
+- Remove `action:"sendEmail"` body-based call.
+
+## Phase 4 — Internal notes (req §4)
+
+Rewrite the notes repo/hook:
+- Use `operatingContext.currentTenantId` and `operatingContext.profileId` as UUIDs.
+- Verify client belongs to tenant.
+- Insert into `crm_notes` with `note_type='internal'`, no hardcoded emails/tenant strings.
+- Surface in the timeline distinctly from external comms.
+
+## Phase 5 — Patient selector in Communications (req §5)
+
+- New `<ClientPicker>` (search across `pat_name_preferred | pat_name_f/l | email | phone`, tenant-scoped, canonical clients).
+- `CanonicalInbox` composer requires explicit selection; Send disabled until picked; resets on channel change / close.
+- When opened from `CanonicalClientDetail`, preselect that client.
+
+## Phase 6 — Server-policy-authoritative composer (req §6)
+
+- `PolicyAwareComposer` removes any local rule interpretation.
+- Calls `crm_evaluate_communication_policy` on channel/message-class change AND immediately before send (stale-state guard).
+- Displays backend reason code with friendly copy map.
+- Blocks send on deny; shows override-not-allowed messaging.
+
+## Phase 7 — Canonical campaign auto-enrollment (req §7)
+
+Backend migration:
+- Additive columns on `crm_campaign_triggers`: `trigger_dimension`, `trigger_operator`, `trigger_value`, `trigger_event`, `trigger_version`. Existing rows stay valid.
+- Drop the active `enroll_campaign_on_status_change()` trigger; keep function body for history (renamed `_legacy_…`) but not attached.
+- New trigger on `crm_client_state_audit` (post-insert) → `crm_process_canonical_campaign_triggers(client_id, tenant_id, event)` that matches active triggers, checks policy, prevents duplicate active enrollment, atomically creates enrollment + first step log, writes activity event, idempotent per `(client_id, campaign_id, event_hash)`.
+- Data migration: remap existing `Registered/Matching/Waitlist` campaigns to canonical dimensions. `Interested` and any ambiguous legacy campaign flagged `is_manual_only=true` (new boolean) and shown in UI as Manual.
+
+## Phase 8 — Atomic manual enrollment RPC (req §8)
+
+- New RPC `crm_enroll_clients_in_campaign(p_campaign_id, p_client_ids[], p_reason, p_idempotency_key, p_contract_version)` returning `jsonb[]` of per-client results. Transactional: enrollment + first step in one tx; policy-checked; tenant-checked; idempotent.
+- Frontend enrollment UI switches to this RPC. Remove every direct insert into `crm_campaign_enrollments` / `crm_campaign_step_logs` from `src/hooks/crm/*` and `src/repositories/supabase/campaigns.ts`.
+
+## Phase 9 — Controlled enrollment state actions (req §9)
+
+- New RPCs: `crm_pause_enrollment`, `crm_resume_enrollment`, `crm_cancel_enrollment`, `crm_mark_enrollment_responded`, `crm_restart_enrollment`. All: tenant-check, reason, idempotency, audit event, cascade-suppress scheduled step logs when appropriate.
+- UI: replace "Remove Enrollment" destructive delete with Cancel/Archive. Permanent delete removed from operator UI.
+
+## Phase 10 — Transition-aware lifecycle controls (req §10)
+
+- New RPC/view `crm_allowed_lifecycle_transitions(p_client_id)` returning valid next stages + reason-why-not for blocked ones (single source of truth).
+- `CanonicalClientDetail` lifecycle control queries this and renders only allowed transitions. Requires reason. Handles concurrency conflict by refetching.
+
+## Phase 11 — Close Client dialog (req §11)
+
+Dedicated Close dialog: disposition picker (exact contract vocabulary), reason, optional notes, "what closing does" explainer, then `crm_close_client` with real concurrency token + fresh idempotency + contract version. Lifecycle dropdown no longer offers Closed.
+
+## Phase 12 — Reopen Client (req §12)
+
+Reopen action visible only when `lifecycle='Closed'`. Reason required. Calls `crm_reopen_client`. Preserves historical closure event. No auto-restart of cancelled campaigns.
+
+## Phase 13 — Eligibility Manual Review dialog (req §13)
+
+Dialog with reason/owner/next_action/review_due_at. Calls `crm_set_eligibility` with full `p_manual_review` JSON. Blocks Manual Review submission without payload. Displays active review; authorized user can resolve by transitioning to another eligibility state.
+
+## Phase 14 — Clinician assignment (req §14)
+
+- Server-side eligible-clinician view `v_crm_eligible_clinicians_for_client(client_id)` scoping to tenant, active, license/state, capacity, pathway/payer readiness (using existing `staff_*` readiness tables read-only).
+- Client detail assignment control uses this view + calls `crm_assign_clinician`. No direct write to `clients.primary_staff_id`.
+
+## Phase 15 — Journey / Audit display (req §15)
+
+- Stabilize on canonical event_type identifier `lifecycle_transitioned` (or the identifier already emitted by `crm_transition_lifecycle` — confirmed in Phase 0). Update `audit.ts` mapper to keep display label separate from event_type. Journey tab filters by event_type, not label. Verify assignment/eligibility/engagement/policy/cadence/close/reopen events all appear.
+
+## Phase 16 — Task management (req §16)
+
+Full CRUD via `crm_tasks` with tenant RLS: create, edit, assign/reassign, collaborators (additive `crm_task_collaborators` table), priority, type, start/due, checklist (additive `crm_task_checklist_items`), tags, complete, cancel. Client detail Tasks tab gets Add Task + row navigation to detail. All writes carry operating-context tenant + creator.
+
+## Phase 17 — Exceptions ↔ tasks (req §17)
+
+Verify/repair: view, resolve, dismiss, reassign, create-linked-task. Linked task carries exception_id, client_id, campaign_id, priority-from-severity, creator. Idempotency guard against double task creation.
+
+## Phase 18 — Remove obsolete/competing paths (req §18)
+
+Ripgrep sweep + delete:
+- Any direct frontend update of canonical state columns, `primary_staff_id`, enrollments/step_logs.
+- Legacy `pat_status` CRM mutations, hardcoded tenant/sender strings, fabricated success returns.
+- Duplicate client/campaign/comms implementations. One active implementation per workflow.
+- Ensure no legacy route stays reachable.
+
+## Phase 19 — Real-Patient onboarding compatibility (req §19)
+
+Verify (no code change unless a gap surfaces): a client inserted through the real onboarding flow gets canonical defaults, appears in CRM list, has usable concurrency token, can progress from Registration, be assigned, receive policy-approved comms, enter canonical campaign, create tasks/audit. No synthetic CRM-only patient path introduced. No plaintext password handling.
+
+## Phase 20 — Shared-app impact review (req §20)
+
+Every migration audited against Client / Staff / Billing / Credentialing / scheduling / claims / provider-matching / HelpScout / RingCentral / campaign-scheduler. All changes additive: new tables, new columns with defaults, new RPCs, extended (not replaced) triggers. Report per-app impact assessment.
+
+## Phase 21 — Static verification (req §21)
+
+`bun run lint`, `tsgo` app + tooling, `bunx vitest run`, `bun run build`, ripgrep for forbidden direct writes / hardcoded tenants / legacy `pat_status` mutations, edge-function repo-vs-deployed diff, RPC signature+grant inspection, RLS inspection for every touched table, confirmation no `anon` grants on protected mutations. No live sends, no live patient created.
+
+## Phase 22 — Final completion evidence (req §22)
+
+Report with: commit SHA, changed files, migrations applied, RPC signatures, edge function versions/hashes, grants, RLS policies, active UI route per workflow, obsolete-code confirmation, ripgrep results, build/lint/type/test results, shared-app compatibility notes, remaining blockers. One of the two required verdicts.
 
 ---
 
-### A. CRM-only required contract list
+## Execution model
 
-Grouped by launch-criticality. Each entry ties to a real CRM consumer file.
+- Phases are executed in numeric order across multiple turns. Each backend phase is one migration + one edge-function change at most, submitted via `supabase--migration` for your approval before running.
+- After each phase I report: what shipped, static-verification result, any surprises from Phase 0 read-back, and the next phase's exact plan.
+- No live SMS/email/patient mutation at any point in this implementation pass.
+- If any Phase 0 discovery contradicts an assumption above (e.g. an RPC already exists with a different signature), I will report and revise before proceeding.
 
-**A1. Required for CRM launch**
+## Out of scope
 
-| # | Contract | Kind | Signature | CRM consumer | Grants | Caller role | RLS | Idempotent | Emits | Status |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | `v_client_canonical_state` | view | columns per `CanonicalClientState` (contract v1) | `useCanonicalClientState(s)`, kanban, client detail, badges | SELECT to `authenticated` | admin/staff of tenant | tenant scoped | n/a | n/a | **MISSING** |
-| 2 | `crm_transition_lifecycle` | rpc | `(client_id uuid, to_stage text, reason text, idempotency_key uuid, contract_version text) → MutationResult` | `useTransitionLifecycle` | EXECUTE to `authenticated` | admin/staff | callee checks `crm_has_role` + tenant | yes | audit: `lifecycle_changed` | **MISSING** |
-| 3 | `crm_set_engagement` | rpc | `(client_id, to_state, reason, idempotency_key, contract_version)` | `useSetEngagement` | EXECUTE authenticated | admin/staff | yes | yes | `engagement_changed` | **MISSING** |
-| 4 | `crm_set_contact_policy` | rpc | `(client_id, policy, reason, idempotency_key, contract_version)` | `useSetContactPolicy`, DNC toggle | EXECUTE authenticated | admin/staff | yes | yes | `contact_policy_changed` | **MISSING** |
-| 5 | `crm_set_service_policy` | rpc | same shape | `useSetServicePolicy` | " | admin/staff | yes | yes | `service_policy_changed` | **MISSING** |
-| 6 | `crm_set_eligibility` | rpc | `(client_id, state, manual_review jsonb, reason, idempotency_key, contract_version)` | `useSetEligibility` | " | admin/staff | yes | yes | `eligibility_changed` | **MISSING** |
-| 7 | `crm_set_care_cadence` | rpc | `(client_id, cadence, reason, idempotency_key, contract_version)` | `useSetCareCadence` | " | admin/staff | yes | yes | `care_cadence_changed` | **MISSING** |
-| 8 | `crm_assign_clinician` | rpc | `(client_id, staff_id, reason, idempotency_key, contract_version)` | assign action | " | admin/staff | yes | yes | `clinician_assigned` | **MISSING** |
-| 9 | `crm_close_client` / `crm_reopen_client` | rpc | `(client_id, disposition_reason, reason, idempotency_key, contract_version)` | close/reopen actions | " | admin/staff | yes | yes | `closed`/`reopened` | **MISSING** |
-| 10 | `crm_evaluate_communication_policy` | rpc | `(client_id, channel, message_class) → { allowed, reason, code }` | `PolicyAwareComposer`, `useBulkSend`, `useBulkSms`, campaign-scheduler | EXECUTE authenticated + service_role | admin/staff | tenant scoped read | n/a | n/a | **MISSING (server-side authority)** |
-| 11 | `helpscout-proxy` edge fn (send path must call #10) | edge | existing | `useReplyToConversation`, bulk email | n/a | admin/staff JWT | n/a | send-time guard | `email_suppressed` on block | **PARTIAL — needs suppression call server-side** |
-| 12 | `ringcentral-sms` edge fn (send path must call #10) | edge | existing | `useBulkSms`, campaign step SMS | n/a | admin/staff JWT | n/a | send-time guard | `sms_suppressed` on block | **PARTIAL — same** |
-| 13 | `crm_activity_events` insert via edge fn only | policy | no direct client insert of protected event types | activity timeline | INSERT to `service_role` only for protected classes | n/a | tenant scoped read | n/a | n/a | **NEEDS lockdown** |
-| 14 | `crm_client_state_audit` | table | already CRM-owned | audit displays | already granted | admin read | tenant scoped | n/a | n/a | DELIVERED |
-| 15 | `crm_tasks`, `crm_exceptions`, `crm_idempotency_keys`, `crm_client_canonical_meta` | tables | CRM-owned | tasks/exceptions pages | already granted | admin/staff | tenant scoped | n/a | n/a | DELIVERED |
-
-**A2. Required only for a later CRM feature (not launch-blocking)**
-
-- `crm_bulk_enroll_campaign` rpc — bulk enrollment tooling; today enrollment goes through existing enrollment edge fn.
-- `v_crm_reports_funnel`, `v_crm_reports_engagement`, `v_crm_reports_closure`, `v_crm_reports_campaigns`, `v_crm_reports_tasks`, `v_crm_reports_exceptions` — read models for Reports page. Reports can ship with "requires backend view" empty states.
-- `crm_reengage_client` rpc — optional re-engagement helper.
-
-**A3. Not a CRM blocker (owned by other apps)**
-
-Removed from CRM blocker list — these appeared in the global register but no CRM file consumes them:
-
-- All `staff_*` credentialing tables (licenses, malpractice, CAQH, education, work history, certifications, disclosures, payer enrollments)
-- Provider lifecycle: `provider_*`, `vaccn_*`
-- Clinical: `appointment_clinical_notes`, `client_treatment_plans`, `client_safety_plans`, all assessments (`client_phq9_*`, `gad7`, `pcl5`), `client_history_*`
-- Insurance/eligibility internals: `client_insurance*`, `eligibility_checks` details, `client_diagnoses`
-- Billing/RCM: `claims`, `claim_*`, `era*`, `payment_allocations`, `client_charges`, `client_payments`, `client_payment_links`, `client_payment_methods`
-- Payroll: all `payroll_*`
-- Practice config: `practice_info`, `practice_locations`, `services`, `cpt_codes`, `place_of_service`
-- Scheduling internals: `appointments`, `appointment_series`, `appointment_exceptions`, calendar sync tables
-- Forms platform: `form_*`, `consent_templates`
-- Backend contract registry itself: `backend_contract_*`
-- Cross-app mirrors: `clickup_client_mirror_state`, `crm_clickup_*` (UI already retired)
-
-These stay in the shared backend and are out of scope for CRM completion.
-
----
-
-### B. Contracts removed from CRM blocker list
-
-Everything in A3 above. Rationale: no file under `src/pages/crm/**`, `src/components/crm/**`, `src/hooks/crm/**`, `src/hooks/canonical/**`, `src/repositories/**`, or CRM-owned edge functions (`helpscout-proxy`, `ringcentral-sms`, `campaign-scheduler`) reads or writes those tables. They belong to `valorwell-clients`, `valorwell-staff`, `valorwell-billing`, and `valorwell-credentialing`.
-
----
-
-### C. CRM work already completed despite backend blockers
-
-- Canonical domain model, contracts v1, and mock provider (WS1–2).
-- Supabase repositories for clients, tasks, exceptions, staff, audit, campaigns, communications, reports (WS3–10) — fail-closed when canonical view/RPCs missing.
-- CRM-owned tables + RLS + grants: `crm_tasks`, `crm_exceptions`, `crm_client_canonical_meta`, `crm_client_state_audit`, `crm_idempotency_keys`.
-- ClickUp UI + edge function retirement.
-- Contract version constant wired through every canonical hook.
-- Unit tests green (17/17).
-- Shared suppression helper (`supabase/functions/_shared/suppression.ts`).
-
----
-
-### C-next. CRM work to execute in this pass (no missing backend needed)
-
-1. **Route cutover to canonical pages.** Point `/crm/clients`, `/crm/clients/:id`, `/crm/campaigns`, `/crm/inbox`, `/crm/reports`, `/crm/staff`, `/crm/tasks` (new), `/crm/exceptions` (new) at the Canonical* pages in `App.tsx`. Retire legacy pages by re-exporting canonical.
-2. **Kill `pat_status` reads/writes in CRM code paths.**
-   - `useClients` / `useClientsByStatus`: drop `pat_status` filter/order; use canonical batch read for status column.
-   - `ClientKanban*`, `ClientTable`, `StatusBadge`, `useUpdateClientStatus`, `useBulkUpdateStatus`: switch to `useTransitionLifecycle` and canonical lifecycle labels.
-   - Delete `useUpdateClientStatus`/`useBulkUpdateStatus` legacy paths that update `clients.pat_status` directly; replace with lifecycle RPC calls that render `CONTRACT_NOT_DEPLOYED` toast until RPC ships.
-3. **At Risk read-only enforcement.** Remove any UI that toggles `at_risk`; render as computed badge from canonical state only.
-4. **DNC / suppression presentation.** Add unified `SuppressionBanner` and gate composer send buttons on `crm_evaluate_communication_policy` result; fail closed with clear reason when RPC missing.
-5. **Server-side suppression enforcement.** Update `helpscout-proxy` and `ringcentral-sms` send handlers to invoke suppression evaluation (via shared helper) before dispatch and to persist `suppressed` audit event on block. No client-side-only guard.
-6. **Authorization-aware UI.** Hide/disable mutating controls when `useCrmAuth().role` is not `admin`/`staff`; show read-only variants otherwise.
-7. **Contract-version handling.** Surface active contract version in Settings → About; block mutations when server returns `contract_version_mismatch`.
-8. **Loading / error / empty states.** Every canonical hook renders skeleton → error card with `CONTRACT_NOT_DEPLOYED` code → empty state, replacing silent `null` fallbacks currently in `useCanonicalClientState(s)`.
-9. **Audit displays.** Wire `crm_client_state_audit` reader to the client detail Activity tab; group by correlation id.
-10. **Reports.** Keep page mounted; each panel shows "Backend view pending: <view name>" empty state until A2 views ship. No fake numbers.
-11. **Direct protected-table writes.** Remove any remaining `supabase.from('clients').update(...)` calls on protected columns (`pat_status`, `assigned_therapist_id`, `contact_policy`, `service_policy`, `care_cadence`, `at_risk`, eligibility). Grep-verify zero matches under `src/`.
-12. **Tests.** Extend Vitest suite: mock-provider canonical flow, legacy-assertion guard (no `pat_status` string in CRM src), authorization gating, suppression fail-closed. All must pass against currently delivered contracts.
-13. **Retire dead code.** Delete legacy `Clients.tsx`, `ClientDetail.tsx`, `Campaigns.tsx`, `Inbox.tsx`, `Reports.tsx`, `Staff.tsx` after canonical routes are live and referenced.
-14. **Deliver A CRM-specific backend delivery request** (`docs/crm-backend-delivery-request.md`) containing the A1/A2 tables above with signatures, grants, RLS, idempotency, events, consumer file, verification test, and current blocker detail.
-
----
-
-### D. CRM files/actions that will remain blocked after this pass
-
-Blocked strictly on A1 backend delivery (`v_client_canonical_state` + `crm_*` RPCs + `crm_evaluate_communication_policy`):
-
-- `src/hooks/crm/useCanonicalClientState.ts` — returns fail-closed until view ships.
-- `src/hooks/crm/useCanonicalMutations.ts` — all six mutation hooks fail-closed.
-- `src/components/crm/canonical/PolicyAwareComposer.tsx` — send disabled until policy RPC ships.
-- `src/pages/crm/canonical/CanonicalReports.tsx` — panels blocked until A2 views ship.
-- `supabase/functions/helpscout-proxy` and `ringcentral-sms` — final send-path enforcement requires policy RPC.
-- Authenticated E2E RLS proofs — require live RPCs + a signed-in admin/staff session (external Supabase, sandbox cannot mint).
-
-Nothing else remains CRM-blocked.
-
----
-
-### E. Commit SHA + F. Build/type/lint/test results
-
-Reported at end of the execution pass — not available until code changes land. Plan mode produces no commits.
-
----
-
-### Execution order once approved
-
-1. Route cutover + legacy page retirement.
-2. `pat_status` and protected-column write removal (grep-clean).
-3. Fail-closed hook states + `SuppressionBanner` + composer gating.
-4. Auth-aware UI gating + contract version surface.
-5. Server-side suppression enforcement in `helpscout-proxy` + `ringcentral-sms`.
-6. Audit reader wiring + Reports empty states.
-7. `docs/crm-backend-delivery-request.md`.
-8. Extend Vitest suite; run typecheck + lint + tests.
-9. Report commit SHA + results.
-
-No shared backend migrations. No changes to other Lovable projects. No temporary substitutes.
+- Publishing `backend_contract_releases` row (explicitly deferred until live validation passes).
+- Live message sends, live test-patient creation, sibling-app regression runs — all are human-driven steps after `IMPLEMENTATION READY…` verdict.
