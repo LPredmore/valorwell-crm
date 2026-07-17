@@ -60,7 +60,7 @@ export default function CanonicalExceptions() {
                           {staffOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>)}
                         </SelectContent>
                       </Select>
-                    ) : (staffOptions.find(s => s.id === e.ownerId)?.name ?? '—')}
+                    ) : (staffOptions.find(s => s.id === e.ownerId)?.displayName ?? '—')}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{new Date(e.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right space-x-2">
