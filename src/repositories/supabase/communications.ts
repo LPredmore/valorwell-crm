@@ -295,23 +295,27 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
   },
 
   async evaluatePolicy({ clientId, channel, messageClass }): Promise<CommunicationPolicyResult> {
-    const c = await supabaseClientsRepository.get(clientId);
-    if (!c) return { allowed: false, requiresReview: false, reasons: ['Client not found'] };
-    const reasons: string[] = [];
-    let code: CommunicationPolicyResult['suppressionCode'] | undefined;
-    if (c.contactPolicy === 'Do Not Contact' && messageClass !== 'critical_operational') {
-      reasons.push('Client marked Do Not Contact'); code = 'DO_NOT_CONTACT';
+    // Server-authoritative: delegate ENTIRELY to `crm_evaluate_communication_policy`.
+    // No client-side re-interpretation of contact/service/lifecycle rules.
+    const { data, error } = await supabase.rpc('crm_evaluate_communication_policy', {
+      p_client_id: clientId,
+      p_channel: channel,
+      p_message_class: messageClass,
+    });
+    if (error) {
+      return { allowed: false, requiresReview: false, reasons: [error.message], suppressionCode: 'policy_check_failed' };
     }
-    if (c.servicePolicy === 'Service Blocked' && messageClass === 'ordinary_campaign_follow_up') {
-      reasons.push('Service Blocked — campaign follow-up not permitted'); code = code ?? 'SERVICE_BLOCKED';
-    }
-    if (c.lifecycle === 'Closed' && messageClass === 'ordinary_campaign_follow_up') {
-      reasons.push('Client is closed'); code = code ?? 'CLIENT_CLOSED';
-    }
-    if (channel === 'sms' && !c.phone) { reasons.push('No phone on file'); code = code ?? 'CHANNEL_RESTRICTED'; }
-    if (channel === 'email' && !c.email) { reasons.push('No email on file'); code = code ?? 'CHANNEL_RESTRICTED'; }
-    return { allowed: reasons.length === 0, requiresReview: false, reasons, suppressionCode: code };
+    const d = (data ?? {}) as { allowed?: boolean; reason_code?: string; policy_version?: string };
+    const allowed = !!d.allowed;
+    const reason = d.reason_code ?? (allowed ? 'ok' : 'unknown_canonical_state');
+    return {
+      allowed,
+      requiresReview: false,
+      reasons: allowed ? [] : [reason],
+      suppressionCode: allowed ? undefined : reason,
+    };
   },
+
 
   async ingestInbound(msg) {
     // Inbound is persisted by the RingCentral / HelpScout webhook edge
