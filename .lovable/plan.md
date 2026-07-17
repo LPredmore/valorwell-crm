@@ -115,9 +115,12 @@ Dialog `<EligibilityManualReviewDialog>` on `CanonicalClientDetail` captures rea
 - `crm_task_collaborators` / `crm_task_checklist_items` side-tables are deferred: `crm_tasks` already stores `collaborator_ids` (uuid[]) and `checklist` (jsonb) that the current UI does not surface; adding new tables would be a non-additive duplication. Recorded in the backend delivery request.
 - 86/86 tests pass.
 
-## Phase 17 — Exceptions ↔ tasks (req §17)
+## Phase 17 — Exceptions ↔ tasks (req §17) ✅
 
-Verify/repair: view, resolve, dismiss, reassign, create-linked-task. Linked task carries exception_id, client_id, campaign_id, priority-from-severity, creator. Idempotency guard against double task creation.
+- `CanonicalExceptions` gains an Owner column with inline reassign (Select over `useStaffList()`, disabled for Resolved/Dismissed rows) wired to `dataProvider.exceptions.reassign`.
+- View / Resolve / Dismiss / Create-Task already routed through `useExceptionMutations`; toasts confirm each write.
+- **Idempotency guard**: `createTaskFromException` now checks `crm_tasks` for any non-terminal task with `exception_id = id` and returns it instead of inserting a duplicate. Linked task carries `exception_id`, `client_id`, `campaign_id`, `type='Campaign Exception'`, `priority` mapped from severity (Critical→Urgent, High→High, else Normal), and `created_by_profile_id` from `auth.getUser()`.
+- 86/86 tests pass.
 
 ## Phase 18 — Remove obsolete/competing paths (req §18)
 

@@ -1,8 +1,9 @@
-import { useExceptions, useExceptionMutations } from '@/hooks/canonical/useCrmData';
+import { useExceptions, useExceptionMutations, useStaffList } from '@/hooks/canonical/useCrmData';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 const sevColor: Record<string, string> = {
@@ -14,7 +15,10 @@ const sevColor: Record<string, string> = {
 
 export default function CanonicalExceptions() {
   const { data, isLoading } = useExceptions();
+  const staff = useStaffList();
   const mut = useExceptionMutations();
+
+  const staffOptions = staff.data ?? [];
 
   return (
     <div className="space-y-4 p-6">
@@ -30,36 +34,53 @@ export default function CanonicalExceptions() {
               <TableHead>Severity</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Summary</TableHead>
+              <TableHead>Owner</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>}
-            {data?.map(e => (
-              <TableRow key={e.id}>
-                <TableCell className="font-medium">{e.type}</TableCell>
-                <TableCell><Badge variant="secondary" className={sevColor[e.severity]}>{e.severity}</Badge></TableCell>
-                <TableCell><Badge variant={e.status === 'Open' ? 'destructive' : 'outline'}>{e.status}</Badge></TableCell>
-                <TableCell className="text-sm text-muted-foreground max-w-md truncate">{e.summary}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{new Date(e.createdAt).toLocaleDateString()}</TableCell>
-                <TableCell className="text-right space-x-2">
-                  {e.status === 'Open' || e.status === 'In Review' ? (
-                    <>
-                      <Button size="sm" variant="outline" onClick={() => mut.createTask.mutate(e.id, { onSuccess: () => toast.success('Task created') })}>
-                        Create Task
-                      </Button>
-                      <Button size="sm" onClick={() => mut.resolve.mutate({ id: e.id }, { onSuccess: () => toast.success('Resolved') })}>
-                        Resolve
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => mut.dismiss.mutate({ id: e.id }, { onSuccess: () => toast.success('Dismissed') })}>
-                        Dismiss
-                      </Button>
-                    </>
-                  ) : null}
-                </TableCell>
-              </TableRow>
-            ))}
+            {isLoading && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>}
+            {data?.map(e => {
+              const active = e.status === 'Open' || e.status === 'In Review';
+              return (
+                <TableRow key={e.id}>
+                  <TableCell className="font-medium">{e.type}</TableCell>
+                  <TableCell><Badge variant="secondary" className={sevColor[e.severity]}>{e.severity}</Badge></TableCell>
+                  <TableCell><Badge variant={e.status === 'Open' ? 'destructive' : 'outline'}>{e.status}</Badge></TableCell>
+                  <TableCell className="text-sm text-muted-foreground max-w-md truncate">{e.summary}</TableCell>
+                  <TableCell className="text-sm">
+                    {active ? (
+                      <Select
+                        value={e.ownerId ?? ''}
+                        onValueChange={(ownerId) => mut.reassign.mutate({ id: e.id, ownerId }, { onSuccess: () => toast.success('Reassigned') })}
+                      >
+                        <SelectTrigger className="h-8 w-40"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                        <SelectContent>
+                          {staffOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    ) : (staffOptions.find(s => s.id === e.ownerId)?.displayName ?? '—')}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{new Date(e.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    {active ? (
+                      <>
+                        <Button size="sm" variant="outline" onClick={() => mut.createTask.mutate(e.id, { onSuccess: (t) => toast.success(`Task ready: ${t.title}`) })}>
+                          Create Task
+                        </Button>
+                        <Button size="sm" onClick={() => mut.resolve.mutate({ id: e.id }, { onSuccess: () => toast.success('Resolved') })}>
+                          Resolve
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => mut.dismiss.mutate({ id: e.id }, { onSuccess: () => toast.success('Dismissed') })}>
+                          Dismiss
+                        </Button>
+                      </>
+                    ) : null}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </Card>

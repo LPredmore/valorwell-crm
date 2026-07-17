@@ -123,6 +123,22 @@ export const supabaseExceptionsRepository: ExceptionsRepository = {
     const { data: exc, error: eErr } = await supabase.from('crm_exceptions').select(COLS).eq('id', id).maybeSingle();
     if (eErr) throw new Error(eErr.message);
     if (!exc) throw new Error('Exception not found');
+
+    // Idempotency guard: reuse any non-terminal task already linked to this exception.
+    const { data: existing, error: exErr } = await supabase
+      .from('crm_tasks')
+      .select('id')
+      .eq('exception_id', id)
+      .not('status', 'in', '(completed,cancelled)')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (exErr) throw new Error(exErr.message);
+    if (existing) {
+      const found = await supabaseTasksRepository.get(existing.id);
+      if (found) return found;
+    }
+
     const { data: uid } = await supabase.auth.getUser();
     const createdByProfileId = uid.user?.id;
     if (!createdByProfileId) throw new Error('Authenticated user required to create an exception task');
