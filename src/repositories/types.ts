@@ -51,7 +51,12 @@ export interface ClientsRepository {
   get(id: string): Promise<CanonicalClient | null>;
   updateLifecycle(id: string, next: LifecycleStage, reason: string, note?: string): Promise<CanonicalClient>;
   updateEngagement(id: string, next: EngagementState): Promise<CanonicalClient>;
-  updateEligibility(id: string, next: EligibilityState, note?: string): Promise<CanonicalClient>;
+  updateEligibility(
+    id: string,
+    next: EligibilityState,
+    note?: string,
+    manualReview?: { owner: string; next_action: string; review_due_at: string } | null,
+  ): Promise<CanonicalClient>;
   updateContactPolicy(id: string, next: ContactPolicy, reason: string): Promise<CanonicalClient>;
   updateServicePolicy(id: string, next: ServicePolicy, reason: string): Promise<CanonicalClient>;
   updateCareCadence(id: string, next: CareCadence): Promise<CanonicalClient>;

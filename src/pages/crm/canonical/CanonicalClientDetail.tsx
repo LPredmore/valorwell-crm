@@ -7,6 +7,7 @@ import { LifecycleBadge, EngagementBadge, EligibilityBadge, ContactPolicyBadge, 
 import { LifecycleControl } from '@/components/crm/canonical/LifecycleControl';
 import { CloseClientDialog } from '@/components/crm/canonical/CloseClientDialog';
 import { ReopenClientDialog } from '@/components/crm/canonical/ReopenClientDialog';
+import { EligibilityManualReviewDialog } from '@/components/crm/canonical/EligibilityManualReviewDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -77,8 +78,13 @@ export default function CanonicalClientDetail() {
                 </div>
                 <StateRow label="Engagement" value={client.engagement} options={ENGAGEMENT_STATES}
                   onChange={v => m.updateEngagement.mutate(v as EngagementState, { onSuccess: () => toast.success('Engagement updated') })} />
-                <StateRow label="Eligibility" value={client.eligibility} options={ELIGIBILITY_STATES}
+                <StateRow label="Eligibility" value={client.eligibility}
+                  options={ELIGIBILITY_STATES.filter(o => o !== 'Manual Review')}
                   onChange={v => m.updateEligibility.mutate({ next: v as EligibilityState }, { onSuccess: () => toast.success('Eligibility updated') })} />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground w-32">Manual Review</span>
+                  <div className="flex-1"><EligibilityManualReviewDialog clientId={id} /></div>
+                </div>
                 <StateRow label="Contact Policy" value={client.contactPolicy} options={CONTACT_POLICIES}
                   onChange={v => m.updateContactPolicy.mutate({ next: v as ContactPolicy, reason: 'manual' }, { onSuccess: () => toast.success('Contact policy updated') })} />
                 <StateRow label="Service Policy" value={client.servicePolicy} options={SERVICE_POLICIES}
@@ -160,10 +166,21 @@ export default function CanonicalClientDetail() {
         </TabsContent>
 
         <TabsContent value="eligibility">
-          <Card><CardContent className="p-4 text-sm space-y-1">
+          <Card><CardContent className="p-4 text-sm space-y-3">
             <Info label="State" value={client.eligibility} />
             <Info label="Payer" value={client.payer ?? '—'} />
             <Info label="Program" value={client.program ?? '—'} />
+            <div className="pt-2 border-t flex items-center justify-between">
+              <div className="text-muted-foreground">
+                {client.eligibility === 'Manual Review'
+                  ? 'Update the manual review owner, next action, or due date.'
+                  : 'Flag this client for manual review with an owner and next action.'}
+              </div>
+              <EligibilityManualReviewDialog
+                clientId={id}
+                triggerLabel={client.eligibility === 'Manual Review' ? 'Update Review' : 'Set Manual Review'}
+              />
+            </div>
           </CardContent></Card>
         </TabsContent>
 

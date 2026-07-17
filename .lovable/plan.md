@@ -94,9 +94,9 @@ Dedicated `<CloseClientDialog>` on `CanonicalClientDetail`: disposition picker u
 
 Reopen action visible only when `lifecycle='Closed'`. Reason required (min 3 chars). Calls `crm_reopen_client` via `dataProvider.clients.reopen`. Preserves historical closure event. No auto-restart of cancelled campaigns.
 
-## Phase 13 — Eligibility Manual Review dialog (req §13)
+## Phase 13 — Eligibility Manual Review dialog (req §13) ✅
 
-Dialog with reason/owner/next_action/review_due_at. Calls `crm_set_eligibility` with full `p_manual_review` JSON. Blocks Manual Review submission without payload. Displays active review; authorized user can resolve by transitioning to another eligibility state.
+Dialog `<EligibilityManualReviewDialog>` on `CanonicalClientDetail` captures reason (min 3), owner, next_action, and review_due_at, and calls `crm_set_eligibility` with a full `p_manual_review` JSON payload. Manual Review is removed from the plain eligibility dropdown so it can only be set via the dialog. Repository enforces the payload requirement — `updateEligibility` throws when `Manual Review` is selected without a `manualReview` object. Eligibility tab shows the current state and offers a Set/Update Review action depending on whether the client is already in Manual Review.
 
 ## Phase 14 — Clinician assignment (req §14)
 
