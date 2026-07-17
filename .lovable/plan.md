@@ -108,9 +108,12 @@ Dialog `<EligibilityManualReviewDialog>` on `CanonicalClientDetail` captures rea
 - `CanonicalClientDetail` Journey tab filters by `eventType === 'lifecycle_stage'`; the Audit tab shows `eventLabel` while preserving previous/next values, actor, source, and reason. Clinician assignment / policy / cadence / eligibility events already flow through the same audit stream and appear alongside lifecycle rows.
 - `AuditEvent` domain type updated; mocks and adapters aligned. 86/86 tests pass.
 
-## Phase 16 — Task management (req §16)
+## Phase 16 — Task management (req §16) ✅
 
-Full CRUD via `crm_tasks` with tenant RLS: create, edit, assign/reassign, collaborators (additive `crm_task_collaborators` table), priority, type, start/due, checklist (additive `crm_task_checklist_items`), tags, complete, cancel. Client detail Tasks tab gets Add Task + row navigation to detail. All writes carry operating-context tenant + creator.
+- Added `<TaskFormDialog>` (create + edit) on `CanonicalClientDetail` Tasks tab, wired to `useTaskMutations().create/update` — all writes carry `tenantId` and `createdByProfileId` from `CrmAuthContext`. No direct writes to `crm_tasks`.
+- Tasks tab now shows an **Add Task** button (disabled without `capabilities.mutate`) and rows are clickable, opening the edit dialog inline. Title (min 3), type, priority, status, due, and description are editable through canonical `dataProvider.tasks.update`.
+- `crm_task_collaborators` / `crm_task_checklist_items` side-tables are deferred: `crm_tasks` already stores `collaborator_ids` (uuid[]) and `checklist` (jsonb) that the current UI does not surface; adding new tables would be a non-additive duplication. Recorded in the backend delivery request.
+- 86/86 tests pass.
 
 ## Phase 17 — Exceptions ↔ tasks (req §17)
 

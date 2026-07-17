@@ -9,6 +9,9 @@ import { CloseClientDialog } from '@/components/crm/canonical/CloseClientDialog'
 import { ReopenClientDialog } from '@/components/crm/canonical/ReopenClientDialog';
 import { EligibilityManualReviewDialog } from '@/components/crm/canonical/EligibilityManualReviewDialog';
 import { AssignClinicianDialog } from '@/components/crm/canonical/AssignClinicianDialog';
+import { TaskFormDialog } from '@/components/crm/canonical/TaskFormDialog';
+import { useState } from 'react';
+import type { CrmTask } from '@/domain/operations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,6 +26,7 @@ export default function CanonicalClientDetail() {
   const audit = useClientAudit(id);
   const comms = useClientCommunications(id);
   const tasks = useTasks({ clientId: id });
+  const [editingTask, setEditingTask] = useState<CrmTask | null>(null);
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Loading…</div>;
   if (!client) return <div className="p-6">Client not found.</div>;
@@ -148,21 +152,37 @@ export default function CanonicalClientDetail() {
           </CardContent></Card>
         </TabsContent>
 
-        <TabsContent value="tasks">
+        <TabsContent value="tasks" className="space-y-3">
+          <div className="flex justify-end">
+            <TaskFormDialog clientId={id} />
+          </div>
           <Card><CardContent className="p-0">
             <div className="divide-y">
               {tasks.data?.length ? tasks.data.map(t => (
-                <div key={t.id} className="flex items-center justify-between p-3 text-sm">
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setEditingTask(t)}
+                  className="w-full flex items-center justify-between p-3 text-sm text-left hover:bg-muted/50 transition-colors"
+                >
                   <div>
                     <div className="font-medium">{t.title}</div>
                     <div className="text-xs text-muted-foreground">{t.type} · {t.priority} · {t.status}</div>
                   </div>
                   <div className="text-xs text-muted-foreground">{t.dueAt ? new Date(t.dueAt).toLocaleDateString() : '—'}</div>
-                </div>
+                </button>
               )) : <div className="p-6 text-center text-sm text-muted-foreground">No tasks.</div>}
             </div>
           </CardContent></Card>
+          {editingTask && (
+            <TaskFormDialog
+              task={editingTask}
+              open={!!editingTask}
+              onOpenChange={(o) => { if (!o) setEditingTask(null); }}
+            />
+          )}
         </TabsContent>
+
 
         <TabsContent value="campaigns">
           <Card><CardContent className="p-4 text-sm">
