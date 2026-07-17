@@ -95,18 +95,26 @@ export interface OperationalException {
   }[];
 }
 
+/**
+ * Canonical message-class vocabulary — MUST mirror the backend enum used by
+ * `crm_evaluate_communication_policy` and the suppression edge helper.
+ */
+export type CanonicalMessageClass =
+  | 'ordinary_promotional'
+  | 'ordinary_campaign_follow_up'
+  | 'wait_path_ordinary'
+  | 'necessary_scheduling'
+  | 'active_care'
+  | 'billing_insurance'
+  | 'clinical_safety_legal'
+  | 'transactional_account';
+
 export interface CommunicationPolicyResult {
   allowed: boolean;
   requiresReview: boolean;
   reasons: string[];
-  suppressionCode?:
-    | 'DO_NOT_CONTACT'
-    | 'CAMPAIGN_PAUSED'
-    | 'CLIENT_CLOSED'
-    | 'CHANNEL_RESTRICTED'
-    | 'DUPLICATE_SEND'
-    | 'QUIET_HOURS'
-    | 'SERVICE_BLOCKED';
+  /** Backend reason code (see REASON_COPY in PolicyAwareComposer) or a legacy code. */
+  suppressionCode?: string;
 }
 
 export type CampaignStatus = 'Draft' | 'Active' | 'Paused' | 'Archived';
@@ -190,6 +198,7 @@ export interface CommunicationMessage {
   status: 'queued' | 'sent' | 'delivered' | 'failed' | 'suppressed' | 'received';
   suppressionReason?: string;
   campaignId?: string;
+  messageClass?: CanonicalMessageClass;
   threadId: string;
   createdAt: string;
 }

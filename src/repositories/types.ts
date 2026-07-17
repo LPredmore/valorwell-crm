@@ -125,7 +125,7 @@ export interface CommunicationsRepository {
     clientId: string;
     channel: 'sms' | 'email';
     campaignId?: string;
-    messageClass: 'ordinary_campaign_follow_up' | 'critical_operational' | 'transactional' | 'manual';
+    messageClass: import('@/domain/operations').CanonicalMessageClass;
   }): Promise<CommunicationPolicyResult>;
   ingestInbound(message: Omit<CommunicationMessage, 'id' | 'createdAt' | 'status'>): Promise<CommunicationMessage>;
 }

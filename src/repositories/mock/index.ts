@@ -203,7 +203,7 @@ export const mockDataProvider: CrmDataProvider = {
       await wait();
       const policy = await mockDataProvider.communications.evaluatePolicy({
         clientId: msg.clientId!, channel: msg.channel as 'sms'|'email',
-        campaignId: msg.campaignId, messageClass: 'manual',
+        campaignId: msg.campaignId, messageClass: 'necessary_scheduling',
       });
       const status: CommunicationMessage['status'] = policy.allowed ? 'sent' : 'suppressed';
       const created: CommunicationMessage = { ...msg, id: `msg-${Date.now()}`, createdAt: new Date().toISOString(), status,
@@ -215,11 +215,12 @@ export const mockDataProvider: CrmDataProvider = {
       if (!c) return { allowed: false, requiresReview: false, reasons: ['Client not found'] };
       const reasons: string[] = [];
       let code: CommunicationPolicyResult['suppressionCode'] | undefined;
-      if (c.contactPolicy === 'Do Not Contact' && messageClass !== 'critical_operational') { reasons.push('Client marked Do Not Contact'); code = 'DO_NOT_CONTACT'; }
-      if (c.servicePolicy === 'Service Blocked' && messageClass === 'ordinary_campaign_follow_up') { reasons.push('Service Blocked — campaign follow-up not permitted'); code = code ?? 'SERVICE_BLOCKED'; }
-      if (c.lifecycle === 'Closed' && messageClass === 'ordinary_campaign_follow_up') { reasons.push('Client is closed'); code = code ?? 'CLIENT_CLOSED'; }
-      if (channel === 'sms' && !c.phone) { reasons.push('No phone on file'); code = code ?? 'CHANNEL_RESTRICTED'; }
-      if (channel === 'email' && !c.email) { reasons.push('No email on file'); code = code ?? 'CHANNEL_RESTRICTED'; }
+      const isCritical = messageClass === 'clinical_safety_legal' || messageClass === 'billing_insurance' || messageClass === 'transactional_account';
+      if (c.contactPolicy === 'Do Not Contact' && !isCritical) { reasons.push('Client marked Do Not Contact'); code = 'contact_policy_dnc'; }
+      if (c.servicePolicy === 'Service Blocked' && messageClass === 'ordinary_campaign_follow_up') { reasons.push('Service Blocked — campaign follow-up not permitted'); code = code ?? 'service_policy_blocked'; }
+      if (c.lifecycle === 'Closed' && messageClass === 'ordinary_campaign_follow_up') { reasons.push('Client is closed'); code = code ?? 'lifecycle_closed_no_active_care'; }
+      if (channel === 'sms' && !c.phone) { reasons.push('No phone on file'); code = code ?? 'class_never_permitted'; }
+      if (channel === 'email' && !c.email) { reasons.push('No email on file'); code = code ?? 'class_never_permitted'; }
       return { allowed: reasons.length === 0, requiresReview: false, reasons, suppressionCode: code };
     },
     async ingestInbound(msg) {
