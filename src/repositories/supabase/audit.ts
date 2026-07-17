@@ -5,7 +5,7 @@ import type { AuditEvent } from '@/domain/operations';
 
 type AuditRow = Tables<'crm_client_state_audit'>;
 
-function eventTypeFor(dimension: string): string {
+function labelFor(dimension: string): string {
   switch (dimension) {
     case 'lifecycle_stage': return 'Lifecycle changed';
     case 'engagement_state': return 'Engagement changed';
@@ -15,7 +15,9 @@ function eventTypeFor(dimension: string): string {
     case 'care_cadence': return 'Care cadence changed';
     case 'closure_reason': return 'Client closed';
     case 'assignment_clinician': return 'Clinician assigned';
+    case 'at_risk':
     case 'risk_state': return 'Risk state changed';
+    case 'legacy_pat_status': return 'Legacy status changed';
     default: return dimension;
   }
 }
@@ -25,7 +27,8 @@ function rowToEvent(r: AuditRow): AuditEvent {
     id: r.id,
     tenantId: r.tenant_id,
     clientId: r.client_id,
-    eventType: eventTypeFor(r.dimension),
+    eventType: r.dimension,
+    eventLabel: labelFor(r.dimension),
     previousValue: r.from_value ?? null,
     newValue: r.to_value ?? null,
     actor: {

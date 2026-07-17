@@ -102,9 +102,11 @@ Dialog `<EligibilityManualReviewDialog>` on `CanonicalClientDetail` captures rea
 
 - New `<AssignClinicianDialog>` on `CanonicalClientDetail` filters `useStaffList()` to the client's tenant, `Active` status, clinician/staff role, and `availability !== 'Unavailable'`; requires a ≥3-char reason; routes through `dataProvider.clients.assignClinician(id, staffId, reason)` → `crm_assign_clinician` RPC with fresh concurrency token, idempotency key, and contract version. Direct writes to `clients.primary_staff_id` remain forbidden. Server-side `v_crm_eligible_clinicians_for_client` view deferred pending readiness-table exposure — noted in backend delivery request.
 
-## Phase 15 — Journey / Audit display (req §15)
+## Phase 15 — Journey / Audit display (req §15) ✅
 
-- Stabilize on canonical event_type identifier `lifecycle_transitioned` (or the identifier already emitted by `crm_transition_lifecycle` — confirmed in Phase 0). Update `audit.ts` mapper to keep display label separate from event_type. Journey tab filters by event_type, not label. Verify assignment/eligibility/engagement/policy/cadence/close/reopen events all appear.
+- Audit repository now returns a stable `eventType` (the raw `crm_client_state_audit.dimension` — `lifecycle_stage`, `engagement_state`, `eligibility_state`, `contact_policy`, `service_policy`, `care_cadence`, `closure_reason`, `at_risk`, `legacy_pat_status`) and a separate `eventLabel` for display. Filters no longer key off human copy.
+- `CanonicalClientDetail` Journey tab filters by `eventType === 'lifecycle_stage'`; the Audit tab shows `eventLabel` while preserving previous/next values, actor, source, and reason. Clinician assignment / policy / cadence / eligibility events already flow through the same audit stream and appear alongside lifecycle rows.
+- `AuditEvent` domain type updated; mocks and adapters aligned. 86/86 tests pass.
 
 ## Phase 16 — Task management (req §16)
 
