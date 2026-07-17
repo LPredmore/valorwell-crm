@@ -92,6 +92,10 @@ export default function CanonicalClientDetail() {
                   onChange={v => m.updateServicePolicy.mutate({ next: v as ServicePolicy, reason: 'manual' }, { onSuccess: () => toast.success('Service policy updated') })} />
                 <StateRow label="Care Cadence" value={client.careCadence} options={CARE_CADENCES}
                   onChange={v => m.updateCareCadence.mutate(v as CareCadence, { onSuccess: () => toast.success('Cadence updated') })} />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground w-32">Clinician</span>
+                  <div className="flex-1"><AssignClinicianDialog client={client} /></div>
+                </div>
               </CardContent>
             </Card>
 
