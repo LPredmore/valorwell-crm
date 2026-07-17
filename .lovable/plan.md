@@ -81,10 +81,10 @@ Backend migration:
 - UI: replace "Remove Enrollment" destructive delete with Cancel/Archive. Permanent delete removed from operator UI.
 
 
-## Phase 10 — Transition-aware lifecycle controls (req §10)
+## Phase 10 — Transition-aware lifecycle controls (req §10) ✅
 
-- New RPC/view `crm_allowed_lifecycle_transitions(p_client_id)` returning valid next stages + reason-why-not for blocked ones (single source of truth).
-- `CanonicalClientDetail` lifecycle control queries this and renders only allowed transitions. Requires reason. Handles concurrency conflict by refetching.
+- New RPC `crm_allowed_lifecycle_transitions(p_client_id)` returning valid next stages + reason-why-not for blocked ones (single source of truth).
+- `CanonicalClientDetail` lifecycle control queries this RPC via `useAllowedLifecycleTransitions`, renders only allowed transitions (Closed hidden — routed to Phase 11 Close dialog), requires a reason (min 3 chars) in a confirmation dialog, and refetches allowed transitions + client state on `concurrency_conflict`.
 
 ## Phase 11 — Close Client dialog (req §11)
 
