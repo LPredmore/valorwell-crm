@@ -166,10 +166,21 @@ export default function CanonicalClientDetail() {
         </TabsContent>
 
         <TabsContent value="eligibility">
-          <Card><CardContent className="p-4 text-sm space-y-1">
+          <Card><CardContent className="p-4 text-sm space-y-3">
             <Info label="State" value={client.eligibility} />
             <Info label="Payer" value={client.payer ?? '—'} />
             <Info label="Program" value={client.program ?? '—'} />
+            <div className="pt-2 border-t flex items-center justify-between">
+              <div className="text-muted-foreground">
+                {client.eligibility === 'Manual Review'
+                  ? 'Update the manual review owner, next action, or due date.'
+                  : 'Flag this client for manual review with an owner and next action.'}
+              </div>
+              <EligibilityManualReviewDialog
+                clientId={id}
+                triggerLabel={client.eligibility === 'Manual Review' ? 'Update Review' : 'Set Manual Review'}
+              />
+            </div>
           </CardContent></Card>
         </TabsContent>
 
