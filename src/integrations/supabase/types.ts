@@ -11811,6 +11811,551 @@ export type Database = {
           },
         ]
       }
+      relationship_contact_organizations: {
+        Row: {
+          contact_id: string
+          created_at: string
+          is_primary: boolean
+          metadata: Json
+          organization_id: string
+          role_title: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          is_primary?: boolean
+          metadata?: Json
+          organization_id: string
+          role_title?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          is_primary?: boolean
+          metadata?: Json
+          organization_id?: string
+          role_title?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_contact_organizations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_contact_organizations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_contact_organizations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationship_contact_roles: {
+        Row: {
+          contact_id: string
+          created_at: string
+          metadata: Json
+          role_code: string
+          source: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          metadata?: Json
+          role_code: string
+          source?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          metadata?: Json
+          role_code?: string
+          source?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_contact_roles_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_contact_roles_role_code_fkey"
+            columns: ["role_code"]
+            isOneToOne: false
+            referencedRelation: "relationship_role_catalog"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "relationship_contact_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationship_contacts: {
+        Row: {
+          created_at: string
+          do_not_contact: boolean
+          email: string | null
+          first_name: string | null
+          id: string
+          last_contact_at: string | null
+          last_name: string | null
+          metadata: Json
+          next_action: string | null
+          next_action_due_at: string | null
+          outreach_status: string
+          owner_profile_id: string | null
+          phone: string | null
+          preferred_name: string | null
+          profile_id: string | null
+          source: string
+          source_record_key: string | null
+          state: string | null
+          tenant_id: string
+          updated_at: string
+          veteran_affiliation: string
+        }
+        Insert: {
+          created_at?: string
+          do_not_contact?: boolean
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_contact_at?: string | null
+          last_name?: string | null
+          metadata?: Json
+          next_action?: string | null
+          next_action_due_at?: string | null
+          outreach_status?: string
+          owner_profile_id?: string | null
+          phone?: string | null
+          preferred_name?: string | null
+          profile_id?: string | null
+          source?: string
+          source_record_key?: string | null
+          state?: string | null
+          tenant_id: string
+          updated_at?: string
+          veteran_affiliation?: string
+        }
+        Update: {
+          created_at?: string
+          do_not_contact?: boolean
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_contact_at?: string | null
+          last_name?: string | null
+          metadata?: Json
+          next_action?: string | null
+          next_action_due_at?: string | null
+          outreach_status?: string
+          owner_profile_id?: string | null
+          phone?: string | null
+          preferred_name?: string | null
+          profile_id?: string | null
+          source?: string
+          source_record_key?: string | null
+          state?: string | null
+          tenant_id?: string
+          updated_at?: string
+          veteran_affiliation?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_contacts_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "relationship_contacts_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_contacts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "relationship_contacts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationship_influencer_profiles: {
+        Row: {
+          accepted_rules: boolean | null
+          additional_info: string | null
+          avatar_url: string | null
+          comfort_level: string | null
+          contact_id: string
+          created_at: string
+          fundraising_goal: string | null
+          highest_follower_count: number | null
+          highest_follower_platform: string | null
+          is_competing: boolean
+          metadata: Json
+          motivation: string | null
+          past_competitions: Json
+          personal_mission: string | null
+          profile_complete: boolean | null
+          source: string
+          source_record_key: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          veteran_connection: string | null
+          willing_to_share: boolean | null
+        }
+        Insert: {
+          accepted_rules?: boolean | null
+          additional_info?: string | null
+          avatar_url?: string | null
+          comfort_level?: string | null
+          contact_id: string
+          created_at?: string
+          fundraising_goal?: string | null
+          highest_follower_count?: number | null
+          highest_follower_platform?: string | null
+          is_competing?: boolean
+          metadata?: Json
+          motivation?: string | null
+          past_competitions?: Json
+          personal_mission?: string | null
+          profile_complete?: boolean | null
+          source?: string
+          source_record_key?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          veteran_connection?: string | null
+          willing_to_share?: boolean | null
+        }
+        Update: {
+          accepted_rules?: boolean | null
+          additional_info?: string | null
+          avatar_url?: string | null
+          comfort_level?: string | null
+          contact_id?: string
+          created_at?: string
+          fundraising_goal?: string | null
+          highest_follower_count?: number | null
+          highest_follower_platform?: string | null
+          is_competing?: boolean
+          metadata?: Json
+          motivation?: string | null
+          past_competitions?: Json
+          personal_mission?: string | null
+          profile_complete?: boolean | null
+          source?: string
+          source_record_key?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          veteran_connection?: string | null
+          willing_to_share?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_influencer_profiles_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: true
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_influencer_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationship_organization_roles: {
+        Row: {
+          created_at: string
+          metadata: Json
+          organization_id: string
+          role_code: string
+          source: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          metadata?: Json
+          organization_id: string
+          role_code: string
+          source?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          metadata?: Json
+          organization_id?: string
+          role_code?: string
+          source?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_organization_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_organization_roles_role_code_fkey"
+            columns: ["role_code"]
+            isOneToOne: false
+            referencedRelation: "relationship_role_catalog"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "relationship_organization_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationship_organizations: {
+        Row: {
+          created_at: string
+          do_not_contact: boolean
+          id: string
+          last_contact_at: string | null
+          metadata: Json
+          name: string
+          next_action: string | null
+          next_action_due_at: string | null
+          organization_kind: string | null
+          outreach_status: string
+          owner_profile_id: string | null
+          source: string
+          source_record_key: string | null
+          tenant_id: string
+          updated_at: string
+          veteran_affiliated: boolean | null
+          website: string | null
+        }
+        Insert: {
+          created_at?: string
+          do_not_contact?: boolean
+          id?: string
+          last_contact_at?: string | null
+          metadata?: Json
+          name: string
+          next_action?: string | null
+          next_action_due_at?: string | null
+          organization_kind?: string | null
+          outreach_status?: string
+          owner_profile_id?: string | null
+          source?: string
+          source_record_key?: string | null
+          tenant_id: string
+          updated_at?: string
+          veteran_affiliated?: boolean | null
+          website?: string | null
+        }
+        Update: {
+          created_at?: string
+          do_not_contact?: boolean
+          id?: string
+          last_contact_at?: string | null
+          metadata?: Json
+          name?: string
+          next_action?: string | null
+          next_action_due_at?: string | null
+          organization_kind?: string | null
+          outreach_status?: string
+          owner_profile_id?: string | null
+          source?: string
+          source_record_key?: string | null
+          tenant_id?: string
+          updated_at?: string
+          veteran_affiliated?: boolean | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_organizations_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "relationship_organizations_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_organizations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationship_role_catalog: {
+        Row: {
+          applies_to: string
+          code: string
+          created_at: string
+          description: string | null
+          is_active: boolean
+          label: string
+          outreach_lane: string
+          updated_at: string
+        }
+        Insert: {
+          applies_to: string
+          code: string
+          created_at?: string
+          description?: string | null
+          is_active?: boolean
+          label: string
+          outreach_lane: string
+          updated_at?: string
+        }
+        Update: {
+          applies_to?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          is_active?: boolean
+          label?: string
+          outreach_lane?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      relationship_social_profiles: {
+        Row: {
+          approved: boolean | null
+          contact_id: string | null
+          created_at: string
+          follower_count: number | null
+          handle: string | null
+          id: string
+          metadata: Json
+          organization_id: string | null
+          platform_name: string
+          profile_url: string | null
+          source: string
+          source_record_key: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved?: boolean | null
+          contact_id?: string | null
+          created_at?: string
+          follower_count?: number | null
+          handle?: string | null
+          id?: string
+          metadata?: Json
+          organization_id?: string | null
+          platform_name: string
+          profile_url?: string | null
+          source?: string
+          source_record_key?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved?: boolean | null
+          contact_id?: string | null
+          created_at?: string
+          follower_count?: number | null
+          handle?: string | null
+          id?: string
+          metadata?: Json
+          organization_id?: string | null
+          platform_name?: string
+          profile_url?: string | null
+          source?: string
+          source_record_key?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_social_profiles_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_social_profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_social_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_password_remediation_log: {
         Row: {
           had_plaintext: boolean
@@ -14238,6 +14783,151 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: []
+      }
+      website_intake_migration_runs: {
+        Row: {
+          completed_at: string | null
+          counts: Json
+          details: Json
+          id: string
+          migration_key: string
+          source_project_ref: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          counts?: Json
+          details?: Json
+          id?: string
+          migration_key: string
+          source_project_ref: string
+          started_at?: string
+          status: string
+        }
+        Update: {
+          completed_at?: string | null
+          counts?: Json
+          details?: Json
+          id?: string
+          migration_key?: string
+          source_project_ref?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      website_submissions: {
+        Row: {
+          consent: boolean | null
+          contact_id: string | null
+          created_at: string
+          id: string
+          normalized_lane: string
+          organization_id: string | null
+          original_lane: string | null
+          payload: Json
+          provider_applicant_id: string | null
+          source_page: string | null
+          source_record_key: string | null
+          source_system: string
+          status: string
+          subject_contact_id: string | null
+          subject_organization_id: string | null
+          submission_type: string
+          submitted_at: string
+          tenant_id: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          consent?: boolean | null
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          normalized_lane: string
+          organization_id?: string | null
+          original_lane?: string | null
+          payload: Json
+          provider_applicant_id?: string | null
+          source_page?: string | null
+          source_record_key?: string | null
+          source_system?: string
+          status?: string
+          subject_contact_id?: string | null
+          subject_organization_id?: string | null
+          submission_type: string
+          submitted_at?: string
+          tenant_id: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          consent?: boolean | null
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          normalized_lane?: string
+          organization_id?: string | null
+          original_lane?: string | null
+          payload?: Json
+          provider_applicant_id?: string | null
+          source_page?: string | null
+          source_record_key?: string | null
+          source_system?: string
+          status?: string
+          subject_contact_id?: string | null
+          subject_organization_id?: string | null
+          submission_type?: string
+          submitted_at?: string
+          tenant_id?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_submissions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_submissions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_submissions_provider_applicant_id_fkey"
+            columns: ["provider_applicant_id"]
+            isOneToOne: false
+            referencedRelation: "provider_applicants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_submissions_subject_contact_id_fkey"
+            columns: ["subject_contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_submissions_subject_organization_id_fkey"
+            columns: ["subject_organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_submissions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -16899,6 +17589,49 @@ export type Database = {
             }
             Returns: Json
           }
+      website_assign_contact_role: {
+        Args: {
+          p_contact_id: string
+          p_metadata?: Json
+          p_role_code: string
+          p_source: string
+        }
+        Returns: undefined
+      }
+      website_assign_organization_role: {
+        Args: {
+          p_metadata?: Json
+          p_organization_id: string
+          p_role_code: string
+          p_source: string
+        }
+        Returns: undefined
+      }
+      website_intake_tenant_id: { Args: never; Returns: string }
+      website_state_code: {
+        Args: { p_state: string }
+        Returns: Database["public"]["Enums"]["state_code_enum"]
+      }
+      website_upsert_contact: {
+        Args: {
+          p_payload: Json
+          p_source: string
+          p_source_record_key?: string
+        }
+        Returns: string
+      }
+      website_upsert_organization: {
+        Args: {
+          p_kind: string
+          p_metadata?: Json
+          p_name: string
+          p_source: string
+          p_source_record_key?: string
+          p_veteran_affiliated: boolean
+          p_website: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       accept_assign_enum: "Y" | "N"
