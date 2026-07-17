@@ -62,7 +62,7 @@ Rewrite the notes repo/hook:
 - Displays backend reason code with friendly copy map.
 - Blocks send on deny; shows override-not-allowed messaging.
 
-## Phase 7 — Canonical campaign auto-enrollment (req §7)
+## Phase 7 — Canonical campaign auto-enrollment (req §7) ✅
 
 Backend migration:
 - Additive columns on `crm_campaign_triggers`: `trigger_dimension`, `trigger_operator`, `trigger_value`, `trigger_event`, `trigger_version`. Existing rows stay valid.
