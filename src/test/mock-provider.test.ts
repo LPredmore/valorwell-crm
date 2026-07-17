@@ -47,7 +47,7 @@ describe('mock data provider — communication policy', () => {
   it('allows critical operational messages even for DNC clients', async () => {
     const dnc = (await mockDataProvider.clients.list({ contactPolicy: ['Do Not Contact'], pageSize: 1 })).rows[0];
     const res = await mockDataProvider.communications.evaluatePolicy({
-      clientId: dnc.id, channel: 'sms', messageClass: 'critical_operational',
+      clientId: dnc.id, channel: 'sms', messageClass: 'clinical_safety_legal',
     });
     // Only channel restriction (if phone missing) could block; otherwise allowed.
     if (dnc.phone) expect(res.allowed).toBe(true);
