@@ -6171,24 +6171,42 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          is_manual_only: boolean
           tenant_id: string
+          trigger_dimension: string | null
+          trigger_event: string | null
           trigger_on_status: string
+          trigger_operator: string
+          trigger_value: string | null
+          trigger_version: number
         }
         Insert: {
           campaign_id: string
           created_at?: string
           id?: string
           is_active?: boolean
+          is_manual_only?: boolean
           tenant_id: string
+          trigger_dimension?: string | null
+          trigger_event?: string | null
           trigger_on_status: string
+          trigger_operator?: string
+          trigger_value?: string | null
+          trigger_version?: number
         }
         Update: {
           campaign_id?: string
           created_at?: string
           id?: string
           is_active?: boolean
+          is_manual_only?: boolean
           tenant_id?: string
+          trigger_dimension?: string | null
+          trigger_event?: string | null
           trigger_on_status?: string
+          trigger_operator?: string
+          trigger_value?: string | null
+          trigger_version?: number
         }
         Relationships: [
           {
