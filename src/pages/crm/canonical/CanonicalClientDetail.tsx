@@ -7,6 +7,7 @@ import { LifecycleBadge, EngagementBadge, EligibilityBadge, ContactPolicyBadge, 
 import { LifecycleControl } from '@/components/crm/canonical/LifecycleControl';
 import { CloseClientDialog } from '@/components/crm/canonical/CloseClientDialog';
 import { ReopenClientDialog } from '@/components/crm/canonical/ReopenClientDialog';
+import { EligibilityManualReviewDialog } from '@/components/crm/canonical/EligibilityManualReviewDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
