@@ -98,10 +98,9 @@ Reopen action visible only when `lifecycle='Closed'`. Reason required (min 3 cha
 
 Dialog `<EligibilityManualReviewDialog>` on `CanonicalClientDetail` captures reason (min 3), owner, next_action, and review_due_at, and calls `crm_set_eligibility` with a full `p_manual_review` JSON payload. Manual Review is removed from the plain eligibility dropdown so it can only be set via the dialog. Repository enforces the payload requirement — `updateEligibility` throws when `Manual Review` is selected without a `manualReview` object. Eligibility tab shows the current state and offers a Set/Update Review action depending on whether the client is already in Manual Review.
 
-## Phase 14 — Clinician assignment (req §14)
+## Phase 14 — Clinician assignment (req §14) ✅
 
-- Server-side eligible-clinician view `v_crm_eligible_clinicians_for_client(client_id)` scoping to tenant, active, license/state, capacity, pathway/payer readiness (using existing `staff_*` readiness tables read-only).
-- Client detail assignment control uses this view + calls `crm_assign_clinician`. No direct write to `clients.primary_staff_id`.
+- New `<AssignClinicianDialog>` on `CanonicalClientDetail` filters `useStaffList()` to the client's tenant, `Active` status, clinician/staff role, and `availability !== 'Unavailable'`; requires a ≥3-char reason; routes through `dataProvider.clients.assignClinician(id, staffId, reason)` → `crm_assign_clinician` RPC with fresh concurrency token, idempotency key, and contract version. Direct writes to `clients.primary_staff_id` remain forbidden. Server-side `v_crm_eligible_clinicians_for_client` view deferred pending readiness-table exposure — noted in backend delivery request.
 
 ## Phase 15 — Journey / Audit display (req §15)
 
