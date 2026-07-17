@@ -3,6 +3,7 @@ import {
   applyRemove,
   checkSuppression,
   isRemoveMessage,
+  type MessageClass,
 } from "../_shared/suppression.ts";
 
 declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
