@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useCanonicalClient, useClientMutations } from '@/hooks/canonical/useCanonicalClients';
 import { useClientAudit, useClientCommunications } from '@/hooks/canonical/useCrmData';
 import { useTasks } from '@/hooks/canonical/useCrmData';
-import { displayName, LIFECYCLE_STAGES, ENGAGEMENT_STATES, ELIGIBILITY_STATES, CONTACT_POLICIES, SERVICE_POLICIES, CARE_CADENCES, type LifecycleStage, type EngagementState, type EligibilityState, type ContactPolicy, type ServicePolicy, type CareCadence } from '@/domain/canonical';
+import { displayName, ENGAGEMENT_STATES, ELIGIBILITY_STATES, CONTACT_POLICIES, SERVICE_POLICIES, CARE_CADENCES, type EngagementState, type EligibilityState, type ContactPolicy, type ServicePolicy, type CareCadence } from '@/domain/canonical';
 import { LifecycleBadge, EngagementBadge, EligibilityBadge, ContactPolicyBadge, ServicePolicyBadge, AtRiskBadge } from '@/components/crm/canonical/StateBadges';
 import { LifecycleControl } from '@/components/crm/canonical/LifecycleControl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
