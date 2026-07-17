@@ -41,7 +41,7 @@ describe('mock data provider — communication policy', () => {
       clientId: dnc.id, channel: 'sms', messageClass: 'ordinary_campaign_follow_up',
     });
     expect(res.allowed).toBe(false);
-    expect(res.suppressionCode).toBe('DO_NOT_CONTACT');
+    expect(res.suppressionCode).toBe('contact_policy_dnc');
   });
 
   it('allows critical operational messages even for DNC clients', async () => {
