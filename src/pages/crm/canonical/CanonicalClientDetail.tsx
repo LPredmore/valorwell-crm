@@ -78,8 +78,13 @@ export default function CanonicalClientDetail() {
                 </div>
                 <StateRow label="Engagement" value={client.engagement} options={ENGAGEMENT_STATES}
                   onChange={v => m.updateEngagement.mutate(v as EngagementState, { onSuccess: () => toast.success('Engagement updated') })} />
-                <StateRow label="Eligibility" value={client.eligibility} options={ELIGIBILITY_STATES}
+                <StateRow label="Eligibility" value={client.eligibility}
+                  options={ELIGIBILITY_STATES.filter(o => o !== 'Manual Review')}
                   onChange={v => m.updateEligibility.mutate({ next: v as EligibilityState }, { onSuccess: () => toast.success('Eligibility updated') })} />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground w-32">Manual Review</span>
+                  <div className="flex-1"><EligibilityManualReviewDialog clientId={id} /></div>
+                </div>
                 <StateRow label="Contact Policy" value={client.contactPolicy} options={CONTACT_POLICIES}
                   onChange={v => m.updateContactPolicy.mutate({ next: v as ContactPolicy, reason: 'manual' }, { onSuccess: () => toast.success('Contact policy updated') })} />
                 <StateRow label="Service Policy" value={client.servicePolicy} options={SERVICE_POLICIES}
