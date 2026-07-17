@@ -195,7 +195,7 @@ export default function CanonicalClientDetail() {
               {audit.data?.length ? audit.data.map(a => (
                 <div key={a.id} className="p-3 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{a.eventType}</span>
+                    <span className="font-medium">{a.eventLabel}</span>
                     <span className="text-xs text-muted-foreground">{new Date(a.createdAt).toLocaleString()}</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
