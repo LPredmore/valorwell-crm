@@ -184,62 +184,67 @@ export function useEnrollClients() {
 }
 
 
+type EnrollmentAction = 'pause' | 'resume' | 'cancel' | 'responded' | 'restart';
+
+const ACTION_RPC: Record<EnrollmentAction, string> = {
+  pause: 'crm_pause_enrollment',
+  resume: 'crm_resume_enrollment',
+  cancel: 'crm_cancel_enrollment',
+  responded: 'crm_mark_enrollment_responded',
+  restart: 'crm_restart_enrollment',
+};
+
+const ACTION_LABEL: Record<EnrollmentAction, string> = {
+  pause: 'paused',
+  resume: 'resumed',
+  cancel: 'cancelled',
+  responded: 'marked as responded',
+  restart: 'restarted',
+};
+
 /**
- * Update enrollment status (pause, resume, cancel)
+ * Controlled enrollment state transitions. Requires a reason.
+ * Routes through server-side RPCs that enforce tenant checks,
+ * idempotency, audit logging, and cascade-suppression of
+ * scheduled step logs. Destructive delete is no longer exposed.
  */
-export function useUpdateEnrollmentStatus() {
+export function useEnrollmentAction() {
   const queryClient = useQueryClient();
-  const { tenantId } = useCrmAuth();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({
       enrollmentId,
-      status,
-      pauseReason,
+      action,
+      reason,
     }: {
       enrollmentId: string;
-      status: EnrollmentStatus;
-      pauseReason?: string;
-    }): Promise<void> => {
-      if (!tenantId) throw new Error('Not authenticated');
-
-      const updates: Record<string, unknown> = { status };
-      
-      if (status === 'paused') {
-        updates.paused_at = new Date().toISOString();
-        updates.pause_reason = pauseReason || null;
-      } else if (status === 'active') {
-        updates.paused_at = null;
-        updates.pause_reason = null;
-      } else if (status === 'completed' || status === 'cancelled') {
-        updates.completed_at = new Date().toISOString();
-      }
-
-      const { error } = await supabase
-        .from('crm_campaign_enrollments')
-        .update(updates)
-        .eq('id', enrollmentId)
-        .eq('tenant_id', tenantId);
-
+      action: EnrollmentAction;
+      reason: string;
+    }): Promise<Record<string, unknown>> => {
+      const rpc = (supabase as unknown as {
+        rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+      }).rpc;
+      const { data, error } = await rpc(ACTION_RPC[action], {
+        p_enrollment_id: enrollmentId,
+        p_reason: reason,
+        p_idempotency_key: crypto.randomUUID(),
+      });
       if (error) throw error;
+      const result = (data ?? {}) as Record<string, unknown>;
+      if (result.ok === false) {
+        throw new Error(String(result.error_code ?? 'unknown_error'));
+      }
+      return result;
     },
-    onSuccess: (_, { status }) => {
+    onSuccess: (_, { action }) => {
       queryClient.invalidateQueries({ queryKey: ['crm-campaign-enrollments'] });
       queryClient.invalidateQueries({ queryKey: ['crm-campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['crm-client-enrollment'] });
-      
-      const actionMap: Record<EnrollmentStatus, string> = {
-        active: 'resumed',
-        paused: 'paused',
-        cancelled: 'cancelled',
-        completed: 'marked as completed',
-        responded: 'marked as responded',
-      };
-      
+      queryClient.invalidateQueries({ queryKey: ['crm-client-enrollment-history'] });
       toast({
         title: 'Enrollment updated',
-        description: `Enrollment has been ${actionMap[status]}.`,
+        description: `Enrollment has been ${ACTION_LABEL[action]}.`,
       });
     },
     onError: (error) => {
@@ -252,41 +257,3 @@ export function useUpdateEnrollmentStatus() {
   });
 }
 
-/**
- * Remove enrollment entirely
- */
-export function useDeleteEnrollment() {
-  const queryClient = useQueryClient();
-  const { tenantId } = useCrmAuth();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async (enrollmentId: string): Promise<void> => {
-      if (!tenantId) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('crm_campaign_enrollments')
-        .delete()
-        .eq('id', enrollmentId)
-        .eq('tenant_id', tenantId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crm-campaign-enrollments'] });
-      queryClient.invalidateQueries({ queryKey: ['crm-campaigns'] });
-      queryClient.invalidateQueries({ queryKey: ['crm-client-enrollment'] });
-      toast({
-        title: 'Enrollment removed',
-        description: 'The client has been removed from the campaign.',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error removing enrollment',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-}
