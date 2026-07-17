@@ -23,7 +23,7 @@ type BulkSmsRow = Tables<'crm_bulk_sms_recipients'>;
 type ConversationCacheRow = Tables<'crm_conversation_cache'>;
 type ConversationLinkRow = Tables<'crm_conversation_links'>;
 type InboundSmsRow = Tables<'crm_inbound_sms_logs'>;
-type MessageRow = Tables<'messages'>;
+type CrmNoteRow = Tables<'crm_notes'>;
 
 function rowInboundSms(r: InboundSmsRow, tenantId: string): CommunicationMessage {
   return {
