@@ -75,10 +75,11 @@ Backend migration:
 - New RPC `crm_enroll_clients_in_campaign(p_campaign_id, p_client_ids[], p_reason, p_idempotency_key, p_contract_version)` returning `jsonb[]` of per-client results. Transactional: enrollment + first step in one tx; policy-checked; tenant-checked; idempotent.
 - Frontend enrollment UI switches to this RPC. Remove every direct insert into `crm_campaign_enrollments` / `crm_campaign_step_logs` from `src/hooks/crm/*` and `src/repositories/supabase/campaigns.ts`.
 
-## Phase 9 — Controlled enrollment state actions (req §9)
+## Phase 9 — Controlled enrollment state actions (req §9) ✅
 
 - New RPCs: `crm_pause_enrollment`, `crm_resume_enrollment`, `crm_cancel_enrollment`, `crm_mark_enrollment_responded`, `crm_restart_enrollment`. All: tenant-check, reason, idempotency, audit event, cascade-suppress scheduled step logs when appropriate.
 - UI: replace "Remove Enrollment" destructive delete with Cancel/Archive. Permanent delete removed from operator UI.
+
 
 ## Phase 10 — Transition-aware lifecycle controls (req §10)
 
