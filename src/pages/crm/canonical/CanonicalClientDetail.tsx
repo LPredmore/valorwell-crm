@@ -43,9 +43,13 @@ export default function CanonicalClientDetail() {
           </div>
         </div>
         <div className="text-right text-sm text-muted-foreground">
-          <div>{client.email ?? '—'}</div>
-          <div>{client.phone ?? '—'}</div>
-          <div>{client.state ?? '—'} · {client.payer ?? '—'}</div>
+        <div className="flex flex-col items-end gap-2 text-sm text-muted-foreground">
+          <div className="text-right">
+            <div>{client.email ?? '—'}</div>
+            <div>{client.phone ?? '—'}</div>
+            <div>{client.state ?? '—'} · {client.payer ?? '—'}</div>
+          </div>
+          {client.lifecycle !== 'Closed' && <CloseClientDialog clientId={id} />}
         </div>
       </div>
 
