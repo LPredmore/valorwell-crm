@@ -11,8 +11,6 @@ export default function CanonicalInbox() {
   const [composerOpen, setComposerOpen] = useState(false);
   const { data, isLoading } = useMessageThreads(channel);
 
-  const firstClientId = data?.find((m) => m.clientId)?.clientId ?? '';
-
   return (
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
@@ -26,7 +24,7 @@ export default function CanonicalInbox() {
             <Button variant={channel === 'email' ? 'secondary' : 'ghost'} size="sm" onClick={() => setChannel('email')}>Email</Button>
           </div>
           <CrmMutationGate>
-            <Button size="sm" className="gap-2" onClick={() => setComposerOpen(true)} disabled={!firstClientId}>
+            <Button size="sm" className="gap-2" onClick={() => setComposerOpen(true)}>
               <Plus className="h-4 w-4" /> Compose
             </Button>
           </CrmMutationGate>
@@ -48,14 +46,11 @@ export default function CanonicalInbox() {
         ))}
       </Card>
 
-      {firstClientId && (
-        <PolicyAwareComposer
-          open={composerOpen}
-          onOpenChange={setComposerOpen}
-          clientId={firstClientId}
-          defaultChannel={channel}
-        />
-      )}
+      <PolicyAwareComposer
+        open={composerOpen}
+        onOpenChange={setComposerOpen}
+        defaultChannel={channel}
+      />
     </div>
   );
 }
