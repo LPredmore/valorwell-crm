@@ -35,9 +35,17 @@ describe('useReports active-tenant flow', () => {
         <CrmAuthCtx.Provider value={{
           userId: 'user-a',
           tenantId: 'tenant-a',
+          currentTenantId: 'tenant-a',
+          availableTenants: [{ tenant_id: 'tenant-a', crm_role: 'crm_operator' }],
+          crmRole: 'crm_operator',
           role: 'staff',
+          capabilities: { mutate: true, communicate: true, manage_campaigns: true, report: true },
+          contractVersion: 'valorwell-crm-contracts@1.0.1+20260714',
           isLoading: false,
           isAuthenticated: true,
+          needsTenantSelection: false,
+          switchTenant: async () => {},
+          refresh: async () => {},
         }}>
           <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
         </CrmAuthCtx.Provider>
