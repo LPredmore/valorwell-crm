@@ -9,6 +9,9 @@ import { CloseClientDialog } from '@/components/crm/canonical/CloseClientDialog'
 import { ReopenClientDialog } from '@/components/crm/canonical/ReopenClientDialog';
 import { EligibilityManualReviewDialog } from '@/components/crm/canonical/EligibilityManualReviewDialog';
 import { AssignClinicianDialog } from '@/components/crm/canonical/AssignClinicianDialog';
+import { TaskFormDialog } from '@/components/crm/canonical/TaskFormDialog';
+import { useState } from 'react';
+import type { CrmTask } from '@/domain/operations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
