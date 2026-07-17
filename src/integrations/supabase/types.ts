@@ -7224,6 +7224,36 @@ export type Database = {
           },
         ]
       }
+      crm_user_capabilities: {
+        Row: {
+          crm_role: Database["public"]["Enums"]["crm_capability_role"]
+          granted_at: string
+          granted_by: string | null
+          id: string
+          profile_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          crm_role?: Database["public"]["Enums"]["crm_capability_role"]
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          profile_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          crm_role?: Database["public"]["Enums"]["crm_capability_role"]
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          profile_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       data_fields: {
         Row: {
           client_editable_default: boolean
@@ -15548,6 +15578,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      crm_select_operating_tenant: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
       crm_set_care_cadence: {
         Args: {
           p_client_id: string
@@ -15906,6 +15940,7 @@ export type Database = {
               tenant_id: string
             }[]
           }
+      get_crm_operating_context: { Args: never; Returns: Json }
       get_documented_session_status: {
         Args: { p_appointment_id: string }
         Returns: Json
@@ -16938,6 +16973,11 @@ export type Database = {
         | "published"
         | "deprecated"
         | "retired"
+      crm_capability_role:
+        | "crm_admin"
+        | "crm_operator"
+        | "crm_readonly"
+        | "crm_none"
       crm_exception_severity_enum: "low" | "medium" | "high" | "critical"
       crm_exception_status_enum: "open" | "in_review" | "resolved" | "dismissed"
       crm_exception_type_enum:
@@ -17421,6 +17461,12 @@ export const Constants = {
         "published",
         "deprecated",
         "retired",
+      ],
+      crm_capability_role: [
+        "crm_admin",
+        "crm_operator",
+        "crm_readonly",
+        "crm_none",
       ],
       crm_exception_severity_enum: ["low", "medium", "high", "critical"],
       crm_exception_status_enum: ["open", "in_review", "resolved", "dismissed"],

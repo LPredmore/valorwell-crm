@@ -81,12 +81,36 @@ export interface CrmActivityEvent {
   } | null;
 }
 
+export type CrmCapabilityRole = 'crm_admin' | 'crm_operator' | 'crm_readonly' | 'crm_none';
+
+export interface CrmCapabilities {
+  mutate: boolean;
+  communicate: boolean;
+  manage_campaigns: boolean;
+  report: boolean;
+}
+
+export interface CrmAvailableTenant {
+  tenant_id: string;
+  crm_role: CrmCapabilityRole;
+}
+
 export interface CrmAuthContext {
   userId: string;
+  /** Backwards-compat alias for currentTenantId. Empty string when none selected. */
   tenantId: string;
+  currentTenantId: string | null;
+  availableTenants: CrmAvailableTenant[];
+  crmRole: CrmCapabilityRole;
+  /** Legacy shim: 'admin' for crm_admin, otherwise 'staff'. Prefer crmRole/capabilities. */
   role: 'admin' | 'staff';
+  capabilities: CrmCapabilities;
+  contractVersion: string;
   isLoading: boolean;
   isAuthenticated: boolean;
+  needsTenantSelection: boolean;
+  switchTenant: (tenantId: string) => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 export interface ClientFilters {
