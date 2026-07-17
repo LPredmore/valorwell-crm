@@ -3,6 +3,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import type { CommunicationsRepository } from '../types';
 import type { CommunicationMessage, CommunicationPolicyResult } from '@/domain/operations';
 import { supabaseClientsRepository } from './clients';
+import { displayName } from '@/domain/canonical';
 
 /**
  * Supabase-backed communications adapter.
