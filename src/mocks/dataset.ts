@@ -198,8 +198,8 @@ export const mockExceptions: OperationalException[] = Array.from({ length: 24 },
 export const mockAudit: Record<string, AuditEvent[]> = {};
 mockClients.forEach(c => {
   mockAudit[c.id] = [
-    { id: `${c.id}-a1`, tenantId: TENANT, clientId: c.id, eventType: 'lifecycle.transitioned', previousValue: 'Registration', newValue: c.lifecycle, actor: { label: 'System', automated: true }, source: 'lifecycle_engine', createdAt: iso(30) },
-    { id: `${c.id}-a2`, tenantId: TENANT, clientId: c.id, eventType: 'engagement.changed', previousValue: 'Engaged', newValue: c.engagement, actor: { label: 'System', automated: true }, source: 'engagement_engine', createdAt: iso(10) },
+    { id: `${c.id}-a1`, tenantId: TENANT, clientId: c.id, eventType: 'lifecycle_stage', eventLabel: 'Lifecycle changed', previousValue: 'Registration', newValue: c.lifecycle, actor: { label: 'System', automated: true }, source: 'lifecycle_engine', createdAt: iso(30) },
+    { id: `${c.id}-a2`, tenantId: TENANT, clientId: c.id, eventType: 'engagement_state', eventLabel: 'Engagement changed', previousValue: 'Engaged', newValue: c.engagement, actor: { label: 'System', automated: true }, source: 'engagement_engine', createdAt: iso(10) },
   ];
 });
 
