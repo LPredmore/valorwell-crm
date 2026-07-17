@@ -182,10 +182,10 @@ export const mockDataProvider: CrmDataProvider = {
       clients = clients.map(c => clientIds.includes(c.id) ? { ...c, activeCampaignId: campaignId } : c);
       emit(); return created;
     },
-    async pauseEnrollment(id) { const i = enrollments.findIndex(e => e.id === id); enrollments[i] = { ...enrollments[i], status: 'Paused' }; emit(); return enrollments[i]; },
-    async resumeEnrollment(id) { const i = enrollments.findIndex(e => e.id === id); enrollments[i] = { ...enrollments[i], status: 'Active' }; emit(); return enrollments[i]; },
+    async pauseEnrollment(id, _reason) { const i = enrollments.findIndex(e => e.id === id); enrollments[i] = { ...enrollments[i], status: 'Paused' }; emit(); return enrollments[i]; },
+    async resumeEnrollment(id, _reason) { const i = enrollments.findIndex(e => e.id === id); enrollments[i] = { ...enrollments[i], status: 'Active' }; emit(); return enrollments[i]; },
     async cancelEnrollment(id, reason) { const i = enrollments.findIndex(e => e.id === id); enrollments[i] = { ...enrollments[i], status: 'Canceled', exitReason: reason }; emit(); return enrollments[i]; },
-    async restartEnrollment(id) { const i = enrollments.findIndex(e => e.id === id); enrollments[i] = { ...enrollments[i], status: 'Active', currentStepId: 's1', completedSteps: [] }; emit(); return enrollments[i]; },
+    async restartEnrollment(id, _reason) { const i = enrollments.findIndex(e => e.id === id); enrollments[i] = { ...enrollments[i], status: 'Active', currentStepId: 's1', completedSteps: [] }; emit(); return enrollments[i]; },
   },
 
   communications: {
