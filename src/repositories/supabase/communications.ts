@@ -189,31 +189,46 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
     // uses these directly; this adapter path exists so callers routed through
     // the CrmDataProvider can send without knowing the transport.
     if (msg.channel === 'sms') {
+      if (!msg.clientId) throw new Error('clientId is required for SMS send');
       const { data, error } = await supabase.functions.invoke('ringcentral-sms', {
-        body: { clientId: msg.clientId, body: msg.body, campaignId: msg.campaignId },
+        body: {
+          action: 'send-individual',
+          clientId: msg.clientId,
+          body: msg.body,
+          campaignId: msg.campaignId,
+          messageClass: 'necessary_scheduling',
+        },
       });
       if (error) throw new Error(error.message);
+      if (data && typeof data === 'object' && 'error' in data) {
+        throw new Error(String((data as { error: string }).error));
+      }
       return {
         ...msg,
-        id: data?.id ?? `sms-${Date.now()}`,
-        createdAt: new Date().toISOString(),
+        id: `sms-${Date.now()}`,
+        createdAt: (data as { sentAt?: string } | null)?.sentAt ?? new Date().toISOString(),
         status: 'sent',
       };
     }
     if (msg.channel === 'email') {
-      const { data, error } = await supabase.functions.invoke('helpscout-proxy', {
-        body: {
-          action: 'sendEmail',
-          clientId: msg.clientId,
-          subject: msg.subject,
-          body: msg.body,
-          campaignId: msg.campaignId,
+      if (!msg.clientId) throw new Error('clientId is required for email send');
+      if (!msg.subject) throw new Error('subject is required for email send');
+      const { helpscoutApi } = await import('@/lib/crm/helpscout-api');
+      const result = await helpscoutApi<{ success: boolean; conversationId: string | null }>(
+        'create-conversation',
+        {
+          method: 'POST',
+          body: {
+            subject: msg.subject,
+            customerEmail: msg.to,
+            text: msg.body,
+            messageClass: 'ordinary_promotional',
+          },
         },
-      });
-      if (error) throw new Error(error.message);
+      );
       return {
         ...msg,
-        id: data?.id ?? `email-${Date.now()}`,
+        id: result.conversationId ? `email-${result.conversationId}` : `email-${Date.now()}`,
         createdAt: new Date().toISOString(),
         status: 'sent',
       };
