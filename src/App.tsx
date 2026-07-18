@@ -22,6 +22,8 @@ import CanonicalInbox from "./pages/crm/canonical/CanonicalInbox";
 import CanonicalStaff from "./pages/crm/canonical/CanonicalStaff";
 import CanonicalCampaignDetail from "./pages/crm/canonical/CanonicalCampaignDetail";
 import CanonicalSearch from "./pages/crm/canonical/CanonicalSearch";
+import CreatorCommunityInterestQueue from "./pages/crm/canonical/CreatorCommunityInterestQueue";
+import CreatorCommunityInterestDetail from "./pages/crm/canonical/CreatorCommunityInterestDetail";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +52,8 @@ const App = () => (
             <Route path="exceptions" element={<CanonicalExceptions />} />
             <Route path="inbox" element={<CanonicalInbox />} />
             <Route path="reports" element={<CanonicalReports />} />
+            <Route path="creator-community-interest" element={<CreatorCommunityInterestQueue />} />
+            <Route path="creator-community-interest/:id" element={<CreatorCommunityInterestDetail />} />
             <Route path="settings" element={<CrmSettings />} />
             <Route path="canonical" element={<CanonicalDashboard />} />
             <Route path="canonical/clients" element={<CanonicalClients />} />

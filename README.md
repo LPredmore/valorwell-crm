@@ -1,5 +1,9 @@
 # Welcome to your Lovable project
 
+## Creator, promoter, and community interest operations
+
+Billing Hub is the canonical source of record for this relationship-interest workflow. Authorized staff use `/crm/creator-community-interest` to review submissions, correct canonical fields atomically, assign outreach ownership and next actions, manage supported roles, and record internal interaction notes. The workflow never creates application Auth users. See [the operating and rollback guide](docs/creator-community-interest.md).
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID

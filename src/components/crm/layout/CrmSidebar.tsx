@@ -14,6 +14,7 @@ import {
   Sparkles,
   Search,
   Megaphone as MegaphoneIcon,
+  HeartHandshake,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,11 @@ const navItems: NavItem[] = [
     label: 'Reports',
     href: '/crm/reports',
     icon: BarChart3,
+  },
+  {
+    label: 'Creator, Promoter & Community Interest',
+    href: '/crm/creator-community-interest',
+    icon: HeartHandshake,
   },
   {
     label: 'Settings',

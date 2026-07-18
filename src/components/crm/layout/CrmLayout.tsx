@@ -5,7 +5,7 @@ import { CrmAuthProvider } from '@/contexts/CrmAuthContext';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { Loader2 } from 'lucide-react';
 
-function CrmLayoutInner() {
+export function CrmLayoutInner() {
   const { isLoading, isAuthenticated } = useCrmAuth();
 
   if (isLoading) {
