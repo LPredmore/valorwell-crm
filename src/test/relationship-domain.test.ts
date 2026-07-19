@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { approvedSourceLanguage, canTransition, normalizeDomain, parseCsv, relationshipReadModelKinds, type Referral } from '@/domain/relationships/contracts';
+import { approvedSourceLanguage, canTransition, isValidValidationResult, normalizeDomain, parseCsv, relationshipReadModelKinds, type CampaignEligibilityResult, type CommunicationPersonalizationContext, type ImportConflict, type Referral } from '@/domain/relationships/contracts';
 import { relationshipCapabilities } from '@/domain/relationships/capabilities';
 
 describe('relationship domain safety', () => {
@@ -13,6 +13,22 @@ describe('relationship domain safety', () => {
       'communication_log', 'reply', 'suppression', 'unsubscribe_request',
       'report_metric', 'search_result', 'actor_permissions',
     ]));
+  });
+  it('keeps campaign eligibility, import conflicts, and personalization in typed application contracts', () => {
+    const eligibility: CampaignEligibilityResult = { eligible: false, reasons: ['suppressed'], sourceLanguage: 'none' };
+    const conflict: ImportConflict = { row: 4, candidates: [], decision: 'defer' };
+    const context: CommunicationPersonalizationContext = {
+      contactKind: 'role_inbox', contactDisplayName: 'Partnerships team', organizationName: 'Example Org',
+      senderName: 'ValorWell', postalAddress: '123 Main St', unsubscribeUrl: 'https://example.test/unsubscribe', approvedSourceLanguage: 'research',
+    };
+    expect(eligibility.reasons).toContain('suppressed');
+    expect(conflict.decision).toBe('defer');
+    expect(context.contactKind).toBe('role_inbox');
+  });
+  it('only treats a validation result as valid when it has no field or form errors', () => {
+    expect(isValidValidationResult({ valid: true, fieldErrors: {} })).toBe(true);
+    expect(isValidValidationResult({ valid: true, fieldErrors: { name: 'Required' } })).toBe(false);
+    expect(isValidValidationResult({ valid: false, fieldErrors: {} })).toBe(false);
   });
   it('allows only intentional lifecycle transitions', () => {
     expect(canTransition('identified', 'qualified_outreach')).toBe(true);

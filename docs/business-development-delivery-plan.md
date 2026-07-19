@@ -55,8 +55,8 @@ Every pass closes with this audit, recorded in its completion note/PR body:
 
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
-| P02 | BLOCKED | Complete read-model contracts | Typed read models now cover roles, social profiles, affiliations, lifecycle history, referrals, BTY opportunities, interactions, campaigns, enrollments, communication logs, replies, suppressions, unsubscribe requests, reports, search, permissions, audit metadata, and pagination. Completion awaits focused and full-suite verification in the validated Codespaces environment. |
-| P03 | NOT STARTED | Complete input/query contracts | Define create/update inputs, validation results, filters, sorting, duplicate candidates, import conflicts, campaign eligibility, personalization contexts, and execution outcomes. Add pure contract tests. |
+| P02 | COMPLETE | Complete read-model contracts | Typed read models cover roles, social profiles, affiliations, lifecycle history, referrals, BTY opportunities, interactions, campaigns, enrollments, communication logs, replies, suppressions, unsubscribe requests, reports, search, permissions, audit metadata, and pagination. GitHub Codespaces post-merge full-suite and build evidence is recorded below. |
+| P03 | IN PROGRESS | Complete input/query contracts | Create/update inputs, filters, sorting, duplicate candidates, import conflicts, campaign eligibility, personalization contexts, execution outcomes, and pure contract tests are implemented. Completion awaits focused and full-suite verification in GitHub Codespaces. |
 | P04 | NOT STARTED | Relationship repository surface | Expand the dedicated non-clinical repository/service interface to cover every P02/P03 concept. Add compile-time/runtime tests that clinical client and campaign types cannot be used. |
 | P05 | NOT STARTED | Capability detection adapter | Implement one cached, typed capability probe abstraction with explicit missing-contract, permission, network, query, invalid-response, and pending outcomes. It must not query unsupported tables/functions repeatedly. |
 | P06 | NOT STARTED | Capability UI state | Replace generic pending behavior with reusable capability, loading, empty, error, and retry states. Test every backend-failure classification without exposing raw diagnostics to staff. |
@@ -159,7 +159,7 @@ Next pass: P01 — Requirement-to-test traceability. Status: NOT STARTED.
 
 ## P01 record — Requirement-to-test traceability
 
-**Status: BLOCKED (2026-07-19)**
+**Status: COMPLETE (2026-07-19, GitHub Codespaces post-merge evidence)**
 
 `docs/relationship-requirements-traceability.md` maps every requirement area
 to a single primary pass, intended implementation source, required evidence,
@@ -175,16 +175,32 @@ Next pass: P02 — Complete read-model contracts. Status: NOT STARTED.
 
 ## P02 record — Complete read-model contracts
 
-**Status: BLOCKED (2026-07-19)**
+**Status: COMPLETE (2026-07-19, GitHub Codespaces post-merge evidence)**
 
 Expanded only `src/domain/relationships/contracts.ts` with non-clinical
 read-model contracts and a runtime read-model inventory. No repository method,
 Supabase query, UI behavior, database artifact, or write path was added or
 changed. `relationship-domain.test.ts` verifies the required read-model
-inventory remains in the relationship domain. This execution environment
-cannot resolve Vitest from the npm registry: `npx vitest run
-src/test/relationship-domain.test.ts` returned `npm error code E403` for
-`https://registry.npmjs.org/vitest`. P02 cannot be marked complete until the
-focused and full validation commands are rerun in GitHub Codespaces.
+inventory remains in the relationship domain. The P02 work was merged to
+`main` and then validated in GitHub Codespaces: the full Vitest suite passed
+with 21 test files and 106 tests, and the production build completed
+successfully. Existing React Router, Browserslist, dynamic-import, and chunk
+size messages were warnings and did not fail the tests or build.
 
-Next pass: P02 — Complete read-model contracts. Status: BLOCKED.
+The prior restricted-environment `E403` result remains an environment-specific
+limitation; it does not invalidate the successful post-merge Codespaces run.
+
+Next pass: P03 — Complete input/query contracts. Status: NOT STARTED.
+
+## P03 record — Complete input/query contracts
+
+**Status: IN PROGRESS (2026-07-19)**
+
+Expanded only `src/domain/relationships/contracts.ts` and its pure domain test
+with application-side inputs, filters, import decisions, campaign eligibility,
+personalization contexts, execution outcomes, and validation invariants. No
+repository method, Supabase query, UI behavior, database artifact, or write
+path was added or changed. Focused and full-suite GitHub Codespaces validation
+is required before P03 may be marked complete.
+
+Next pass: P03 — Complete input/query contracts. Status: IN PROGRESS.
