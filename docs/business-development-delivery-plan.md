@@ -81,7 +81,7 @@ its gate passes. A bundle failure returns work to the earliest affected pass.
 | P02 | COMPLETE | Complete read-model contracts | Typed read models cover roles, social profiles, affiliations, lifecycle history, referrals, BTY opportunities, interactions, campaigns, enrollments, communication logs, replies, suppressions, unsubscribe requests, reports, search, permissions, audit metadata, and pagination. GitHub Codespaces post-merge full-suite and build evidence is recorded below. |
 | P03 | IMPLEMENTED_PENDING_BUNDLE | Complete input/query contracts | Create/update inputs, filters, sorting, duplicate candidates, import conflicts, campaign eligibility, personalization contexts, execution outcomes, and pure contract tests are implemented. V-A verification is required before completion. |
 | P04 | IMPLEMENTED_PENDING_BUNDLE | Relationship repository surface | The dedicated non-clinical repository/service interface covers P02/P03 concepts with a no-query/no-write unavailable adapter. Compile-time/runtime separation tests are implemented; V-A verification is required before completion. |
-| P05 | NOT STARTED | Capability detection adapter | Implement one cached, typed capability probe abstraction with explicit missing-contract, permission, network, query, invalid-response, and pending outcomes. It must not query unsupported tables/functions repeatedly. |
+| P05 | IMPLEMENTED_PENDING_BUNDLE | Capability detection adapter | A cached, typed capability probe normalizes missing-contract, permission, network, query, invalid-response, and pending outcomes. It does not repeatedly probe unsupported capabilities; V-A verification is required before completion. |
 | P06 | NOT STARTED | Capability UI state | Replace generic pending behavior with reusable capability, loading, empty, error, and retry states. Test every backend-failure classification without exposing raw diagnostics to staff. |
 
 ## Shared CRM shell
@@ -242,3 +242,16 @@ enrollment targets and runtime capability-boundary checks. V-A validation is
 required before P04 may be marked complete.
 
 Next pass: P05 — Capability detection adapter. Status: NOT STARTED.
+
+## P05 record — Capability detection adapter
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-19)**
+
+Added a single cached capability adapter that consumes only the typed
+relationship repository capability surface. It validates capability snapshots,
+classifies probe failures, fills missing capability contracts explicitly, and
+does not issue a per-page database probe. Focused tests cover cache behavior,
+missing contracts, network classification, and intentional invalidation. V-A
+validation is required before P05 may be marked complete.
+
+Next pass: P06 — Capability UI state. Status: NOT STARTED.
