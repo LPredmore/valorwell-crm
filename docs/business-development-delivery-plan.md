@@ -48,7 +48,7 @@ Every pass closes with this audit, recorded in its completion note/PR body:
 
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
-| P00 | BLOCKED | Reproducible validation baseline | `npm ci --legacy-peer-deps --no-audit --no-fund`, lint, application type check, tooling type check, tests, and build all pass using the CI-equivalent commands. Resolve lockfile/package-manager issues if they are repository issues. See the P00 record below. |
+| P00 | COMPLETE | Reproducible validation baseline | `npm ci --legacy-peer-deps --no-audit --no-fund`, lint, application type check, tooling type check, tests, and build all pass using the CI-equivalent commands. Codespaces evidence is recorded below. |
 | P01 | NOT STARTED | Requirement-to-test traceability | Add a checked-in matrix mapping every original requirement to a future pass, source location, and test. Confirm existing clinical and inbound-interest regression suites pass. |
 
 ## Domain and capability foundation
@@ -129,24 +129,30 @@ Next pass: P## — <name>. Status: NOT STARTED.
 
 ## P00 record — Reproducible validation baseline
 
-**Status: BLOCKED (2026-07-19)**
+**Status: COMPLETE (2026-07-19, GitHub Codespaces evidence)**
 
-The CI-equivalent install command was executed:
+The following CI-equivalent command sequence was executed in GitHub Codespaces
+at `/workspaces/valorwell-crm` on the `main` branch (Node `v24.14.0`, npm
+`11.9.0`, registry `https://registry.npmjs.org/`):
 
 ```sh
+rm -rf node_modules
 npm ci --legacy-peer-deps --no-audit --no-fund
+npx eslint src --max-warnings=0
+npx tsc --noEmit --project tsconfig.app.json
+npx tsc --noEmit --project tsconfig.node.json
+npm test
+npm run build
 ```
 
-It left an incomplete dependency tree in this execution environment. The
-follow-up CI lint command failed because `node_modules/@eslint/js` existed as
-an empty directory and could not be imported. A direct registry diagnostic
-returned `npm error code E403` for `npm view @eslint/js@9.32.0 dist.tarball`.
-This is an external registry/proxy access failure, not evidence of a repository
-lockfile defect; no dependency or lockfile changes were made to conceal it.
+`npm ci` installed 573 packages successfully. Lint and both TypeScript checks
+completed without reported errors. Vitest completed with **21 test files and
+106 tests passing**. The production build completed successfully. The build
+reported existing non-fatal Browserslist freshness and chunk-size warnings;
+these warnings did not cause the build to fail.
 
-Because lint cannot load its declared dependency, the application type check,
-tooling type check, tests, and production build have not been claimed as
-passed. No later pass may begin until an environment with approved registry
-access completes the required command sequence.
+This completes P00 for the Codespaces validation environment. The GitHub
+Actions workflow remains the independent Node 22 validation path and must stay
+required; its result must not be claimed until GitHub Actions has run.
 
-Next pass: P00 — Reproducible validation baseline. Status: BLOCKED.
+Next pass: P01 — Requirement-to-test traceability. Status: NOT STARTED.
