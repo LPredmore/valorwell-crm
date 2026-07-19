@@ -30,6 +30,129 @@ export type ContactQuery = { search?: string; kinds?: ContactKind[]; organizatio
 export type DuplicateCandidate = { entity: 'organization' | 'contact'; id: string; score: number; signals: string[] };
 export type ImportPreview = { rows: Array<{ row: number; decision: 'create' | 'update' | 'duplicate' | 'ambiguous' | 'invalid' | 'excluded'; errors: string[]; candidates: DuplicateCandidate[] }>; mapping: Record<string, string>; valid: boolean };
 
+/** P03 application inputs, filters, and outcomes. They contain no database rows. */
+export type DateRange = { from?: string; to?: string };
+export type PageRequest = { page?: number; pageSize?: number };
+export type OrganizationFilters = PageRequest & {
+  search?: string;
+  stages?: RelationshipStage[];
+  reviewStatuses?: string[];
+  outreachStatuses?: string[];
+  organizationTypes?: string[];
+  veteranAffiliation?: boolean;
+  ownerIds?: string[];
+  roleCodes?: string[];
+  initiatives?: string[];
+  states?: string[];
+  hasSocialPresence?: boolean;
+  overdueNextAction?: boolean;
+  doNotContact?: boolean;
+  referralCategories?: string[];
+  opportunityStatuses?: OpportunityStatus[];
+  contacted?: 'recently' | 'never';
+  sortBy?: keyof Organization;
+  sortDirection?: SortDirection;
+};
+export type ContactFilters = PageRequest & {
+  search?: string;
+  organizationIds?: string[];
+  kinds?: ContactKind[];
+  titles?: string[];
+  ownerIds?: string[];
+  stages?: RelationshipStage[];
+  outreachStatuses?: string[];
+  veteranAffiliation?: boolean;
+  doNotContact?: boolean;
+  hasNextAction?: boolean;
+  lastInteraction?: DateRange;
+  sortBy?: keyof RelationshipContact;
+  sortDirection?: SortDirection;
+};
+export type OpportunityFilters = PageRequest & {
+  search?: string;
+  organizationIds?: string[];
+  contactIds?: string[];
+  statuses?: OpportunityStatus[];
+  ownerIds?: string[];
+  veteranPriority?: boolean;
+  causeAreas?: string[];
+  reviewStatuses?: string[];
+  riskFlags?: string[];
+  overdueNextAction?: boolean;
+  referralCategories?: string[];
+  sortBy?: keyof RelationshipOpportunity;
+  sortDirection?: SortDirection;
+};
+export type CampaignFilters = PageRequest & {
+  statuses?: RelationshipCampaignStatus[];
+  ownerIds?: string[];
+  initiatives?: string[];
+  search?: string;
+  sortBy?: keyof RelationshipCampaign;
+  sortDirection?: SortDirection;
+};
+export type InteractionFilters = PageRequest & { types?: InteractionType[]; occurred?: DateRange };
+export type SuppressionFilters = PageRequest & { scopes?: SuppressionScope[]; reasons?: SuppressionReason[]; effective?: DateRange };
+
+export type CreateReferralInput = Omit<Referral, 'id' | keyof AuditMetadata | 'verifiedAt' | 'verifiedBy' | 'revokedAt'>;
+export type UpdateReferralInput = Partial<Omit<CreateReferralInput, 'organizationId' | 'contactId'>>;
+export type VerifyReferralInput = { verified: boolean; disclosure: ReferralDisclosure; verifiedBy: string; verifiedAt: string; notes?: string };
+export type CreateOpportunityInput = Omit<RelationshipOpportunity, 'id' | keyof AuditMetadata>;
+export type UpdateOpportunityInput = Partial<Omit<CreateOpportunityInput, 'organizationId'>>;
+export type CreateInteractionInput = Omit<RelationshipInteraction, 'id' | keyof AuditMetadata>;
+export type CreateCampaignInput = Omit<RelationshipCampaign, 'id' | keyof AuditMetadata | 'enrollmentCount' | 'replyCount' | 'suppressionCount' | 'errorCount'>;
+export type UpdateCampaignInput = Partial<CreateCampaignInput>;
+export type CreateSuppressionInput = Omit<RelationshipSuppression, 'id' | keyof AuditMetadata>;
+export type UpdateSuppressionInput = Partial<Omit<CreateSuppressionInput, 'scope'>>;
+
+export type ImportField =
+  | 'organization_name' | 'website' | 'organization_type' | 'state' | 'veteran_affiliation'
+  | 'contact_name' | 'contact_email' | 'contact_phone' | 'contact_kind' | 'contact_title'
+  | 'source_category' | 'source_summary' | 'social_platform' | 'social_handle' | 'social_url'
+  | 'role_code' | 'bty_status' | 'bty_cause_area' | 'bty_audience_reach';
+export type ImportColumnMapping = Record<string, ImportField | 'ignore'>;
+export type ImportConflictDecision = 'link_organization' | 'link_contact' | 'create_organization' | 'create_contact' | 'exclude' | 'correct_source' | 'defer';
+export type ImportConflict = {
+  row: number;
+  candidates: DuplicateCandidate[];
+  decision?: ImportConflictDecision;
+  selectedCandidateId?: string;
+  note?: string;
+};
+export type ImportPreviewResult = ImportPreview & { conflicts: ImportConflict[]; excludedRows: number[] };
+
+export type CampaignEligibilityReason =
+  | 'missing_email' | 'review_not_approved' | 'opportunity_not_qualified' | 'do_not_contact'
+  | 'suppressed' | 'active_enrollment' | 'previous_response' | 'source_language_not_allowed'
+  | 'campaign_requirement_not_met' | 'capability_pending';
+export type CampaignEligibilityResult = { eligible: boolean; reasons: CampaignEligibilityReason[]; sourceLanguage: SourceLanguageMode };
+export type CommunicationPersonalizationContext = {
+  contactKind: ContactKind;
+  contactFirstName?: string;
+  contactDisplayName: string;
+  organizationName: string;
+  organizationType?: string;
+  realActionSummary?: string;
+  causeArea?: string;
+  opportunityContext?: string;
+  senderName: string;
+  postalAddress: string;
+  unsubscribeUrl: string;
+  approvedSourceLanguage: SourceLanguageMode;
+};
+export type PersonalizationResult = { rendered: string; unresolvedVariables: string[]; blockedClaims: string[] };
+export type CampaignExecutionOutcome = {
+  enrollmentId: string;
+  outcome: 'sent' | 'skipped' | 'stopped' | 'failed';
+  reason?: string;
+  communicationLogId?: string;
+  retryAt?: string;
+};
+
+export function isValidValidationResult(result: ValidationResult) {
+  return result.valid && Object.keys(result.fieldErrors).length === 0 && !result.formError;
+}
+
 /** Read-only relationship records. Write inputs and filters are expanded in P03. */
 export type OrganizationAffiliation = AuditMetadata & {
   id: string;

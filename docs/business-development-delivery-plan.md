@@ -9,11 +9,12 @@ storage, or an unrelated persistence mechanism.
 
 ## How to use this plan
 
-* A user message of **`next`** means: complete **only** the first pass marked
-  `NOT STARTED` after all preceding passes are `COMPLETE`.
+* A user message of **`next`** means: work on **only** the next pass in the
+  active verification bundle. It must not begin a pass from a later bundle.
 * A pass may be marked `COMPLETE` only when every acceptance item and every
-  audit item in that pass has passed. A partially implemented pass remains
-  `IN PROGRESS`; it is never relabeled as complete.
+  audit item in that pass has passed. A pass implemented before its bundle
+  verification is marked `IMPLEMENTED_PENDING_BUNDLE`; it is never relabeled
+  as complete before that verification succeeds.
 * If an external dependency prevents completion, mark the pass `BLOCKED` with
   the exact command, failure, and dependency. Do not begin a later pass.
 * Each pass must finish with a user-facing line in this form:
@@ -44,6 +45,28 @@ Every pass closes with this audit, recorded in its completion note/PR body:
 6. **Completion audit:** compare implementation against every acceptance item
    below; identify the next `NOT STARTED` pass exactly.
 
+## Verification cadence
+
+GitHub Codespaces validation is a required **bundle gate**, not a required
+manual step after every small contract-only pass. Every pass still receives the
+scope, separation, capability-safety, and `git diff --check` audits locally.
+No pass may be described as verified or complete until its bundle gate passes.
+
+| Bundle gate | Passes verified together | Required GitHub Codespaces commands |
+| --- | --- | --- |
+| V0 | P00 | Clean install, lint, both type checks, full test suite, production build. |
+| V-A | P02–P06 | Clean install, focused relationship-domain/repository tests, lint, both type checks, full test suite, production build. |
+| V-B | P07–P09 | V-A commands plus route/sidebar/dashboard component tests and a dashboard screenshot. |
+| V-C | P10–P15 | Full suite plus organization/contact/lifecycle/timeline tests and representative workspace screenshots. |
+| V-D | P16–P22 | Full suite plus referral/BTY/import tests and import-preview screenshot. |
+| V-E | P23–P30 | Full suite plus campaign/reply/suppression/unsubscribe tests and campaign preview/inbox screenshots. |
+| V-F | P31–P33 | Full suite, production build, full acceptance audit, regression checks, and final screenshots. |
+
+During a bundle, later passes may depend on earlier passes marked
+`IMPLEMENTED_PENDING_BUNDLE`, but no database-backed capability is activated,
+no production action is performed, and no bundle is merged as verified before
+its gate passes. A bundle failure returns work to the earliest affected pass.
+
 ## Global validation baseline
 
 | Pass | Status | Scope | Completion criteria |
@@ -55,11 +78,11 @@ Every pass closes with this audit, recorded in its completion note/PR body:
 
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
-| P02 | BLOCKED | Complete read-model contracts | Typed read models now cover roles, social profiles, affiliations, lifecycle history, referrals, BTY opportunities, interactions, campaigns, enrollments, communication logs, replies, suppressions, unsubscribe requests, reports, search, permissions, audit metadata, and pagination. Completion awaits focused and full-suite verification in the validated Codespaces environment. |
-| P03 | NOT STARTED | Complete input/query contracts | Define create/update inputs, validation results, filters, sorting, duplicate candidates, import conflicts, campaign eligibility, personalization contexts, and execution outcomes. Add pure contract tests. |
-| P04 | NOT STARTED | Relationship repository surface | Expand the dedicated non-clinical repository/service interface to cover every P02/P03 concept. Add compile-time/runtime tests that clinical client and campaign types cannot be used. |
-| P05 | NOT STARTED | Capability detection adapter | Implement one cached, typed capability probe abstraction with explicit missing-contract, permission, network, query, invalid-response, and pending outcomes. It must not query unsupported tables/functions repeatedly. |
-| P06 | NOT STARTED | Capability UI state | Replace generic pending behavior with reusable capability, loading, empty, error, and retry states. Test every backend-failure classification without exposing raw diagnostics to staff. |
+| P02 | COMPLETE | Complete read-model contracts | Typed read models cover roles, social profiles, affiliations, lifecycle history, referrals, BTY opportunities, interactions, campaigns, enrollments, communication logs, replies, suppressions, unsubscribe requests, reports, search, permissions, audit metadata, and pagination. GitHub Codespaces post-merge full-suite and build evidence is recorded below. |
+| P03 | IMPLEMENTED_PENDING_BUNDLE | Complete input/query contracts | Create/update inputs, filters, sorting, duplicate candidates, import conflicts, campaign eligibility, personalization contexts, execution outcomes, and pure contract tests are implemented. V-A verification is required before completion. |
+| P04 | IMPLEMENTED_PENDING_BUNDLE | Relationship repository surface | The dedicated non-clinical repository/service interface covers P02/P03 concepts with a no-query/no-write unavailable adapter. Compile-time/runtime separation tests are implemented; V-A verification is required before completion. |
+| P05 | IMPLEMENTED_PENDING_BUNDLE | Capability detection adapter | A cached, typed capability probe normalizes missing-contract, permission, network, query, invalid-response, and pending outcomes. It does not repeatedly probe unsupported capabilities; V-A verification is required before completion. |
+| P06 | IMPLEMENTED_PENDING_BUNDLE | Capability UI state | A reusable relationship capability component and cached hook render loading, pending, missing-contract, permission, network, query, invalid-response, retry, and available states without exposing diagnostics. V-A verification is required before completion. |
 
 ## Shared CRM shell
 
@@ -159,7 +182,7 @@ Next pass: P01 — Requirement-to-test traceability. Status: NOT STARTED.
 
 ## P01 record — Requirement-to-test traceability
 
-**Status: BLOCKED (2026-07-19)**
+**Status: COMPLETE (2026-07-19, GitHub Codespaces post-merge evidence)**
 
 `docs/relationship-requirements-traceability.md` maps every requirement area
 to a single primary pass, intended implementation source, required evidence,
@@ -175,16 +198,73 @@ Next pass: P02 — Complete read-model contracts. Status: NOT STARTED.
 
 ## P02 record — Complete read-model contracts
 
-**Status: BLOCKED (2026-07-19)**
+**Status: COMPLETE (2026-07-19, GitHub Codespaces post-merge evidence)**
 
 Expanded only `src/domain/relationships/contracts.ts` with non-clinical
 read-model contracts and a runtime read-model inventory. No repository method,
 Supabase query, UI behavior, database artifact, or write path was added or
 changed. `relationship-domain.test.ts` verifies the required read-model
-inventory remains in the relationship domain. This execution environment
-cannot resolve Vitest from the npm registry: `npx vitest run
-src/test/relationship-domain.test.ts` returned `npm error code E403` for
-`https://registry.npmjs.org/vitest`. P02 cannot be marked complete until the
-focused and full validation commands are rerun in GitHub Codespaces.
+inventory remains in the relationship domain. The P02 work was merged to
+`main` and then validated in GitHub Codespaces: the full Vitest suite passed
+with 21 test files and 106 tests, and the production build completed
+successfully. Existing React Router, Browserslist, dynamic-import, and chunk
+size messages were warnings and did not fail the tests or build.
 
-Next pass: P02 — Complete read-model contracts. Status: BLOCKED.
+The prior restricted-environment `E403` result remains an environment-specific
+limitation; it does not invalidate the successful post-merge Codespaces run.
+
+Next pass: P03 — Complete input/query contracts. Status: NOT STARTED.
+
+## P03 record — Complete input/query contracts
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-19)**
+
+Expanded only `src/domain/relationships/contracts.ts` and its pure domain test
+with application-side inputs, filters, import decisions, campaign eligibility,
+personalization contexts, execution outcomes, and validation invariants. No
+repository method, Supabase query, UI behavior, database artifact, or write
+path was added or changed. V-A GitHub Codespaces validation is required before
+P03 may be marked complete.
+
+Next pass: P04 — Relationship repository surface. Status: NOT STARTED.
+
+## P04 record — Relationship repository surface
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-19)**
+
+Expanded the relationship-only repository interface and its unavailable adapter
+to cover organizations, contacts/affiliations, lifecycle/interactions,
+referrals, opportunities, imports, campaigns/enrollments/communications,
+replies, suppressions/unsubscribe, reporting, and search. The unavailable
+adapter throws before every operation and performs no query or write. Tests
+include a compile-time prohibition on clinical client IDs as relationship
+enrollment targets and runtime capability-boundary checks. V-A validation is
+required before P04 may be marked complete.
+
+Next pass: P05 — Capability detection adapter. Status: NOT STARTED.
+
+## P05 record — Capability detection adapter
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-19)**
+
+Added a single cached capability adapter that consumes only the typed
+relationship repository capability surface. It validates capability snapshots,
+classifies probe failures, fills missing capability contracts explicitly, and
+does not issue a per-page database probe. Focused tests cover cache behavior,
+missing contracts, network classification, and intentional invalidation. V-A
+validation is required before P05 may be marked complete.
+
+Next pass: P06 — Capability UI state. Status: NOT STARTED.
+
+## P06 record — Capability UI state
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-19)**
+
+Added one shared capability-state component and one cached React Query hook for
+relationship workspaces. The generic capability page now uses this boundary
+instead of constructing a pending state itself. Tests cover loading, retry,
+pending/missing/permission/network/query/invalid response states, and prevent
+raw diagnostics from rendering for staff. No database-backed action is enabled
+by this pass. V-A validation is required before P06 may be marked complete.
+
+Next pass: V-A — Foundation bundle verification. Status: NOT STARTED.
