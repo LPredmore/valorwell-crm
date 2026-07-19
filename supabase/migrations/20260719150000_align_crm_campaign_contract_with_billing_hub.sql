@@ -62,11 +62,15 @@ security definer
 set search_path to 'public'
 as $function$
 declare
-  v_campaign record;
-  v_first_step record;
   v_actor uuid := auth.uid();
+  v_campaign_tenant_id uuid;
+  v_campaign_is_active boolean;
+  v_first_step_id uuid;
+  v_first_step_delay_days integer;
+  v_first_step_delay_hours integer;
+  v_first_step_channel text;
   v_client_id uuid;
-  v_client record;
+  v_client_tenant_id uuid;
   v_existing uuid;
   v_enrollment_id uuid;
   v_scheduled timestamptz;
@@ -81,12 +85,12 @@ begin
     raise exception 'unauthorized' using errcode = '42501';
   end if;
 
-  select id, tenant_id, is_active
-    into v_campaign
+  select tenant_id, is_active
+    into v_campaign_tenant_id, v_campaign_is_active
     from public.crm_campaigns
    where id = p_campaign_id;
 
-  if v_campaign.id is null then
+  if not found then
     raise exception 'campaign_not_found' using errcode = 'P0002';
   end if;
 
@@ -94,7 +98,7 @@ begin
     select 1
       from public.tenant_memberships
      where user_id = v_actor
-       and tenant_id = v_campaign.tenant_id
+       and tenant_id = v_campaign_tenant_id
   ) then
     raise exception 'unauthorized_tenant' using errcode = '42501';
   end if;
@@ -102,7 +106,7 @@ begin
   v_cached := public._crm_idempotency_claim(
     v_idempotency_key,
     'crm_enroll_clients_in_campaign',
-    v_campaign.tenant_id,
+    v_campaign_tenant_id,
     p_campaign_id
   );
 
@@ -111,27 +115,30 @@ begin
   end if;
 
   select id, delay_days, delay_hours, channel
-    into v_first_step
+    into v_first_step_id,
+         v_first_step_delay_days,
+         v_first_step_delay_hours,
+         v_first_step_channel
     from public.crm_campaign_steps
    where campaign_id = p_campaign_id
      and is_active = true
    order by step_order
    limit 1;
 
-  v_first_channel := coalesce(v_first_step.channel, 'email');
+  v_first_channel := coalesce(v_first_step_channel, 'email');
 
   foreach v_client_id in array coalesce(p_client_ids, array[]::uuid[])
   loop
-    v_client := null;
+    v_client_tenant_id := null;
     v_existing := null;
     v_enrollment_id := null;
 
-    select id, tenant_id
-      into v_client
+    select tenant_id
+      into v_client_tenant_id
       from public.clients
      where id = v_client_id;
 
-    if v_client.id is null or v_client.tenant_id <> v_campaign.tenant_id then
+    if not found or v_client_tenant_id <> v_campaign_tenant_id then
       v_results := v_results || jsonb_build_object(
         'client_id', v_client_id,
         'status', 'skipped',
@@ -140,7 +147,7 @@ begin
       continue;
     end if;
 
-    if v_campaign.is_active = false then
+    if v_campaign_is_active = false then
       v_results := v_results || jsonb_build_object(
         'client_id', v_client_id,
         'status', 'skipped',
@@ -172,7 +179,7 @@ begin
     select id
       into v_existing
       from public.crm_campaign_enrollments
-     where tenant_id = v_campaign.tenant_id
+     where tenant_id = v_campaign_tenant_id
        and client_id = v_client_id
        and status = 'active'
      limit 1;
@@ -214,7 +221,7 @@ begin
     values (
       p_campaign_id,
       v_client_id,
-      v_campaign.tenant_id,
+      v_campaign_tenant_id,
       0,
       'active',
       now(),
@@ -222,10 +229,10 @@ begin
     )
     returning id into v_enrollment_id;
 
-    if v_first_step.id is not null then
+    if v_first_step_id is not null then
       v_scheduled := now()
-        + make_interval(days => coalesce(v_first_step.delay_days, 0))
-        + make_interval(hours => coalesce(v_first_step.delay_hours, 0));
+        + make_interval(days => coalesce(v_first_step_delay_days, 0))
+        + make_interval(hours => coalesce(v_first_step_delay_hours, 0));
 
       insert into public.crm_campaign_step_logs (
         enrollment_id,
@@ -238,12 +245,12 @@ begin
       )
       values (
         v_enrollment_id,
-        v_first_step.id,
-        v_campaign.tenant_id,
+        v_first_step_id,
+        v_campaign_tenant_id,
         v_client_id,
         v_scheduled,
         'scheduled',
-        v_first_step.channel
+        v_first_step_channel
       );
     end if;
 
@@ -256,7 +263,7 @@ begin
       created_by_profile_id
     )
     values (
-      v_campaign.tenant_id,
+      v_campaign_tenant_id,
       v_client_id,
       'campaign_enrolled',
       p_campaign_id::text,
@@ -285,15 +292,6 @@ begin
   );
 
   return v_results;
-exception
-  when others then
-    if v_idempotency_key is not null then
-      delete from public.crm_idempotency_keys
-       where key = v_idempotency_key
-         and operation = 'crm_enroll_clients_in_campaign'
-         and status = 'in_flight';
-    end if;
-    raise;
 end;
 $function$;
 
