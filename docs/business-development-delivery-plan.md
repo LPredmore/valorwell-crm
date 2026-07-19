@@ -82,7 +82,7 @@ its gate passes. A bundle failure returns work to the earliest affected pass.
 | P03 | IMPLEMENTED_PENDING_BUNDLE | Complete input/query contracts | Create/update inputs, filters, sorting, duplicate candidates, import conflicts, campaign eligibility, personalization contexts, execution outcomes, and pure contract tests are implemented. V-A verification is required before completion. |
 | P04 | IMPLEMENTED_PENDING_BUNDLE | Relationship repository surface | The dedicated non-clinical repository/service interface covers P02/P03 concepts with a no-query/no-write unavailable adapter. Compile-time/runtime separation tests are implemented; V-A verification is required before completion. |
 | P05 | IMPLEMENTED_PENDING_BUNDLE | Capability detection adapter | A cached, typed capability probe normalizes missing-contract, permission, network, query, invalid-response, and pending outcomes. It does not repeatedly probe unsupported capabilities; V-A verification is required before completion. |
-| P06 | NOT STARTED | Capability UI state | Replace generic pending behavior with reusable capability, loading, empty, error, and retry states. Test every backend-failure classification without exposing raw diagnostics to staff. |
+| P06 | IMPLEMENTED_PENDING_BUNDLE | Capability UI state | A reusable relationship capability component and cached hook render loading, pending, missing-contract, permission, network, query, invalid-response, retry, and available states without exposing diagnostics. V-A verification is required before completion. |
 
 ## Shared CRM shell
 
@@ -255,3 +255,16 @@ missing contracts, network classification, and intentional invalidation. V-A
 validation is required before P05 may be marked complete.
 
 Next pass: P06 — Capability UI state. Status: NOT STARTED.
+
+## P06 record — Capability UI state
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-19)**
+
+Added one shared capability-state component and one cached React Query hook for
+relationship workspaces. The generic capability page now uses this boundary
+instead of constructing a pending state itself. Tests cover loading, retry,
+pending/missing/permission/network/query/invalid response states, and prevent
+raw diagnostics from rendering for staff. No database-backed action is enabled
+by this pass. V-A validation is required before P06 may be marked complete.
+
+Next pass: V-A — Foundation bundle verification. Status: NOT STARTED.
