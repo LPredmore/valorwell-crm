@@ -9,11 +9,12 @@ storage, or an unrelated persistence mechanism.
 
 ## How to use this plan
 
-* A user message of **`next`** means: complete **only** the first pass marked
-  `NOT STARTED` after all preceding passes are `COMPLETE`.
+* A user message of **`next`** means: work on **only** the next pass in the
+  active verification bundle. It must not begin a pass from a later bundle.
 * A pass may be marked `COMPLETE` only when every acceptance item and every
-  audit item in that pass has passed. A partially implemented pass remains
-  `IN PROGRESS`; it is never relabeled as complete.
+  audit item in that pass has passed. A pass implemented before its bundle
+  verification is marked `IMPLEMENTED_PENDING_BUNDLE`; it is never relabeled
+  as complete before that verification succeeds.
 * If an external dependency prevents completion, mark the pass `BLOCKED` with
   the exact command, failure, and dependency. Do not begin a later pass.
 * Each pass must finish with a user-facing line in this form:
@@ -44,6 +45,28 @@ Every pass closes with this audit, recorded in its completion note/PR body:
 6. **Completion audit:** compare implementation against every acceptance item
    below; identify the next `NOT STARTED` pass exactly.
 
+## Verification cadence
+
+GitHub Codespaces validation is a required **bundle gate**, not a required
+manual step after every small contract-only pass. Every pass still receives the
+scope, separation, capability-safety, and `git diff --check` audits locally.
+No pass may be described as verified or complete until its bundle gate passes.
+
+| Bundle gate | Passes verified together | Required GitHub Codespaces commands |
+| --- | --- | --- |
+| V0 | P00 | Clean install, lint, both type checks, full test suite, production build. |
+| V-A | P02–P06 | Clean install, focused relationship-domain/repository tests, lint, both type checks, full test suite, production build. |
+| V-B | P07–P09 | V-A commands plus route/sidebar/dashboard component tests and a dashboard screenshot. |
+| V-C | P10–P15 | Full suite plus organization/contact/lifecycle/timeline tests and representative workspace screenshots. |
+| V-D | P16–P22 | Full suite plus referral/BTY/import tests and import-preview screenshot. |
+| V-E | P23–P30 | Full suite plus campaign/reply/suppression/unsubscribe tests and campaign preview/inbox screenshots. |
+| V-F | P31–P33 | Full suite, production build, full acceptance audit, regression checks, and final screenshots. |
+
+During a bundle, later passes may depend on earlier passes marked
+`IMPLEMENTED_PENDING_BUNDLE`, but no database-backed capability is activated,
+no production action is performed, and no bundle is merged as verified before
+its gate passes. A bundle failure returns work to the earliest affected pass.
+
 ## Global validation baseline
 
 | Pass | Status | Scope | Completion criteria |
@@ -56,7 +79,7 @@ Every pass closes with this audit, recorded in its completion note/PR body:
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
 | P02 | COMPLETE | Complete read-model contracts | Typed read models cover roles, social profiles, affiliations, lifecycle history, referrals, BTY opportunities, interactions, campaigns, enrollments, communication logs, replies, suppressions, unsubscribe requests, reports, search, permissions, audit metadata, and pagination. GitHub Codespaces post-merge full-suite and build evidence is recorded below. |
-| P03 | IN PROGRESS | Complete input/query contracts | Create/update inputs, filters, sorting, duplicate candidates, import conflicts, campaign eligibility, personalization contexts, execution outcomes, and pure contract tests are implemented. Completion awaits focused and full-suite verification in GitHub Codespaces. |
+| P03 | IMPLEMENTED_PENDING_BUNDLE | Complete input/query contracts | Create/update inputs, filters, sorting, duplicate candidates, import conflicts, campaign eligibility, personalization contexts, execution outcomes, and pure contract tests are implemented. V-A verification is required before completion. |
 | P04 | NOT STARTED | Relationship repository surface | Expand the dedicated non-clinical repository/service interface to cover every P02/P03 concept. Add compile-time/runtime tests that clinical client and campaign types cannot be used. |
 | P05 | NOT STARTED | Capability detection adapter | Implement one cached, typed capability probe abstraction with explicit missing-contract, permission, network, query, invalid-response, and pending outcomes. It must not query unsupported tables/functions repeatedly. |
 | P06 | NOT STARTED | Capability UI state | Replace generic pending behavior with reusable capability, loading, empty, error, and retry states. Test every backend-failure classification without exposing raw diagnostics to staff. |
@@ -194,13 +217,13 @@ Next pass: P03 — Complete input/query contracts. Status: NOT STARTED.
 
 ## P03 record — Complete input/query contracts
 
-**Status: IN PROGRESS (2026-07-19)**
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-19)**
 
 Expanded only `src/domain/relationships/contracts.ts` and its pure domain test
 with application-side inputs, filters, import decisions, campaign eligibility,
 personalization contexts, execution outcomes, and validation invariants. No
 repository method, Supabase query, UI behavior, database artifact, or write
-path was added or changed. Focused and full-suite GitHub Codespaces validation
-is required before P03 may be marked complete.
+path was added or changed. V-A GitHub Codespaces validation is required before
+P03 may be marked complete.
 
-Next pass: P03 — Complete input/query contracts. Status: IN PROGRESS.
+Next pass: P04 — Relationship repository surface. Status: NOT STARTED.
