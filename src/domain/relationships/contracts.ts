@@ -30,6 +30,161 @@ export type ContactQuery = { search?: string; kinds?: ContactKind[]; organizatio
 export type DuplicateCandidate = { entity: 'organization' | 'contact'; id: string; score: number; signals: string[] };
 export type ImportPreview = { rows: Array<{ row: number; decision: 'create' | 'update' | 'duplicate' | 'ambiguous' | 'invalid' | 'excluded'; errors: string[]; candidates: DuplicateCandidate[] }>; mapping: Record<string, string>; valid: boolean };
 
+/** Read-only relationship records. Write inputs and filters are expanded in P03. */
+export type OrganizationAffiliation = AuditMetadata & {
+  id: string;
+  contactId: string;
+  organizationId: string;
+  title?: string;
+  isPrimary: boolean;
+  startedAt?: string;
+  endedAt?: string;
+};
+export type RelationshipStageHistory = AuditMetadata & {
+  id: string;
+  organizationId?: string;
+  contactId?: string;
+  from?: RelationshipStage;
+  to: RelationshipStage;
+  changedAt: string;
+  reason?: string;
+};
+export type RelationshipCampaignStatus = 'draft' | 'active' | 'paused' | 'completed' | 'archived';
+export type RelationshipCampaignStep = {
+  id: string;
+  position: number;
+  subjectTemplate: string;
+  bodyTemplate: string;
+  delayDays: number;
+  stopOnReply: boolean;
+};
+export type RelationshipCampaign = AuditMetadata & {
+  id: string;
+  name: string;
+  purpose: string;
+  initiative?: string;
+  ownerId?: string;
+  senderName: string;
+  senderEmail: string;
+  status: RelationshipCampaignStatus;
+  steps: RelationshipCampaignStep[];
+  enrollmentCount: number;
+  replyCount: number;
+  suppressionCount: number;
+  errorCount: number;
+};
+export type RelationshipEnrollmentStatus = 'pending' | 'active' | 'paused' | 'responded' | 'stopped' | 'completed' | 'failed' | 'suppressed';
+export type RelationshipEnrollment = AuditMetadata & {
+  id: string;
+  campaignId: string;
+  organizationId?: string;
+  contactId?: string;
+  opportunityId?: string;
+  status: RelationshipEnrollmentStatus;
+  currentStepPosition?: number;
+  nextScheduledAt?: string;
+  stoppedReason?: string;
+  respondedAt?: string;
+};
+export type RelationshipCommunicationStatus = 'scheduled' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received';
+export type RelationshipCommunicationLog = AuditMetadata & {
+  id: string;
+  enrollmentId?: string;
+  organizationId?: string;
+  contactId?: string;
+  direction: 'outbound' | 'inbound';
+  channel: 'email';
+  status: RelationshipCommunicationStatus;
+  subject?: string;
+  renderedBody?: string;
+  providerMessageId?: string;
+  occurredAt: string;
+};
+export type RelationshipReply = AuditMetadata & {
+  id: string;
+  communicationLogId: string;
+  enrollmentId?: string;
+  organizationId?: string;
+  contactId?: string;
+  ownerId?: string;
+  receivedAt: string;
+  body: string;
+  status: 'new' | 'needs_action' | 'in_progress' | 'resolved';
+  followUpDueAt?: string;
+};
+export type SuppressionScope = 'global' | 'organization' | 'contact' | 'email' | 'campaign';
+export type SuppressionReason = 'manual' | 'unsubscribe' | 'do_not_contact' | 'invalid_address' | 'bounce' | 'complaint' | 'campaign_stop';
+export type RelationshipSuppression = AuditMetadata & {
+  id: string;
+  scope: SuppressionScope;
+  reason: SuppressionReason;
+  organizationId?: string;
+  contactId?: string;
+  campaignId?: string;
+  email?: string;
+  effectiveAt: string;
+  expiresAt?: string;
+};
+export type RelationshipUnsubscribeRequest = AuditMetadata & {
+  id: string;
+  tokenId: string;
+  email?: string;
+  processedAt?: string;
+  suppressionId?: string;
+  outcome: 'pending' | 'unsubscribed' | 'already_unsubscribed' | 'invalid_token';
+};
+export type RelationshipReportMetric = {
+  key: string;
+  label: string;
+  value?: number;
+  unavailableReason?: string;
+  periodStart?: string;
+  periodEnd?: string;
+};
+export type RelationshipSearchResult = {
+  id: string;
+  kind: 'organization' | 'contact' | 'opportunity' | 'campaign';
+  label: string;
+  detail?: string;
+  route: string;
+};
+export type RelationshipPermission =
+  | 'view_relationships'
+  | 'edit_organizations'
+  | 'manage_contacts'
+  | 'verify_referrals'
+  | 'review_opportunities'
+  | 'import_organizations'
+  | 'create_campaigns'
+  | 'activate_campaigns'
+  | 'enroll_relationships'
+  | 'view_replies'
+  | 'apply_suppressions'
+  | 'view_sensitive_sources';
+export type RelationshipActorPermissions = { actorId: string; permissions: RelationshipPermission[] };
+
+/** Runtime inventory used by contract tests and documentation tooling. */
+export const relationshipReadModelKinds = [
+  'organization',
+  'organization_role',
+  'social_profile',
+  'contact',
+  'organization_affiliation',
+  'stage_history',
+  'referral',
+  'opportunity',
+  'interaction',
+  'campaign',
+  'enrollment',
+  'communication_log',
+  'reply',
+  'suppression',
+  'unsubscribe_request',
+  'report_metric',
+  'search_result',
+  'actor_permissions',
+] as const;
+
 const transitions: Record<RelationshipStage, RelationshipStage[]> = { identified: ['qualified_outreach', 'nurture', 'closed_no_fit', 'inactive'], qualified_outreach: ['contacted', 'nurture', 'closed_no_fit'], contacted: ['engaged', 'discovery', 'nurture', 'closed_no_fit'], engaged: ['discovery', 'next_step_agreed', 'nurture', 'inactive'], discovery: ['next_step_agreed', 'active', 'nurture', 'closed_no_fit'], next_step_agreed: ['active', 'nurture', 'closed_no_fit'], active: ['nurture', 'inactive'], nurture: ['qualified_outreach', 'contacted', 'closed_no_fit', 'inactive'], closed_no_fit: ['identified'], inactive: ['identified', 'nurture'] };
 export function canTransition(from: RelationshipStage, to: RelationshipStage) { return transitions[from].includes(to); }
 export function approvedSourceLanguage(referral?: Referral): SourceLanguageMode { if (!referral) return 'research'; if (!referral.verified || referral.revokedAt || referral.disclosure === 'internal' || referral.disclosure === 'compliance_review') return 'none'; if (referral.disclosure === 'named_referrer' && referral.namedReferrer) return 'verified_named'; return referral.disclosure === 'community_anonymous' ? 'verified_anonymous' : 'community'; }
