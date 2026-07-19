@@ -12,6 +12,8 @@ import CrmSettings from "./pages/crm/Settings";
 import CrmCampaignEditor from "./pages/crm/CampaignEditor";
 import CrmCampaignEnrollments from "./pages/crm/CampaignEnrollments";
 import BusinessDevelopmentArchitecture from "./pages/crm/BusinessDevelopmentArchitecture";
+import BusinessDevelopmentDashboard from "./pages/crm/business-development/BusinessDevelopmentDashboard";
+import { CapabilityPage } from "./pages/crm/business-development/CapabilityPage";
 import CanonicalDashboard from "./pages/crm/canonical/CanonicalDashboard";
 import CanonicalClients from "./pages/crm/canonical/CanonicalClients";
 import CanonicalClientDetail from "./pages/crm/canonical/CanonicalClientDetail";
@@ -53,7 +55,16 @@ const App = () => (
             <Route path="exceptions" element={<CanonicalExceptions />} />
             <Route path="inbox" element={<CanonicalInbox />} />
             <Route path="reports" element={<CanonicalReports />} />
-            <Route path="business-development" element={<BusinessDevelopmentArchitecture />} />
+            <Route path="business-development" element={<BusinessDevelopmentDashboard />} />
+            <Route path="business-development/status" element={<BusinessDevelopmentArchitecture />} />
+            <Route path="business-development/organizations" element={<CapabilityPage title="Organizations" capability="organizations" description="Search, review, and manage organization relationships." />} />
+            <Route path="business-development/contacts" element={<CapabilityPage title="Relationship contacts" capability="contacts" description="Manage named people and role-based organizational inboxes." />} />
+            <Route path="business-development/opportunities" element={<CapabilityPage title="BTY opportunities" capability="opportunities" description="Qualify Beyond The Yellow opportunities and intentional next steps." />} />
+            <Route path="business-development/imports" element={<CapabilityPage title="Organization imports" capability="imports" description="Preview CSV mappings, normalization, duplicates, and conflicts before write operations." />} />
+            <Route path="business-development/campaigns" element={<CapabilityPage title="Relationship campaigns" capability="campaigns" description="Relationship-only campaigns; clinical campaign infrastructure is never used." />} />
+            <Route path="business-development/replies" element={<CapabilityPage title="Relationship replies" capability="replies" description="Replies are kept out of clinical communications and stop further relationship automation." />} />
+            <Route path="business-development/suppressions" element={<CapabilityPage title="Relationship suppressions" capability="suppression" description="Manage relationship outreach do-not-contact and unsubscribe controls." />} />
+            <Route path="business-development/reports" element={<CapabilityPage title="Business Development reports" capability="reporting" description="Operational reporting distinguishes unavailable data from zero activity." />} />
             <Route path="creator-community-interest" element={<CreatorCommunityInterestQueue />} />
             <Route path="creator-community-interest/:id" element={<CreatorCommunityInterestDetail />} />
             <Route path="settings" element={<CrmSettings />} />

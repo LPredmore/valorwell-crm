@@ -35,7 +35,7 @@ export default function BusinessDevelopmentArchitecture() {
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <Badge variant="outline">Business Development</Badge>
-            <Badge>Phase 1 Established</Badge>
+            <Badge variant="secondary">Architecture established</Badge>
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Business Development / BTY Outreach</h1>
           <p className="mt-2 max-w-3xl text-muted-foreground">
@@ -53,8 +53,8 @@ export default function BusinessDevelopmentArchitecture() {
 
       {isError && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm">
-          The live architecture contract could not be loaded. The page is displaying the
-          application fallback contract.
+          Database support for the live architecture contract is pending. This page shows the
+          application boundary, not a loaded database contract.
         </div>
       )}
 

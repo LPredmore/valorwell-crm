@@ -30,6 +30,15 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { label: 'Business Development', href: '/crm/business-development', icon: Building2 },
+  { label: 'BD Organizations', href: '/crm/business-development/organizations', icon: Building2 },
+  { label: 'BD Contacts', href: '/crm/business-development/contacts', icon: Users },
+  { label: 'BTY Opportunities', href: '/crm/business-development/opportunities', icon: HeartHandshake },
+  { label: 'BD Imports', href: '/crm/business-development/imports', icon: Inbox },
+  { label: 'Relationship Campaigns', href: '/crm/business-development/campaigns', icon: Megaphone },
+  { label: 'Relationship Replies', href: '/crm/business-development/replies', icon: Inbox },
+  { label: 'Relationship Suppressions', href: '/crm/business-development/suppressions', icon: AlertTriangle },
+  { label: 'BD Reports', href: '/crm/business-development/reports', icon: BarChart3 },
   {
     label: 'Clients',
     href: '/crm/clients',
@@ -54,11 +63,6 @@ const navItems: NavItem[] = [
     label: 'Reports',
     href: '/crm/reports',
     icon: BarChart3,
-  },
-  {
-    label: 'Business Development / BTY Outreach',
-    href: '/crm/business-development',
-    icon: Building2,
   },
   {
     label: 'Inbound Creator & Community Interest',
@@ -111,7 +115,9 @@ export function CrmSidebar() {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-2">
         {navItems.map((item) => {
-          const isActive = location.pathname.startsWith(item.href);
+          const isActive = item.href === '/crm/business-development'
+            ? location.pathname === item.href
+            : location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
 
           if (item.disabled) {
