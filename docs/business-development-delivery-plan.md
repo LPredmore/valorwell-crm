@@ -49,7 +49,7 @@ Every pass closes with this audit, recorded in its completion note/PR body:
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
 | P00 | COMPLETE | Reproducible validation baseline | `npm ci --legacy-peer-deps --no-audit --no-fund`, lint, application type check, tooling type check, tests, and build all pass using the CI-equivalent commands. Codespaces evidence is recorded below. |
-| P01 | NOT STARTED | Requirement-to-test traceability | Add a checked-in matrix mapping every original requirement to a future pass, source location, and test. Confirm existing clinical and inbound-interest regression suites pass. |
+| P01 | COMPLETE | Requirement-to-test traceability | The checked-in requirements matrix maps each requirement area to a pass, intended source location, evidence, and database dependency. Existing clinical and inbound-interest regression suites are identified and were included in the P00 Codespaces run. |
 
 ## Domain and capability foundation
 
@@ -156,3 +156,19 @@ Actions workflow remains the independent Node 22 validation path and must stay
 required; its result must not be claimed until GitHub Actions has run.
 
 Next pass: P01 — Requirement-to-test traceability. Status: NOT STARTED.
+
+## P01 record — Requirement-to-test traceability
+
+**Status: COMPLETE (2026-07-19)**
+
+`docs/relationship-requirements-traceability.md` maps every requirement area
+to a single primary pass, intended implementation source, required evidence,
+and database dependency. It also names the existing clinical-client, clinical
+campaign/reporting, and Creator & Community Interest regression suites that
+remain mandatory in every future pass.
+
+The P00 GitHub Codespaces validation evidence confirms the full suite passed
+with 21 test files and 106 tests. P01 introduced no application, database,
+migration, deployment, or production-data change.
+
+Next pass: P02 — Complete read-model contracts. Status: NOT STARTED.
