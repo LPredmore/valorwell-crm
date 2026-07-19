@@ -15,6 +15,7 @@ import {
   Search,
   Megaphone as MegaphoneIcon,
   HeartHandshake,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -55,7 +56,12 @@ const navItems: NavItem[] = [
     icon: BarChart3,
   },
   {
-    label: 'Creator, Promoter & Community Interest',
+    label: 'Business Development / BTY Outreach',
+    href: '/crm/business-development',
+    icon: Building2,
+  },
+  {
+    label: 'Inbound Creator & Community Interest',
     href: '/crm/creator-community-interest',
     icon: HeartHandshake,
   },

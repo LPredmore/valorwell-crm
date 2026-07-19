@@ -11,6 +11,7 @@ import CrmIndex from "./pages/crm/Index";
 import CrmSettings from "./pages/crm/Settings";
 import CrmCampaignEditor from "./pages/crm/CampaignEditor";
 import CrmCampaignEnrollments from "./pages/crm/CampaignEnrollments";
+import BusinessDevelopmentArchitecture from "./pages/crm/BusinessDevelopmentArchitecture";
 import CanonicalDashboard from "./pages/crm/canonical/CanonicalDashboard";
 import CanonicalClients from "./pages/crm/canonical/CanonicalClients";
 import CanonicalClientDetail from "./pages/crm/canonical/CanonicalClientDetail";
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="exceptions" element={<CanonicalExceptions />} />
             <Route path="inbox" element={<CanonicalInbox />} />
             <Route path="reports" element={<CanonicalReports />} />
+            <Route path="business-development" element={<BusinessDevelopmentArchitecture />} />
             <Route path="creator-community-interest" element={<CreatorCommunityInterestQueue />} />
             <Route path="creator-community-interest/:id" element={<CreatorCommunityInterestDetail />} />
             <Route path="settings" element={<CrmSettings />} />
