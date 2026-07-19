@@ -35,7 +35,10 @@ describe('relationship domain safety', () => {
     expect(canTransition('closed_no_fit', 'active')).toBe(false);
   });
   it('prevents unverified and internal referral claims', () => {
-    const internal: Referral = { id: '1', sourceCategory: 'client', summary: 'private', verified: true, disclosure: 'internal' };
+    const internal: Referral = {
+      id: '1', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+      sourceCategory: 'client', summary: 'private', verified: true, disclosure: 'internal', evidenceUrls: [],
+    };
     expect(approvedSourceLanguage(internal)).toBe('none');
     expect(approvedSourceLanguage({ ...internal, disclosure: 'named_referrer', namedReferrer: 'Pat' })).toBe('verified_named');
   });
