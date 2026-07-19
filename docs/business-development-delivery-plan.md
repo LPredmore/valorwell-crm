@@ -80,7 +80,7 @@ its gate passes. A bundle failure returns work to the earliest affected pass.
 | --- | --- | --- | --- |
 | P02 | COMPLETE | Complete read-model contracts | Typed read models cover roles, social profiles, affiliations, lifecycle history, referrals, BTY opportunities, interactions, campaigns, enrollments, communication logs, replies, suppressions, unsubscribe requests, reports, search, permissions, audit metadata, and pagination. GitHub Codespaces post-merge full-suite and build evidence is recorded below. |
 | P03 | IMPLEMENTED_PENDING_BUNDLE | Complete input/query contracts | Create/update inputs, filters, sorting, duplicate candidates, import conflicts, campaign eligibility, personalization contexts, execution outcomes, and pure contract tests are implemented. V-A verification is required before completion. |
-| P04 | NOT STARTED | Relationship repository surface | Expand the dedicated non-clinical repository/service interface to cover every P02/P03 concept. Add compile-time/runtime tests that clinical client and campaign types cannot be used. |
+| P04 | IMPLEMENTED_PENDING_BUNDLE | Relationship repository surface | The dedicated non-clinical repository/service interface covers P02/P03 concepts with a no-query/no-write unavailable adapter. Compile-time/runtime separation tests are implemented; V-A verification is required before completion. |
 | P05 | NOT STARTED | Capability detection adapter | Implement one cached, typed capability probe abstraction with explicit missing-contract, permission, network, query, invalid-response, and pending outcomes. It must not query unsupported tables/functions repeatedly. |
 | P06 | NOT STARTED | Capability UI state | Replace generic pending behavior with reusable capability, loading, empty, error, and retry states. Test every backend-failure classification without exposing raw diagnostics to staff. |
 
@@ -227,3 +227,18 @@ path was added or changed. V-A GitHub Codespaces validation is required before
 P03 may be marked complete.
 
 Next pass: P04 — Relationship repository surface. Status: NOT STARTED.
+
+## P04 record — Relationship repository surface
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-19)**
+
+Expanded the relationship-only repository interface and its unavailable adapter
+to cover organizations, contacts/affiliations, lifecycle/interactions,
+referrals, opportunities, imports, campaigns/enrollments/communications,
+replies, suppressions/unsubscribe, reporting, and search. The unavailable
+adapter throws before every operation and performs no query or write. Tests
+include a compile-time prohibition on clinical client IDs as relationship
+enrollment targets and runtime capability-boundary checks. V-A validation is
+required before P04 may be marked complete.
+
+Next pass: P05 — Capability detection adapter. Status: NOT STARTED.
