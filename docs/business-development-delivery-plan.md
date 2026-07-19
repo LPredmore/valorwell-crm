@@ -55,7 +55,7 @@ Every pass closes with this audit, recorded in its completion note/PR body:
 
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
-| P02 | IN PROGRESS | Complete read-model contracts | Typed read models now cover roles, social profiles, affiliations, lifecycle history, referrals, BTY opportunities, interactions, campaigns, enrollments, communication logs, replies, suppressions, unsubscribe requests, reports, search, permissions, audit metadata, and pagination. Completion awaits focused and full-suite verification in the validated Codespaces environment. |
+| P02 | BLOCKED | Complete read-model contracts | Typed read models now cover roles, social profiles, affiliations, lifecycle history, referrals, BTY opportunities, interactions, campaigns, enrollments, communication logs, replies, suppressions, unsubscribe requests, reports, search, permissions, audit metadata, and pagination. Completion awaits focused and full-suite verification in the validated Codespaces environment. |
 | P03 | NOT STARTED | Complete input/query contracts | Define create/update inputs, validation results, filters, sorting, duplicate candidates, import conflicts, campaign eligibility, personalization contexts, and execution outcomes. Add pure contract tests. |
 | P04 | NOT STARTED | Relationship repository surface | Expand the dedicated non-clinical repository/service interface to cover every P02/P03 concept. Add compile-time/runtime tests that clinical client and campaign types cannot be used. |
 | P05 | NOT STARTED | Capability detection adapter | Implement one cached, typed capability probe abstraction with explicit missing-contract, permission, network, query, invalid-response, and pending outcomes. It must not query unsupported tables/functions repeatedly. |
@@ -159,7 +159,7 @@ Next pass: P01 — Requirement-to-test traceability. Status: NOT STARTED.
 
 ## P01 record — Requirement-to-test traceability
 
-**Status: IN PROGRESS (2026-07-19)**
+**Status: BLOCKED (2026-07-19)**
 
 `docs/relationship-requirements-traceability.md` maps every requirement area
 to a single primary pass, intended implementation source, required evidence,
@@ -175,14 +175,16 @@ Next pass: P02 — Complete read-model contracts. Status: NOT STARTED.
 
 ## P02 record — Complete read-model contracts
 
-**Status: IN PROGRESS (2026-07-19)**
+**Status: BLOCKED (2026-07-19)**
 
 Expanded only `src/domain/relationships/contracts.ts` with non-clinical
 read-model contracts and a runtime read-model inventory. No repository method,
 Supabase query, UI behavior, database artifact, or write path was added or
 changed. `relationship-domain.test.ts` verifies the required read-model
-inventory remains in the relationship domain. This execution environment does
-not have a complete dependency tree, so P02 cannot be marked complete until
-the focused and full validation commands are rerun in GitHub Codespaces.
+inventory remains in the relationship domain. This execution environment
+cannot resolve Vitest from the npm registry: `npx vitest run
+src/test/relationship-domain.test.ts` returned `npm error code E403` for
+`https://registry.npmjs.org/vitest`. P02 cannot be marked complete until the
+focused and full validation commands are rerun in GitHub Codespaces.
 
-Next pass: P02 — Complete read-model contracts. Status: IN PROGRESS.
+Next pass: P02 — Complete read-model contracts. Status: BLOCKED.
