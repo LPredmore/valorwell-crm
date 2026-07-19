@@ -48,7 +48,7 @@ Every pass closes with this audit, recorded in its completion note/PR body:
 
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
-| P00 | NOT STARTED | Reproducible validation baseline | `npm ci --legacy-peer-deps --no-audit --no-fund`, lint, application type check, tooling type check, tests, and build all pass using the CI-equivalent commands. Resolve lockfile/package-manager issues if they are repository issues. |
+| P00 | BLOCKED | Reproducible validation baseline | `npm ci --legacy-peer-deps --no-audit --no-fund`, lint, application type check, tooling type check, tests, and build all pass using the CI-equivalent commands. Resolve lockfile/package-manager issues if they are repository issues. See the P00 record below. |
 | P01 | NOT STARTED | Requirement-to-test traceability | Add a checked-in matrix mapping every original requirement to a future pass, source location, and test. Confirm existing clinical and inbound-interest regression suites pass. |
 
 ## Domain and capability foundation
@@ -126,3 +126,27 @@ Audit: scope / domain separation / capability safety / security and UX / verific
 Known limitations: <none or exact list>
 Next pass: P## — <name>. Status: NOT STARTED.
 ```
+
+## P00 record — Reproducible validation baseline
+
+**Status: BLOCKED (2026-07-19)**
+
+The CI-equivalent install command was executed:
+
+```sh
+npm ci --legacy-peer-deps --no-audit --no-fund
+```
+
+It left an incomplete dependency tree in this execution environment. The
+follow-up CI lint command failed because `node_modules/@eslint/js` existed as
+an empty directory and could not be imported. A direct registry diagnostic
+returned `npm error code E403` for `npm view @eslint/js@9.32.0 dist.tarball`.
+This is an external registry/proxy access failure, not evidence of a repository
+lockfile defect; no dependency or lockfile changes were made to conceal it.
+
+Because lint cannot load its declared dependency, the application type check,
+tooling type check, tests, and production build have not been claimed as
+passed. No later pass may begin until an environment with approved registry
+access completes the required command sequence.
+
+Next pass: P00 — Reproducible validation baseline. Status: BLOCKED.
