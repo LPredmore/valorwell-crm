@@ -4,6 +4,7 @@ import type {
 import type { CanonicalClient, LifecycleStage } from '@/domain/canonical';
 import type { CrmTask, TaskStatus, OperationalException, Campaign, CampaignEnrollment, CommunicationMessage, StaffMember, AuditEvent, CommunicationPolicyResult } from '@/domain/operations';
 import { mockClients, mockCampaigns, mockEnrollments, mockTasks, mockExceptions, mockStaff, mockAudit, mockMessages } from '@/mocks/dataset';
+import { unavailableRelationshipsRepository } from '../relationships-unavailable';
 
 // In-memory mutable stores so mock mutations feel real across the session.
 let clients: CanonicalClient[] = [...mockClients];
@@ -46,6 +47,7 @@ function patch(id: string, mut: (c: CanonicalClient) => CanonicalClient): Canoni
 }
 
 export const mockDataProvider: CrmDataProvider = {
+  relationships: unavailableRelationshipsRepository,
   clients: {
     async list(q: ListClientsQuery): Promise<Paged<CanonicalClient>> {
       await wait();
