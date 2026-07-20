@@ -4,8 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import OrganizationDirectoryPage from '@/pages/crm/business-development/OrganizationDirectoryPage';
 import { capabilityState } from '@/domain/relationships/capabilities';
 
-const useRelationshipCapability = vi.fn();
-const useOrganizationDirectory = vi.fn();
+const { useRelationshipCapability, useOrganizationDirectory } = vi.hoisted(() => ({
+  useRelationshipCapability: vi.fn(),
+  useOrganizationDirectory: vi.fn(),
+}));
 
 vi.mock('@/hooks/relationships/useRelationshipCapabilities', () => ({ useRelationshipCapability: (...args: unknown[]) => useRelationshipCapability(...args) }));
 vi.mock('@/hooks/relationships/useOrganizationDirectory', async (importOriginal) => {
