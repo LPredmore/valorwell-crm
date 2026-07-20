@@ -28,7 +28,7 @@ describe('OrganizationDirectoryPage', () => {
   it('keeps query controls visible but does not show fabricated organization results while pending', () => {
     renderPage();
     expect(screen.getByRole('textbox', { name: 'Search' })).toBeInTheDocument();
-    expect(screen.getByText('Directory ready for database support')).toBeInTheDocument();
+    expect(screen.getByText('Organization database access unavailable')).toBeInTheDocument();
     expect(screen.queryByText('Organization results')).not.toBeInTheDocument();
     expect(useOrganizationDirectory).toHaveBeenLastCalledWith(expect.any(Object), false);
   });
@@ -51,7 +51,7 @@ describe('OrganizationDirectoryPage', () => {
 
   it('supports selecting capability-backed rows and paginating the result set', () => {
     useRelationshipCapability.mockReturnValue({ capability: capabilityState('organizations', 'available'), isLoading: false, isError: false, refetch: vi.fn() });
-    useOrganizationDirectory.mockReturnValue({ data: { items: [{ id: 'org-1', name: 'Veterans Forward', stage: 'identified', doNotContact: false, roles: [], socialProfiles: [], createdAt: '2026-01-01', updatedAt: '2026-01-02' }], total: 26, page: 1, pageSize: 25 }, isLoading: false, isError: false, refetch: vi.fn() });
+    useOrganizationDirectory.mockReturnValue({ data: { items: [{ id: 'org-1', tenantId: 'tenant-1', name: 'Veterans Forward', outreachStatus: 'new', doNotContact: false, source: 'crm_manual', createdAt: '2026-01-01', updatedAt: '2026-01-02' }], total: 26, page: 1, pageSize: 25 }, isLoading: false, isError: false, refetch: vi.fn() });
     renderPage();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Veterans Forward' }));
     expect(screen.getByText('1 selected')).toBeInTheDocument();
