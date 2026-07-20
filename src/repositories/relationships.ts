@@ -1,10 +1,7 @@
 import type {
-  AuditMetadata,
   CampaignFilters,
   Capability,
   CapabilityAvailability,
-  ContactFilters,
-  ContactInput,
   CreateCampaignInput,
   CreateInteractionInput,
   CreateOpportunityInput,
@@ -13,15 +10,10 @@ import type {
   ImportConflict,
   ImportPreviewResult,
   InteractionFilters,
-  Organization,
-  OrganizationAffiliation,
-  OrganizationFilters,
-  OrganizationInput,
   OrganizationRole,
   PageResult,
   RelationshipCampaign,
   RelationshipCommunicationLog,
-  RelationshipContact,
   RelationshipEnrollment,
   RelationshipInteraction,
   RelationshipOpportunity,
@@ -41,6 +33,20 @@ import type {
   UpdateSuppressionInput,
   VerifyReferralInput,
 } from '@/domain/relationships/contracts';
+import type {
+  RelationshipAffiliationInput,
+  RelationshipAffiliationKey,
+  RelationshipAffiliationRecord,
+  RelationshipAffiliationUpdate,
+  RelationshipContactFilters,
+  RelationshipContactInput,
+  RelationshipContactPage,
+  RelationshipContactRecord,
+  RelationshipOrganizationFilters,
+  RelationshipOrganizationInput,
+  RelationshipOrganizationPage,
+  RelationshipOrganizationRecord,
+} from '@/domain/relationships/records';
 
 export type RelationshipSubject = { organizationId?: string; contactId?: string; opportunityId?: string };
 export type RelationshipEnrollmentTarget = { organizationId?: string; contactId?: string; opportunityId?: string };
@@ -54,22 +60,25 @@ export type RelationshipSearchQuery = { query: string; kinds?: RelationshipSearc
 export interface RelationshipsRepository {
   capabilities(): Promise<CapabilityAvailability[]>;
 
-  listOrganizations(filters: OrganizationFilters): Promise<PageResult<Organization>>;
-  getOrganization(id: string): Promise<Organization | null>;
-  createOrganization(input: OrganizationInput): Promise<Organization>;
-  updateOrganization(id: string, input: Partial<OrganizationInput>): Promise<Organization>;
+  listOrganizations(filters: RelationshipOrganizationFilters): Promise<RelationshipOrganizationPage>;
+  getOrganization(id: string): Promise<RelationshipOrganizationRecord | null>;
+  createOrganization(input: RelationshipOrganizationInput): Promise<RelationshipOrganizationRecord>;
+  updateOrganization(id: string, input: Partial<RelationshipOrganizationInput>): Promise<RelationshipOrganizationRecord>;
   listOrganizationRoles(organizationId: string): Promise<OrganizationRole[]>;
   replaceOrganizationRoles(organizationId: string, roles: OrganizationRole[]): Promise<OrganizationRole[]>;
   listOrganizationSocialProfiles(organizationId: string): Promise<SocialProfile[]>;
   replaceOrganizationSocialProfiles(organizationId: string, profiles: SocialProfile[]): Promise<SocialProfile[]>;
 
-  listContacts(filters: ContactFilters): Promise<PageResult<RelationshipContact>>;
-  getContact(id: string): Promise<RelationshipContact | null>;
-  createContact(input: ContactInput): Promise<RelationshipContact>;
-  updateContact(id: string, input: Partial<ContactInput>): Promise<RelationshipContact>;
-  listAffiliations(subject: { organizationId?: string; contactId?: string }): Promise<OrganizationAffiliation[]>;
-  createAffiliation(input: Omit<OrganizationAffiliation, 'id' | keyof AuditMetadata>): Promise<OrganizationAffiliation>;
-  updateAffiliation(id: string, input: Partial<Omit<OrganizationAffiliation, 'id' | keyof AuditMetadata>>): Promise<OrganizationAffiliation>;
+  listContacts(filters: RelationshipContactFilters): Promise<RelationshipContactPage>;
+  getContact(id: string): Promise<RelationshipContactRecord | null>;
+  createContact(input: RelationshipContactInput): Promise<RelationshipContactRecord>;
+  updateContact(id: string, input: Partial<RelationshipContactInput>): Promise<RelationshipContactRecord>;
+  listAffiliations(subject: { organizationId?: string; contactId?: string }): Promise<RelationshipAffiliationRecord[]>;
+  createAffiliation(input: RelationshipAffiliationInput): Promise<RelationshipAffiliationRecord>;
+  updateAffiliation(
+    key: Omit<RelationshipAffiliationKey, 'tenantId'>,
+    input: RelationshipAffiliationUpdate,
+  ): Promise<RelationshipAffiliationRecord>;
 
   listStageHistory(subject: RelationshipSubject): Promise<RelationshipStageHistory[]>;
   transitionStage(input: { subject: RelationshipSubject; to: RelationshipStage; reason?: string }): Promise<RelationshipStageHistory>;
