@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { dataProvider } from '@/services/dataProvider';
-import type { OrganizationFilters, SortDirection } from '@/domain/relationships/contracts';
+import type {
+  RelationshipOrganizationFilters,
+  RelationshipOutreachStatus,
+} from '@/domain/relationships/records';
+import type { SortDirection } from '@/domain/relationships/contracts';
 
 const pageSize = 25;
 
@@ -21,26 +25,18 @@ function booleanParam(value: string | null) {
 /** URL-backed organization filters. No relationship record is persisted in browser storage. */
 export function useOrganizationDirectoryFilters() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const filters: OrganizationFilters = {
+  const filters: RelationshipOrganizationFilters = {
     search: searchParams.get('q') || undefined,
-    stages: values(searchParams, 'stage') as OrganizationFilters['stages'],
-    reviewStatuses: values(searchParams, 'reviewStatus'),
-    outreachStatuses: values(searchParams, 'outreachStatus'),
-    organizationTypes: values(searchParams, 'organizationType'),
-    veteranAffiliation: booleanParam(searchParams.get('veteranAffiliation')),
+    outreachStatuses: values(searchParams, 'outreachStatus') as RelationshipOutreachStatus[],
+    organizationKinds: values(searchParams, 'organizationKind'),
+    veteranAffiliated: booleanParam(searchParams.get('veteranAffiliated')),
     ownerIds: values(searchParams, 'owner'),
-    roleCodes: values(searchParams, 'roleCode'),
-    initiatives: values(searchParams, 'initiative'),
-    states: values(searchParams, 'state'),
-    hasSocialPresence: booleanParam(searchParams.get('hasSocialPresence')),
     overdueNextAction: booleanParam(searchParams.get('overdue')),
     doNotContact: booleanParam(searchParams.get('doNotContact')),
-    referralCategories: values(searchParams, 'referralCategory'),
-    opportunityStatuses: values(searchParams, 'opportunityStatus') as OrganizationFilters['opportunityStatuses'],
-    contacted: (searchParams.get('contacted') || undefined) as OrganizationFilters['contacted'],
+    contacted: (searchParams.get('contacted') || undefined) as RelationshipOrganizationFilters['contacted'],
     page: numberParam(searchParams.get('page'), 1),
     pageSize,
-    sortBy: (searchParams.get('sortBy') || 'name') as OrganizationFilters['sortBy'],
+    sortBy: (searchParams.get('sortBy') || 'name') as RelationshipOrganizationFilters['sortBy'],
     sortDirection: (searchParams.get('sortDirection') || 'asc') as SortDirection,
   };
 
@@ -51,9 +47,9 @@ export function useOrganizationDirectoryFilters() {
     return next;
   });
 
-  const setMany = (values: Record<string, string | undefined>) => setSearchParams((current) => {
+  const setMany = (newValues: Record<string, string | undefined>) => setSearchParams((current) => {
     const next = new URLSearchParams(current);
-    for (const [key, value] of Object.entries(values)) {
+    for (const [key, value] of Object.entries(newValues)) {
       if (value) next.set(key, value); else next.delete(key);
     }
     next.delete('page');
@@ -65,7 +61,7 @@ export function useOrganizationDirectoryFilters() {
 }
 
 /** Query is enabled only after the typed organization capability is available. */
-export function useOrganizationDirectory(filters: OrganizationFilters, enabled: boolean) {
+export function useOrganizationDirectory(filters: RelationshipOrganizationFilters, enabled: boolean) {
   return useQuery({
     queryKey: ['relationship-organizations', filters],
     queryFn: () => dataProvider.relationships.listOrganizations(filters),
