@@ -1,48 +1,28 @@
-import type { OrganizationInput, OrganizationRole, SocialProfile, ValidationResult } from './contracts';
-
-function parseCommaSeparatedValues(value: string) {
-  return value.split(',').map((entry) => entry.trim()).filter(Boolean);
-}
-
-function normalizeRoleCode(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-}
+import type { ValidationResult } from './contracts';
+import type { RelationshipOrganizationInput } from './records';
 
 export function prepareOrganizationSubmissionInput(
-  input: Partial<OrganizationInput>,
-  rolesText: string,
-  socialProfilesText: string,
-  description: string,
-): Partial<OrganizationInput> {
-  const roles: OrganizationRole[] = parseCommaSeparatedValues(rolesText).map((value, index) => ({
-    id: `role-${index + 1}`,
-    code: normalizeRoleCode(value),
-    label: value,
-    primary: index === 0,
-  }));
-
-  const socialProfiles: SocialProfile[] = parseCommaSeparatedValues(socialProfilesText).map((value) => {
-    try {
-      const parsed = new URL(value);
-      return { platform: parsed.hostname.replace(/^www\./, ''), url: parsed.toString() };
-    } catch {
-      return { platform: value, url: value };
-    }
-  });
-
+  input: Partial<RelationshipOrganizationInput>,
+): Partial<RelationshipOrganizationInput> {
   return {
     ...input,
-    description,
-    roles,
-    socialProfiles,
+    name: input.name?.trim(),
+    website: input.website?.trim() || undefined,
+    organizationKind: input.organizationKind?.trim() || undefined,
+    ownerId: input.ownerId?.trim() || undefined,
+    nextAction: input.nextAction?.trim() || undefined,
+    nextActionDueAt: input.nextActionDueAt || undefined,
   };
 }
 
-/** Application-side guard; repository/RLS remain the eventual write authority. */
-export function validateOrganizationInput(input: Partial<OrganizationInput>): ValidationResult {
+/** Application-side guard; repository and tenant RLS remain write authority. */
+export function validateOrganizationInput(
+  input: Partial<RelationshipOrganizationInput>,
+): ValidationResult {
   const fieldErrors: Record<string, string> = {};
   if (!input.name?.trim()) fieldErrors.name = 'Organization name is required.';
-  if (input.website && !/^https?:\/\//i.test(input.website)) fieldErrors.website = 'Website must begin with http:// or https://.';
-  if (!input.stage) fieldErrors.stage = 'Relationship stage is required.';
+  if (input.website && !/^https?:\/\//i.test(input.website)) {
+    fieldErrors.website = 'Website must begin with http:// or https://.';
+  }
   return { valid: Object.keys(fieldErrors).length === 0, fieldErrors };
 }
