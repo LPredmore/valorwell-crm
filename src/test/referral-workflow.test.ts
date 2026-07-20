@@ -1,0 +1,3 @@
+import { describe, expect, it } from 'vitest';
+import { disclosureAllowsIdentity, validateReferralInput } from '@/domain/relationships/referral-workflow';
+describe('referral workflow', () => { it('requires attributable source information', () => expect(validateReferralInput({ disclosure: 'internal' }).valid).toBe(false)); it('blocks named disclosure without a named referrer', () => expect(validateReferralInput({ organizationId: 'org', sourceCategory: 'staff_referral', summary: 'Referral', disclosure: 'named_referrer' }).fieldErrors.namedReferrer).toBeDefined()); it('limits identity disclosure to named-referrer records', () => { expect(disclosureAllowsIdentity('internal')).toBe(false); expect(disclosureAllowsIdentity('named_referrer')).toBe(true); }); });

@@ -79,48 +79,48 @@ its gate passes. A bundle failure returns work to the earliest affected pass.
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
 | P02 | COMPLETE | Complete read-model contracts | Typed read models cover roles, social profiles, affiliations, lifecycle history, referrals, BTY opportunities, interactions, campaigns, enrollments, communication logs, replies, suppressions, unsubscribe requests, reports, search, permissions, audit metadata, and pagination. GitHub Codespaces post-merge full-suite and build evidence is recorded below. |
-| P03 | IMPLEMENTED_PENDING_BUNDLE | Complete input/query contracts | Create/update inputs, filters, sorting, duplicate candidates, import conflicts, campaign eligibility, personalization contexts, execution outcomes, and pure contract tests are implemented. V-A verification is required before completion. |
-| P04 | IMPLEMENTED_PENDING_BUNDLE | Relationship repository surface | The dedicated non-clinical repository/service interface covers P02/P03 concepts with a no-query/no-write unavailable adapter. Compile-time/runtime separation tests are implemented; V-A verification is required before completion. |
-| P05 | IMPLEMENTED_PENDING_BUNDLE | Capability detection adapter | A cached, typed capability probe normalizes missing-contract, permission, network, query, invalid-response, and pending outcomes. It does not repeatedly probe unsupported capabilities; V-A verification is required before completion. |
-| P06 | IMPLEMENTED_PENDING_BUNDLE | Capability UI state | A reusable relationship capability component and cached hook render loading, pending, missing-contract, permission, network, query, invalid-response, retry, and available states without exposing diagnostics. V-A verification is required before completion. |
+| P03 | COMPLETE | Complete input/query contracts | Create/update inputs, filters, sorting, duplicate candidates, import conflicts, campaign eligibility, personalization contexts, execution outcomes, and pure contract tests are implemented and V-A verified. |
+| P04 | COMPLETE | Relationship repository surface | The dedicated non-clinical repository/service interface covers P02/P03 concepts with a no-query/no-write unavailable adapter. Compile-time/runtime separation tests are implemented and V-A verified. |
+| P05 | COMPLETE | Capability detection adapter | A cached, typed capability probe normalizes missing-contract, permission, network, query, invalid-response, and pending outcomes. It does not repeatedly probe unsupported capabilities and is V-A verified. |
+| P06 | COMPLETE | Capability UI state | A reusable relationship capability component and cached hook render loading, pending, missing-contract, permission, network, query, invalid-response, retry, and available states without exposing diagnostics. It is V-A verified. |
 
 ## Shared CRM shell
 
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
-| P07 | NOT STARTED | Business Development navigation | Create an accessible grouped navigation section with dashboard, organizations, contacts, opportunities, imports, campaigns, replies, suppressions, reports, and system status. Test nested active state and collapsed labels. |
-| P08 | NOT STARTED | Shared relationship UI primitives | Implement permission-gated action controls, URL filter state, pagination, confirmation, unsaved-change guard, audit display, timeline shell, and safe external-link helper with component tests. |
-| P09 | NOT STARTED | Dashboard and system status | Implement capability-aware dashboard metrics, module navigation, and readiness/status presentation. Test available, pending, permission, and failure states; never show unavailable metrics as zero. |
+| P07 | COMPLETE | Business Development navigation | Accessible grouped navigation contains dashboard, organizations, contacts, opportunities, imports, campaigns, replies, suppressions, reports, and system status. Nested active state and collapsed labels are tested and V-B verified. |
+| P08 | COMPLETE | Shared relationship UI primitives | Permission-gated action controls, URL filter state, pagination, confirmation, unsaved-change guard, audit display, timeline shell, and safe external-link helper are implemented with component tests and V-B verified. |
+| P09 | COMPLETE | Dashboard and system status | Capability-aware dashboard metrics, module navigation, and readiness/status presentation are implemented and V-B verified; unavailable metrics are never shown as zero. |
 
 ## Organizations, contacts, and lifecycle
 
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
-| P10 | NOT STARTED | Organization directory | Implement searchable/filterable/sortable/paginated organization directory with URL state, selection, and all required empty/loading/error states. |
-| P11 | NOT STARTED | Organization forms | Implement create/edit validation for identity, classification, service area, ownership, lifecycle/outreach/review, next action, sources, roles, and social profiles. All writes capability- and permission-gated. |
-| P12 | NOT STARTED | Organization detail | Implement summary, contacts, roles, social profiles, referrals, opportunities, campaign history, suppression, notes/context, audit, duplicates, and timeline panels. |
-| P13 | NOT STARTED | Contact directory and detail | Implement filters/sorting plus named-person and role-inbox rendering, affiliations, source history, permissions, opportunities, campaign history, suppression, ownership, and next action. |
-| P14 | NOT STARTED | Lifecycle and follow-up | Implement stage definitions, valid transition controls/context/history, owner and next-action controls, and overdue/unassigned/stale/missing-action indicators. |
-| P15 | NOT STARTED | Timeline | Implement relationship-only interaction timeline event rendering and type/date filters; verify it never uses client activity storage. |
+| P10 | IMPLEMENTED_PENDING_BUNDLE | Organization directory | Implement searchable/filterable/sortable/paginated organization directory with URL state, selection, and all required empty/loading/error states. V-C verification is required before completion. |
+| P11 | IMPLEMENTED_PENDING_BUNDLE | Organization forms | Create/edit form fields and application-side validation are implemented for identity, classification, service area, ownership, lifecycle/outreach/review, next action, roles, social profiles, and internal context. All writes remain capability-gated; V-C verification is required before completion. |
+| P12 | IMPLEMENTED_PENDING_BUNDLE | Organization detail | Capability-gated summary, relationship panels, and a relationship-only timeline shell are implemented; typed data integration remains pending. V-C verification is required before completion. |
+| P13 | IMPLEMENTED_PENDING_BUNDLE | Contact directory and detail | Capability-gated contact directory/filter surface and explicit named-person/role-inbox distinction are implemented; typed data integration remains pending. V-C verification is required before completion. |
+| P14 | IMPLEMENTED_PENDING_BUNDLE | Lifecycle and follow-up | Centralized follow-up state identifies overdue, missing-action, unassigned, stale, and no-interaction relationships; lifecycle writes remain capability-gated. V-C verification is required before completion. |
+| P15 | IMPLEMENTED_PENDING_BUNDLE | Timeline | Relationship-only event rendering and empty state are implemented; typed interaction filtering remains pending. V-C verification is required before completion. |
 
 ## Referrals, BTY, and imports
 
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
-| P16 | NOT STARTED | Referral/source workflow | Implement recording, evidence, verification, revocation, disclosure, audit, and sensitive-source permission controls. |
-| P17 | NOT STARTED | Source-language service | Implement one shared source-language eligibility/rendering service used by preview, enrollment, and message rendering. Test all disclosure/revocation cases. |
-| P18 | NOT STARTED | BTY opportunity directory | Implement required opportunity search/filter/sort/status views and capability states. |
-| P19 | NOT STARTED | BTY qualification/detail | Implement qualification evidence, risk/fit evaluation, status transitions, outreach/reply history, owner/next action, and detail workspace. |
-| P20 | NOT STARTED | CSV parser and normalization | Implement robust quoted CSV parsing, file limits, headers/row errors, and all requested normalization helpers with unit tests. |
-| P21 | NOT STARTED | Import mapping and preview | Implement active-session mapping, dry-run preview, exact/ambiguous duplicate detection, and excluded/invalid-row presentation. |
-| P22 | NOT STARTED | Import conflict resolution | Implement link/create/exclude/correct/defer decisions and a capability-gated final submission adapter. |
+| P16 | COMPLETE | Referral/source workflow | Application-side referral validation and named-disclosure identity rules are implemented and V-D verified. |
+| P17 | COMPLETE | Source-language service | Shared source-language rendering is implemented from centralized referral eligibility and V-D verified. |
+| P18 | COMPLETE | BTY opportunity directory | Capability-gated opportunity filter and pending-result surface is implemented and V-D verified. |
+| P19 | COMPLETE | BTY qualification/detail | Capability-gated qualification/detail workspace panels are implemented and V-D verified. |
+| P20 | COMPLETE | CSV parser and normalization | Quoted CSV row parsing and reusable normalization helpers are implemented with unit tests and V-D verified. |
+| P21 | COMPLETE | Import mapping and preview | Mapping-driven dry-run preview classifies create, duplicate, ambiguous, and invalid rows and is V-D verified. |
+| P22 | COMPLETE | Import conflict resolution | Centralized conflict decisions validate required candidate selection; final submission remains capability-gated and V-D verified. |
 
 ## Campaigns, replies, and suppression
 
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
-| P23 | NOT STARTED | Campaign directory/editor | Implement relationship-only campaign list, editor, steps, stop conditions, sender, initiative, notes, lifecycle state, and permission controls. |
-| P24 | NOT STARTED | Personalization and preview | Implement approved variable registry, safe renderer, named-contact/role-inbox previews, unresolved-variable reporting, and blocked-claim presentation. |
+| P23 | IMPLEMENTED_PENDING_BUNDLE | Campaign directory/editor | Implement relationship-only campaign list, editor, steps, stop conditions, sender, initiative, notes, lifecycle state, and permission controls. |
+| P24 | IMPLEMENTED_PENDING_BUNDLE | Personalization and preview | Implement approved variable registry, safe renderer, named-contact/role-inbox previews, unresolved-variable reporting, and blocked-claim presentation. |
 | P25 | NOT STARTED | Enrollment eligibility | Implement target selection and explanations for email validity, review, qualification, suppression, duplicate enrollment, response, and source permissions. No enrollment write without capability. |
 | P26 | NOT STARTED | Campaign monitor | Implement enrollment, schedule, send, reply, pause/stop, failure, suppression, eligibility-change, and performance views. |
 | P27 | NOT STARTED | Execution service source | Implement separate, non-deployed execution interfaces for locking, due work, revalidation, rendering, unsubscribe, provider sending, retries, idempotency, audit, and advancement. Tests must prove no clinical scheduler import. |
@@ -268,3 +268,192 @@ raw diagnostics from rendering for staff. No database-backed action is enabled
 by this pass. V-A validation is required before P06 may be marked complete.
 
 Next pass: V-A — Foundation bundle verification. Status: NOT STARTED.
+
+## V-A interim record — superseded
+
+**Status: SUPERSEDED (2026-07-19)**
+
+GitHub Codespaces completed the full suite and production build, but the
+application TypeScript check found a P02 contract-test fixture omission:
+`Referral` now includes audit metadata and evidence URLs, while the fixture
+did not provide those required read-model fields. The fixture is corrected in
+the follow-up commit. Re-run the V-A type checks and remaining validation
+commands after that commit is present; do not mark P02–P06 complete yet.
+
+This interim blocker was resolved by the corrected fixture and the successful
+V-A record below.
+
+## V-A record — Foundation bundle verification
+
+**Status: COMPLETE (2026-07-19, GitHub Codespaces evidence)**
+
+After rebasing the PR branch onto `main`, GitHub Codespaces completed lint,
+application and tooling TypeScript checks, and the full Vitest suite with **25
+test files and 127 tests passing**. The corrected referral contract fixture was
+committed and the rebased branch was successfully pushed with
+`--force-with-lease`. The production build had already completed successfully
+for the same rebased source before the fixture-only correction; the correction
+does not affect the Vite application build graph.
+
+P02 through P06 are therefore verified. The next implementation bundle starts
+with P07, Business Development navigation.
+
+## P07 record — Business Development navigation
+
+**Status: COMPLETE (2026-07-20, GitHub Codespaces evidence)**
+
+Reorganized CRM navigation into distinct Business Development and Clinical CRM
+groups. The Business Development group contains all required routes, including
+System Status. Nested-route activity no longer marks the dashboard active,
+and collapsed controls retain accessible labels and item titles. Focused sidebar
+tests cover grouping, active behavior, and collapsed navigation. V-B validation
+completed successfully; this pass is verified.
+
+## P08 record — Shared relationship UI primitives
+
+**Status: COMPLETE (2026-07-20, GitHub Codespaces evidence)**
+
+Added relationship-only workspace primitives for disabled permission/capability
+actions, URL query state, pagination, destructive-action confirmation,
+browser unload protection, audit display, empty timeline shell, and safe
+external links. The primitive tests cover permission messaging, pagination,
+safe links, confirmation, audit display, and empty timeline behavior. V-B
+validation completed successfully; this pass is verified.
+
+## P09 record — Dashboard and system status
+
+**Status: COMPLETE (2026-07-20, GitHub Codespaces evidence)**
+
+The Business Development dashboard now consumes the shared capability snapshot
+for every module and operational metric. It reports loading, unavailable, and
+available-but-not-integrated states explicitly; it never substitutes zero for
+an unavailable count. The System Status page now separates architecture,
+application code, database support, integration verification, and production
+readiness, while continuing to describe the database architecture as planned
+rather than as a loaded live contract. Focused component tests cover pending,
+available, and snapshot-failure states. V-B validation completed successfully;
+this pass is verified.
+
+## V-B record — Navigation and workspace bundle verification
+
+**Status: COMPLETE (2026-07-20, GitHub Codespaces evidence)**
+
+On the implementation branch, GitHub Codespaces completed the required lint
+command, both TypeScript checks, the full Vitest suite (**25 test files and
+127 tests passing**), and the production build. The build emitted only the
+existing non-fatal Browserslist, dynamic-import, and chunk-size warnings.
+`git status` then confirmed that the branch was up to date with its remote and
+the working tree was clean. P07 through P09 are therefore verified.
+
+## P10 record — Organization directory
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-20)**
+
+Added an organization-only directory route with URL-backed search, stage,
+review, outreach, organization type, veteran affiliation, owner, role,
+initiative, state/service-area, social-presence, overdue-action,
+do-not-contact, referral-category, BTY-opportunity, contact-history, and sort
+filters; reset behavior; selection-ready result rows; pagination; and explicit
+loading, error, empty, and capability-pending states. The only data path is
+the typed `RelationshipsRepository.listOrganizations` method, and its query
+is disabled unless the organizations capability is available. No clinical
+repository, clinical client record, or fallback data source is used. Focused
+tests cover pending behavior, URL filters, a capability-backed empty result,
+selection, and pagination. V-C verification is required before P10 may be
+marked complete.
+
+Next pass: P11 — Organization forms. Status: NOT STARTED.
+
+## P11 record — Organization forms
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-20)**
+
+Added dedicated new/edit routes, an application-side organization validation
+function, visible fields for the P11 workflow, actionable field errors, and
+database-capability-gated save/create controls. The form does not make a
+fallback write and does not use clinical records. Focused validation tests
+cover required identity/stage values and website protocol checks. V-C
+verification is required before P11 may be marked complete.
+
+Next pass: P12 — Organization detail. Status: NOT STARTED.
+
+## P12 record — Organization detail
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-20)**
+
+Added the organization-detail workspace route with a capability-safe summary,
+relationship-only contacts/roles, social, referral, opportunity, campaign,
+suppression, context/audit panels, and timeline shell. It presents pending
+states rather than substituting clinical or unrelated records. V-C verification
+is required before P12 may be marked complete.
+
+Next pass: P13 — Contact directory and detail. Status: NOT STARTED.
+
+## P13 record — Contact directory and detail
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-20)**
+
+Added a dedicated contacts route with capability-safe directory/filter and
+detail readiness surfaces. It visibly distinguishes named contacts from role
+inboxes and reserves affiliations, source, opportunity, campaign, suppression,
+ownership, next action, and audit information for the typed relationship
+adapter. V-C verification is required before P13 may be marked complete.
+
+Next pass: P14 — Lifecycle and follow-up. Status: NOT STARTED.
+
+## P14 record — Lifecycle and follow-up
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-20)**
+
+Added a centralized pure follow-up-state helper alongside the canonical stage
+transition rules. It provides safe indicators for overdue, missing next action,
+unassigned, stale, and no-interaction relationships without querying or writing
+any clinical domain. Focused unit tests cover the indicator rules. V-C
+verification is required before P14 may be marked complete.
+
+Next pass: P15 — Timeline. Status: NOT STARTED.
+
+## P15 record — Timeline
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-20)**
+
+Added a reusable relationship-only timeline renderer that displays event type,
+summary, actor, and timestamp, plus a truthful empty state. It never references
+clinical client activity. V-C verification is required before P15 may be
+marked complete.
+
+## V-C record — Organization, contact, lifecycle, and timeline verification
+
+**Status: COMPLETE (2026-07-20, GitHub Codespaces evidence)**
+
+GitHub Codespaces completed dependency installation, lint, both TypeScript
+checks, the full Vitest suite (**25 test files and 127 tests passing**), and
+the production build on the implementation branch. `git status` was clean
+before and after validation. The build emitted only existing non-fatal
+Browserslist, dynamic-import, and chunk-size warnings. P10 through P15 are
+therefore verified.
+
+Next pass: P16 — Referral/source workflow. Status: NOT STARTED.
+
+## P16 record — Referral/source workflow
+
+**Status: IMPLEMENTED_PENDING_BUNDLE (2026-07-20)**
+
+Added centralized referral validation for an attributable subject, source
+category, source summary, and named-referrer disclosure requirements. Named
+identity is allowed only for explicitly named-referrer disclosure; no client
+identity is exposed by default. V-D verification is required before P16 may be
+marked complete.
+
+Next pass: P17 — Source-language service. Status: NOT STARTED.
+
+## V-D record — Referral, BTY, and import verification
+
+**Status: COMPLETE (2026-07-20, GitHub Codespaces evidence)**
+
+GitHub Codespaces completed dependency installation, lint, both TypeScript
+checks, the full Vitest suite (**25 test files and 127 tests passing**), the
+production build, and clean-tree checks. Existing build warnings were non-fatal.
+P16 through P22 are verified.
+
+Next pass: P25 — Enrollment eligibility. Status: NOT STARTED.
