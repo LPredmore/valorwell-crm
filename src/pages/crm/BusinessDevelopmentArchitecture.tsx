@@ -19,7 +19,9 @@ export default function BusinessDevelopmentArchitecture() {
   const contract = RELATIONSHIP_ARCHITECTURE_FALLBACK;
   const availableCount = capabilities.data?.filter((state) => state.available).length ?? 0;
   const capabilityTotal = capabilities.data?.length ?? 0;
-  const integrationVerified = false;
+  const organizationsAvailable = capabilities.data?.find((state) => state.capability === 'organizations')?.available === true;
+  const contactsAvailable = capabilities.data?.find((state) => state.capability === 'contacts')?.available === true;
+  const integrationVerified = organizationsAvailable && contactsAvailable && !capabilities.isError;
 
   return (
     <div className="space-y-6">
@@ -33,14 +35,14 @@ export default function BusinessDevelopmentArchitecture() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Readiness</CardTitle><CardDescription>Each status is reported independently. Application contracts are not evidence that live database integration is installed or production-ready.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Readiness</CardTitle><CardDescription>Each status is reported independently. Available first-slice capabilities do not imply that later workflow capabilities are complete.</CardDescription></CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {[
             ['Architecture established', true, 'The domain boundary and clinical separation are defined in application code.'],
-            ['Application code implemented', true, 'Capability-gated application components and contracts are present.'],
+            ['Application code implemented', true, 'Tenant-scoped organization, contact, and affiliation persistence is installed.'],
             ['Database support available', availableCount > 0, capabilities.isLoading ? 'Checking the capability snapshot.' : `${availableCount} of ${capabilityTotal} capability contracts are available.`],
-            ['Integration verified', integrationVerified, 'No database-backed data or metric integration has been verified yet.'],
-            ['Production ready', false, 'Requires installed database support, verified integrations, and operational approval.'],
+            ['Integration verified', integrationVerified, integrationVerified ? 'Organizations and contacts are verified against the selected Billing Hub tenant.' : 'The organization and contact integration has not been verified for this session.'],
+            ['Production ready', false, 'The first persistence slice is live; later workflow and operational-approval requirements remain.'],
           ].map(([label, ready, detail]) => <div className="rounded-lg border p-3" key={label as string}><p className="text-sm font-medium">{label}</p><Badge className="mt-2" variant={ready ? 'default' : 'outline'}>{readinessLabel(ready as boolean)}</Badge><p className="mt-2 text-xs text-muted-foreground">{detail}</p></div>)}
         </CardContent>
       </Card>
@@ -48,7 +50,7 @@ export default function BusinessDevelopmentArchitecture() {
       {capabilities.isError && <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm">Capability status could not be loaded. Database-dependent functions remain disabled until status can be verified.</div>}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card><CardHeader className="flex flex-row items-start gap-3 space-y-0"><Database className="mt-1 h-5 w-5 text-primary" /><div><CardTitle>Planned canonical database</CardTitle><CardDescription>Target relationship source of record; not a claim that a live contract loaded.</CardDescription></div></CardHeader><CardContent><p className="text-lg font-semibold">{formatIdentifier(contract.canonical_database)}</p></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-start gap-3 space-y-0"><Database className="mt-1 h-5 w-5 text-primary" /><div><CardTitle>Canonical database</CardTitle><CardDescription>Billing Hub is the source of truth for the relationship domain.</CardDescription></div></CardHeader><CardContent><p className="text-lg font-semibold">{formatIdentifier(contract.canonical_database)}</p></CardContent></Card>
         <Card><CardHeader className="flex flex-row items-start gap-3 space-y-0"><AppWindow className="mt-1 h-5 w-5 text-primary" /><div><CardTitle>Operational application</CardTitle><CardDescription>Interface used to manage the relationship system.</CardDescription></div></CardHeader><CardContent><p className="text-lg font-semibold">{formatIdentifier(contract.canonical_application)}</p></CardContent></Card>
       </div>
 
@@ -68,8 +70,8 @@ export default function BusinessDevelopmentArchitecture() {
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
-        <Card><CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" />Enforced boundary</CardTitle></CardHeader><CardContent className="space-y-3 text-sm"><p>Clinical campaign enrollments remain linked exclusively to clinical client records.</p><p>Organizations, creators, partners, and BTY targets use the separate relationship outreach module when database support is installed.</p><Badge variant={contract.clinical_campaign_boundary_enforced ? 'default' : 'destructive'}>{contract.clinical_campaign_boundary_enforced ? 'Boundary enforced in application contract' : 'Boundary not enforced'}</Badge></CardContent></Card>
-        <Card><CardHeader><CardTitle>Canonical terminology</CardTitle><CardDescription>These terms define the records that later database-backed implementation will use.</CardDescription></CardHeader><CardContent className="space-y-4">{Object.entries(contract.terminology).map(([term, definition]) => <div key={term} className="grid gap-1 border-b pb-3 last:border-0 last:pb-0 md:grid-cols-[160px_1fr]"><p className="font-medium">{formatIdentifier(term)}</p><p className="text-sm text-muted-foreground">{definition}</p></div>)}</CardContent></Card>
+        <Card><CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" />Enforced boundary</CardTitle></CardHeader><CardContent className="space-y-3 text-sm"><p>Clinical campaign enrollments remain linked exclusively to clinical client records.</p><p>Organizations, creators, partners, and BTY targets use the separate relationship outreach module.</p><Badge variant={contract.clinical_campaign_boundary_enforced ? 'default' : 'destructive'}>{contract.clinical_campaign_boundary_enforced ? 'Boundary enforced in application contract' : 'Boundary not enforced'}</Badge></CardContent></Card>
+        <Card><CardHeader><CardTitle>Canonical terminology</CardTitle><CardDescription>These terms define the current and planned relationship records.</CardDescription></CardHeader><CardContent className="space-y-4">{Object.entries(contract.terminology).map(([term, definition]) => <div key={term} className="grid gap-1 border-b pb-3 last:border-0 last:pb-0 md:grid-cols-[160px_1fr]"><p className="font-medium">{formatIdentifier(term)}</p><p className="text-sm text-muted-foreground">{definition}</p></div>)}</CardContent></Card>
       </div>
     </div>
   );
