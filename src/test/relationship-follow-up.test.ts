@@ -1,0 +1,3 @@
+import { describe, expect, it } from 'vitest';
+import { relationshipFollowUpState } from '@/domain/relationships/contracts';
+describe('relationship follow-up state', () => { it('identifies missing ownership, actions, and interactions', () => expect(relationshipFollowUpState({ now: new Date('2026-01-31') })).toEqual(['unassigned', 'missing_next_action', 'no_interaction'])); it('identifies overdue and stale relationships', () => expect(relationshipFollowUpState({ ownerId: 'staff', nextAction: 'Call', nextActionDueAt: '2026-01-01', lastInteractionAt: '2025-12-01', now: new Date('2026-01-31') })).toEqual(['overdue', 'stale'])); });

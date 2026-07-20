@@ -1,0 +1,1 @@
+import{describe,expect,it}from'vitest';import{resolveImportConflict}from'@/domain/relationships/import-conflicts';describe('import conflicts',()=>it('requires a candidate when linking',()=>{const c={row:2,candidates:[]};expect(()=>resolveImportConflict(c,'link_organization')).toThrow();expect(resolveImportConflict(c,'exclude').decision).toBe('exclude');}));
