@@ -56,7 +56,7 @@ export default function BusinessDevelopmentArchitecture() {
         <CardHeader><CardTitle>Database capability status</CardTitle><CardDescription>Unavailable capabilities do not issue relationship queries or substitute clinical data.</CardDescription></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {capabilities.isLoading && <p className="text-sm text-muted-foreground">Checking relationship capability status…</p>}
-          {capabilities.data?.map((state) => <div className="rounded border p-3" key={state.capability}><div className="flex items-center justify-between gap-2"><p className="font-medium">{formatIdentifier(state.capability)}</p><Badge variant={state.available ? 'default' : 'outline'}>{state.status.replaceAll('_', ' ')}</Badge></div><p className="mt-2 text-sm text-muted-foreground">{state.reason}</p></div>)}
+          {capabilities.data?.map((state) => <div className="rounded border p-3" key={state.capability}><div className="flex items-center justify-between gap-2"><p className="font-medium">{formatIdentifier(state.capability)}</p><Badge variant={state.available ? 'default' : 'outline'}>{state.status.replace(/_/g, ' ')}</Badge></div><p className="mt-2 text-sm text-muted-foreground">{state.reason}</p></div>)}
         </CardContent>
       </Card>
 

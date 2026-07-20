@@ -27,13 +27,13 @@ const metrics = [
   ['Recently updated relationships', 'organizations'],
 ] as const satisfies readonly [string, Capability][];
 
-export function capabilityLabel(state?: CapabilityAvailability) {
+function capabilityLabel(state?: CapabilityAvailability) {
   if (!state) return 'Checking database support';
   if (state.available) return 'Database support available';
-  return state.status.replaceAll('_', ' ');
+  return state.status.replace(/_/g, ' ');
 }
 
-export function metricMessage(state?: CapabilityAvailability) {
+function metricMessage(state?: CapabilityAvailability) {
   if (!state) return 'Checking database support before loading this metric.';
   if (state.available) return 'Database support is available; this metric will appear after its integration is verified.';
   return state.reason;
