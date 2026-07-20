@@ -120,7 +120,7 @@ its gate passes. A bundle failure returns work to the earliest affected pass.
 | Pass | Status | Scope | Completion criteria |
 | --- | --- | --- | --- |
 | P23 | IMPLEMENTED_PENDING_BUNDLE | Campaign directory/editor | Implement relationship-only campaign list, editor, steps, stop conditions, sender, initiative, notes, lifecycle state, and permission controls. |
-| P24 | NOT STARTED | Personalization and preview | Implement approved variable registry, safe renderer, named-contact/role-inbox previews, unresolved-variable reporting, and blocked-claim presentation. |
+| P24 | IMPLEMENTED_PENDING_BUNDLE | Personalization and preview | Implement approved variable registry, safe renderer, named-contact/role-inbox previews, unresolved-variable reporting, and blocked-claim presentation. |
 | P25 | NOT STARTED | Enrollment eligibility | Implement target selection and explanations for email validity, review, qualification, suppression, duplicate enrollment, response, and source permissions. No enrollment write without capability. |
 | P26 | NOT STARTED | Campaign monitor | Implement enrollment, schedule, send, reply, pause/stop, failure, suppression, eligibility-change, and performance views. |
 | P27 | NOT STARTED | Execution service source | Implement separate, non-deployed execution interfaces for locking, due work, revalidation, rendering, unsubscribe, provider sending, retries, idempotency, audit, and advancement. Tests must prove no clinical scheduler import. |
@@ -456,4 +456,4 @@ checks, the full Vitest suite (**25 test files and 127 tests passing**), the
 production build, and clean-tree checks. Existing build warnings were non-fatal.
 P16 through P22 are verified.
 
-Next pass: P24 — Personalization and preview. Status: NOT STARTED.
+Next pass: P25 — Enrollment eligibility. Status: NOT STARTED.
