@@ -16,6 +16,7 @@ import {
   Megaphone as MegaphoneIcon,
   HeartHandshake,
   Building2,
+  CircleHelp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,26 @@ interface NavItem {
   disabled?: boolean;
 }
 
-const navItems: NavItem[] = [
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const businessDevelopmentItems: NavItem[] = [
+  { label: 'Business Development', href: '/crm/business-development', icon: Building2 },
+  { label: 'Organizations', href: '/crm/business-development/organizations', icon: Building2 },
+  { label: 'Contacts', href: '/crm/business-development/contacts', icon: Users },
+  { label: 'BTY Opportunities', href: '/crm/business-development/opportunities', icon: HeartHandshake },
+  { label: 'Imports', href: '/crm/business-development/imports', icon: Inbox },
+  { label: 'Relationship Campaigns', href: '/crm/business-development/campaigns', icon: Megaphone },
+  { label: 'Relationship Replies', href: '/crm/business-development/replies', icon: Inbox },
+  { label: 'Relationship Suppressions', href: '/crm/business-development/suppressions', icon: AlertTriangle },
+  { label: 'Relationship Search', href: '/crm/business-development/search', icon: Search },
+  { label: 'Reports', href: '/crm/business-development/reports', icon: BarChart3 },
+  { label: 'System Status', href: '/crm/business-development/status', icon: CircleHelp },
+];
+
+const clinicalNavItems: NavItem[] = [
   {
     label: 'Clients',
     href: '/crm/clients',
@@ -56,11 +76,6 @@ const navItems: NavItem[] = [
     icon: BarChart3,
   },
   {
-    label: 'Business Development / BTY Outreach',
-    href: '/crm/business-development',
-    icon: Building2,
-  },
-  {
     label: 'Inbound Creator & Community Interest',
     href: '/crm/creator-community-interest',
     icon: HeartHandshake,
@@ -76,6 +91,11 @@ const navItems: NavItem[] = [
   { label: 'Exceptions', href: '/crm/canonical/exceptions', icon: AlertTriangle },
   { label: 'Canonical Campaigns', href: '/crm/canonical/campaigns', icon: MegaphoneIcon },
   { label: 'Search', href: '/crm/canonical/search', icon: Search },
+];
+
+const navGroups: NavGroup[] = [
+  { label: 'Business Development', items: businessDevelopmentItems },
+  { label: 'Clinical CRM', items: clinicalNavItems },
 ];
 
 export function CrmSidebar() {
@@ -99,6 +119,7 @@ export function CrmSidebar() {
           size="icon"
           onClick={() => setCollapsed(!collapsed)}
           className="h-8 w-8"
+          aria-label={collapsed ? 'Expand CRM navigation' : 'Collapse CRM navigation'}
         >
           {collapsed ? (
             <ChevronRight className="h-4 w-4" />
@@ -109,9 +130,13 @@ export function CrmSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-2">
-        {navItems.map((item) => {
-          const isActive = location.pathname.startsWith(item.href);
+      <nav className="flex-1 space-y-4 overflow-y-auto p-2" aria-label="CRM navigation">
+        {navGroups.map((group) => <div key={group.label} className="space-y-1">
+          {!collapsed && <p className="px-3 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group.label}</p>}
+          {group.items.map((item) => {
+          const isActive = item.href === '/crm/business-development'
+            ? location.pathname === item.href
+            : location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
 
           if (item.disabled) {
@@ -139,6 +164,7 @@ export function CrmSidebar() {
             <NavLink
               key={item.href}
               to={item.href}
+              end={item.href === '/crm/business-development'}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 "hover:bg-accent hover:text-accent-foreground",
@@ -148,6 +174,7 @@ export function CrmSidebar() {
                 collapsed && "justify-center px-2"
               )}
               title={collapsed ? item.label : undefined}
+              aria-current={isActive ? 'page' : undefined}
             >
               <Icon className="h-5 w-5 flex-shrink-0" />
               {!collapsed && (
@@ -162,7 +189,8 @@ export function CrmSidebar() {
               )}
             </NavLink>
           );
-        })}
+          })}
+        </div>)}
       </nav>
 
       {/* Footer */}

@@ -1,0 +1,3 @@
+import type { ImportConflict, ImportConflictDecision } from './contracts';
+const allowed: ImportConflictDecision[]=['link_organization','link_contact','create_organization','create_contact','exclude','correct_source','defer'];
+export function resolveImportConflict(conflict: ImportConflict, decision: ImportConflictDecision, selectedCandidateId?: string): ImportConflict { if(!allowed.includes(decision)) throw new Error('Unsupported import conflict decision.'); if((decision==='link_organization'||decision==='link_contact')&&!selectedCandidateId) throw new Error('Select an existing candidate before linking.'); return {...conflict,decision,selectedCandidateId}; }

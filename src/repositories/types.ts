@@ -22,6 +22,7 @@ import type {
   CommunicationPolicyResult,
 } from '@/domain/operations';
 import type { Tables } from '@/integrations/supabase/types';
+import type { RelationshipsRepository } from './relationships';
 
 export interface Paged<T> {
   rows: T[];
@@ -208,4 +209,6 @@ export interface CrmDataProvider {
   staff: StaffRepository;
   audit: AuditRepository;
   reports: ReportsRepository;
+  /** Never aliases clients, clinical campaigns, or clinical communications. */
+  relationships: RelationshipsRepository;
 }

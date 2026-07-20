@@ -1,0 +1,3 @@
+import type { Referral, SourceLanguageMode } from './contracts';
+import { approvedSourceLanguage } from './contracts';
+export function sourceLanguageSentence(referral?: Referral): { mode: SourceLanguageMode; sentence?: string } { const mode = approvedSourceLanguage(referral); const sentence = mode === 'research' ? 'We learned about your organization through our research.' : mode === 'community' ? 'Your organization was shared through our community network.' : mode === 'verified_anonymous' ? 'A verified community recommendation brought your work to our attention.' : mode === 'verified_named' ? `${referral?.namedReferrer} recommended your organization.` : undefined; return { mode, sentence }; }
