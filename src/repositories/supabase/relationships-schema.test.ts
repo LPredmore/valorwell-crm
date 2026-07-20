@@ -35,9 +35,13 @@ describe('canonical relationship persistence schema', () => {
 
     expectTypeOf<RelationshipContactInsert>().toMatchTypeOf<{
       tenant_id: string;
-      first_name: string;
-      last_name: string;
     }>();
+    expectTypeOf<RelationshipContactInsert['first_name']>().toEqualTypeOf<
+      string | null | undefined
+    >();
+    expectTypeOf<RelationshipContactInsert['last_name']>().toEqualTypeOf<
+      string | null | undefined
+    >();
 
     expectTypeOf<RelationshipAffiliationInsert>().toMatchTypeOf<{
       tenant_id: string;
