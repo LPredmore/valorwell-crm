@@ -7,7 +7,7 @@ import { supabaseAuditRepository } from './audit';
 import { supabaseCampaignsRepository } from './campaigns';
 import { supabaseCommunicationsRepository } from './communications';
 import { supabaseReportsRepository } from './reports';
-import { unavailableRelationshipsRepository } from '../relationships-unavailable';
+import { supabaseRelationshipsRepository } from './relationships';
 
 /**
  * Full Supabase provider. Every domain repository is backed by Supabase
@@ -22,7 +22,5 @@ export const supabaseDataProvider: CrmDataProvider = {
   campaigns: supabaseCampaignsRepository,
   communications: supabaseCommunicationsRepository,
   reports: supabaseReportsRepository,
-  relationships: unavailableRelationshipsRepository,
+  relationships: supabaseRelationshipsRepository,
 };
-
-
