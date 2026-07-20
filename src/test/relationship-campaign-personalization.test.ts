@@ -77,4 +77,11 @@ describe('relationship campaign personalization', () => {
     expect(result.rendered).toContain('{{cause_area}}');
     expect(result.unresolvedVariables).toEqual(['{{organization_type}}', '{{cause_area}}']);
   });
+
+  it('handles mixed-case placeholders by normalizing them before allowlist checks', () => {
+    const result = resolveRelationshipCampaignPersonalization('Hello {{CONTACT_FIRST_NAME}} from {{ORGANIZATION_NAME}} and {{Unknown_VAR}}', context);
+
+    expect(result.rendered).toBe('Hello Mina from ValorWell Partners and {{Unknown_VAR}}');
+    expect(result.unresolvedVariables).toEqual(['{{Unknown_VAR}}']);
+  });
 });

@@ -47,4 +47,12 @@ describe('relationship domain safety', () => {
     expect(parseCsv('name\nValorWell').errors).toContain('Required header: organization_name.');
     expect(normalizeDomain(' https://www.Example.org/hello ')).toBe('example.org');
   });
+
+  it('parses quoted CSV values with commas and escaped quotes', () => {
+    const withCommas = parseCsv('organization_name,summary\nValorWell,"A, B, C"');
+    expect(withCommas.rows).toEqual([{ organization_name: 'ValorWell', summary: 'A, B, C' }]);
+
+    const withEscapedQuotes = parseCsv('organization_name,summary\nValorWell,"She said ""hello"""');
+    expect(withEscapedQuotes.rows).toEqual([{ organization_name: 'ValorWell', summary: 'She said "hello"' }]);
+  });
 });

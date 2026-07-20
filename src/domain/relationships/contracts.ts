@@ -15,7 +15,7 @@ export type OperationError = { code: OperationErrorCode; message: string; diagno
 export type ValidationResult = { valid: boolean; fieldErrors: Record<string, string>; formError?: string };
 export type OrganizationRole = { id: string; code: string; label: string; primary: boolean };
 export type SocialProfile = { platform: string; handle?: string; url: string; followers?: number };
-export type Organization = AuditMetadata & { id: string; name: string; website?: string; type?: string; state?: string; veteranAffiliation?: boolean; stage: RelationshipStage; outreachStatus?: string; reviewStatus?: string; ownerId?: string; nextAction?: string; nextActionDueAt?: string; doNotContact: boolean; roles: OrganizationRole[]; socialProfiles: SocialProfile[] };
+export type Organization = AuditMetadata & { id: string; name: string; website?: string; type?: string; state?: string; veteranAffiliation?: boolean; stage: RelationshipStage; outreachStatus?: string; reviewStatus?: string; ownerId?: string; nextAction?: string; nextActionDueAt?: string; description?: string; doNotContact: boolean; roles: OrganizationRole[]; socialProfiles: SocialProfile[] };
 export type OrganizationInput = Omit<Organization, 'id' | keyof AuditMetadata>;
 export type RelationshipContact = AuditMetadata & { id: string; kind: ContactKind; displayName: string; firstName?: string; email?: string; phone?: string; organizationIds: string[]; primaryOrganizationId?: string; title?: string; stage: RelationshipStage; ownerId?: string; nextAction?: string; nextActionDueAt?: string; doNotContact: boolean };
 export type ContactInput = Omit<RelationshipContact, 'id' | keyof AuditMetadata>;
@@ -315,4 +315,57 @@ export function relationshipFollowUpState(input: { ownerId?: string; nextAction?
 export function approvedSourceLanguage(referral?: Referral): SourceLanguageMode { if (!referral) return 'research'; if (!referral.verified || referral.revokedAt || referral.disclosure === 'internal' || referral.disclosure === 'compliance_review') return 'none'; if (referral.disclosure === 'named_referrer' && referral.namedReferrer) return 'verified_named'; return referral.disclosure === 'community_anonymous' ? 'verified_anonymous' : 'community'; }
 export function normalizeDomain(value: string) { return value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]; }
 export function normalizeEmail(value: string) { return value.trim().toLowerCase(); }
-export function parseCsv(text: string): { headers: string[]; rows: Record<string, string>[]; errors: string[] } { const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean); if (!lines.length) return { headers: [], rows: [], errors: ['The CSV is empty.'] }; const split = (line: string) => line.split(',').map(v => v.trim().replace(/^"|"$/g, '')); const headers = split(lines[0]); if (!headers.includes('organization_name')) return { headers, rows: [], errors: ['Required header: organization_name.'] }; return { headers, rows: lines.slice(1).map(line => Object.fromEntries(headers.map((header, index) => [header, split(line)[index] ?? '']))), errors: [] }; }
+export function parseCsv(text: string): { headers: string[]; rows: Record<string, string>[]; errors: string[] } {
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.trim() !== '');
+  if (!lines.length) return { headers: [], rows: [], errors: ['The CSV is empty.'] };
+
+  const split = (line: string) => {
+    const values: string[] = [];
+    let field = '';
+    let quoted = false;
+
+    for (let i = 0; i < line.length; i += 1) {
+      const char = line[i];
+      const next = line[i + 1];
+
+      if (char === '"') {
+        if (quoted && next === '"') {
+          field += '"';
+          i += 1;
+        } else {
+          quoted = !quoted;
+        }
+      } else if (char === ',' && !quoted) {
+        values.push(field.trim());
+        field = '';
+      } else {
+        field += char;
+      }
+    }
+
+    return {
+      values: values.concat(field.trim()),
+      error: quoted ? 'Unclosed quoted CSV field.' : undefined,
+    };
+  };
+
+  const headersResult = split(lines[0]);
+  if (headersResult.error) return { headers: [], rows: [], errors: [headersResult.error] };
+
+  const headers = headersResult.values;
+  if (!headers.includes('organization_name')) return { headers, rows: [], errors: ['Required header: organization_name.'] };
+
+  const parsedRows = lines.slice(1).map((line) => {
+    const parsed = split(line);
+    return {
+      row: Object.fromEntries(headers.map((header, index) => [header, parsed.values[index] ?? ''])),
+      error: parsed.error,
+    };
+  });
+
+  return {
+    headers,
+    rows: parsedRows.map(({ row }) => row),
+    errors: parsedRows.flatMap(({ error }) => (error ? [error] : [])),
+  };
+}

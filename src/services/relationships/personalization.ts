@@ -63,10 +63,10 @@ function valueFor(variable: AllowedVariableName, context: CommunicationPersonali
 }
 
 function blockedClaimsIn(template: string) {
-  const matches = Array.from(template.matchAll(/\{\{([a-z0-9_]+)\}\}/g));
+  const matches = Array.from(template.matchAll(/\{\{([a-z0-9_]+)\}\}/gi));
   return matches.flatMap(([, variable]) => {
-    const lower = variable.toLowerCase();
-    if (!allowedVariables.has(variable as AllowedVariableName) && (lower.includes('source') || lower.includes('referral') || lower.includes('claim'))) {
+    const normalized = variable.toLowerCase();
+    if (!allowedVariables.has(normalized as AllowedVariableName) && (normalized.includes('source') || normalized.includes('referral') || normalized.includes('claim'))) {
       return [`Blocked referral-claim variable: {{${variable}}}`];
     }
     return [];
@@ -81,7 +81,7 @@ export function resolveRelationshipCampaignPersonalization(
   const unresolvedVariables: string[] = [];
   const blockedClaims = blockedClaimsIn(template);
 
-  const rendered = template.replace(/\{\{([a-z0-9_]+)\}\}/g, (match, variableName) => {
+  const rendered = template.replace(/\{\{([a-z0-9_]+)\}\}/gi, (match, variableName) => {
     const normalized = variableName.toLowerCase();
     const isBlocked = blockedClaims.some((claim) => claim.includes(`{{${variableName}}}`));
     if (isBlocked) {
