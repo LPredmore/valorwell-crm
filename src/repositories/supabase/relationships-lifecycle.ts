@@ -6,6 +6,10 @@ import type {
   InteractionFilters,
   RelationshipStage,
 } from '@/domain/relationships/contracts';
+import type {
+  RelationshipContactFilters,
+  RelationshipOrganizationFilters,
+} from '@/domain/relationships/records';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import type { RelationshipsRepository, RelationshipSubject } from '@/repositories/relationships';
@@ -27,9 +31,27 @@ type OperatingContext = {
   canMutate: boolean;
 };
 
+type LifecycleEntityRow = {
+  id: string;
+  tenant_id: string;
+  relationship_stage: RelationshipStage;
+};
+
 type LifecycleDatabase = {
   public: {
     Tables: {
+      relationship_organizations: {
+        Row: LifecycleEntityRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      relationship_contacts: {
+        Row: LifecycleEntityRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       relationship_stage_history: {
         Row: LifecycleStageHistoryRow;
         Insert: Partial<LifecycleStageHistoryRow>;
@@ -169,6 +191,132 @@ async function lifecycleCapabilities(): Promise<CapabilityAvailability[]> {
   }
 }
 
+async function entityStage(
+  table: 'relationship_organizations' | 'relationship_contacts',
+  tenantId: string,
+  id: string,
+): Promise<RelationshipStage | undefined> {
+  const { data, error } = await lifecycleSupabase
+    .from(table)
+    .select('relationship_stage')
+    .eq('tenant_id', tenantId)
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.relationship_stage;
+}
+
+async function entityStageMap(
+  table: 'relationship_organizations' | 'relationship_contacts',
+  tenantId: string,
+  ids: string[],
+): Promise<Map<string, RelationshipStage>> {
+  if (!ids.length) return new Map();
+  const { data, error } = await lifecycleSupabase
+    .from(table)
+    .select('id, relationship_stage')
+    .eq('tenant_id', tenantId)
+    .in('id', ids);
+  if (error) throw new Error(error.message);
+  return new Map((data ?? []).map((row) => [row.id, row.relationship_stage]));
+}
+
+async function listOrganizations(filters: RelationshipOrganizationFilters) {
+  const page = await baseRelationshipsRepository.listOrganizations(filters);
+  const context = await operatingContext();
+  const stages = await entityStageMap(
+    'relationship_organizations',
+    context.tenantId,
+    page.items.map((organization) => organization.id),
+  );
+  return {
+    ...page,
+    items: page.items.map((organization) => ({
+      ...organization,
+      stage: stages.get(organization.id),
+    })),
+  };
+}
+
+async function getOrganization(id: string) {
+  const organization = await baseRelationshipsRepository.getOrganization(id);
+  if (!organization) return null;
+  const context = await operatingContext();
+  return {
+    ...organization,
+    stage: await entityStage('relationship_organizations', context.tenantId, id),
+  };
+}
+
+async function createOrganization(input: Parameters<RelationshipsRepository['createOrganization']>[0]) {
+  const organization = await baseRelationshipsRepository.createOrganization(input);
+  const context = await operatingContext();
+  return {
+    ...organization,
+    stage: await entityStage('relationship_organizations', context.tenantId, organization.id),
+  };
+}
+
+async function updateOrganization(
+  id: string,
+  input: Parameters<RelationshipsRepository['updateOrganization']>[1],
+) {
+  const organization = await baseRelationshipsRepository.updateOrganization(id, input);
+  const context = await operatingContext();
+  return {
+    ...organization,
+    stage: await entityStage('relationship_organizations', context.tenantId, organization.id),
+  };
+}
+
+async function listContacts(filters: RelationshipContactFilters) {
+  const page = await baseRelationshipsRepository.listContacts(filters);
+  const context = await operatingContext();
+  const stages = await entityStageMap(
+    'relationship_contacts',
+    context.tenantId,
+    page.items.map((contact) => contact.id),
+  );
+  return {
+    ...page,
+    items: page.items.map((contact) => ({
+      ...contact,
+      stage: stages.get(contact.id),
+    })),
+  };
+}
+
+async function getContact(id: string) {
+  const contact = await baseRelationshipsRepository.getContact(id);
+  if (!contact) return null;
+  const context = await operatingContext();
+  return {
+    ...contact,
+    stage: await entityStage('relationship_contacts', context.tenantId, id),
+  };
+}
+
+async function createContact(input: Parameters<RelationshipsRepository['createContact']>[0]) {
+  const contact = await baseRelationshipsRepository.createContact(input);
+  const context = await operatingContext();
+  return {
+    ...contact,
+    stage: await entityStage('relationship_contacts', context.tenantId, contact.id),
+  };
+}
+
+async function updateContact(
+  id: string,
+  input: Parameters<RelationshipsRepository['updateContact']>[1],
+) {
+  const contact = await baseRelationshipsRepository.updateContact(id, input);
+  const context = await operatingContext();
+  return {
+    ...contact,
+    stage: await entityStage('relationship_contacts', context.tenantId, contact.id),
+  };
+}
+
 async function listStageHistory(subject: RelationshipSubject) {
   const context = await operatingContext();
   const normalized = assertStageSubject(subject);
@@ -249,6 +397,14 @@ async function createInteraction(input: Parameters<RelationshipsRepository['crea
 export const supabaseRelationshipsRepository: RelationshipsRepository = {
   ...baseRelationshipsRepository,
   capabilities: lifecycleCapabilities,
+  listOrganizations,
+  getOrganization,
+  createOrganization,
+  updateOrganization,
+  listContacts,
+  getContact,
+  createContact,
+  updateContact,
   listStageHistory,
   transitionStage,
   listInteractions,

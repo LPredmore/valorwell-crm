@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RelationshipCapabilityState } from '@/components/crm/relationships/RelationshipCapabilityState';
+import { RelationshipLifecyclePanel } from '@/components/crm/relationships/RelationshipLifecyclePanel';
+import { relationshipStageLabel } from '@/domain/relationships/lifecycle-workflow';
 import { useRelationshipCapability } from '@/hooks/relationships/useRelationshipCapabilities';
 import { dataProvider } from '@/services/dataProvider';
 
@@ -48,8 +50,9 @@ export default function OrganizationDetailPage() {
       {organization.data === null && <Card><CardHeader><CardTitle>Organization not found</CardTitle><CardDescription>No organization with this ID exists in the selected tenant.</CardDescription></CardHeader></Card>}
 
       {organization.data && <Card>
-        <CardHeader><CardTitle>Organization summary</CardTitle><CardDescription>Values shown here are direct Billing Hub fields.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Organization summary</CardTitle><CardDescription>Values shown here are direct Billing Hub relationship fields.</CardDescription></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Summary label="Lifecycle stage" value={relationshipStageLabel(organization.data.stage)} />
           <Summary label="Outreach status" value={organization.data.outreachStatus.replace(/_/g, ' ')} />
           <Summary label="Organization kind" value={organization.data.organizationKind ?? 'Not recorded'} />
           <Summary label="Veteran affiliated" value={organization.data.veteranAffiliated === undefined ? 'Not recorded' : organization.data.veteranAffiliated ? 'Yes' : 'No'} />
@@ -62,6 +65,14 @@ export default function OrganizationDetailPage() {
         </CardContent>
       </Card>}
 
+      {organization.data && (
+        <RelationshipLifecyclePanel
+          subject={{ organizationId: organization.data.id }}
+          currentStage={organization.data.stage}
+          entityLabel={organization.data.name}
+        />
+      )}
+
       <Card>
         <CardHeader><CardTitle>Affiliated contacts</CardTitle><CardDescription>Contact membership is loaded through the composite tenant/contact/organization affiliation table.</CardDescription></CardHeader>
         <CardContent>
@@ -71,13 +82,13 @@ export default function OrganizationDetailPage() {
           {affiliatedContacts.data?.items.length === 0 && <p className="text-sm text-muted-foreground">No contacts are affiliated with this organization.</p>}
           {affiliatedContacts.data && affiliatedContacts.data.items.length > 0 && <div className="divide-y rounded border">{affiliatedContacts.data.items.map((contact) => {
             const affiliation = contact.affiliations.find((item) => item.organizationId === id);
-            return <div className="flex flex-wrap items-center justify-between gap-2 p-3" key={contact.id}><div><p className="font-medium">{contact.displayName}</p><p className="text-sm text-muted-foreground">{contact.email ?? 'No email recorded'}</p></div><div className="text-right"><p className="text-sm">{affiliation?.roleTitle ?? 'Role not recorded'}</p>{affiliation?.isPrimary && <Badge variant="secondary">Primary</Badge>}</div></div>;
+            return <div className="flex flex-wrap items-center justify-between gap-2 p-3" key={contact.id}><div><Link className="font-medium text-primary underline-offset-4 hover:underline" to={`/crm/business-development/contacts/${contact.id}`}>{contact.displayName}</Link><p className="text-sm text-muted-foreground">{contact.email ?? 'No email recorded'} · {relationshipStageLabel(contact.stage)}</p></div><div className="text-right"><p className="text-sm">{affiliation?.roleTitle ?? 'Role not recorded'}</p>{affiliation?.isPrimary && <Badge variant="secondary">Primary</Badge>}</div></div>;
           })}</div>}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Deferred relationship functions</CardTitle><CardDescription>Lifecycle stages, review workflow, interactions, opportunities, campaigns, suppressions, and timeline events remain capability-gated until their database contracts are implemented.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Remaining relationship functions</CardTitle><CardDescription>Referrals, opportunities, campaigns, suppressions, and automated communications remain capability-gated for later implementation passes.</CardDescription></CardHeader>
       </Card>
     </div>
   );
