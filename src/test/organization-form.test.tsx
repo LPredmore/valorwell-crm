@@ -1,56 +1,127 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { capabilityState } from '@/domain/relationships/capabilities';
 import { prepareOrganizationSubmissionInput, validateOrganizationInput } from '@/domain/relationships/organization-form';
 import OrganizationFormPage from '@/pages/crm/business-development/OrganizationFormPage';
+
+const { createOrganization, getOrganization, updateOrganization } = vi.hoisted(() => ({
+  createOrganization: vi.fn(),
+  getOrganization: vi.fn(),
+  updateOrganization: vi.fn(),
+}));
 
 vi.mock('@/hooks/relationships/useRelationshipCapabilities', () => ({
   useRelationshipCapability: () => ({ capability: capabilityState('organizations', 'available'), isLoading: false, isError: false, refetch: vi.fn() }),
 }));
 
+vi.mock('@/services/dataProvider', () => ({
+  dataProvider: {
+    relationships: {
+      createOrganization,
+      getOrganization,
+      updateOrganization,
+    },
+  },
+}));
+
+function renderForm() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter><OrganizationFormPage /></MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
 describe('validateOrganizationInput', () => {
-  it('requires a name and stage and validates website protocol', () => {
-    expect(validateOrganizationInput({ website: 'example.org' })).toEqual({ valid: false, fieldErrors: { name: 'Organization name is required.', website: 'Website must begin with http:// or https://.', stage: 'Relationship stage is required.' } });
+  it('requires a name and validates website protocol', () => {
+    expect(validateOrganizationInput({ website: 'example.org' })).toEqual({
+      valid: false,
+      fieldErrors: {
+        name: 'Organization name is required.',
+        website: 'Website must begin with http:// or https://.',
+      },
+    });
   });
 
-  it('accepts a minimally valid organization input', () => {
-    expect(validateOrganizationInput({ name: 'Veterans Forward', website: 'https://example.org', stage: 'identified' })).toEqual({ valid: true, fieldErrors: {} });
+  it('accepts a minimally valid persisted organization input', () => {
+    expect(validateOrganizationInput({
+      name: 'Veterans Forward',
+      website: 'https://example.org',
+      outreachStatus: 'new',
+    })).toEqual({ valid: true, fieldErrors: {} });
   });
 });
 
 describe('organization form submission preparation', () => {
-  it('retains typed role, social profile, and description values in the form', () => {
-    render(<MemoryRouter><OrganizationFormPage /></MemoryRouter>);
-
-    fireEvent.change(screen.getByLabelText('Organization roles'), { target: { value: 'advocate, sponsor' } });
-    fireEvent.change(screen.getByLabelText('Social profiles'), { target: { value: 'https://linkedin.com/company/valorwell, https://x.com/valorwell' } });
-    fireEvent.change(screen.getByLabelText(/Description, mission/), { target: { value: 'Mission and outreach context' } });
-
-    expect(screen.getByLabelText('Organization roles')).toHaveValue('advocate, sponsor');
-    expect(screen.getByLabelText('Social profiles')).toHaveValue('https://linkedin.com/company/valorwell, https://x.com/valorwell');
-    expect(screen.getByLabelText(/Description, mission/)).toHaveValue('Mission and outreach context');
+  beforeEach(() => {
+    createOrganization.mockReset();
+    getOrganization.mockReset();
+    updateOrganization.mockReset();
+    createOrganization.mockResolvedValue({
+      id: 'org-1',
+      tenantId: 'tenant-1',
+      name: 'Veterans Forward',
+      outreachStatus: 'new',
+      doNotContact: false,
+      source: 'crm_manual',
+      createdAt: '2026-07-20T00:00:00Z',
+      updatedAt: '2026-07-20T00:00:00Z',
+    });
   });
 
-  it('converts comma-separated roles and social profiles to typed submission objects', () => {
-    const result = prepareOrganizationSubmissionInput(
-      { name: 'Veterans Forward', website: 'https://example.org', stage: 'identified' },
-      'Advocate, Sponsor',
-      'https://linkedin.com/company/valorwell, https://x.com/valorwell',
-      'Mission and outreach context',
-    );
+  it('shows persisted fields and omits unsupported future-state fields', () => {
+    renderForm();
 
-    expect(result).toMatchObject({
-      name: 'Veterans Forward',
-      description: 'Mission and outreach context',
-      roles: [
-        { code: 'advocate', label: 'Advocate', primary: true },
-        { code: 'sponsor', label: 'Sponsor', primary: false },
-      ],
-      socialProfiles: [
-        { platform: 'linkedin.com', url: 'https://linkedin.com/company/valorwell' },
-        { platform: 'x.com', url: 'https://x.com/valorwell' },
-      ],
+    expect(screen.getByLabelText('Organization name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Organization kind')).toBeInTheDocument();
+    expect(screen.getByLabelText('Outreach status')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Organization roles')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Social profiles')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Description, mission/)).not.toBeInTheDocument();
+  });
+
+  it('normalizes only persisted organization submission values', () => {
+    const result = prepareOrganizationSubmissionInput({
+      name: '  Veterans Forward  ',
+      website: ' https://example.org ',
+      organizationKind: ' nonprofit ',
+      outreachStatus: 'new',
+      doNotContact: false,
     });
+
+    expect(result).toEqual({
+      name: 'Veterans Forward',
+      website: 'https://example.org',
+      organizationKind: 'nonprofit',
+      outreachStatus: 'new',
+      doNotContact: false,
+      ownerId: undefined,
+      nextAction: undefined,
+      nextActionDueAt: undefined,
+    });
+  });
+
+  it('submits the tenant-scoped repository create path', async () => {
+    renderForm();
+    fireEvent.change(screen.getByLabelText('Organization name'), { target: { value: 'Veterans Forward' } });
+    fireEvent.change(screen.getByLabelText('Website'), { target: { value: 'https://example.org' } });
+    fireEvent.change(screen.getByLabelText('Organization kind'), { target: { value: 'nonprofit' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create organization' }));
+
+    await waitFor(() => expect(createOrganization).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Veterans Forward',
+      website: 'https://example.org',
+      organizationKind: 'nonprofit',
+      outreachStatus: 'new',
+      doNotContact: false,
+    })));
   });
 });

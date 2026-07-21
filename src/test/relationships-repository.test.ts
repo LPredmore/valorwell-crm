@@ -21,7 +21,15 @@ describe('relationship repository boundary', () => {
 
   it('does not query or substitute a clinical repository when support is absent', async () => {
     await expect(unavailableRelationshipsRepository.listOrganizations({})).rejects.toBeInstanceOf(RelationshipCapabilityUnavailableError);
-    await expect(unavailableRelationshipsRepository.createContact({ kind: 'person', displayName: 'No write', organizationIds: [], stage: 'identified', doNotContact: false })).rejects.toMatchObject({ capability: 'contacts' });
+    await expect(unavailableRelationshipsRepository.createContact({ email: 'no-write@example.test' }))
+      .rejects.toMatchObject({ capability: 'contacts' });
+  });
+
+  it('uses a composite affiliation key rather than a synthetic affiliation ID', async () => {
+    await expect(unavailableRelationshipsRepository.updateAffiliation(
+      { contactId: 'contact-1', organizationId: 'org-1' },
+      { isPrimary: true },
+    )).rejects.toMatchObject({ capability: 'contacts' });
   });
 
   it('exposes relationship-only campaign, reply, suppression, reporting, and search operations', async () => {

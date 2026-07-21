@@ -45,13 +45,27 @@ describe('Business Development dashboard and system status', () => {
     expect(screen.getAllByText('Database support is available; this metric will appear after its integration is verified.').length).toBeGreaterThan(0);
   });
 
-  it('separates application readiness from database integration and production readiness', () => {
+  it('separates first-slice integration from full production readiness', () => {
     renderStatus();
     expect(screen.getByText('Architecture established')).toBeInTheDocument();
     expect(screen.getByText('Application code implemented')).toBeInTheDocument();
     expect(screen.getByText('Production ready')).toBeInTheDocument();
     expect(screen.getAllByText('Not verified').length).toBeGreaterThan(0);
-    expect(screen.getByText('Planned canonical database')).toBeInTheDocument();
+    expect(screen.getByText('Canonical database')).toBeInTheDocument();
+  });
+
+  it('verifies integration only when organizations and contacts are available', () => {
+    useRelationshipCapabilities.mockReturnValue({
+      data: relationshipCapabilities({
+        organizations: 'available',
+        contacts: 'available',
+      }),
+      isLoading: false,
+      isError: false,
+    });
+    renderStatus();
+    expect(screen.getByText('Organizations and contacts are verified against the selected Billing Hub tenant.')).toBeInTheDocument();
+    expect(screen.getByText('The first persistence slice is live; later workflow and operational-approval requirements remain.')).toBeInTheDocument();
   });
 
   it('keeps database-dependent functions disabled when the snapshot cannot be loaded', () => {

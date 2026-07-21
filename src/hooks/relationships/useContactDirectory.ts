@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { dataProvider } from '@/services/dataProvider';
 import type {
-  RelationshipOrganizationFilters,
+  RelationshipContactFilters,
   RelationshipOutreachStatus,
+  VeteranAffiliation,
 } from '@/domain/relationships/records';
 import type { SortDirection } from '@/domain/relationships/contracts';
+import { dataProvider } from '@/services/dataProvider';
 
 const pageSize = 25;
 
@@ -22,21 +23,19 @@ function booleanParam(value: string | null) {
   return value === 'true' ? true : value === 'false' ? false : undefined;
 }
 
-/** URL-backed organization filters. No relationship record is persisted in browser storage. */
-export function useOrganizationDirectoryFilters() {
+export function useContactDirectoryFilters() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const filters: RelationshipOrganizationFilters = {
+  const filters: RelationshipContactFilters = {
     search: searchParams.get('q') || undefined,
-    outreachStatuses: values(searchParams, 'outreachStatus') as RelationshipOutreachStatus[],
-    organizationKinds: values(searchParams, 'organizationKind'),
-    veteranAffiliated: booleanParam(searchParams.get('veteranAffiliated')),
+    organizationIds: values(searchParams, 'organization'),
     ownerIds: values(searchParams, 'owner'),
-    overdueNextAction: booleanParam(searchParams.get('overdue')),
+    outreachStatuses: values(searchParams, 'outreachStatus') as RelationshipOutreachStatus[],
+    veteranAffiliations: values(searchParams, 'veteranAffiliation') as VeteranAffiliation[],
     doNotContact: booleanParam(searchParams.get('doNotContact')),
-    contacted: (searchParams.get('contacted') || undefined) as RelationshipOrganizationFilters['contacted'],
+    hasNextAction: booleanParam(searchParams.get('hasNextAction')),
     page: numberParam(searchParams.get('page'), 1),
     pageSize,
-    sortBy: (searchParams.get('sortBy') || 'name') as RelationshipOrganizationFilters['sortBy'],
+    sortBy: (searchParams.get('sortBy') || 'displayName') as RelationshipContactFilters['sortBy'],
     sortDirection: (searchParams.get('sortDirection') || 'asc') as SortDirection,
   };
 
@@ -57,14 +56,13 @@ export function useOrganizationDirectoryFilters() {
   });
 
   const reset = () => setSearchParams({});
-  return { filters, searchParams, set, setMany, reset };
+  return { filters, set, setMany, reset };
 }
 
-/** Query is enabled only after the typed organization capability is available. */
-export function useOrganizationDirectory(filters: RelationshipOrganizationFilters, enabled: boolean) {
+export function useContactDirectory(filters: RelationshipContactFilters, enabled: boolean) {
   return useQuery({
-    queryKey: ['relationship-organizations', filters],
-    queryFn: () => dataProvider.relationships.listOrganizations(filters),
+    queryKey: ['relationship-contacts', filters],
+    queryFn: () => dataProvider.relationships.listContacts(filters),
     enabled,
     retry: false,
   });
