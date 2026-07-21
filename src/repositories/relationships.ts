@@ -7,8 +7,6 @@ import type {
   CreateOpportunityInput,
   CreateReferralInput,
   CreateSuppressionInput,
-  ImportConflict,
-  ImportPreviewResult,
   InteractionFilters,
   OrganizationRole,
   PageResult,
@@ -33,6 +31,10 @@ import type {
   UpdateSuppressionInput,
   VerifyReferralInput,
 } from '@/domain/relationships/contracts';
+import type {
+  RelationshipImportPreviewResult,
+  RelationshipImportResolution,
+} from '@/domain/relationships/import-contracts';
 import type {
   RelationshipAffiliationInput,
   RelationshipAffiliationKey,
@@ -98,9 +100,23 @@ export interface RelationshipsRepository {
   updateOpportunity(id: string, input: UpdateOpportunityInput): Promise<RelationshipOpportunity>;
   transitionOpportunityStatus(id: string, input: { status: RelationshipOpportunity['status']; reason?: string }): Promise<RelationshipOpportunity>;
 
-  previewImport(input: { csv: string; mapping: import('@/domain/relationships/contracts').ImportColumnMapping }): Promise<ImportPreviewResult>;
-  resolveImportConflicts(input: { previewId: string; conflicts: ImportConflict[] }): Promise<ImportPreviewResult>;
-  commitImport(input: { previewId: string }): Promise<{ importId: string }>;
+  getImportPreview(previewId: string): Promise<RelationshipImportPreviewResult>;
+  previewImport(input: {
+    csv: string;
+    mapping: import('@/domain/relationships/contracts').ImportColumnMapping;
+    filename?: string;
+    sourceType?: string;
+  }): Promise<RelationshipImportPreviewResult>;
+  resolveImportConflicts(input: {
+    previewId: string;
+    conflicts: RelationshipImportResolution[];
+    expectedVersion?: number;
+  }): Promise<RelationshipImportPreviewResult>;
+  commitImport(input: {
+    previewId: string;
+    expectedVersion?: number;
+    idempotencyKey?: string;
+  }): Promise<{ importId: string }>;
 
   listCampaigns(filters: CampaignFilters): Promise<PageResult<RelationshipCampaign>>;
   getCampaign(id: string): Promise<RelationshipCampaign | null>;
