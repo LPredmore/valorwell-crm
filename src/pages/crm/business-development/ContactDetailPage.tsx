@@ -33,10 +33,9 @@ export default function ContactDetailPage() {
   });
 
   const organizationNames = new Map(
-    organizationQueries
-      .map((query) => query.data)
-      .filter((organization): organization is NonNullable<typeof organization> => Boolean(organization))
-      .map((organization) => [organization.id, organization.name]),
+    organizationQueries.flatMap((query) => query.data
+      ? [[query.data.id, query.data.name] as const]
+      : []),
   );
 
   return (
