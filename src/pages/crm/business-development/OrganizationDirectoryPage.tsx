@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RelationshipCapabilityState } from '@/components/crm/relationships/RelationshipCapabilityState';
 import { RelationshipPagination } from '@/components/crm/relationships/RelationshipWorkspacePrimitives';
+import { relationshipStageLabel } from '@/domain/relationships/lifecycle-workflow';
 import { useRelationshipCapability } from '@/hooks/relationships/useRelationshipCapabilities';
 import { useOrganizationDirectory, useOrganizationDirectoryFilters } from '@/hooks/relationships/useOrganizationDirectory';
 
@@ -68,7 +69,7 @@ export default function OrganizationDirectoryPage() {
       {available && directory.data && <Card>
         <CardHeader><CardTitle>Organization results</CardTitle><CardDescription>{directory.data.total} matching relationship organizations.</CardDescription></CardHeader>
         <CardContent className="space-y-4">
-          {items.length === 0 ? <p className="text-sm text-muted-foreground">No organizations match the current filters.</p> : <div className="divide-y rounded border">{items.map((organization) => <div className="flex items-center gap-3 p-3" key={organization.id}><Checkbox aria-label={`Select ${organization.name}`} checked={selectedIds.includes(organization.id)} onCheckedChange={(checked) => toggleSelected(organization.id, checked === true)} /><div className="min-w-0 flex-1"><Link className="font-medium text-primary underline-offset-4 hover:underline" to={`/crm/business-development/organizations/${organization.id}`}>{organization.name}</Link><p className="truncate text-sm text-muted-foreground">{organization.organizationKind ?? 'Kind not recorded'} · {organization.outreachStatus.replace(/_/g, ' ')}</p></div><p className="hidden text-sm text-muted-foreground md:block">{organization.nextAction ?? 'No next action'}</p></div>)}</div>}
+          {items.length === 0 ? <p className="text-sm text-muted-foreground">No organizations match the current filters.</p> : <div className="divide-y rounded border">{items.map((organization) => <div className="flex items-center gap-3 p-3" key={organization.id}><Checkbox aria-label={`Select ${organization.name}`} checked={selectedIds.includes(organization.id)} onCheckedChange={(checked) => toggleSelected(organization.id, checked === true)} /><div className="min-w-0 flex-1"><Link className="font-medium text-primary underline-offset-4 hover:underline" to={`/crm/business-development/organizations/${organization.id}`}>{organization.name}</Link><p className="truncate text-sm text-muted-foreground">{organization.organizationKind ?? 'Kind not recorded'} · {relationshipStageLabel(organization.stage)} · {organization.outreachStatus.replace(/_/g, ' ')}</p></div><p className="hidden text-sm text-muted-foreground md:block">{organization.nextAction ?? 'No next action'}</p></div>)}</div>}
           <RelationshipPagination page={directory.data.page} pageSize={directory.data.pageSize} total={directory.data.total} onPageChange={(page) => set('page', String(page))} />
         </CardContent>
       </Card>}
