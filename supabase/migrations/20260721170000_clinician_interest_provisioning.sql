@@ -64,10 +64,6 @@ begin
         is_active = true,
         updated_at = now();
 
-  insert into public.user_roles (user_id, role)
-  values (p_auth_user_id, 'staff'::public.app_role)
-  on conflict (user_id, role) do nothing;
-
   insert into public.staff (
     tenant_id,
     profile_id,
@@ -113,6 +109,7 @@ begin
            'communication_consent', true,
            'interest_source', 'website_clinician_interest',
            'account_provisioning_state', 'provisioned',
+           'application_access_role', 'deferred_until_approved',
            'interest_registered_at', now()
          ),
          updated_at = now()
@@ -167,7 +164,8 @@ begin
     'profile_id', p_auth_user_id,
     'staff_id', v_staff_id,
     'recruiting_lifecycle', 'invite_sent',
-    'staff_status', 'Invited'
+    'staff_status', 'Invited',
+    'application_access_role', 'deferred_until_approved'
   );
 end;
 $function$;
