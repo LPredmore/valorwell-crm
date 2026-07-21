@@ -9,3 +9,5 @@ verify_jwt = false
 [functions.campaign-scheduler]
 verify_jwt = false
 
+[functions.register-clinician-interest]
+verify_jwt = false
