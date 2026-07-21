@@ -17,7 +17,7 @@ import {
 
 const statusLabel: Record<RelationshipCampaignStatus, string> = {
   draft: 'Draft',
-  active: 'Active definition',
+  active: 'Active',
   paused: 'Paused',
   completed: 'Completed',
   archived: 'Archived',
@@ -39,7 +39,9 @@ export default function RelationshipCampaignDirectoryPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline"><Link to="/crm/business-development/status">System status</Link></Button>
-          <Button asChild disabled={!available}><Link to="/crm/business-development/campaigns/new"><Plus className="mr-2 h-4 w-4" />New campaign</Link></Button>
+          {available
+            ? <Button asChild><Link to="/crm/business-development/campaigns/new"><Plus className="mr-2 h-4 w-4" />New campaign</Link></Button>
+            : <Button type="button" disabled><Plus className="mr-2 h-4 w-4" />New campaign</Button>}
         </div>
       </div>
 
@@ -99,17 +101,21 @@ export default function RelationshipCampaignDirectoryPage() {
       {available && directory.isError && <Card><CardHeader><CardTitle>Relationship campaigns could not be loaded</CardTitle><CardDescription>Try again later. No clinical campaign data was used as a fallback.</CardDescription></CardHeader><CardContent><Button variant="outline" onClick={() => { void directory.refetch(); }}>Try again</Button></CardContent></Card>}
       {available && directory.data && <Card>
         <CardHeader>
-          <CardTitle>Campaign register</CardTitle>
-          <CardDescription>{directory.data.total} matching relationship campaign definitions.</CardDescription>
+          <CardTitle>Relationship campaign results</CardTitle>
+          <CardDescription>{directory.data.total} matching relationship campaigns.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {items.length === 0 ? <p className="text-sm text-muted-foreground">No relationship campaigns match the current filters.</p> : <div className="divide-y rounded border">{items.map((campaign) => <div className="space-y-3 p-4" key={campaign.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><Link className="font-medium text-primary hover:underline" to={`/crm/business-development/campaigns/${campaign.id}`}>{campaign.name}</Link><p className="text-sm text-muted-foreground">{campaign.purpose}</p></div><div className="flex gap-2"><Badge variant="outline">{statusLabel[campaign.status]}</Badge><Badge variant="secondary">{campaign.marketingLifecycleStage.replace(/_/g, ' ')}</Badge></div></div><div className="flex flex-wrap gap-3 text-sm text-muted-foreground"><span>{campaign.initiative ?? 'No initiative'}</span><span>Owner {campaign.ownerId ?? 'unassigned'}</span><span>{campaign.senderName} &lt;{campaign.senderEmail}&gt;</span><span>{campaign.steps.length ? `${campaign.steps.length} steps` : 'Step count loads on detail'}</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <MetricCard label="Enrollments" value={campaign.metricsAvailable ? campaign.enrollmentCount : undefined} />
-            <MetricCard label="Replies" value={campaign.metricsAvailable ? campaign.replyCount : undefined} />
-            <MetricCard label="Suppressions" value={campaign.metricsAvailable ? campaign.suppressionCount : undefined} />
-            <MetricCard label="Upcoming send" value={undefined} />
-            <MetricCard label="Errors" value={campaign.metricsAvailable ? campaign.errorCount : undefined} />
-          </div></div>)}</div>}
+          {items.length === 0 ? <p className="text-sm text-muted-foreground">No relationship campaigns match the current filters.</p> : <div className="divide-y rounded border">{items.map((campaign) => {
+            const metricsAvailable = campaign.metricsAvailable !== false;
+            const marketingStage = campaign.marketingLifecycleStage;
+            return <div className="space-y-3 p-4" key={campaign.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><Link className="font-medium text-primary hover:underline" to={`/crm/business-development/campaigns/${campaign.id}`}>{campaign.name}</Link><p className="text-sm text-muted-foreground">{campaign.purpose}</p></div><div className="flex gap-2"><Badge variant="outline">{statusLabel[campaign.status]}</Badge>{marketingStage && <Badge variant="secondary">{marketingStage.replace(/_/g, ' ')}</Badge>}</div></div><div className="flex flex-wrap gap-3 text-sm text-muted-foreground"><span>{campaign.initiative ?? 'No initiative'}</span><span>Owner {campaign.ownerId ?? 'unassigned'}</span><span>{campaign.senderName} &lt;{campaign.senderEmail}&gt;</span><span>{campaign.steps.length ? `${campaign.steps.length} steps` : 'Step count loads on detail'}</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <MetricCard label="Enrollment" value={metricsAvailable ? campaign.enrollmentCount : undefined} />
+              <MetricCard label="Replies" value={metricsAvailable ? campaign.replyCount : undefined} />
+              <MetricCard label="Suppressions" value={metricsAvailable ? campaign.suppressionCount : undefined} />
+              <MetricCard label="Upcoming send" value={undefined} />
+              <MetricCard label="Errors" value={metricsAvailable ? campaign.errorCount : undefined} />
+            </div></div>;
+          })}</div>}
           <RelationshipPagination page={directory.data.page} pageSize={directory.data.pageSize} total={directory.data.total} onPageChange={(page) => set('page', String(page))} />
         </CardContent>
       </Card>}
