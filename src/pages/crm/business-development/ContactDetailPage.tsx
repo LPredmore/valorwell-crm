@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RelationshipCapabilityState } from '@/components/crm/relationships/RelationshipCapabilityState';
 import { RelationshipLifecyclePanel } from '@/components/crm/relationships/RelationshipLifecyclePanel';
+import { RelationshipReferralPanel } from '@/components/crm/relationships/RelationshipReferralPanel';
 import { relationshipStageLabel } from '@/domain/relationships/lifecycle-workflow';
 import { useRelationshipCapability } from '@/hooks/relationships/useRelationshipCapabilities';
 import { dataProvider } from '@/services/dataProvider';
@@ -76,6 +77,13 @@ export default function ContactDetailPage() {
         <RelationshipLifecyclePanel
           subject={{ contactId: contact.data.id }}
           currentStage={contact.data.stage}
+          entityLabel={contact.data.displayName}
+        />
+      )}
+
+      {contact.data && (
+        <RelationshipReferralPanel
+          subject={{ contactId: contact.data.id }}
           entityLabel={contact.data.displayName}
         />
       )}
