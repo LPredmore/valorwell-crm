@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { RelationshipCapabilityState } from '@/components/crm/relationships/RelationshipCapabilityState';
 import { RelationshipLifecyclePanel } from '@/components/crm/relationships/RelationshipLifecyclePanel';
+import { RelationshipOpportunityPanel } from '@/components/crm/relationships/RelationshipOpportunityPanel';
 import { RelationshipReferralPanel } from '@/components/crm/relationships/RelationshipReferralPanel';
 import { relationshipStageLabel } from '@/domain/relationships/lifecycle-workflow';
 import { useRelationshipCapability } from '@/hooks/relationships/useRelationshipCapabilities';
@@ -81,6 +82,13 @@ export default function OrganizationDetailPage() {
         />
       )}
 
+      {organization.data && (
+        <RelationshipOpportunityPanel
+          organizationId={organization.data.id}
+          entityLabel={organization.data.name}
+        />
+      )}
+
       <Card>
         <CardHeader><CardTitle>Affiliated contacts</CardTitle><CardDescription>Contact membership is loaded through the composite tenant/contact/organization affiliation table.</CardDescription></CardHeader>
         <CardContent>
@@ -96,7 +104,7 @@ export default function OrganizationDetailPage() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Remaining relationship functions</CardTitle><CardDescription>Opportunities, campaigns, suppressions, and automated communications remain capability-gated for later implementation passes.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Remaining relationship functions</CardTitle><CardDescription>Campaigns, suppressions, and automated communications remain capability-gated for later implementation passes.</CardDescription></CardHeader>
       </Card>
     </div>
   );
