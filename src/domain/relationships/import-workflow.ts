@@ -91,13 +91,14 @@ export function validateImportMapping(mapping: ImportColumnMapping) {
 }
 
 export function conflictDecisionsForRow(row: RelationshipImportRow): ImportConflictDecision[] {
+  if (row.decision === 'invalid') return ['correct_source', 'exclude', 'defer'];
+
   const decisions: ImportConflictDecision[] = [];
   const hasOrganization = row.candidates.some((candidate) => candidate.entity === 'organization');
   const hasContact = row.candidates.some((candidate) => candidate.entity === 'contact');
 
   if (hasContact) decisions.push('link_contact');
-  if (hasOrganization && !hasContact) decisions.push('link_organization');
-  if (hasOrganization && !hasContact) decisions.push('create_contact');
+  if (hasOrganization && !hasContact) decisions.push('link_organization', 'create_contact');
   if (!hasContact) decisions.push('create_organization');
   decisions.push('correct_source', 'exclude', 'defer');
   return [...new Set(decisions)];
