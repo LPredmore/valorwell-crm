@@ -1,8 +1,6 @@
 import type {
-  CampaignFilters,
   Capability,
   CapabilityAvailability,
-  CreateCampaignInput,
   CreateInteractionInput,
   CreateOpportunityInput,
   CreateReferralInput,
@@ -10,7 +8,6 @@ import type {
   InteractionFilters,
   OrganizationRole,
   PageResult,
-  RelationshipCampaign,
   RelationshipCommunicationLog,
   RelationshipEnrollment,
   RelationshipInteraction,
@@ -25,12 +22,18 @@ import type {
   Referral,
   SocialProfile,
   SuppressionFilters,
-  UpdateCampaignInput,
   UpdateOpportunityInput,
   UpdateReferralInput,
   UpdateSuppressionInput,
   VerifyReferralInput,
 } from '@/domain/relationships/contracts';
+import type {
+  RelationshipCampaign,
+  RelationshipCampaignDefinitionInput,
+  RelationshipCampaignFilters,
+  RelationshipCampaignPage,
+  RelationshipCampaignTransitionInput,
+} from '@/domain/relationships/campaign-contracts';
 import type {
   RelationshipImportPreviewResult,
   RelationshipImportResolution,
@@ -118,10 +121,19 @@ export interface RelationshipsRepository {
     idempotencyKey?: string;
   }): Promise<{ importId: string }>;
 
-  listCampaigns(filters: CampaignFilters): Promise<PageResult<RelationshipCampaign>>;
+  listCampaigns(filters: RelationshipCampaignFilters): Promise<RelationshipCampaignPage>;
   getCampaign(id: string): Promise<RelationshipCampaign | null>;
-  createCampaign(input: CreateCampaignInput): Promise<RelationshipCampaign>;
-  updateCampaign(id: string, input: UpdateCampaignInput): Promise<RelationshipCampaign>;
+  createCampaign(input: {
+    definition: RelationshipCampaignDefinitionInput;
+    idempotencyKey?: string;
+  }): Promise<RelationshipCampaign>;
+  updateCampaign(id: string, input: {
+    definition: RelationshipCampaignDefinitionInput;
+    expectedVersion: number;
+    idempotencyKey?: string;
+  }): Promise<RelationshipCampaign>;
+  transitionCampaignStatus(id: string, input: RelationshipCampaignTransitionInput): Promise<RelationshipCampaign>;
+
   listEnrollments(campaignId: string): Promise<RelationshipEnrollment[]>;
   enroll(campaignId: string, targets: RelationshipEnrollmentTarget[]): Promise<RelationshipEnrollment[]>;
   updateEnrollmentStatus(id: string, input: { status: RelationshipEnrollment['status']; reason?: string }): Promise<RelationshipEnrollment>;
