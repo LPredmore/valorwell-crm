@@ -1,0 +1,5 @@
+create index relationship_campaign_idempotency_tenant_campaign_fk_idx
+  on private.relationship_campaign_idempotency (tenant_id, campaign_id);
+
+create index relationship_campaign_idempotency_actor_fk_idx
+  on private.relationship_campaign_idempotency (actor_profile_id);
