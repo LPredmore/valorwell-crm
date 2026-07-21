@@ -37,7 +37,8 @@ export type RelationshipOrganizationRecord = AuditMetadata & {
   website?: string;
   organizationKind?: string;
   veteranAffiliated?: boolean;
-  stage: RelationshipStage;
+  /** Present when the lifecycle-capable repository is active. */
+  stage?: RelationshipStage;
   outreachStatus: RelationshipOutreachStatus;
   ownerId?: string;
   nextAction?: string;
@@ -112,7 +113,8 @@ export type RelationshipContactRecord = AuditMetadata & {
   phone?: string;
   state?: string;
   veteranAffiliation: VeteranAffiliation;
-  stage: RelationshipStage;
+  /** Present when the lifecycle-capable repository is active. */
+  stage?: RelationshipStage;
   outreachStatus: RelationshipOutreachStatus;
   ownerId?: string;
   nextAction?: string;
