@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RelationshipCapabilityState } from '@/components/crm/relationships/RelationshipCapabilityState';
 import { RelationshipPagination } from '@/components/crm/relationships/RelationshipWorkspacePrimitives';
+import { relationshipStageLabel } from '@/domain/relationships/lifecycle-workflow';
 import { useRelationshipCapability } from '@/hooks/relationships/useRelationshipCapabilities';
 import { useContactDirectory, useContactDirectoryFilters } from '@/hooks/relationships/useContactDirectory';
 
@@ -45,7 +46,7 @@ export default function ContactDirectoryPage() {
       {available && directory.data && <Card>
         <CardHeader><CardTitle>Contact results</CardTitle><CardDescription>{directory.data.total} matching relationship contacts.</CardDescription></CardHeader>
         <CardContent className="space-y-4">
-          {directory.data.items.length === 0 ? <p className="text-sm text-muted-foreground">No contacts match the current filters.</p> : <div className="divide-y rounded border">{directory.data.items.map((contact) => <div className="flex flex-wrap items-center justify-between gap-3 p-3" key={contact.id}><div><div className="flex items-center gap-2"><p className="font-medium">{contact.displayName}</p><Badge variant="outline">{contact.kind.replace(/_/g, ' ')}</Badge></div><p className="text-sm text-muted-foreground">{contact.email ?? 'No email'}{contact.phone ? ` · ${contact.phone}` : ''}</p></div><div className="text-right"><p className="text-sm">{contact.outreachStatus.replace(/_/g, ' ')}</p><p className="text-xs text-muted-foreground">{contact.affiliations.length} affiliation{contact.affiliations.length === 1 ? '' : 's'}</p></div></div>)}</div>}
+          {directory.data.items.length === 0 ? <p className="text-sm text-muted-foreground">No contacts match the current filters.</p> : <div className="divide-y rounded border">{directory.data.items.map((contact) => <div className="flex flex-wrap items-center justify-between gap-3 p-3" key={contact.id}><div><div className="flex items-center gap-2"><Link className="font-medium text-primary underline-offset-4 hover:underline" to={`/crm/business-development/contacts/${contact.id}`}>{contact.displayName}</Link><Badge variant="outline">{contact.kind.replace(/_/g, ' ')}</Badge></div><p className="text-sm text-muted-foreground">{contact.email ?? 'No email'}{contact.phone ? ` · ${contact.phone}` : ''}</p></div><div className="text-right"><p className="text-sm">{relationshipStageLabel(contact.stage)}</p><p className="text-xs text-muted-foreground">{contact.outreachStatus.replace(/_/g, ' ')} · {contact.affiliations.length} affiliation{contact.affiliations.length === 1 ? '' : 's'}</p></div></div>)}</div>}
           <RelationshipPagination page={directory.data.page} pageSize={directory.data.pageSize} total={directory.data.total} onPageChange={(page) => set('page', String(page))} />
         </CardContent>
       </Card>}
