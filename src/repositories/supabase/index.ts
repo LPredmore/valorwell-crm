@@ -7,7 +7,7 @@ import { supabaseAuditRepository } from './audit';
 import { supabaseCampaignsRepository } from './campaigns';
 import { supabaseCommunicationsRepository } from './communications';
 import { supabaseReportsRepository } from './reports';
-import { supabaseRelationshipsRepository } from './relationships';
+import { supabaseRelationshipsRepository } from './relationships-lifecycle';
 
 /**
  * Full Supabase provider. Every domain repository is backed by Supabase
