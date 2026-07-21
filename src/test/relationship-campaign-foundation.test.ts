@@ -19,12 +19,14 @@ describe('relationship campaign foundation', () => {
     definition.purpose = 'Create one defined partnership conversation.';
     definition.senderName = 'ValorWell';
     definition.senderEmail = 'outreach@example.org';
+    definition.steps[0].subjectTemplate = 'Introduction';
+    definition.steps[0].bodyTemplate = 'Hello';
 
     expect(campaignDefinitionErrors(definition)).toEqual([]);
     expect(relationshipCampaignPayload(definition)).not.toHaveProperty('executionEnabled');
     expect(relationshipCampaignStepsPayload(definition)).toEqual([{
-      subjectTemplate: '',
-      bodyTemplate: '',
+      subjectTemplate: 'Introduction',
+      bodyTemplate: 'Hello',
       delayDays: 0,
       stopOnReply: true,
       isActive: true,
