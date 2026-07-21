@@ -1,4 +1,10 @@
-import type { AuditMetadata, ContactKind, PageResult, SortDirection } from './contracts';
+import type {
+  AuditMetadata,
+  ContactKind,
+  PageResult,
+  RelationshipStage,
+  SortDirection,
+} from './contracts';
 
 export const relationshipOutreachStatuses = [
   'new',
@@ -31,6 +37,7 @@ export type RelationshipOrganizationRecord = AuditMetadata & {
   website?: string;
   organizationKind?: string;
   veteranAffiliated?: boolean;
+  stage: RelationshipStage;
   outreachStatus: RelationshipOutreachStatus;
   ownerId?: string;
   nextAction?: string;
@@ -105,6 +112,7 @@ export type RelationshipContactRecord = AuditMetadata & {
   phone?: string;
   state?: string;
   veteranAffiliation: VeteranAffiliation;
+  stage: RelationshipStage;
   outreachStatus: RelationshipOutreachStatus;
   ownerId?: string;
   nextAction?: string;
