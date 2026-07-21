@@ -21,6 +21,7 @@ import ContactDirectoryPage from "./pages/crm/business-development/ContactDirect
 import ContactDetailPage from "./pages/crm/business-development/ContactDetailPage";
 import OpportunityDirectoryPage from "./pages/crm/business-development/OpportunityDirectoryPage";
 import OpportunityDetailPage from "./pages/crm/business-development/OpportunityDetailPage";
+import RelationshipImportPage from "./pages/crm/business-development/RelationshipImportPage";
 import RelationshipCampaignDirectoryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDirectoryPage";
 import RelationshipCampaignPreviewPage from "./pages/crm/business-development/campaigns/RelationshipCampaignPreviewPage";
 import CanonicalDashboard from "./pages/crm/canonical/CanonicalDashboard";
@@ -74,7 +75,7 @@ const App = () => (
             <Route path="business-development/contacts/:id" element={<ContactDetailPage />} />
             <Route path="business-development/opportunities" element={<OpportunityDirectoryPage />} />
             <Route path="business-development/opportunities/:id" element={<OpportunityDetailPage />} />
-            <Route path="business-development/imports" element={<CapabilityPage title="Organization imports" capability="imports" description="Preview CSV mappings, normalization, duplicates, and conflicts before write operations." />} />
+            <Route path="business-development/imports" element={<RelationshipImportPage />} />
             <Route path="business-development/campaigns" element={<RelationshipCampaignDirectoryPage />} />
             <Route path="business-development/campaigns/preview" element={<RelationshipCampaignPreviewPage />} />
             <Route path="business-development/replies" element={<CapabilityPage title="Relationship replies" capability="replies" description="Replies are kept out of clinical communications and stop further relationship automation." />} />
