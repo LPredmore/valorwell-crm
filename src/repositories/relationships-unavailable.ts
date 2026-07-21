@@ -37,6 +37,7 @@ export const unavailableRelationshipsRepository: RelationshipsRepository = {
   async createOpportunity() { return unavailable('opportunities'); },
   async updateOpportunity() { return unavailable('opportunities'); },
   async transitionOpportunityStatus() { return unavailable('opportunities'); },
+  async getImportPreview() { return unavailable('imports'); },
   async previewImport() { return unavailable('imports'); },
   async resolveImportConflicts() { return unavailable('imports'); },
   async commitImport() { return unavailable('imports'); },
