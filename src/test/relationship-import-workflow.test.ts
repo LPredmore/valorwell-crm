@@ -59,6 +59,23 @@ describe('relationship import workflow', () => {
     ]);
   });
 
+  it('does not allow invalid rows to bypass correction or exclusion', () => {
+    const row: RelationshipImportRow = {
+      row: 3,
+      decision: 'invalid',
+      errors: ['Contact email is invalid.'],
+      candidates: [],
+      resolution: {},
+      normalizedData: { organization_name: 'Example', contact_email: 'invalid' },
+    };
+
+    expect(conflictDecisionsForRow(row)).toEqual([
+      'correct_source',
+      'exclude',
+      'defer',
+    ]);
+  });
+
   it('parses corrected JSON objects and rejects invalid values', () => {
     expect(parseCorrectedImportData('{"organization_name":"Corrected"}'))
       .toEqual({ organization_name: 'Corrected' });
