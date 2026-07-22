@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - codex/pass-10-relationship-enrollment-orchestration
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
