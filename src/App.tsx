@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import RelationshipUnsubscribePage from "./pages/RelationshipUnsubscribePage";
 import { CrmLayout } from "./components/crm/layout/CrmLayout";
 import CrmIndex from "./pages/crm/Index";
 import CrmSettings from "./pages/crm/Settings";
@@ -22,6 +23,7 @@ import ContactDetailPage from "./pages/crm/business-development/ContactDetailPag
 import OpportunityDirectoryPage from "./pages/crm/business-development/OpportunityDirectoryPage";
 import OpportunityDetailPage from "./pages/crm/business-development/OpportunityDetailPage";
 import RelationshipImportPage from "./pages/crm/business-development/RelationshipImportPage";
+import RelationshipSuppressionPage from "./pages/crm/business-development/RelationshipSuppressionPage";
 import RelationshipCampaignDirectoryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDirectoryPage";
 import RelationshipCampaignEditorPage from "./pages/crm/business-development/campaigns/RelationshipCampaignEditorPage";
 import RelationshipCampaignEnrollmentsPage from "./pages/crm/business-development/campaigns/RelationshipCampaignEnrollmentsPage";
@@ -51,9 +53,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/unsubscribe" element={<RelationshipUnsubscribePage />} />
 
-          {/* CRM Routes — canonical pages only. Legacy pat_status-based
-              pages have been removed as part of the canonical cutover. */}
           <Route path="/crm" element={<CrmLayout />}>
             <Route index element={<CrmIndex />} />
             <Route path="clients" element={<CanonicalClients />} />
@@ -84,7 +85,7 @@ const App = () => (
             <Route path="business-development/campaigns/:id/enrollments" element={<RelationshipCampaignEnrollmentsPage />} />
             <Route path="business-development/campaigns/:id" element={<RelationshipCampaignEditorPage />} />
             <Route path="business-development/replies" element={<CapabilityPage title="Relationship replies" capability="replies" description="Replies are kept out of clinical communications and stop further relationship automation." />} />
-            <Route path="business-development/suppressions" element={<CapabilityPage title="Relationship suppressions" capability="suppression" description="Manage relationship outreach do-not-contact and unsubscribe controls." />} />
+            <Route path="business-development/suppressions" element={<RelationshipSuppressionPage />} />
             <Route path="business-development/reports" element={<CapabilityPage title="Business Development reports" capability="reporting" description="Operational reporting distinguishes unavailable data from zero activity." />} />
             <Route path="creator-community-interest" element={<CreatorCommunityInterestQueue />} />
             <Route path="creator-community-interest/:id" element={<CreatorCommunityInterestDetail />} />
@@ -102,7 +103,6 @@ const App = () => (
             <Route path="canonical/reports" element={<CanonicalReports />} />
           </Route>
 
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
