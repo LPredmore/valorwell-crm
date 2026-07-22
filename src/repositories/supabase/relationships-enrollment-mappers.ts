@@ -5,10 +5,17 @@ import type {
   RelationshipEnrollmentEligibilityReason,
   RelationshipEnrollmentEvent,
   RelationshipEnrollmentEventType,
+  RelationshipEnrollmentSafetyStatus,
   RelationshipEnrollmentStatus,
   RelationshipEnrollmentTarget,
 } from '@/domain/relationships/enrollment-contracts';
 import type { SourceLanguageMode } from '@/domain/relationships/contracts';
+import type {
+  RelationshipCommunicationSafetyEvaluation,
+  RelationshipSafetySuppressionMatch,
+  RelationshipSuppressionReason,
+  RelationshipSuppressionScope,
+} from '@/domain/relationships/safety-contracts';
 
 export type RelationshipEnrollmentRow = {
   id: string;
@@ -28,6 +35,10 @@ export type RelationshipEnrollmentRow = {
   personalization_context: Json;
   eligibility_snapshot: Json;
   safety_status: string;
+  safety_snapshot: Json;
+  safety_evaluated_at: string | null;
+  safety_ready_at: string | null;
+  safety_blocked_at: string | null;
   delivery_enabled: boolean;
   version: number;
   enrolled_by_profile_id: string | null;
@@ -73,6 +84,43 @@ function record(value: Json | undefined): Record<string, unknown> {
   return object(value) as Record<string, unknown>;
 }
 
+function mapSuppressionMatch(value: Json): RelationshipSafetySuppressionMatch {
+  const item = object(value);
+  return {
+    id: requiredString(item.id, 'suppression match id'),
+    scope: requiredString(item.scope, 'suppression match scope') as RelationshipSuppressionScope,
+    reason: requiredString(item.reason, 'suppression match reason') as RelationshipSuppressionReason,
+    organizationId: stringValue(item.organizationId),
+    contactId: stringValue(item.contactId),
+    campaignId: stringValue(item.campaignId),
+    email: stringValue(item.email),
+    effectiveAt: requiredString(item.effectiveAt, 'suppression effective timestamp'),
+    expiresAt: stringValue(item.expiresAt),
+  };
+}
+
+export function mapRelationshipSafetyEvaluation(value: Json): RelationshipCommunicationSafetyEvaluation {
+  const item = object(value);
+  const suppressions = Array.isArray(item.suppressions) ? item.suppressions.map(mapSuppressionMatch) : [];
+  return {
+    eligible: booleanValue(item.eligible) === true,
+    safetyEligible: booleanValue(item.safetyEligible) === true,
+    safetyStatus: (stringValue(item.safetyStatus) ?? 'blocked') as 'ready' | 'blocked',
+    deliveryEnabled: false,
+    reasons: stringArray(item.reasons),
+    suppressions,
+    primarySuppression: item.primarySuppression ? mapSuppressionMatch(item.primarySuppression) : undefined,
+    policyVersion: 'pass11-v1',
+    evaluatedAt: requiredString(item.evaluatedAt, 'safety evaluation timestamp'),
+    campaignId: requiredString(item.campaignId, 'safety campaign id'),
+    contactId: requiredString(item.contactId, 'safety contact id'),
+    organizationId: stringValue(item.organizationId),
+    opportunityId: stringValue(item.opportunityId),
+    recipientEmail: requiredString(item.recipientEmail, 'safety recipient email'),
+    sourceLanguageMode: stringValue(item.sourceLanguageMode) ?? 'none',
+  };
+}
+
 export function mapRelationshipEnrollmentEligibility(value: Json): RelationshipEnrollmentEligibility {
   const item = object(value);
   const targetValue = object(item.target);
@@ -106,6 +154,7 @@ export function mapRelationshipEnrollmentEligibility(value: Json): RelationshipE
 export function mapRelationshipEnrollmentResponse(value: Json): RelationshipCampaignEnrollment {
   const item = object(value);
   const eligibility = mapRelationshipEnrollmentEligibility(item.eligibilitySnapshot ?? {});
+  const safetySnapshot = isNonEmptyObject(item.safetySnapshot) ? mapRelationshipSafetyEvaluation(item.safetySnapshot) : undefined;
   return {
     id: requiredString(item.id, 'enrollment id'),
     campaignId: requiredString(item.campaignId, 'campaign id'),
@@ -122,7 +171,11 @@ export function mapRelationshipEnrollmentResponse(value: Json): RelationshipCamp
     sourceLanguageMode: (stringValue(item.sourceLanguageMode) ?? 'none') as SourceLanguageMode,
     personalizationContext: record(item.personalizationContext),
     eligibilitySnapshot: eligibility,
-    safetyStatus: 'pending_pass_11',
+    safetyStatus: (stringValue(item.safetyStatus) ?? 'pending_pass_11') as RelationshipEnrollmentSafetyStatus,
+    safetySnapshot,
+    safetyEvaluatedAt: stringValue(item.safetyEvaluatedAt),
+    safetyReadyAt: stringValue(item.safetyReadyAt),
+    safetyBlockedAt: stringValue(item.safetyBlockedAt),
     deliveryEnabled: false,
     version: numberValue(item.version) ?? 1,
     enrolledBy: stringValue(item.enrolledBy),
@@ -151,6 +204,10 @@ export function mapRelationshipEnrollmentRow(row: RelationshipEnrollmentRow): Re
     personalizationContext: row.personalization_context,
     eligibilitySnapshot: row.eligibility_snapshot,
     safetyStatus: row.safety_status,
+    safetySnapshot: row.safety_snapshot,
+    safetyEvaluatedAt: row.safety_evaluated_at,
+    safetyReadyAt: row.safety_ready_at,
+    safetyBlockedAt: row.safety_blocked_at,
     deliveryEnabled: row.delivery_enabled,
     version: row.version,
     enrolledBy: row.enrolled_by_profile_id,
@@ -174,6 +231,10 @@ export function mapRelationshipEnrollmentEventRow(row: RelationshipEnrollmentEve
     metadata: record(row.metadata),
     createdAt: row.created_at,
   };
+}
+
+function isNonEmptyObject(value: Json | undefined) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length > 0;
 }
 
 function requiredString(value: Json | undefined, label: string) {
