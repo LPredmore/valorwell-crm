@@ -5,12 +5,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import BusinessDevelopmentDashboard from '@/pages/crm/business-development/BusinessDevelopmentDashboard';
 import BusinessDevelopmentArchitecture from '@/pages/crm/BusinessDevelopmentArchitecture';
 import { relationshipCapabilities } from '@/domain/relationships/capabilities';
+import { RELATIONSHIP_ARCHITECTURE_FALLBACK } from '@/lib/crm/relationship-architecture';
 
 const useRelationshipCapabilities = vi.fn();
+const useRelationshipReleaseContract = vi.fn();
 const listReportMetrics = vi.fn();
 
 vi.mock('@/hooks/relationships/useRelationshipCapabilities', () => ({
   useRelationshipCapabilities: () => useRelationshipCapabilities(),
+}));
+
+vi.mock('@/hooks/relationships/useRelationshipReleaseContract', () => ({
+  useRelationshipReleaseContract: () => useRelationshipReleaseContract(),
 }));
 
 vi.mock('@/services/dataProvider', () => ({
@@ -20,6 +26,20 @@ vi.mock('@/services/dataProvider', () => ({
     },
   },
 }));
+
+const acceptedLockedContract = {
+  ...RELATIONSHIP_ARCHITECTURE_FALLBACK,
+  implementation_status: 'production_hardened',
+  release_status: 'accepted' as const,
+  activation_status: 'locked' as const,
+  schema_fingerprint: 'abcdef1234567890abcdef1234567890',
+  generated_type_hash: 'typehash',
+  accepted_at: '2026-07-22T22:45:00Z',
+  activation_blockers: [
+    'delivery_provider_not_configured',
+    'pilot_campaign_not_approved',
+  ],
+};
 
 function renderDashboard() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -39,6 +59,11 @@ describe('Business Development dashboard and system status', () => {
     listReportMetrics.mockReset();
     useRelationshipCapabilities.mockReturnValue({
       data: relationshipCapabilities(),
+      isLoading: false,
+      isError: false,
+    });
+    useRelationshipReleaseContract.mockReturnValue({
+      data: acceptedLockedContract,
       isLoading: false,
       isError: false,
     });
@@ -74,30 +99,30 @@ describe('Business Development dashboard and system status', () => {
     expect(screen.queryByText(/this metric will appear after its integration is verified/i)).not.toBeInTheDocument();
   });
 
-  it('separates first-slice integration from full production readiness', () => {
+  it('separates final implementation acceptance from production activation', () => {
     renderStatus();
-    expect(screen.getByText('Architecture established')).toBeInTheDocument();
-    expect(screen.getByText('Application code implemented')).toBeInTheDocument();
-    expect(screen.getByText('Production ready')).toBeInTheDocument();
-    expect(screen.getAllByText('Not verified').length).toBeGreaterThan(0);
+    expect(screen.getByText('Implementation accepted')).toBeInTheDocument();
+    expect(screen.getByText('Implementation accepted; production delivery locked')).toBeInTheDocument();
+    expect(screen.getByText('Production activation')).toBeInTheDocument();
+    expect(screen.getByText('No-go / locked')).toBeInTheDocument();
+    expect(screen.getByText('Delivery Provider Not Configured')).toBeInTheDocument();
+    expect(screen.getByText('Pilot Campaign Not Approved')).toBeInTheDocument();
     expect(screen.getByText('Canonical database')).toBeInTheDocument();
   });
 
-  it('verifies integration only when organizations and contacts are available', () => {
-    useRelationshipCapabilities.mockReturnValue({
-      data: relationshipCapabilities({ organizations: 'available', contacts: 'available' }),
-      isLoading: false,
-      isError: false,
-    });
+  it('does not claim acceptance when the live contract is unavailable', () => {
+    useRelationshipReleaseContract.mockReturnValue({ data: undefined, isLoading: false, isError: true });
     renderStatus();
-    expect(screen.getByText('Organizations and contacts are verified against the selected Billing Hub tenant.')).toBeInTheDocument();
-    expect(screen.getByText('The first persistence slice is live; later workflow and operational-approval requirements remain.')).toBeInTheDocument();
+    expect(screen.getByText('The live release contract could not be loaded. Production activation remains locked.')).toBeInTheDocument();
+    expect(screen.getByText('Not accepted')).toBeInTheDocument();
+    expect(screen.getByText('Locked')).toBeInTheDocument();
   });
 
-  it('keeps database-dependent functions disabled when the snapshot cannot be loaded', () => {
+  it('keeps database-dependent functions disabled when the capability snapshot cannot be loaded', () => {
     useRelationshipCapabilities.mockReturnValue({ data: undefined, isLoading: false, isError: true });
     renderStatus();
     expect(screen.getByText(/Capability status could not be loaded/)).toBeInTheDocument();
-    expect(screen.getByText('Database support available')).toBeInTheDocument();
+    expect(screen.getByText('Capabilities verified')).toBeInTheDocument();
+    expect(screen.getByText('Not verified')).toBeInTheDocument();
   });
 });
