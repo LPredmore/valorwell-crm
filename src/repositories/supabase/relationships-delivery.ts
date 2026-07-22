@@ -14,84 +14,17 @@ import type { Json } from '@/integrations/supabase/types';
 import type { RelationshipsRepository } from '@/repositories/relationships';
 import { supabaseRelationshipsRepository as safetyRelationshipsRepository } from './relationships-safety';
 
-const DEFAULT_PAGE_SIZE = 25;
-const MAX_PAGE_SIZE = 100;
-
 type OperatingContext = { tenantId: string; canMutate: boolean };
 type JsonObject = { [key: string]: Json | undefined };
 
-type CommunicationRow = {
-  id: string;
-  work_item_id: string | null;
-  campaign_id: string | null;
-  campaign_step_id: string | null;
-  enrollment_id: string | null;
-  organization_id: string | null;
-  contact_id: string | null;
-  opportunity_id: string | null;
-  direction: string;
-  channel: string;
-  status: string;
-  sender_email: string;
-  recipient_email: string;
-  subject: string | null;
-  rendered_body: string | null;
-  provider: string | null;
-  provider_message_id: string | null;
-  provider_thread_id: string | null;
-  occurred_at: string;
-  scheduled_for: string | null;
-  sent_at: string | null;
-  delivered_at: string | null;
-  failed_at: string | null;
-  error_code: string | null;
-  error_message: string | null;
-  metadata: Json;
-  created_by_profile_id: string | null;
-  updated_by_profile_id: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-type CommunicationEventRow = {
-  id: string;
-  communication_id: string;
-  provider: string;
-  provider_event_id: string | null;
-  event_type: string;
-  occurred_at: string;
-  payload: Json;
-  created_at: string;
-};
-
-type ReplyRow = {
-  id: string;
-  communication_id: string;
-  enrollment_id: string | null;
-  organization_id: string | null;
-  contact_id: string | null;
-  opportunity_id: string | null;
-  owner_profile_id: string | null;
-  status: string;
-  follow_up_due_at: string | null;
-  resolved_at: string | null;
-  version: number;
-  metadata: Json;
-  created_by_profile_id: string | null;
-  updated_by_profile_id: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
 type DeliveryDatabase = {
   public: {
-    Tables: {
-      relationship_communications: { Row: CommunicationRow; Insert: never; Update: never; Relationships: [] };
-      relationship_communication_events: { Row: CommunicationEventRow; Insert: never; Update: never; Relationships: [] };
-      relationship_replies: { Row: ReplyRow; Insert: never; Update: never; Relationships: [] };
-    };
+    Tables: Record<string, never>;
     Views: Record<string, never>;
     Functions: {
+      list_relationship_communications: { Args: { p_subject?: Json }; Returns: Json };
+      list_relationship_communication_events: { Args: { p_communication_id: string }; Returns: Json };
+      list_relationship_replies: { Args: { p_filters?: Json }; Returns: Json };
       get_relationship_delivery_readiness: { Args: { p_campaign_id: string }; Returns: Json };
       set_relationship_campaign_execution: {
         Args: {
@@ -178,87 +111,56 @@ async function operatingContext(): Promise<OperatingContext> {
 function requireMutation(context: OperatingContext) {
   if (!context.canMutate) throw new Error('You do not have permission to manage relationship delivery or replies.');
 }
-function paging(page?: number, pageSize?: number) {
-  const safePage = Number.isInteger(page) && (page ?? 0) > 0 ? page! : 1;
-  const safeSize = Math.min(
-    Number.isInteger(pageSize) && (pageSize ?? 0) > 0 ? pageSize! : DEFAULT_PAGE_SIZE,
-    MAX_PAGE_SIZE,
-  );
-  return { page: safePage, pageSize: safeSize, from: (safePage - 1) * safeSize, to: safePage * safeSize - 1 };
-}
 
-function mapCommunication(row: CommunicationRow): RelationshipCommunication {
+function mapCommunication(value: Json): RelationshipCommunication {
+  if (!isObject(value)) throw new Error('Invalid relationship communication response.');
   return {
-    id: row.id,
-    workItemId: row.work_item_id ?? undefined,
-    campaignId: row.campaign_id ?? undefined,
-    campaignStepId: row.campaign_step_id ?? undefined,
-    enrollmentId: row.enrollment_id ?? undefined,
-    organizationId: row.organization_id ?? undefined,
-    contactId: row.contact_id ?? undefined,
-    opportunityId: row.opportunity_id ?? undefined,
-    direction: row.direction as RelationshipCommunication['direction'],
+    id: requiredString(value.id, 'communication id'),
+    workItemId: stringValue(value.workItemId),
+    campaignId: stringValue(value.campaignId),
+    campaignStepId: stringValue(value.campaignStepId),
+    enrollmentId: stringValue(value.enrollmentId),
+    organizationId: stringValue(value.organizationId),
+    contactId: stringValue(value.contactId),
+    opportunityId: stringValue(value.opportunityId),
+    direction: requiredString(value.direction, 'communication direction') as RelationshipCommunication['direction'],
     channel: 'email',
-    status: row.status as RelationshipCommunication['status'],
-    senderEmail: row.sender_email,
-    recipientEmail: row.recipient_email,
-    subject: row.subject ?? undefined,
-    renderedBody: row.rendered_body ?? undefined,
-    provider: row.provider === 'resend' ? 'resend' : undefined,
-    providerMessageId: row.provider_message_id ?? undefined,
-    providerThreadId: row.provider_thread_id ?? undefined,
-    occurredAt: row.occurred_at,
-    scheduledFor: row.scheduled_for ?? undefined,
-    sentAt: row.sent_at ?? undefined,
-    deliveredAt: row.delivered_at ?? undefined,
-    failedAt: row.failed_at ?? undefined,
-    errorCode: row.error_code ?? undefined,
-    errorMessage: row.error_message ?? undefined,
-    metadata: record(row.metadata),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    createdBy: row.created_by_profile_id ?? undefined,
-    updatedBy: row.updated_by_profile_id ?? undefined,
+    status: requiredString(value.status, 'communication status') as RelationshipCommunication['status'],
+    senderEmail: requiredString(value.senderEmail, 'communication sender'),
+    recipientEmail: requiredString(value.recipientEmail, 'communication recipient'),
+    subject: stringValue(value.subject),
+    renderedBody: stringValue(value.renderedBody),
+    provider: stringValue(value.provider) === 'resend' ? 'resend' : undefined,
+    providerMessageId: stringValue(value.providerMessageId),
+    providerThreadId: stringValue(value.providerThreadId),
+    occurredAt: requiredString(value.occurredAt, 'communication timestamp'),
+    scheduledFor: stringValue(value.scheduledFor),
+    sentAt: stringValue(value.sentAt),
+    deliveredAt: stringValue(value.deliveredAt),
+    failedAt: stringValue(value.failedAt),
+    errorCode: stringValue(value.errorCode),
+    errorMessage: stringValue(value.errorMessage),
+    metadata: record(value.metadata),
+    createdAt: requiredString(value.createdAt, 'communication created timestamp'),
+    updatedAt: requiredString(value.updatedAt, 'communication updated timestamp'),
+    createdBy: stringValue(value.createdBy),
+    updatedBy: stringValue(value.updatedBy),
   };
 }
-function mapEvent(row: CommunicationEventRow): RelationshipCommunicationEvent {
+function mapEvent(value: Json): RelationshipCommunicationEvent {
+  if (!isObject(value)) throw new Error('Invalid relationship communication event response.');
   return {
-    id: row.id,
-    communicationId: row.communication_id,
-    provider: row.provider,
-    providerEventId: row.provider_event_id ?? undefined,
-    eventType: row.event_type,
-    occurredAt: row.occurred_at,
-    payload: record(row.payload),
-    createdAt: row.created_at,
+    id: requiredString(value.id, 'communication event id'),
+    communicationId: requiredString(value.communicationId, 'communication event subject'),
+    provider: requiredString(value.provider, 'communication event provider'),
+    providerEventId: stringValue(value.providerEventId),
+    eventType: requiredString(value.eventType, 'communication event type'),
+    occurredAt: requiredString(value.occurredAt, 'communication event timestamp'),
+    payload: record(value.payload),
+    createdAt: requiredString(value.createdAt, 'communication event created timestamp'),
   };
 }
-function mapReply(row: ReplyRow, communication: CommunicationRow): RelationshipReply {
-  return {
-    id: row.id,
-    communicationLogId: row.communication_id,
-    enrollmentId: row.enrollment_id ?? undefined,
-    organizationId: row.organization_id ?? undefined,
-    contactId: row.contact_id ?? undefined,
-    opportunityId: row.opportunity_id ?? undefined,
-    ownerId: row.owner_profile_id ?? undefined,
-    receivedAt: communication.occurred_at,
-    senderEmail: communication.sender_email,
-    recipientEmail: communication.recipient_email,
-    subject: communication.subject ?? undefined,
-    body: communication.rendered_body ?? '',
-    status: row.status as RelationshipReplyStatus,
-    followUpDueAt: row.follow_up_due_at ?? undefined,
-    resolvedAt: row.resolved_at ?? undefined,
-    version: row.version,
-    metadata: record(row.metadata),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    createdBy: row.created_by_profile_id ?? undefined,
-    updatedBy: row.updated_by_profile_id ?? undefined,
-  };
-}
-function mapReplyResponse(value: Json): RelationshipReply {
+function mapReply(value: Json): RelationshipReply {
   if (!isObject(value)) throw new Error('Invalid relationship reply response.');
   return {
     id: requiredString(value.id, 'reply id'),
@@ -303,12 +205,10 @@ function mapReadiness(value: Json): RelationshipDeliveryReadiness {
 async function capabilities() {
   const capabilities = await safetyRelationshipsRepository.capabilities();
   try {
-    const context = await operatingContext();
-    const { error } = await deliverySupabase
-      .from('relationship_replies')
-      .select('id')
-      .eq('tenant_id', context.tenantId)
-      .limit(1);
+    await operatingContext();
+    const { error } = await deliverySupabase.rpc('list_relationship_replies', {
+      p_filters: { page: 1, pageSize: 1 },
+    });
     replaceCapability(
       capabilities,
       error ? capabilityState('replies', capabilityStatus(error), error.message) : capabilityState('replies', 'available'),
@@ -318,62 +218,37 @@ async function capabilities() {
   }
   return capabilities;
 }
-
 async function listCommunications(subject: Parameters<RelationshipsRepository['listCommunications']>[0]) {
-  const context = await operatingContext();
-  let query = deliverySupabase.from('relationship_communications').select('*').eq('tenant_id', context.tenantId);
-  if (subject.organizationId) query = query.eq('organization_id', subject.organizationId);
-  if (subject.contactId) query = query.eq('contact_id', subject.contactId);
-  if (subject.opportunityId) query = query.eq('opportunity_id', subject.opportunityId);
-  if (subject.enrollmentId) query = query.eq('enrollment_id', subject.enrollmentId);
-  const { data, error } = await query.order('occurred_at', { ascending: false }).limit(250);
+  await operatingContext();
+  const { data, error } = await deliverySupabase.rpc('list_relationship_communications', {
+    p_subject: subject as unknown as Json,
+  });
   if (error) throw new Error(error.message);
-  return (data ?? []).map(mapCommunication);
+  if (!Array.isArray(data)) throw new Error('Invalid relationship communication list response.');
+  return data.map(mapCommunication);
 }
 async function listCommunicationEvents(communicationId: string) {
-  const context = await operatingContext();
-  const { data, error } = await deliverySupabase
-    .from('relationship_communication_events')
-    .select('*')
-    .eq('tenant_id', context.tenantId)
-    .eq('communication_id', communicationId)
-    .order('occurred_at', { ascending: false });
+  await operatingContext();
+  const { data, error } = await deliverySupabase.rpc('list_relationship_communication_events', {
+    p_communication_id: communicationId,
+  });
   if (error) throw new Error(error.message);
-  return (data ?? []).map(mapEvent);
+  if (!Array.isArray(data)) throw new Error('Invalid relationship communication event list response.');
+  return data.map(mapEvent);
 }
 async function listReplies(filters: Parameters<RelationshipsRepository['listReplies']>[0] = {}) {
-  const context = await operatingContext();
-  const values = paging(filters.page, filters.pageSize);
-  let query = deliverySupabase
-    .from('relationship_replies')
-    .select('*', { count: 'exact' })
-    .eq('tenant_id', context.tenantId);
-  if (filters.statuses?.length) query = query.in('status', filters.statuses);
-  if (filters.ownerId) query = query.eq('owner_profile_id', filters.ownerId);
-  if (filters.unownedOnly) query = query.is('owner_profile_id', null);
-  const { data, error, count } = await query
-    .order('created_at', { ascending: false })
-    .range(values.from, values.to);
-  if (error) throw new Error(error.message);
-
-  const rows = data ?? [];
-  const communicationIds = rows.map((row) => row.communication_id);
-  if (communicationIds.length === 0) {
-    return { items: [], total: count ?? 0, page: values.page, pageSize: values.pageSize };
-  }
-  const { data: communications, error: communicationError } = await deliverySupabase
-    .from('relationship_communications')
-    .select('*')
-    .eq('tenant_id', context.tenantId)
-    .in('id', communicationIds);
-  if (communicationError) throw new Error(communicationError.message);
-  const communicationById = new Map((communications ?? []).map((item) => [item.id, item]));
-  const items = rows.map((row) => {
-    const communication = communicationById.get(row.communication_id);
-    if (!communication) throw new Error('Relationship reply is missing its canonical inbound communication.');
-    return mapReply(row, communication);
+  await operatingContext();
+  const { data, error } = await deliverySupabase.rpc('list_relationship_replies', {
+    p_filters: filters as unknown as Json,
   });
-  return { items, total: count ?? 0, page: values.page, pageSize: values.pageSize };
+  if (error) throw new Error(error.message);
+  if (!isObject(data) || !Array.isArray(data.items)) throw new Error('Invalid relationship reply list response.');
+  return {
+    items: data.items.map(mapReply),
+    total: numberValue(data.total),
+    page: numberValue(data.page, 1),
+    pageSize: numberValue(data.pageSize, 25),
+  };
 }
 async function updateReply(id: string, input: Parameters<RelationshipsRepository['updateReply']>[1]) {
   const context = await operatingContext();
@@ -388,7 +263,7 @@ async function updateReply(id: string, input: Parameters<RelationshipsRepository
     p_reason: input.reason?.trim() || null,
   });
   if (error) throw new Error(error.message);
-  return mapReplyResponse(data);
+  return mapReply(data);
 }
 async function getDeliveryReadiness(campaignId: string) {
   await operatingContext();
