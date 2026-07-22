@@ -7,10 +7,8 @@ import type {
   InteractionFilters,
   OrganizationRole,
   PageResult,
-  RelationshipCommunicationLog,
   RelationshipInteraction,
   RelationshipOpportunity,
-  RelationshipReply,
   RelationshipReportMetric,
   RelationshipSearchResult,
   RelationshipStage,
@@ -28,6 +26,17 @@ import type {
   RelationshipCampaignPage,
   RelationshipCampaignTransitionInput,
 } from '@/domain/relationships/campaign-contracts';
+import type {
+  RelationshipCampaignExecutionResult,
+  RelationshipCommunication,
+  RelationshipCommunicationEvent,
+  RelationshipDeliveryReadiness,
+  RelationshipReply,
+  RelationshipReplyFilters,
+  RelationshipReplyPage,
+  SetRelationshipCampaignExecutionInput,
+  UpdateRelationshipReplyInput,
+} from '@/domain/relationships/delivery-contracts';
 import type {
   EnrollRelationshipTargetsInput,
   RelationshipCampaignEnrollment,
@@ -48,10 +57,7 @@ import type {
   RevalidateRelationshipEnrollmentSafetyInput,
   RevokeRelationshipSuppressionInput,
 } from '@/domain/relationships/safety-contracts';
-import type {
-  RelationshipImportPreviewResult,
-  RelationshipImportResolution,
-} from '@/domain/relationships/import-contracts';
+import type { RelationshipImportPreviewResult, RelationshipImportResolution } from '@/domain/relationships/import-contracts';
 import type {
   RelationshipAffiliationInput,
   RelationshipAffiliationKey,
@@ -67,7 +73,7 @@ import type {
   RelationshipOrganizationRecord,
 } from '@/domain/relationships/records';
 
-export type RelationshipSubject = { organizationId?: string; contactId?: string; opportunityId?: string };
+export type RelationshipSubject = { organizationId?: string; contactId?: string; opportunityId?: string; enrollmentId?: string };
 export type RelationshipSearchQuery = { query: string; kinds?: RelationshipSearchResult['kind'][]; page?: number; pageSize?: number };
 
 /** Dedicated non-clinical repository boundary. */
@@ -119,6 +125,8 @@ export interface RelationshipsRepository {
   createCampaign(input: { definition: RelationshipCampaignDefinitionInput; idempotencyKey?: string }): Promise<RelationshipCampaign>;
   updateCampaign(id: string, input: { definition: RelationshipCampaignDefinitionInput; expectedVersion: number; idempotencyKey?: string }): Promise<RelationshipCampaign>;
   transitionCampaignStatus(id: string, input: RelationshipCampaignTransitionInput): Promise<RelationshipCampaign>;
+  getDeliveryReadiness(campaignId: string): Promise<RelationshipDeliveryReadiness>;
+  setCampaignExecution(campaignId: string, input: SetRelationshipCampaignExecutionInput): Promise<RelationshipCampaignExecutionResult>;
 
   evaluateEnrollmentEligibility(campaignId: string, targets: RelationshipEnrollmentTarget[]): Promise<RelationshipEnrollmentEligibility[]>;
   listEnrollments(campaignId: string, filters?: RelationshipEnrollmentFilters): Promise<RelationshipEnrollmentPage>;
@@ -134,9 +142,10 @@ export interface RelationshipsRepository {
   revalidateEnrollmentSafety(id: string, input: RevalidateRelationshipEnrollmentSafetyInput): Promise<RelationshipCampaignEnrollment>;
   processUnsubscribe(input: { token: string }): Promise<RelationshipUnsubscribeRequest>;
 
-  listCommunications(subject: RelationshipSubject): Promise<RelationshipCommunicationLog[]>;
-  listReplies(filters?: { status?: RelationshipReply['status'][]; ownerId?: string }): Promise<RelationshipReply[]>;
-  updateReply(id: string, input: { status?: RelationshipReply['status']; ownerId?: string; followUpDueAt?: string }): Promise<RelationshipReply>;
+  listCommunications(subject: RelationshipSubject): Promise<RelationshipCommunication[]>;
+  listCommunicationEvents(communicationId: string): Promise<RelationshipCommunicationEvent[]>;
+  listReplies(filters?: RelationshipReplyFilters): Promise<RelationshipReplyPage>;
+  updateReply(id: string, input: UpdateRelationshipReplyInput): Promise<RelationshipReply>;
   listReportMetrics(input?: { period?: { from?: string; to?: string } }): Promise<RelationshipReportMetric[]>;
   search(input: RelationshipSearchQuery): Promise<PageResult<RelationshipSearchResult>>;
 }
