@@ -1,0 +1,2 @@
+create index relationship_campaign_work_items_tenant_step_idx
+  on private.relationship_campaign_work_items (tenant_id, campaign_step_id);
