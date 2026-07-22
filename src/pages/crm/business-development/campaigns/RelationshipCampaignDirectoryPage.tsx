@@ -35,7 +35,7 @@ export default function RelationshipCampaignDirectoryPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Relationship campaigns</h1>
-          <p className="mt-2 max-w-3xl text-muted-foreground">Relationship-only campaign definitions with source, audience, conversion, handoff, measurement, and ordered outreach steps. Clinical campaign infrastructure is never used.</p>
+          <p className="mt-2 max-w-3xl text-muted-foreground">Relationship-only campaign definitions, resolved recipients, and dormant ordered work. Clinical campaign infrastructure is never used.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline"><Link to="/crm/business-development/status">System status</Link></Button>
@@ -47,8 +47,8 @@ export default function RelationshipCampaignDirectoryPage() {
 
       <Card className="border-amber-500/40 bg-amber-50/40 dark:bg-amber-950/10">
         <CardHeader>
-          <CardTitle>Campaign execution remains disabled</CardTitle>
-          <CardDescription>Pass 9 allows campaign definitions to be reviewed and marked active. It cannot enroll recipients, schedule sends, contact anyone, or call the clinical campaign system. Execution requires the separate enrollment, safety, delivery, and reply passes.</CardDescription>
+          <CardTitle>Campaign delivery remains disabled</CardTitle>
+          <CardDescription>Pass 10 can resolve contacts, create pending enrollments, plan dormant ordered work, and manage pause/resume/stop states. Work cannot be claimed or sent until Pass 11 safety and Pass 12 delivery/reply controls are separately completed and verified.</CardDescription>
         </CardHeader>
       </Card>
 
@@ -108,7 +108,7 @@ export default function RelationshipCampaignDirectoryPage() {
           {items.length === 0 ? <p className="text-sm text-muted-foreground">No relationship campaigns match the current filters.</p> : <div className="divide-y rounded border">{items.map((campaign) => {
             const metricsAvailable = campaign.metricsAvailable !== false;
             const marketingStage = campaign.marketingLifecycleStage;
-            return <div className="space-y-3 p-4" key={campaign.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><Link className="font-medium text-primary hover:underline" to={`/crm/business-development/campaigns/${campaign.id}`}>{campaign.name}</Link><p className="text-sm text-muted-foreground">{campaign.purpose}</p></div><div className="flex gap-2"><Badge variant="outline">{statusLabel[campaign.status]}</Badge>{marketingStage && <Badge variant="secondary">{marketingStage.replace(/_/g, ' ')}</Badge>}</div></div><div className="flex flex-wrap gap-3 text-sm text-muted-foreground"><span>{campaign.initiative ?? 'No initiative'}</span><span>Owner {campaign.ownerId ?? 'unassigned'}</span><span>{campaign.senderName} &lt;{campaign.senderEmail}&gt;</span><span>{campaign.steps.length ? `${campaign.steps.length} steps` : 'Step count loads on detail'}</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            return <div className="space-y-3 p-4" key={campaign.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><Link className="font-medium text-primary hover:underline" to={`/crm/business-development/campaigns/${campaign.id}`}>{campaign.name}</Link><p className="text-sm text-muted-foreground">{campaign.purpose}</p></div><div className="flex flex-wrap gap-2"><Badge variant="outline">{statusLabel[campaign.status]}</Badge>{marketingStage && <Badge variant="secondary">{marketingStage.replace(/_/g, ' ')}</Badge>}<Button asChild size="sm" variant="outline"><Link to={`/crm/business-development/campaigns/${campaign.id}/enrollments`}>Enrollments</Link></Button></div></div><div className="flex flex-wrap gap-3 text-sm text-muted-foreground"><span>{campaign.initiative ?? 'No initiative'}</span><span>Owner {campaign.ownerId ?? 'unassigned'}</span><span>{campaign.senderName} &lt;{campaign.senderEmail}&gt;</span><span>{campaign.steps.length ? `${campaign.steps.length} steps` : 'Step count loads on detail'}</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <MetricCard label="Enrollment" value={metricsAvailable ? campaign.enrollmentCount : undefined} />
               <MetricCard label="Replies" value={metricsAvailable ? campaign.replyCount : undefined} />
               <MetricCard label="Suppressions" value={metricsAvailable ? campaign.suppressionCount : undefined} />
