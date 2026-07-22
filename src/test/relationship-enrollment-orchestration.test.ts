@@ -18,13 +18,18 @@ describe('relationship campaign enrollment orchestration', () => {
 
   it('maps eligibility as preliminary while safety and delivery remain locked', () => {
     const eligibility = mapRelationshipEnrollmentEligibility({
-      target: { contactId: 'contact-1', sourceLanguageMode: 'research' },
+      target: {
+        contactId: 'contact-1',
+        sourceLanguageMode: 'verified_anonymous',
+        verifiedReferralId: 'referral-1',
+      },
       eligible: true,
       reasons: [],
       resolvedContactId: 'contact-1',
+      verifiedReferralId: 'referral-1',
       recipientEmail: 'person@example.org',
       recipientName: 'Person',
-      sourceLanguageMode: 'research',
+      sourceLanguageMode: 'verified_anonymous',
       personalizationContext: { contactDisplayName: 'Person' },
       safetyStatus: 'ready',
       safetyEligible: true,
@@ -35,6 +40,8 @@ describe('relationship campaign enrollment orchestration', () => {
 
     expect(eligibility.eligible).toBe(true);
     expect(eligibility.resolvedContactId).toBe('contact-1');
+    expect(eligibility.target.verifiedReferralId).toBe('referral-1');
+    expect(eligibility.verifiedReferralId).toBe('referral-1');
     expect(eligibility.safetyStatus).toBe('pending_pass_11');
     expect(eligibility.safetyEligible).toBe(false);
     expect(eligibility.deliveryEnabled).toBe(false);
