@@ -1,0 +1,36 @@
+name: Pass 10 Typecheck Diagnostic
+
+on:
+  push:
+    branches:
+      - codex/pass-10-relationship-enrollment-orchestration
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --silent
+      - name: Capture TypeScript diagnostics
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck > typecheck.log 2>&1
+          status=$?
+          echo "$status" > typecheck-exit-code.txt
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pass10-typecheck-diagnostics
+          path: |
+            typecheck.log
+            typecheck-exit-code.txt
