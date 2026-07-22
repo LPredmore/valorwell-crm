@@ -53,6 +53,7 @@ export type RelationshipEnrollmentTarget = {
   organizationId?: string;
   opportunityId?: string;
   sourceLanguageMode?: SourceLanguageMode;
+  verifiedReferralId?: string;
 };
 
 export type RelationshipEnrollmentEligibility = {
@@ -62,6 +63,7 @@ export type RelationshipEnrollmentEligibility = {
   resolvedContactId?: string;
   organizationId?: string;
   opportunityId?: string;
+  verifiedReferralId?: string;
   recipientEmail?: string;
   recipientName?: string;
   sourceLanguageMode: SourceLanguageMode;
