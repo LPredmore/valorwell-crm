@@ -47,7 +47,7 @@ const eligibilityLabels: Record<string, string> = {
   do_not_contact: 'The resolved contact or organization is marked do not contact.',
   active_enrollment: 'This contact already has a pending, active, or paused enrollment in the campaign.',
   previous_response: 'This contact previously responded to this campaign.',
-  source_language_not_allowed: 'The selected source-language mode is invalid.',
+  source_language_not_allowed: 'Verified source language requires matching, verified, non-revoked referral evidence with the correct disclosure mode.',
 };
 
 type TargetKind = 'contact' | 'organization' | 'opportunity';
@@ -62,6 +62,7 @@ export default function RelationshipCampaignEnrollmentsPage() {
   const [targetId, setTargetId] = useState('');
   const [explicitContactId, setExplicitContactId] = useState('');
   const [sourceLanguageMode, setSourceLanguageMode] = useState<SourceLanguageMode>('none');
+  const [verifiedReferralId, setVerifiedReferralId] = useState('');
   const [statusFilter, setStatusFilter] = useState<RelationshipEnrollmentStatus | ''>('');
   const [transitionReasons, setTransitionReasons] = useState<Record<string, string>>({});
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string>();
@@ -95,6 +96,7 @@ export default function RelationshipCampaignEnrollmentsPage() {
     const value: RelationshipEnrollmentTarget = { sourceLanguageMode };
     const normalizedTargetId = targetId.trim();
     const normalizedContactId = explicitContactId.trim();
+    const normalizedReferralId = verifiedReferralId.trim();
     if (targetKind === 'contact') value.contactId = normalizedTargetId || undefined;
     if (targetKind === 'organization') {
       value.organizationId = normalizedTargetId || undefined;
@@ -104,12 +106,18 @@ export default function RelationshipCampaignEnrollmentsPage() {
       value.opportunityId = normalizedTargetId || undefined;
       value.contactId = normalizedContactId || undefined;
     }
+    if (sourceLanguageMode === 'verified_anonymous' || sourceLanguageMode === 'verified_named') {
+      value.verifiedReferralId = normalizedReferralId || undefined;
+    }
     return value;
-  }, [explicitContactId, sourceLanguageMode, targetId, targetKind]);
+  }, [explicitContactId, sourceLanguageMode, targetId, targetKind, verifiedReferralId]);
 
   const evaluationMutation = useMutation({
     mutationFn: async () => {
       if (!targetId.trim()) throw new Error('Target ID is required.');
+      if ((sourceLanguageMode === 'verified_anonymous' || sourceLanguageMode === 'verified_named') && !verifiedReferralId.trim()) {
+        throw new Error('Verified referral ID is required for verified source-language modes.');
+      }
       const results = await dataProvider.relationships.evaluateEnrollmentEligibility(campaignId, [target]);
       if (!results[0]) throw new Error('The eligibility evaluator returned no result.');
       return results[0];
@@ -131,6 +139,7 @@ export default function RelationshipCampaignEnrollmentsPage() {
       evaluationMutation.reset();
       setTargetId('');
       setExplicitContactId('');
+      setVerifiedReferralId('');
       if (enrollments[0]) setSelectedEnrollmentId(enrollments[0].id);
       await queryClient.invalidateQueries({ queryKey: ['relationship-enrollments', campaignId] });
       await queryClient.invalidateQueries({ queryKey: ['relationship-campaigns'] });
@@ -153,6 +162,7 @@ export default function RelationshipCampaignEnrollmentsPage() {
   const campaign = campaignQuery.data ?? undefined;
   const evaluation = evaluationMutation.data;
   const pending = evaluationMutation.isPending || enrollmentMutation.isPending || transitionMutation.isPending;
+  const verifiedMode = sourceLanguageMode === 'verified_anonymous' || sourceLanguageMode === 'verified_named';
 
   return (
     <div className="space-y-6">
@@ -207,7 +217,7 @@ export default function RelationshipCampaignEnrollmentsPage() {
 
       {available && campaign && (
         <Card>
-          <CardHeader><CardTitle>Resolve and evaluate recipient</CardTitle><CardDescription>Every enrollment must resolve to one relationship contact. Organization and opportunity targets may resolve through their explicit or single primary contact.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Resolve and evaluate recipient</CardTitle><CardDescription>Every enrollment must resolve to one relationship contact. Organization and opportunity targets may resolve through their explicit or single primary contact. Verified source language requires a matching verified referral record.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Field label="Target type" id="enrollment-target-type">
@@ -220,17 +230,18 @@ export default function RelationshipCampaignEnrollmentsPage() {
               <Field label={`${capitalize(targetKind)} ID`} id="enrollment-target-id"><Input id="enrollment-target-id" value={targetId} onChange={(event) => { setTargetId(event.target.value); evaluationMutation.reset(); }} placeholder="UUID" /></Field>
               {targetKind !== 'contact' && <Field label="Explicit contact ID" id="enrollment-contact-id"><Input id="enrollment-contact-id" value={explicitContactId} onChange={(event) => { setExplicitContactId(event.target.value); evaluationMutation.reset(); }} placeholder="Optional UUID" /></Field>}
               <Field label="Source-language mode" id="enrollment-source-language">
-                <select id="enrollment-source-language" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={sourceLanguageMode} onChange={(event) => { setSourceLanguageMode(event.target.value as SourceLanguageMode); evaluationMutation.reset(); }}>
+                <select id="enrollment-source-language" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={sourceLanguageMode} onChange={(event) => { const mode = event.target.value as SourceLanguageMode; setSourceLanguageMode(mode); if (mode !== 'verified_anonymous' && mode !== 'verified_named') setVerifiedReferralId(''); evaluationMutation.reset(); }}>
                   <option value="none">None</option>
                   <option value="research">Research</option>
                   <option value="community">Community</option>
-                  <option value="verified_anonymous">Verified anonymous</option>
-                  <option value="verified_named">Verified named</option>
+                  <option value="verified_anonymous">Verified anonymous referral</option>
+                  <option value="verified_named">Verified named referral</option>
                 </select>
               </Field>
+              {verifiedMode && <Field label="Verified referral ID" id="enrollment-referral-id"><Input id="enrollment-referral-id" value={verifiedReferralId} onChange={(event) => { setVerifiedReferralId(event.target.value); evaluationMutation.reset(); }} placeholder="Required verified referral UUID" /></Field>}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" disabled={pending || !targetId.trim()} onClick={() => evaluationMutation.mutate()}>{evaluationMutation.isPending ? 'Evaluating…' : 'Evaluate recipient'}</Button>
+              <Button type="button" variant="outline" disabled={pending || !targetId.trim() || (verifiedMode && !verifiedReferralId.trim())} onClick={() => evaluationMutation.mutate()}>{evaluationMutation.isPending ? 'Evaluating…' : 'Evaluate recipient'}</Button>
               <Button type="button" disabled={pending || !evaluation?.eligible || campaign.status !== 'active'} onClick={() => enrollmentMutation.mutate()}>{enrollmentMutation.isPending ? 'Creating…' : 'Create pending enrollment'}</Button>
             </div>
             {evaluationMutation.isError && <p className="text-sm text-destructive">{errorMessage(evaluationMutation.error, 'Eligibility could not be evaluated.')}</p>}
@@ -283,7 +294,7 @@ export default function RelationshipCampaignEnrollmentsPage() {
 }
 
 function EligibilityResult({ evaluation }: { evaluation: RelationshipEnrollmentEligibility }) {
-  return <div className="rounded-lg border p-4"><div className="flex flex-wrap items-center gap-2"><Badge variant={evaluation.eligible ? 'default' : 'destructive'}>{evaluation.eligible ? 'Preliminarily eligible' : 'Not eligible'}</Badge><Badge variant="outline">Safety pending Pass 11</Badge><Badge variant="outline">Delivery disabled</Badge></div>{evaluation.resolvedContactId && <div className="mt-3 grid gap-2 text-sm md:grid-cols-3"><p><span className="font-medium">Resolved contact:</span> {evaluation.resolvedContactId}</p><p><span className="font-medium">Recipient:</span> {evaluation.recipientName ?? 'Unnamed'}</p><p><span className="font-medium">Email:</span> {evaluation.recipientEmail ?? 'Unavailable'}</p></div>}{evaluation.reasons.length > 0 && <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-destructive">{evaluation.reasons.map((reason) => <li key={reason}>{eligibilityLabels[reason] ?? reason.replace(/_/g, ' ')}</li>)}</ul>}</div>;
+  return <div className="rounded-lg border p-4"><div className="flex flex-wrap items-center gap-2"><Badge variant={evaluation.eligible ? 'default' : 'destructive'}>{evaluation.eligible ? 'Preliminarily eligible' : 'Not eligible'}</Badge><Badge variant="outline">Safety pending Pass 11</Badge><Badge variant="outline">Delivery disabled</Badge></div>{evaluation.resolvedContactId && <div className="mt-3 grid gap-2 text-sm md:grid-cols-3"><p><span className="font-medium">Resolved contact:</span> {evaluation.resolvedContactId}</p><p><span className="font-medium">Recipient:</span> {evaluation.recipientName ?? 'Unnamed'}</p><p><span className="font-medium">Email:</span> {evaluation.recipientEmail ?? 'Unavailable'}</p>{evaluation.verifiedReferralId && <p><span className="font-medium">Verified referral:</span> {evaluation.verifiedReferralId}</p>}</div>}{evaluation.reasons.length > 0 && <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-destructive">{evaluation.reasons.map((reason) => <li key={reason}>{eligibilityLabels[reason] ?? reason.replace(/_/g, ' ')}</li>)}</ul>}</div>;
 }
 
 function EnrollmentCard({ enrollment, selected, reason, pending, onSelect, onReasonChange, onTransition }: {
