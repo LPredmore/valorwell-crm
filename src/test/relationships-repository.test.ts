@@ -6,8 +6,11 @@ import { RelationshipCapabilityUnavailableError, type RelationshipsRepository } 
 // Compile-time boundary: relationship enrollments accept relationship targets,
 // not clinical-client IDs or the clinical campaign-enrollment pathway.
 function assertNoClinicalEnrollmentPath(repository: RelationshipsRepository) {
-  // @ts-expect-error A clinical client ID is not a relationship enrollment target.
-  repository.enroll('relationship-campaign', ['clinical-client-id']);
+  repository.enroll('relationship-campaign', {
+    // @ts-expect-error A clinical client ID is not a relationship enrollment target.
+    targets: ['clinical-client-id'],
+    expectedCampaignVersion: 1,
+  });
 }
 void assertNoClinicalEnrollmentPath;
 
@@ -37,8 +40,10 @@ describe('relationship repository boundary', () => {
       'listCampaigns', 'enroll', 'listReplies', 'listSuppressions',
       'processUnsubscribe', 'listReportMetrics', 'search',
     ]));
-    await expect(unavailableRelationshipsRepository.enroll('campaign-1', [{ organizationId: 'org-1' }]))
-      .rejects.toMatchObject({ capability: 'enrollment' });
+    await expect(unavailableRelationshipsRepository.enroll('campaign-1', {
+      targets: [{ organizationId: 'org-1' }],
+      expectedCampaignVersion: 1,
+    })).rejects.toMatchObject({ capability: 'enrollment' });
     await expect(unavailableRelationshipsRepository.processUnsubscribe({ token: 'opaque-token' }))
       .rejects.toMatchObject({ capability: 'unsubscribe' });
   });
