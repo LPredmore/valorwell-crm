@@ -1,4 +1,5 @@
 import type { AuditMetadata, PageResult, SourceLanguageMode } from './contracts';
+import type { RelationshipCommunicationSafetyEvaluation } from './safety-contracts';
 
 export const relationshipEnrollmentStatuses = [
   'pending',
@@ -24,6 +25,11 @@ export const relationshipEnrollmentEventTypes = [
   'completed',
   'failed',
   'system',
+  'safety_ready',
+  'safety_blocked',
+  'suppressed',
+  'suppression_revoked',
+  'unsubscribe_processed',
 ] as const;
 export type RelationshipEnrollmentEventType = (typeof relationshipEnrollmentEventTypes)[number];
 
@@ -76,6 +82,8 @@ export type RelationshipEnrollmentEligibility = {
   executionBoundary: 'disabled_until_passes_11_12';
 };
 
+export type RelationshipEnrollmentSafetyStatus = 'pending_pass_11' | 'ready' | 'blocked';
+
 export type RelationshipCampaignEnrollment = AuditMetadata & {
   id: string;
   campaignId: string;
@@ -92,7 +100,11 @@ export type RelationshipCampaignEnrollment = AuditMetadata & {
   sourceLanguageMode: SourceLanguageMode;
   personalizationContext: Record<string, unknown>;
   eligibilitySnapshot: RelationshipEnrollmentEligibility;
-  safetyStatus: 'pending_pass_11';
+  safetyStatus: RelationshipEnrollmentSafetyStatus;
+  safetySnapshot?: RelationshipCommunicationSafetyEvaluation;
+  safetyEvaluatedAt?: string;
+  safetyReadyAt?: string;
+  safetyBlockedAt?: string;
   deliveryEnabled: false;
   version: number;
   enrolledBy?: string;
