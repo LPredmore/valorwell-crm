@@ -73,7 +73,13 @@ import type {
   RelationshipOrganizationRecord,
 } from '@/domain/relationships/records';
 
-export type RelationshipSubject = { organizationId?: string; contactId?: string; opportunityId?: string; enrollmentId?: string };
+export type RelationshipSubject = {
+  campaignId?: string;
+  organizationId?: string;
+  contactId?: string;
+  opportunityId?: string;
+  enrollmentId?: string;
+};
 export type RelationshipSearchQuery = { query: string; kinds?: RelationshipSearchResult['kind'][]; page?: number; pageSize?: number };
 
 /** Dedicated non-clinical repository boundary. */
@@ -152,5 +158,9 @@ export interface RelationshipsRepository {
 
 export class RelationshipCapabilityUnavailableError extends Error {
   readonly capability: Capability;
-  constructor(capability: Capability) { super(`Relationship capability pending: ${capability}`); this.name = 'RelationshipCapabilityUnavailableError'; this.capability = capability; }
+  constructor(capability: Capability) {
+    super(`Relationship capability pending: ${capability}`);
+    this.name = 'RelationshipCapabilityUnavailableError';
+    this.capability = capability;
+  }
 }
