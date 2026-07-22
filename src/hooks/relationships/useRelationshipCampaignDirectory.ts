@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { dataProvider } from '@/services/dataProvider';
-import type { CampaignFilters, RelationshipCampaignStatus, SortDirection } from '@/domain/relationships/contracts';
+import type {
+  RelationshipCampaignFilters,
+  RelationshipCampaignStatus,
+} from '@/domain/relationships/campaign-contracts';
+import type { SortDirection } from '@/domain/relationships/contracts';
 
 const pageSize = 25;
 
@@ -16,14 +20,14 @@ function values(searchParams: URLSearchParams, key: string) {
 
 export function useRelationshipCampaignDirectoryFilters() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const filters: CampaignFilters = {
+  const filters: RelationshipCampaignFilters = {
     search: searchParams.get('q') || undefined,
     statuses: values(searchParams, 'status').map((value) => value as RelationshipCampaignStatus),
     ownerIds: values(searchParams, 'owner'),
     initiatives: values(searchParams, 'initiative'),
     page: numberParam(searchParams.get('page'), 1),
     pageSize,
-    sortBy: (searchParams.get('sortBy') || 'updatedAt') as CampaignFilters['sortBy'],
+    sortBy: (searchParams.get('sortBy') || 'updatedAt') as RelationshipCampaignFilters['sortBy'],
     sortDirection: (searchParams.get('sortDirection') || 'desc') as SortDirection,
   };
 
@@ -34,9 +38,9 @@ export function useRelationshipCampaignDirectoryFilters() {
     return next;
   });
 
-  const setMany = (values: Record<string, string | undefined>) => setSearchParams((current) => {
+  const setMany = (nextValues: Record<string, string | undefined>) => setSearchParams((current) => {
     const next = new URLSearchParams(current);
-    for (const [key, value] of Object.entries(values)) {
+    for (const [key, value] of Object.entries(nextValues)) {
       if (value) next.set(key, value); else next.delete(key);
     }
     next.delete('page');
@@ -47,7 +51,7 @@ export function useRelationshipCampaignDirectoryFilters() {
   return { filters, set, setMany, reset };
 }
 
-export function useRelationshipCampaignDirectory(filters: CampaignFilters, enabled: boolean) {
+export function useRelationshipCampaignDirectory(filters: RelationshipCampaignFilters, enabled: boolean) {
   return useQuery({
     queryKey: ['relationship-campaigns', filters],
     queryFn: () => dataProvider.relationships.listCampaigns(filters),
