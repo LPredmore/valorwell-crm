@@ -23,7 +23,9 @@ import ContactDetailPage from "./pages/crm/business-development/ContactDetailPag
 import OpportunityDirectoryPage from "./pages/crm/business-development/OpportunityDirectoryPage";
 import OpportunityDetailPage from "./pages/crm/business-development/OpportunityDetailPage";
 import RelationshipImportPage from "./pages/crm/business-development/RelationshipImportPage";
+import RelationshipReplyQueuePage from "./pages/crm/business-development/RelationshipReplyQueuePage";
 import RelationshipSuppressionPage from "./pages/crm/business-development/RelationshipSuppressionPage";
+import RelationshipCampaignDeliveryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDeliveryPage";
 import RelationshipCampaignDirectoryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDirectoryPage";
 import RelationshipCampaignEditorPage from "./pages/crm/business-development/campaigns/RelationshipCampaignEditorPage";
 import RelationshipCampaignEnrollmentsPage from "./pages/crm/business-development/campaigns/RelationshipCampaignEnrollmentsPage";
@@ -54,7 +56,6 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/unsubscribe" element={<RelationshipUnsubscribePage />} />
-
           <Route path="/crm" element={<CrmLayout />}>
             <Route index element={<CrmIndex />} />
             <Route path="clients" element={<CanonicalClients />} />
@@ -83,8 +84,9 @@ const App = () => (
             <Route path="business-development/campaigns/new" element={<RelationshipCampaignEditorPage />} />
             <Route path="business-development/campaigns/preview" element={<RelationshipCampaignPreviewPage />} />
             <Route path="business-development/campaigns/:id/enrollments" element={<RelationshipCampaignEnrollmentsPage />} />
+            <Route path="business-development/campaigns/:id/delivery" element={<RelationshipCampaignDeliveryPage />} />
             <Route path="business-development/campaigns/:id" element={<RelationshipCampaignEditorPage />} />
-            <Route path="business-development/replies" element={<CapabilityPage title="Relationship replies" capability="replies" description="Replies are kept out of clinical communications and stop further relationship automation." />} />
+            <Route path="business-development/replies" element={<RelationshipReplyQueuePage />} />
             <Route path="business-development/suppressions" element={<RelationshipSuppressionPage />} />
             <Route path="business-development/reports" element={<CapabilityPage title="Business Development reports" capability="reporting" description="Operational reporting distinguishes unavailable data from zero activity." />} />
             <Route path="creator-community-interest" element={<CreatorCommunityInterestQueue />} />
@@ -102,7 +104,6 @@ const App = () => (
             <Route path="canonical/staff" element={<CanonicalStaff />} />
             <Route path="canonical/reports" element={<CanonicalReports />} />
           </Route>
-
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
