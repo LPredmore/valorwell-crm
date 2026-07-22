@@ -14,7 +14,6 @@ import CrmCampaignEditor from "./pages/crm/CampaignEditor";
 import CrmCampaignEnrollments from "./pages/crm/CampaignEnrollments";
 import BusinessDevelopmentArchitecture from "./pages/crm/BusinessDevelopmentArchitecture";
 import BusinessDevelopmentDashboard from "./pages/crm/business-development/BusinessDevelopmentDashboard";
-import { CapabilityPage } from "./pages/crm/business-development/CapabilityPage";
 import OrganizationDirectoryPage from "./pages/crm/business-development/OrganizationDirectoryPage";
 import OrganizationFormPage from "./pages/crm/business-development/OrganizationFormPage";
 import OrganizationDetailPage from "./pages/crm/business-development/OrganizationDetailPage";
@@ -24,6 +23,8 @@ import OpportunityDirectoryPage from "./pages/crm/business-development/Opportuni
 import OpportunityDetailPage from "./pages/crm/business-development/OpportunityDetailPage";
 import RelationshipImportPage from "./pages/crm/business-development/RelationshipImportPage";
 import RelationshipReplyQueuePage from "./pages/crm/business-development/RelationshipReplyQueuePage";
+import RelationshipReportsPage from "./pages/crm/business-development/RelationshipReportsPage";
+import RelationshipSearchPage from "./pages/crm/business-development/RelationshipSearchPage";
 import RelationshipSuppressionPage from "./pages/crm/business-development/RelationshipSuppressionPage";
 import RelationshipCampaignDeliveryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDeliveryPage";
 import RelationshipCampaignDirectoryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDirectoryPage";
@@ -71,6 +72,7 @@ const App = () => (
             <Route path="reports" element={<CanonicalReports />} />
             <Route path="business-development" element={<BusinessDevelopmentDashboard />} />
             <Route path="business-development/status" element={<BusinessDevelopmentArchitecture />} />
+            <Route path="business-development/search" element={<RelationshipSearchPage />} />
             <Route path="business-development/organizations" element={<OrganizationDirectoryPage />} />
             <Route path="business-development/organizations/new" element={<OrganizationFormPage />} />
             <Route path="business-development/organizations/:id/edit" element={<OrganizationFormPage />} />
@@ -88,7 +90,7 @@ const App = () => (
             <Route path="business-development/campaigns/:id" element={<RelationshipCampaignEditorPage />} />
             <Route path="business-development/replies" element={<RelationshipReplyQueuePage />} />
             <Route path="business-development/suppressions" element={<RelationshipSuppressionPage />} />
-            <Route path="business-development/reports" element={<CapabilityPage title="Business Development reports" capability="reporting" description="Operational reporting distinguishes unavailable data from zero activity." />} />
+            <Route path="business-development/reports" element={<RelationshipReportsPage />} />
             <Route path="creator-community-interest" element={<CreatorCommunityInterestQueue />} />
             <Route path="creator-community-interest/:id" element={<CreatorCommunityInterestDetail />} />
             <Route path="settings" element={<CrmSettings />} />
