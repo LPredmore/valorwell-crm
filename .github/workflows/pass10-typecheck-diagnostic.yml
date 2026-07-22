@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          npm run typecheck > typecheck.log 2>&1
+          npx tsc --noEmit -p tsconfig.app.json --pretty false > typecheck.log 2>&1
           status=$?
           echo "$status" > typecheck-exit-code.txt
           exit 0
