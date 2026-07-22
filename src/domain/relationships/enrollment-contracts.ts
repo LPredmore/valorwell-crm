@@ -1,56 +1,23 @@
 import type { AuditMetadata, PageResult, SourceLanguageMode } from './contracts';
 import type { RelationshipCommunicationSafetyEvaluation } from './safety-contracts';
 
-export const relationshipEnrollmentStatuses = [
-  'pending',
-  'active',
-  'paused',
-  'responded',
-  'stopped',
-  'completed',
-  'failed',
-  'suppressed',
-] as const;
+export const relationshipEnrollmentStatuses = ['pending', 'active', 'paused', 'responded', 'stopped', 'completed', 'failed', 'suppressed'] as const;
 export type RelationshipEnrollmentStatus = (typeof relationshipEnrollmentStatuses)[number];
 
 export const relationshipEnrollmentEventTypes = [
-  'enrolled',
-  'paused',
-  'resumed',
-  'stopped',
-  'work_planned',
-  'work_claimed',
-  'work_retry_scheduled',
-  'step_completed',
-  'completed',
-  'failed',
-  'system',
-  'safety_ready',
-  'safety_blocked',
-  'suppressed',
-  'suppression_revoked',
-  'unsubscribe_processed',
+  'enrolled', 'paused', 'resumed', 'stopped', 'work_planned', 'work_claimed', 'work_retry_scheduled',
+  'step_completed', 'completed', 'failed', 'system', 'safety_ready', 'safety_blocked', 'suppressed',
+  'suppression_revoked', 'unsubscribe_processed', 'delivery_enabled', 'delivery_disabled',
+  'communication_scheduled', 'communication_sent', 'communication_delivered', 'communication_failed',
+  'communication_bounced', 'reply_received',
 ] as const;
 export type RelationshipEnrollmentEventType = (typeof relationshipEnrollmentEventTypes)[number];
 
 export const relationshipEnrollmentEligibilityReasons = [
-  'target_invalid',
-  'campaign_not_found',
-  'campaign_not_active',
-  'opportunity_not_found',
-  'opportunity_not_qualified',
-  'review_not_approved',
-  'organization_not_found',
-  'contact_not_found',
-  'recipient_contact_required',
-  'recipient_contact_ambiguous',
-  'contact_not_linked_to_organization',
-  'target_context_conflict',
-  'missing_email',
-  'do_not_contact',
-  'active_enrollment',
-  'previous_response',
-  'source_language_not_allowed',
+  'target_invalid', 'campaign_not_found', 'campaign_not_active', 'opportunity_not_found', 'opportunity_not_qualified',
+  'review_not_approved', 'organization_not_found', 'contact_not_found', 'recipient_contact_required',
+  'recipient_contact_ambiguous', 'contact_not_linked_to_organization', 'target_context_conflict', 'missing_email',
+  'do_not_contact', 'active_enrollment', 'previous_response', 'source_language_not_allowed',
 ] as const;
 export type RelationshipEnrollmentEligibilityReason = (typeof relationshipEnrollmentEligibilityReasons)[number];
 
@@ -105,7 +72,7 @@ export type RelationshipCampaignEnrollment = AuditMetadata & {
   safetyEvaluatedAt?: string;
   safetyReadyAt?: string;
   safetyBlockedAt?: string;
-  deliveryEnabled: false;
+  deliveryEnabled: boolean;
   version: number;
   enrolledBy?: string;
 };
@@ -129,32 +96,15 @@ export type RelationshipEnrollmentFilters = {
   page?: number;
   pageSize?: number;
 };
-
 export type RelationshipEnrollmentPage = PageResult<RelationshipCampaignEnrollment>;
 
-export type EnrollRelationshipTargetsInput = {
-  targets: RelationshipEnrollmentTarget[];
-  expectedCampaignVersion: number;
-  idempotencyKey?: string;
-};
-
-export type TransitionRelationshipEnrollmentInput = {
-  status: 'pending' | 'paused' | 'stopped';
-  expectedVersion: number;
-  idempotencyKey?: string;
-  reason?: string;
-};
+export type EnrollRelationshipTargetsInput = { targets: RelationshipEnrollmentTarget[]; expectedCampaignVersion: number; idempotencyKey?: string };
+export type TransitionRelationshipEnrollmentInput = { status: 'pending' | 'paused' | 'stopped'; expectedVersion: number; idempotencyKey?: string; reason?: string };
 
 export function operatorEnrollmentTransitions(status: RelationshipEnrollmentStatus) {
   const transitions: Record<RelationshipEnrollmentStatus, Array<'pending' | 'paused' | 'stopped'>> = {
-    pending: ['paused', 'stopped'],
-    active: ['paused', 'stopped'],
-    paused: ['pending', 'stopped'],
-    responded: [],
-    stopped: [],
-    completed: [],
-    failed: [],
-    suppressed: [],
+    pending: ['paused', 'stopped'], active: ['paused', 'stopped'], paused: ['pending', 'stopped'],
+    responded: [], stopped: [], completed: [], failed: [], suppressed: [],
   };
   return transitions[status];
 }

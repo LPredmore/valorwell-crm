@@ -67,19 +67,15 @@ type JsonObject = { [key: string]: Json | undefined };
 function object(value: Json | undefined): JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : {};
 }
-
 function stringValue(value: Json | undefined) {
   return typeof value === 'string' ? value : undefined;
 }
-
 function booleanValue(value: Json | undefined) {
   return typeof value === 'boolean' ? value : undefined;
 }
-
 function stringArray(value: Json | undefined) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
-
 function record(value: Json | undefined): Record<string, unknown> {
   return object(value) as Record<string, unknown>;
 }
@@ -176,7 +172,7 @@ export function mapRelationshipEnrollmentResponse(value: Json): RelationshipCamp
     safetyEvaluatedAt: stringValue(item.safetyEvaluatedAt),
     safetyReadyAt: stringValue(item.safetyReadyAt),
     safetyBlockedAt: stringValue(item.safetyBlockedAt),
-    deliveryEnabled: false,
+    deliveryEnabled: booleanValue(item.deliveryEnabled) === true,
     version: numberValue(item.version) ?? 1,
     enrolledBy: stringValue(item.enrolledBy),
     createdAt: requiredString(item.createdAt, 'created timestamp'),
@@ -236,13 +232,11 @@ export function mapRelationshipEnrollmentEventRow(row: RelationshipEnrollmentEve
 function isNonEmptyObject(value: Json | undefined) {
   return typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length > 0;
 }
-
 function requiredString(value: Json | undefined, label: string) {
   const result = stringValue(value);
   if (!result) throw new Error(`Invalid relationship ${label}.`);
   return result;
 }
-
 function numberValue(value: Json | undefined) {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
