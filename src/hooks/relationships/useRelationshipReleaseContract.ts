@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import {
@@ -35,24 +34,19 @@ type ReleaseContractRow = {
   updated_at: string | null;
 };
 
-type ReleaseContractDatabase = {
-  public: {
-    Tables: {
-      crm_domain_contracts: {
-        Row: ReleaseContractRow;
-        Insert: never;
-        Update: never;
-        Relationships: [];
+type QueryError = { message: string };
+type ReleaseContractResult = Promise<{ data: ReleaseContractRow | null; error: QueryError | null }>;
+type ReleaseContractQueryClient = {
+  from: (relation: 'crm_domain_contracts') => {
+    select: (columns: '*') => {
+      eq: (column: 'domain_key', value: string) => {
+        maybeSingle: () => ReleaseContractResult;
       };
     };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
   };
 };
 
-const releaseContractSupabase = supabase as unknown as SupabaseClient<ReleaseContractDatabase>;
+const releaseContractSupabase = supabase as unknown as ReleaseContractQueryClient;
 
 function record(value: Json): Record<string, Json | undefined> {
   if (!value || Array.isArray(value) || typeof value !== 'object') return {};
