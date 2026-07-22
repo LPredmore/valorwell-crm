@@ -9,7 +9,6 @@ import type {
   OrganizationRole,
   PageResult,
   RelationshipCommunicationLog,
-  RelationshipEnrollment,
   RelationshipInteraction,
   RelationshipOpportunity,
   RelationshipReply,
@@ -35,6 +34,16 @@ import type {
   RelationshipCampaignTransitionInput,
 } from '@/domain/relationships/campaign-contracts';
 import type {
+  EnrollRelationshipTargetsInput,
+  RelationshipCampaignEnrollment,
+  RelationshipEnrollmentEligibility,
+  RelationshipEnrollmentEvent,
+  RelationshipEnrollmentFilters,
+  RelationshipEnrollmentPage,
+  RelationshipEnrollmentTarget,
+  TransitionRelationshipEnrollmentInput,
+} from '@/domain/relationships/enrollment-contracts';
+import type {
   RelationshipImportPreviewResult,
   RelationshipImportResolution,
 } from '@/domain/relationships/import-contracts';
@@ -54,7 +63,6 @@ import type {
 } from '@/domain/relationships/records';
 
 export type RelationshipSubject = { organizationId?: string; contactId?: string; opportunityId?: string };
-export type RelationshipEnrollmentTarget = { organizationId?: string; contactId?: string; opportunityId?: string };
 export type RelationshipSearchQuery = { query: string; kinds?: RelationshipSearchResult['kind'][]; page?: number; pageSize?: number };
 
 /**
@@ -134,9 +142,25 @@ export interface RelationshipsRepository {
   }): Promise<RelationshipCampaign>;
   transitionCampaignStatus(id: string, input: RelationshipCampaignTransitionInput): Promise<RelationshipCampaign>;
 
-  listEnrollments(campaignId: string): Promise<RelationshipEnrollment[]>;
-  enroll(campaignId: string, targets: RelationshipEnrollmentTarget[]): Promise<RelationshipEnrollment[]>;
-  updateEnrollmentStatus(id: string, input: { status: RelationshipEnrollment['status']; reason?: string }): Promise<RelationshipEnrollment>;
+  evaluateEnrollmentEligibility(
+    campaignId: string,
+    targets: RelationshipEnrollmentTarget[],
+  ): Promise<RelationshipEnrollmentEligibility[]>;
+  listEnrollments(
+    campaignId: string,
+    filters?: RelationshipEnrollmentFilters,
+  ): Promise<RelationshipEnrollmentPage>;
+  getEnrollment(id: string): Promise<RelationshipCampaignEnrollment | null>;
+  enroll(
+    campaignId: string,
+    input: EnrollRelationshipTargetsInput,
+  ): Promise<RelationshipCampaignEnrollment[]>;
+  transitionEnrollmentStatus(
+    id: string,
+    input: TransitionRelationshipEnrollmentInput,
+  ): Promise<RelationshipCampaignEnrollment>;
+  listEnrollmentEvents(id: string): Promise<RelationshipEnrollmentEvent[]>;
+
   listCommunications(subject: RelationshipSubject): Promise<RelationshipCommunicationLog[]>;
   listReplies(filters?: { status?: RelationshipReply['status'][]; ownerId?: string }): Promise<RelationshipReply[]>;
   updateReply(id: string, input: { status?: RelationshipReply['status']; ownerId?: string; followUpDueAt?: string }): Promise<RelationshipReply>;
