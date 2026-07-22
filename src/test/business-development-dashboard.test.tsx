@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import BusinessDevelopmentDashboard from '@/pages/crm/business-development/BusinessDevelopmentDashboard';
@@ -6,13 +7,27 @@ import BusinessDevelopmentArchitecture from '@/pages/crm/BusinessDevelopmentArch
 import { relationshipCapabilities } from '@/domain/relationships/capabilities';
 
 const useRelationshipCapabilities = vi.fn();
+const listReportMetrics = vi.fn();
 
 vi.mock('@/hooks/relationships/useRelationshipCapabilities', () => ({
   useRelationshipCapabilities: () => useRelationshipCapabilities(),
 }));
 
+vi.mock('@/services/dataProvider', () => ({
+  dataProvider: {
+    relationships: {
+      listReportMetrics: (...args: unknown[]) => listReportMetrics(...args),
+    },
+  },
+}));
+
 function renderDashboard() {
-  return render(<MemoryRouter><BusinessDevelopmentDashboard /></MemoryRouter>);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter><BusinessDevelopmentDashboard /></MemoryRouter>
+    </QueryClientProvider>,
+  );
 }
 
 function renderStatus() {
@@ -21,6 +36,7 @@ function renderStatus() {
 
 describe('Business Development dashboard and system status', () => {
   beforeEach(() => {
+    listReportMetrics.mockReset();
     useRelationshipCapabilities.mockReturnValue({
       data: relationshipCapabilities(),
       isLoading: false,
@@ -28,21 +44,34 @@ describe('Business Development dashboard and system status', () => {
     });
   });
 
-  it('shows pending metrics rather than misleading zero values', () => {
+  it('shows unavailable metrics rather than misleading zero values while reporting is pending', () => {
     renderDashboard();
     expect(screen.getByText('Organizations needing review')).toBeInTheDocument();
     expect(screen.getAllByText(/Database support pending; no relationship data is read or written/).length).toBeGreaterThan(0);
     expect(screen.queryByText('0')).not.toBeInTheDocument();
+    expect(listReportMetrics).not.toHaveBeenCalled();
   });
 
-  it('describes available database support as awaiting verified metric integration', () => {
+  it('displays verified numeric zero values when reporting is available', async () => {
     useRelationshipCapabilities.mockReturnValue({
-      data: relationshipCapabilities({ organizations: 'available' }),
+      data: relationshipCapabilities({ reporting: 'available' }),
       isLoading: false,
       isError: false,
     });
+    listReportMetrics.mockResolvedValue([
+      { key: 'organizations_needing_review', label: 'Organizations needing review', value: 0 },
+      { key: 'opportunities_needing_qualification', label: 'BTY opportunities needing qualification', value: 0 },
+      { key: 'overdue_next_actions', label: 'Overdue next actions', value: 0 },
+      { key: 'unassigned_relationships', label: 'Unassigned relationships', value: 87 },
+      { key: 'active_outreach_campaigns', label: 'Active outreach campaigns', value: 0 },
+      { key: 'replies_requiring_staff_action', label: 'Replies requiring staff action', value: 0 },
+      { key: 'import_conflicts', label: 'Import conflicts', value: 0 },
+      { key: 'recently_updated_relationships', label: 'Recently updated relationships', value: 87 },
+    ]);
     renderDashboard();
-    expect(screen.getAllByText('Database support is available; this metric will appear after its integration is verified.').length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('0')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('87').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/this metric will appear after its integration is verified/i)).not.toBeInTheDocument();
   });
 
   it('separates first-slice integration from full production readiness', () => {
@@ -56,10 +85,7 @@ describe('Business Development dashboard and system status', () => {
 
   it('verifies integration only when organizations and contacts are available', () => {
     useRelationshipCapabilities.mockReturnValue({
-      data: relationshipCapabilities({
-        organizations: 'available',
-        contacts: 'available',
-      }),
+      data: relationshipCapabilities({ organizations: 'available', contacts: 'available' }),
       isLoading: false,
       isError: false,
     });
