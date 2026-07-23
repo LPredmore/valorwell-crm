@@ -1,6 +1,8 @@
 project_id = "ahqauomkgflopxgnlndd"
 
-[functions.helpscout-proxy]
+[functions.crm-resend-email]
+# Public Resend webhooks share this endpoint with JWT-authenticated CRM actions.
+# The function performs signature verification or user/capability authorization internally.
 verify_jwt = false
 
 [functions.ringcentral-sms]
@@ -9,3 +11,5 @@ verify_jwt = false
 [functions.campaign-scheduler]
 verify_jwt = false
 
+[functions.relationship-resend-webhook]
+verify_jwt = false
