@@ -3,15 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EmailEditor, type EmailEditorRef } from '@react-email/editor';
 import { StarterKit } from '@react-email/editor/extensions';
 import { EmailTheming } from '@react-email/editor/plugins';
-import {
-  Archive,
-  ArrowLeft,
-  Copy,
-  Loader2,
-  RotateCcw,
-  Save,
-  Send,
-} from 'lucide-react';
+import { Archive, ArrowLeft, Copy, Loader2, RotateCcw, Save, Send } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,7 +35,6 @@ import {
   type EmailStudioStatus,
 } from '@/features/email-studio/studio/EmailStudio';
 import {
-  EMAIL_STUDIO_THEMES,
   getEmailStudioBlocksForMode,
   type EmailStudioBlockDefinition,
   type EmailStudioThemeKey,
@@ -56,10 +47,7 @@ import {
   createEmailStudioPresetDocument,
 } from '@/features/email-studio/studio/documents';
 import { EmailStudioBlock, EmailStudioVariable } from '@/features/email-studio/studio/extensions';
-import {
-  validateEmailStudioDraft,
-  validateEmailStudioEditorDocument,
-} from '@/features/email-studio/studio/validation';
+import { validateEmailStudioDraft, validateEmailStudioEditorDocument } from '@/features/email-studio/studio/validation';
 import { EmailAssetManager } from '@/features/email-studio/templates/EmailAssetManager';
 import {
   archiveEmailTemplate,
@@ -197,6 +185,10 @@ export default function EmailTemplateEditorPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    editorRef.current?.editor?.setEditable(!readOnly);
+  }, [readOnly]);
+
   const replaceDocument = (
     nextDocument: EmailEditorDocument,
     nextMode = mode,
@@ -259,7 +251,10 @@ export default function EmailTemplateEditorPage() {
     }
   };
 
-  const saveDraft = async (quiet = false): Promise<EmailTemplateRecord | null> => {
+  const saveDraft = async (
+    quiet = false,
+    navigateAfterCreate = true,
+  ): Promise<EmailTemplateRecord | null> => {
     const metadataIssues = validateEmailTemplateMetadata(metadata);
     if (metadataIssues.length) {
       setError(metadataIssues.join(' '));
@@ -279,7 +274,9 @@ export default function EmailTemplateEditorPage() {
       setTemplate(saved);
       setLegacyReview(false);
       if (!quiet) setMessage('Draft saved with canonical JSON, HTML, plain text, and render hash.');
-      if (isNew || !id) navigate(`/crm/email-studio/templates/${saved.id}`, { replace: true });
+      if (navigateAfterCreate && (isNew || !id)) {
+        navigate(`/crm/email-studio/templates/${saved.id}`, { replace: true });
+      }
       return saved;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Email template draft could not be saved.');
@@ -290,7 +287,7 @@ export default function EmailTemplateEditorPage() {
   };
 
   const publish = async () => {
-    const saved = await saveDraft(true);
+    const saved = await saveDraft(true, false);
     if (!saved) return;
     setBusy(true);
     setError(null);
@@ -304,6 +301,9 @@ export default function EmailTemplateEditorPage() {
       setVersions(history);
       setChangeSummary('');
       setMessage(`Published immutable version ${published.versionNumber}.`);
+      if (isNew || !id) {
+        navigate(`/crm/email-studio/templates/${saved.id}`, { replace: true });
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Email template could not be published.');
     } finally {
@@ -438,7 +438,7 @@ export default function EmailTemplateEditorPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="email-template-change-summary">Publish summary</Label>
-              <Input id="email-template-change-summary" value={changeSummary} disabled={readOnly && template?.status !== 'published'} onChange={(event) => setChangeSummary(event.target.value)} placeholder="What changed in this version?" />
+              <Input id="email-template-change-summary" value={changeSummary} disabled={readOnly} onChange={(event) => setChangeSummary(event.target.value)} placeholder="What changed in this version?" />
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -535,5 +535,3 @@ function applyTheme(document: EmailEditorDocument, themeKey: EmailStudioThemeKey
   });
   return visit(document) as EmailEditorDocument;
 }
-
-void EMAIL_STUDIO_THEMES;
