@@ -152,7 +152,7 @@ export function PolicyAwareComposer({
       })
       .finally(() => { if (!cancelled) setTemplatesLoading(false); });
     return () => { cancelled = true; };
-  }, [open, channel, templatesLoading, templates.length]);
+  }, [open, channel, templates.length]);
 
   const friendlyReasons = useMemo(() => {
     if (!policy) return [] as string[];
