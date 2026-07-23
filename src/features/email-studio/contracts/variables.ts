@@ -18,140 +18,28 @@ type EmailVariableDefinitionBase = {
 };
 
 export const CLIENT_EMAIL_VARIABLES = [
-  {
-    key: 'first_name',
-    label: 'Client first name',
-    scope: 'client',
-    valueType: 'text',
-    sampleValue: 'Jordan',
-    description: 'The client first name from the canonical client profile.',
-  },
-  {
-    key: 'preferred_name',
-    label: 'Client preferred name',
-    scope: 'client',
-    valueType: 'text',
-    sampleValue: 'Jordan',
-    description: 'The client preferred name when one is available.',
-  },
-  {
-    key: 'last_name',
-    label: 'Client last name',
-    scope: 'client',
-    valueType: 'text',
-    sampleValue: 'Taylor',
-    description: 'The client last name from the canonical client profile.',
-  },
-  {
-    key: 'therapist_name',
-    label: 'Therapist name',
-    scope: 'client',
-    valueType: 'text',
-    sampleValue: 'Dr. Morgan Lee',
-    description: 'The assigned therapist display name when available.',
-  },
-  {
-    key: 'sender_name',
-    label: 'Sender name',
-    scope: 'client',
-    valueType: 'text',
-    sampleValue: 'ValorWell Care Team',
-    description: 'The approved sender display name for the communication.',
-  },
+  variable('first_name', 'Client first name', 'client', 'text', 'Jordan', 'Canonical client first name.'),
+  variable('preferred_name', 'Client preferred name', 'client', 'text', 'Jordan', 'Canonical client preferred name.'),
+  variable('last_name', 'Client last name', 'client', 'text', 'Taylor', 'Canonical client last name.'),
+  variable('therapist_name', 'Therapist name', 'client', 'text', 'Dr. Morgan Lee', 'Assigned therapist display name.'),
+  variable('sender_name', 'Sender name', 'client', 'text', 'ValorWell Care Team', 'Approved client-email sender name.'),
 ] as const satisfies readonly EmailVariableDefinitionBase[];
 
 export const RELATIONSHIP_EMAIL_VARIABLES = [
-  {
-    key: 'contact_first_name',
-    label: 'Contact first name',
-    scope: 'relationship',
-    valueType: 'text',
-    sampleValue: 'Alex',
-    description: 'The relationship contact first name.',
-  },
-  {
-    key: 'contact_display_name',
-    label: 'Contact display name',
-    scope: 'relationship',
-    valueType: 'text',
-    sampleValue: 'Alex Morgan',
-    description: 'The best available relationship contact display name.',
-  },
-  {
-    key: 'organization_name',
-    label: 'Organization name',
-    scope: 'relationship',
-    valueType: 'text',
-    sampleValue: 'Community Veterans Network',
-    description: 'The organization associated with the relationship contact.',
-  },
-  {
-    key: 'organization_type',
-    label: 'Organization type',
-    scope: 'relationship',
-    valueType: 'text',
-    sampleValue: 'Community nonprofit',
-    description: 'The normalized organization type.',
-  },
-  {
-    key: 'real_action_summary',
-    label: 'Real action summary',
-    scope: 'relationship',
-    valueType: 'text',
-    sampleValue: 'Runs weekly peer-support gatherings for local veterans.',
-    description: 'A grounded summary of the organization activity supported by source evidence.',
-  },
-  {
-    key: 'cause_area',
-    label: 'Cause area',
-    scope: 'relationship',
-    valueType: 'text',
-    sampleValue: 'Veteran mental health',
-    description: 'The organization or contact cause area.',
-  },
-  {
-    key: 'opportunity_context',
-    label: 'Opportunity context',
-    scope: 'relationship',
-    valueType: 'text',
-    sampleValue: 'A possible Beyond the Yellow collaboration.',
-    description: 'The approved relationship opportunity context.',
-  },
-  {
-    key: 'approved_source_sentence',
-    label: 'Approved source sentence',
-    scope: 'relationship',
-    valueType: 'text',
-    sampleValue: 'A ValorWell client recommended that we learn more about your work.',
-    description: 'The approved, evidence-backed source or introduction sentence.',
-  },
-  {
-    key: 'sender_name',
-    label: 'Sender name',
-    scope: 'relationship',
-    valueType: 'text',
-    sampleValue: 'Luke Predmore',
-    description: 'The approved relationship outreach sender display name.',
-  },
+  variable('contact_first_name', 'Contact first name', 'relationship', 'text', 'Alex', 'Relationship contact first name.'),
+  variable('contact_display_name', 'Contact display name', 'relationship', 'text', 'Alex Morgan', 'Best available contact display name.'),
+  variable('organization_name', 'Organization name', 'relationship', 'text', 'Community Veterans Network', 'Associated organization name.'),
+  variable('organization_type', 'Organization type', 'relationship', 'text', 'Community nonprofit', 'Normalized organization type.'),
+  variable('real_action_summary', 'Real action summary', 'relationship', 'text', 'Runs weekly peer-support gatherings for local veterans.', 'Evidence-backed summary of real activity.'),
+  variable('cause_area', 'Cause area', 'relationship', 'text', 'Veteran mental health', 'Organization or contact cause area.'),
+  variable('opportunity_context', 'Opportunity context', 'relationship', 'text', 'A possible Beyond the Yellow collaboration.', 'Approved opportunity context.'),
+  variable('approved_source_sentence', 'Approved source sentence', 'relationship', 'text', 'A ValorWell client recommended that we learn more about your work.', 'Approved evidence-backed introduction sentence.'),
+  variable('sender_name', 'Sender name', 'relationship', 'text', 'Luke Predmore', 'Approved relationship-outreach sender name.'),
 ] as const satisfies readonly EmailVariableDefinitionBase[];
 
 export const SYSTEM_EMAIL_VARIABLES = [
-  {
-    key: 'unsubscribe_url',
-    label: 'Unsubscribe URL',
-    scope: 'system',
-    valueType: 'url',
-    sampleValue: 'https://crm.valorwell.org/unsubscribe/example',
-    description: 'The recipient-specific unsubscribe URL.',
-  },
-  {
-    key: 'postal_address',
-    label: 'Postal address',
-    scope: 'system',
-    valueType: 'text',
-    sampleValue: 'ValorWell, Lee’s Summit, Missouri',
-    description: 'The approved physical mailing address for promotional email.',
-  },
+  variable('unsubscribe_url', 'Unsubscribe URL', 'system', 'url', 'https://crm.valorwell.org/unsubscribe/example', 'Recipient-specific unsubscribe URL.'),
+  variable('postal_address', 'Postal address', 'system', 'text', 'ValorWell, Lee’s Summit, Missouri', 'Approved physical mailing address.'),
 ] as const satisfies readonly EmailVariableDefinitionBase[];
 
 export const EMAIL_VARIABLES = [
@@ -198,7 +86,7 @@ export function resolveEmailVariableKey(key: string, scope: EmailContentScope): 
   const aliases = LEGACY_EMAIL_VARIABLE_ALIASES[scope] as Record<string, EmailVariableKey>;
   const aliasedKey = aliases[requestedKey];
   const canonicalKey = aliasedKey ?? requestedKey;
-  const allowed = getEmailVariablesForScope(scope).find((variable) => variable.key === canonicalKey);
+  const allowed = getEmailVariablesForScope(scope).find((entry) => entry.key === canonicalKey);
 
   if (allowed) {
     return {
@@ -210,7 +98,7 @@ export function resolveEmailVariableKey(key: string, scope: EmailContentScope): 
     };
   }
 
-  const known = EMAIL_VARIABLES.find((variable) => variable.key === canonicalKey);
+  const known = EMAIL_VARIABLES.find((entry) => entry.key === canonicalKey);
   return {
     requestedKey,
     canonicalKey: known?.key,
@@ -222,9 +110,7 @@ export function resolveEmailVariableKey(key: string, scope: EmailContentScope): 
 
 export function extractEmailTemplateVariableKeys(template: string): string[] {
   const keys = new Set<string>();
-  for (const match of template.matchAll(TOKEN_PATTERN)) {
-    keys.add(match[1]);
-  }
+  for (const match of template.matchAll(TOKEN_PATTERN)) keys.add(match[1]);
   return Array.from(keys).sort();
 }
 
@@ -233,70 +119,46 @@ export function normalizeEmailTemplateVariables(template: string, scope: EmailCo
   const normalized = template.replace(TOKEN_PATTERN, (token, key: string) => {
     const resolution = resolveEmailVariableKey(key, scope);
     if (resolution.status !== 'resolved' || !resolution.canonicalKey) return token;
-    if (resolution.aliasUsed) {
-      replacements.push({ from: resolution.aliasUsed, to: resolution.canonicalKey });
-    }
+    if (resolution.aliasUsed) replacements.push({ from: resolution.aliasUsed, to: resolution.canonicalKey });
     return `{{${resolution.canonicalKey}}}`;
   });
-
   return { normalized, replacements };
 }
 
 export function validateEmailTemplateVariables(template: string, scope: EmailContentScope): EmailValidationResult {
   const issues: EmailValidationIssue[] = [];
-
   for (const key of extractEmailTemplateVariableKeys(template)) {
     const resolution = resolveEmailVariableKey(key, scope);
     if (resolution.status === 'unknown') {
-      issues.push({
-        code: 'unknown_variable',
-        message: `Unknown email variable {{${key}}}.`,
-        severity: 'error',
-        variableKey: key,
-      });
+      issues.push(issue('unknown_variable', `Unknown email variable {{${key}}}.`, 'error', key));
     } else if (resolution.status === 'disallowed') {
-      issues.push({
-        code: 'disallowed_variable_scope',
-        message: `Email variable {{${key}}} is not available in ${scope} content.`,
-        severity: 'error',
-        variableKey: key,
-      });
+      issues.push(issue('disallowed_variable_scope', `Email variable {{${key}}} is not available in ${scope} content.`, 'error', key));
     } else if (resolution.aliasUsed && resolution.canonicalKey) {
-      issues.push({
-        code: 'legacy_variable_alias',
-        message: `Legacy variable {{${key}}} is accepted but should be replaced with {{${resolution.canonicalKey}}}.`,
-        severity: 'warning',
-        variableKey: key,
-      });
+      issues.push(issue('legacy_variable_alias', `Legacy variable {{${key}}} is accepted but should be replaced with {{${resolution.canonicalKey}}}.`, 'warning', key));
     }
   }
-
   return createEmailValidationResult(issues);
 }
 
 export function validateEmailVariableValue(definition: EmailVariableDefinition, value: string): string | null {
   if (!value.trim()) return `${definition.label} is required.`;
   if (definition.valueType !== 'url') return null;
-
   try {
     const parsed = new URL(value);
-    if (!['https:', 'http:'].includes(parsed.protocol)) {
-      return `${definition.label} must use an HTTP or HTTPS URL.`;
-    }
+    if (!['https:', 'http:'].includes(parsed.protocol)) return `${definition.label} must use an HTTP or HTTPS URL.`;
   } catch {
     return `${definition.label} must be a valid URL.`;
   }
-
   return null;
 }
 
 export function escapeEmailHtml(value: string): string {
   return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export function renderEmailTemplate(
@@ -309,43 +171,23 @@ export function renderEmailTemplate(
   const output = template.replace(TOKEN_PATTERN, (token, key: string) => {
     const resolution = resolveEmailVariableKey(key, scope);
     if (resolution.status === 'unknown') {
-      issues.push({
-        code: 'unknown_variable',
-        message: `Unknown email variable {{${key}}}.`,
-        severity: 'error',
-        variableKey: key,
-      });
+      issues.push(issue('unknown_variable', `Unknown email variable {{${key}}}.`, 'error', key));
       return token;
     }
     if (resolution.status === 'disallowed' || !resolution.canonicalKey || !resolution.definition) {
-      issues.push({
-        code: 'disallowed_variable_scope',
-        message: `Email variable {{${key}}} is not available in ${scope} content.`,
-        severity: 'error',
-        variableKey: key,
-      });
+      issues.push(issue('disallowed_variable_scope', `Email variable {{${key}}} is not available in ${scope} content.`, 'error', key));
       return token;
     }
 
     const value = values[resolution.canonicalKey];
     if (value === undefined) {
-      issues.push({
-        code: 'missing_variable_value',
-        message: `No value was supplied for {{${resolution.canonicalKey}}}.`,
-        severity: 'error',
-        variableKey: resolution.canonicalKey,
-      });
+      issues.push(issue('missing_variable_value', `No value was supplied for {{${resolution.canonicalKey}}}.`, 'error', resolution.canonicalKey));
       return token;
     }
 
     const valueError = validateEmailVariableValue(resolution.definition, value);
     if (valueError) {
-      issues.push({
-        code: resolution.definition.valueType === 'url' ? 'invalid_url_variable' : 'invalid_variable_value',
-        message: valueError,
-        severity: 'error',
-        variableKey: resolution.canonicalKey,
-      });
+      issues.push(issue(resolution.definition.valueType === 'url' ? 'invalid_url_variable' : 'invalid_variable_value', valueError, 'error', resolution.canonicalKey));
       return token;
     }
 
@@ -358,10 +200,30 @@ export function renderEmailTemplate(
   };
 }
 
+function variable(
+  key: string,
+  label: string,
+  scope: EmailVariableScope,
+  valueType: EmailVariableValueType,
+  sampleValue: string,
+  description: string,
+): EmailVariableDefinitionBase {
+  return { key, label, scope, valueType, sampleValue, description };
+}
+
+function issue(
+  code: string,
+  message: string,
+  severity: 'error' | 'warning',
+  variableKey: string,
+): EmailValidationIssue {
+  return { code, message, severity, variableKey };
+}
+
 function dedupeIssues(issues: EmailValidationIssue[]): EmailValidationIssue[] {
   const seen = new Set<string>();
-  return issues.filter((issue) => {
-    const key = `${issue.code}:${issue.variableKey ?? ''}:${issue.message}`;
+  return issues.filter((entry) => {
+    const key = `${entry.code}:${entry.variableKey ?? ''}:${entry.message}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
