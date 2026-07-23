@@ -1,0 +1,36 @@
+name: Pass 6 Typecheck Diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostics:
+    if: github.head_ref == 'agent/email-studio-pass-6-direct-email'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Capture application typecheck
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck > pass6-typecheck.log 2>&1
+          status=$?
+          echo "TYPECHECK_EXIT=$status" >> "$GITHUB_ENV"
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pass6-typecheck-log
+          path: pass6-typecheck.log
+          retention-days: 1
+      - name: Fail when typecheck failed
+        if: env.TYPECHECK_EXIT != '0'
+        run: exit 1
