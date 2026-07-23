@@ -72,6 +72,7 @@ Deno.serve(async (request: Request) => {
           authorization: `Bearer ${resendApiKey}`,
           "content-type": "application/json",
           "idempotency-key": communication.providerIdempotencyKey,
+          "user-agent": "ValorWell-CRM-Relationship-Worker/1.0",
         },
         body: JSON.stringify({
           from: communication.senderEmail,

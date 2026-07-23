@@ -1,3 +1,4 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkSuppression } from "../_shared/suppression.ts";
 
@@ -5,7 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+const RESEND_API = "https://api.resend.com";
+const USER_AGENT = "ValorWell-CRM-Campaign-Scheduler/1.0";
 
+type Db = ReturnType<typeof createClient>;
 interface ClaimedStep {
   id: string;
   enrollment_id: string;
@@ -16,7 +20,6 @@ interface ClaimedStep {
   channel: "email" | "sms";
   claim_token: string;
 }
-
 interface CampaignStep {
   id: string;
   campaign_id: string;
@@ -30,7 +33,6 @@ interface CampaignStep {
   is_active: boolean;
   signature_id: string | null;
 }
-
 interface Campaign {
   id: string;
   name: string;
@@ -42,7 +44,6 @@ interface Campaign {
   on_complete_action: string | null;
   on_complete_status: string | null;
 }
-
 interface ClientData {
   id: string;
   email: string | null;
@@ -57,13 +58,19 @@ interface ClientData {
     prov_name_for_clients: string | null;
   } | null;
 }
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+interface ResendSettings {
+  from_name: string | null;
+  from_email: string | null;
+  reply_to_email: string | null;
+  inbound_email: string | null;
+  connection_status: string;
 }
+
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  status,
+  headers: { ...corsHeaders, "content-type": "application/json" },
+});
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
 function normalizePhone(phone: string | null): string | null {
   if (!phone) return null;
@@ -76,12 +83,8 @@ function personalize(content: string, client: ClientData): string {
   const firstName = client.pat_name_preferred || client.pat_name_f || "there";
   let therapist = "your therapist";
   if (client.primary_staff) {
-    therapist =
-      client.primary_staff.prov_name_for_clients ||
-      [client.primary_staff.prov_name_f, client.primary_staff.prov_name_l]
-        .filter(Boolean)
-        .join(" ") ||
-      therapist;
+    therapist = client.primary_staff.prov_name_for_clients ||
+      [client.primary_staff.prov_name_f, client.primary_staff.prov_name_l].filter(Boolean).join(" ") || therapist;
   }
   return content
     .replace(/\{\{first_name\}\}/gi, firstName)
@@ -89,39 +92,29 @@ function personalize(content: string, client: ClientData): string {
 }
 
 function parseTime(value: string): number | null {
-  const [h, m] = value.split(":").map(Number);
-  if (!Number.isInteger(h) || !Number.isInteger(m)) return null;
-  return h * 60 + m;
+  const [hour, minute] = value.split(":").map(Number);
+  return Number.isInteger(hour) && Number.isInteger(minute) ? hour * 60 + minute : null;
 }
 
 function isValidSendTime(timeZone: string, campaign: Campaign): boolean {
   try {
     const now = new Date();
-    const weekday = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      weekday: "short",
-    }).format(now);
-    if (campaign.weekdays_only && (weekday === "Sat" || weekday === "Sun")) {
-      return false;
-    }
-
+    const weekday = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(now);
+    if (campaign.weekdays_only && (weekday === "Sat" || weekday === "Sun")) return false;
     const parts = new Intl.DateTimeFormat("en-US", {
       timeZone,
       hour12: false,
       hour: "2-digit",
       minute: "2-digit",
     }).formatToParts(now);
-    const hour = Number(parts.find((p) => p.type === "hour")?.value);
-    const minute = Number(parts.find((p) => p.type === "minute")?.value);
+    const hour = Number(parts.find((part) => part.type === "hour")?.value);
+    const minute = Number(parts.find((part) => part.type === "minute")?.value);
     const start = parseTime(campaign.send_window_start);
     const end = parseTime(campaign.send_window_end);
-    if (!Number.isFinite(hour) || !Number.isFinite(minute) || start === null || end === null) {
-      return false;
-    }
+    if (!Number.isFinite(hour) || !Number.isFinite(minute) || start === null || end === null) return false;
     const current = hour * 60 + minute;
     return current >= start && current <= end;
-  } catch (error) {
-    console.error("Send-window evaluation failed:", error);
+  } catch {
     return false;
   }
 }
@@ -130,123 +123,134 @@ async function getRingCentralToken(): Promise<string> {
   const clientId = Deno.env.get("RINGCENTRAL_CLIENT_ID");
   const clientSecret = Deno.env.get("RINGCENTRAL_CLIENT_SECRET");
   const jwtToken = Deno.env.get("RINGCENTRAL_JWT_TOKEN");
-  const serverUrl =
-    Deno.env.get("RINGCENTRAL_SERVER_URL") || "https://platform.ringcentral.com";
-  if (!clientId || !clientSecret || !jwtToken) {
-    throw new Error("Missing RingCentral credentials");
-  }
+  const serverUrl = Deno.env.get("RINGCENTRAL_SERVER_URL") || "https://platform.ringcentral.com";
+  if (!clientId || !clientSecret || !jwtToken) throw new Error("Missing RingCentral credentials");
   const response = await fetch(`${serverUrl}/restapi/oauth/token`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+      "content-type": "application/x-www-form-urlencoded",
+      authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
     },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwtToken,
-    }),
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwtToken }),
   });
-  if (!response.ok) {
-    await response.text();
-    throw new Error(`RingCentral auth failed: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`RingCentral auth failed: ${response.status}`);
   return (await response.json()).access_token;
 }
 
-async function sendSms(token: string, phone: string, text: string): Promise<void> {
-  const serverUrl =
-    Deno.env.get("RINGCENTRAL_SERVER_URL") || "https://platform.ringcentral.com";
+async function sendSms(token: string, phone: string, text: string) {
+  const serverUrl = Deno.env.get("RINGCENTRAL_SERVER_URL") || "https://platform.ringcentral.com";
   const fromNumber = Deno.env.get("RINGCENTRAL_FROM_NUMBER");
   if (!fromNumber) throw new Error("Missing RingCentral sender number");
-  const response = await fetch(
-    `${serverUrl}/restapi/v1.0/account/~/extension/~/sms`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: { phoneNumber: fromNumber },
-        to: [{ phoneNumber: phone }],
-        text,
-      }),
-    },
-  );
-  if (!response.ok) {
-    await response.text();
-    throw new Error(`RingCentral send failed: ${response.status}`);
-  }
-  await response.text();
+  const response = await fetch(`${serverUrl}/restapi/v1.0/account/~/extension/~/sms`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ from: { phoneNumber: fromNumber }, to: [{ phoneNumber: phone }], text }),
+  });
+  if (!response.ok) throw new Error(`RingCentral send failed: ${response.status}`);
 }
 
-async function getHelpScoutToken(): Promise<string> {
-  const appId = Deno.env.get("HELPSCOUT_APP_ID");
-  const secret = Deno.env.get("HELPSCOUT_APP_SECRET");
-  if (!appId || !secret) throw new Error("HelpScout credentials not configured");
-  const response = await fetch("https://api.helpscout.net/v2/oauth2/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: appId,
-      client_secret: secret,
-    }),
-  });
-  if (!response.ok) {
-    await response.text();
-    throw new Error(`HelpScout auth failed: ${response.status}`);
+async function resendSettings(db: Db, tenantId: string): Promise<ResendSettings> {
+  const { data, error } = await db.from("crm_resend_email_settings")
+    .select("from_name, from_email, reply_to_email, inbound_email, connection_status")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data?.from_email || data.connection_status !== "connected") {
+    throw new Error("Resend email settings are not connected for this tenant");
   }
-  return (await response.json()).access_token;
+  return data as ResendSettings;
+}
+
+function displayFrom(settings: ResendSettings) {
+  const email = normalizeEmail(settings.from_email ?? "");
+  const name = String(settings.from_name ?? "").replace(/[<>\r\n]/g, "").trim();
+  return name ? `${name} <${email}>` : email;
+}
+
+function taggedReplyTo(settings: ResendSettings, messageId: string): string | undefined {
+  const email = normalizeEmail(settings.inbound_email || settings.reply_to_email || "");
+  const [local, domain] = email.split("@");
+  return local && domain ? `${local.split("+")[0]}+crm-${messageId}@${domain}` : email || undefined;
 }
 
 async function sendEmail(
-  token: string,
-  mailboxId: string,
+  db: Db,
+  tenantId: string,
   client: ClientData,
+  campaignId: string,
+  stepId: string,
   subject: string,
   body: string,
-): Promise<string | null> {
+): Promise<string> {
   if (!client.email) throw new Error("Missing client email");
-  const response = await fetch("https://api.helpscout.net/v2/conversations", {
+  const settings = await resendSettings(db, tenantId);
+  const now = new Date().toISOString();
+  const { data: message, error: insertError } = await db.from("crm_email_messages").insert({
+    tenant_id: tenantId,
+    client_id: client.id,
+    campaign_id: campaignId,
+    direction: "outbound",
+    status: "queued",
+    sender_email: normalizeEmail(settings.from_email ?? ""),
+    recipient_email: normalizeEmail(client.email),
+    reply_to_email: settings.reply_to_email ? normalizeEmail(settings.reply_to_email) : null,
+    subject,
+    body_html: body,
+    provider: "resend",
+    message_class: "ordinary_campaign_follow_up",
+    source: "campaign_scheduler",
+    created_by_profile_id: null,
+    occurred_at: now,
+    metadata: { campaign_step_id: stepId },
+  }).select("id").single();
+  if (insertError) throw new Error(insertError.message);
+  const apiKey = Deno.env.get("RESEND_API_KEY") ?? "";
+  if (!apiKey) throw new Error("RESEND_API_KEY not configured");
+  const response = await fetch(`${RESEND_API}/emails`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+      authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json",
+      "user-agent": USER_AGENT,
+      "idempotency-key": `crm-campaign/${message.id}`,
     },
     body: JSON.stringify({
+      from: displayFrom(settings),
+      to: [normalizeEmail(client.email)],
+      reply_to: taggedReplyTo(settings, message.id),
       subject,
-      customer: {
-        email: client.email,
-        firstName: client.pat_name_preferred || client.pat_name_f || "",
-        lastName: client.pat_name_l || "",
-      },
-      mailboxId: Number(mailboxId),
-      type: "email",
-      status: "pending",
-      threads: [{
-        type: "reply",
-        customer: { email: client.email },
-        text: body,
-      }],
+      html: body,
+      headers: { "X-CRM-Email-Message-ID": message.id },
     }),
   });
-  if (!response.ok && response.status !== 201) {
-    await response.text();
-    throw new Error(`HelpScout send failed: ${response.status}`);
+  const provider = await response.json().catch(() => ({})) as { id?: string; message?: string; name?: string };
+  if (!response.ok || !provider.id) {
+    await db.from("crm_email_messages").update({
+      status: "failed",
+      failed_at: new Date().toISOString(),
+      error_code: provider.name ?? `http_${response.status}`,
+      error_message: provider.message ?? "Resend rejected campaign email",
+      updated_at: new Date().toISOString(),
+    }).eq("id", message.id);
+    throw new Error(provider.message ?? `Resend send failed: ${response.status}`);
   }
-  const location =
-    response.headers.get("Location") || response.headers.get("Resource-ID");
-  return location?.split("/").pop() || null;
+  const sentAt = new Date().toISOString();
+  await db.from("crm_email_messages").update({
+    status: "sent",
+    provider_message_id: provider.id,
+    sent_at: sentAt,
+    updated_at: sentAt,
+  }).eq("id", message.id);
+  return provider.id;
 }
 
 async function releaseClaim(
-  db: ReturnType<typeof createClient>,
+  db: Db,
   step: ClaimedStep,
   status: "scheduled" | "failed" | "skipped" | "suppressed" | "cancelled",
   reason?: string,
   nextAt?: Date,
-): Promise<void> {
+) {
   const { error } = await db.rpc("release_campaign_step_claim", {
     p_step_log_id: step.id,
     p_claim_token: step.claim_token,
@@ -257,59 +261,35 @@ async function releaseClaim(
   if (error) console.error("Claim release failed:", step.id, error.message);
 }
 
-async function markSent(
-  db: ReturnType<typeof createClient>,
-  step: ClaimedStep,
-  extra: Record<string, unknown> = {},
-): Promise<boolean> {
-  const { data, error } = await db
-    .from("crm_campaign_step_logs")
-    .update({
-      status: "sent",
-      sent_at: new Date().toISOString(),
-      claimed_at: null,
-      claim_token: null,
-      updated_at: new Date().toISOString(),
-      ...extra,
-    })
-    .eq("id", step.id)
-    .eq("status", "processing")
-    .eq("claim_token", step.claim_token)
-    .select("id")
-    .maybeSingle();
+async function markSent(db: Db, step: ClaimedStep, extra: Record<string, unknown> = {}) {
+  const { data, error } = await db.from("crm_campaign_step_logs").update({
+    status: "sent",
+    sent_at: new Date().toISOString(),
+    claimed_at: null,
+    claim_token: null,
+    updated_at: new Date().toISOString(),
+    ...extra,
+  }).eq("id", step.id).eq("status", "processing").eq("claim_token", step.claim_token).select("id").maybeSingle();
   if (error) throw new Error(error.message);
   return !!data;
 }
 
-async function scheduleNext(
-  db: ReturnType<typeof createClient>,
-  enrollment: any,
-  currentStep: CampaignStep,
-  campaign: Campaign,
-  tenantId: string,
-): Promise<void> {
-  const { data: steps, error } = await db
-    .from("crm_campaign_steps")
+async function scheduleNext(db: Db, enrollment: any, currentStep: CampaignStep, campaign: Campaign, tenantId: string) {
+  const { data: steps, error } = await db.from("crm_campaign_steps")
     .select("*")
     .eq("campaign_id", enrollment.campaign_id)
     .eq("is_active", true)
     .order("step_order", { ascending: true });
   if (error) throw new Error(error.message);
-
-  const index = (steps || []).findIndex((s: any) => s.id === currentStep.id);
-  const next = (steps || [])[index + 1] as CampaignStep | undefined;
-
+  const index = (steps ?? []).findIndex((row: any) => row.id === currentStep.id);
+  const next = (steps ?? [])[index + 1] as CampaignStep | undefined;
   if (!next) {
-    await db
-      .from("crm_campaign_enrollments")
-      .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-        current_step: currentStep.step_order,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", enrollment.id);
-
+    await db.from("crm_campaign_enrollments").update({
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      current_step: currentStep.step_order,
+      updated_at: new Date().toISOString(),
+    }).eq("id", enrollment.id);
     if (campaign.on_complete_action || campaign.on_complete_status) {
       await db.from("crm_activity_events").insert({
         tenant_id: tenantId,
@@ -326,11 +306,9 @@ async function scheduleNext(
     }
     return;
   }
-
   const nextAt = new Date();
   nextAt.setDate(nextAt.getDate() + (next.delay_days || 0));
   nextAt.setHours(nextAt.getHours() + (next.delay_hours || 0));
-
   const { error: insertError } = await db.from("crm_campaign_step_logs").insert({
     enrollment_id: enrollment.id,
     step_id: next.id,
@@ -342,107 +320,65 @@ async function scheduleNext(
     updated_at: new Date().toISOString(),
   });
   if (insertError && insertError.code !== "23505") throw new Error(insertError.message);
-
-  await db
-    .from("crm_campaign_enrollments")
-    .update({
-      current_step: currentStep.step_order,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", enrollment.id);
+  await db.from("crm_campaign_enrollments").update({
+    current_step: currentStep.step_order,
+    updated_at: new Date().toISOString(),
+  }).eq("id", enrollment.id);
 }
 
 async function processCampaignMessages() {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const db = createClient(supabaseUrl, serviceRoleKey);
-  const mailboxId = Deno.env.get("HELPSCOUT_MAILBOX_ID");
-
-  const { data: claimed, error: claimError } = await db.rpc(
-    "claim_pending_campaign_steps",
-    { p_limit: 50 },
-  );
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const db = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+  const { data: claimed, error: claimError } = await db.rpc("claim_pending_campaign_steps", { p_limit: 50 });
   if (claimError) throw new Error(claimError.message);
-
   let rcToken: string | null = null;
-  let hsToken: string | null = null;
   const result = { processed: 0, sent: 0, skipped: 0, suppressed: 0, failed: 0 };
 
-  for (const step of (claimed || []) as ClaimedStep[]) {
+  for (const step of (claimed ?? []) as ClaimedStep[]) {
     try {
-      const { data: enrollment, error: enrollmentError } = await db
-        .from("crm_campaign_enrollments")
-        .select(`
-          id, campaign_id, client_id, current_step, status,
-          campaign:crm_campaigns (
-            id, name, is_active, weekdays_only,
-            send_window_start, send_window_end, default_timezone,
-            on_complete_action, on_complete_status
-          )
-        `)
-        .eq("id", step.enrollment_id)
-        .single();
-
+      const { data: enrollment, error: enrollmentError } = await db.from("crm_campaign_enrollments").select(`
+        id, campaign_id, client_id, current_step, status,
+        campaign:crm_campaigns (
+          id, name, is_active, weekdays_only, send_window_start, send_window_end,
+          default_timezone, on_complete_action, on_complete_status
+        )
+      `).eq("id", step.enrollment_id).single();
       if (enrollmentError || !enrollment || enrollment.status !== "active") {
         await releaseClaim(db, step, "skipped", "enrollment_not_active");
         result.skipped++;
         continue;
       }
-
       const campaign = enrollment.campaign as unknown as Campaign;
       if (!campaign?.is_active) {
         await releaseClaim(db, step, "skipped", "campaign_inactive");
         result.skipped++;
         continue;
       }
-
-      const { data: client, error: clientError } = await db
-        .from("clients")
-        .select(`
-          id, email, phone, pat_name_f, pat_name_l, pat_name_preferred, pat_time_zone,
-          primary_staff:staff!clients_primary_staff_id_fkey (
-            prov_name_f, prov_name_l, prov_name_for_clients
-          )
-        `)
-        .eq("id", step.client_id)
-        .single();
+      const { data: client, error: clientError } = await db.from("clients").select(`
+        id, email, phone, pat_name_f, pat_name_l, pat_name_preferred, pat_time_zone,
+        primary_staff:staff!clients_primary_staff_id_fkey (
+          prov_name_f, prov_name_l, prov_name_for_clients
+        )
+      `).eq("id", step.client_id).single();
       if (clientError || !client) {
         await releaseClaim(db, step, "skipped", "client_not_found");
         result.skipped++;
         continue;
       }
-
       const typedClient = client as unknown as ClientData;
-      const timeZone =
-        typedClient.pat_time_zone || campaign.default_timezone || "America/Chicago";
+      const timeZone = typedClient.pat_time_zone || campaign.default_timezone || "America/Chicago";
       if (!isValidSendTime(timeZone, campaign)) {
-        await releaseClaim(
-          db,
-          step,
-          "scheduled",
-          "outside_send_window",
-          new Date(Date.now() + 15 * 60 * 1000),
-        );
+        await releaseClaim(db, step, "scheduled", "outside_send_window", new Date(Date.now() + 15 * 60 * 1000));
         continue;
       }
-
-      const { data: stepData, error: stepError } = await db
-        .from("crm_campaign_steps")
-        .select("*")
-        .eq("id", step.step_id)
-        .single();
-      if (stepError || !stepData) {
-        await releaseClaim(db, step, "skipped", "step_not_found");
+      const { data: stepData, error: stepError } = await db.from("crm_campaign_steps").select("*").eq("id", step.step_id).single();
+      if (stepError || !stepData || !stepData.is_active) {
+        await releaseClaim(db, step, "skipped", stepData ? "step_disabled" : "step_not_found");
         result.skipped++;
         continue;
       }
       const typedStep = stepData as CampaignStep;
-      if (!typedStep.is_active) {
-        await releaseClaim(db, step, "skipped", "step_disabled");
-        result.skipped++;
-        continue;
-      }
-
       const decision = await checkSuppression(supabaseUrl, serviceRoleKey, {
         tenantId: step.tenant_id,
         clientId: step.client_id,
@@ -454,12 +390,7 @@ async function processCampaignMessages() {
         stepId: typedStep.id,
       });
       if (!decision.allowed) {
-        await releaseClaim(
-          db,
-          step,
-          "suppressed",
-          `suppressed:${decision.reason_code}`,
-        );
+        await releaseClaim(db, step, "suppressed", `suppressed:${decision.reason_code}`);
         result.suppressed++;
         continue;
       }
@@ -470,17 +401,10 @@ async function processCampaignMessages() {
           result.skipped++;
           continue;
         }
-        if (!mailboxId) throw new Error("HELPSCOUT_MAILBOX_ID not configured");
-        hsToken ||= await getHelpScoutToken();
-        const subject = personalize(
-          typedStep.email_subject || "Message from your care team",
-          typedClient,
-        );
+        const subject = personalize(typedStep.email_subject || "Message from your care team", typedClient);
         let body = personalize(typedStep.email_body_html || "", typedClient);
-
         if (typedStep.signature_id) {
-          const { data: signature } = await db
-            .from("crm_email_signatures")
+          const { data: signature } = await db.from("crm_email_signatures")
             .select("signature_type, body_html, image_url")
             .eq("id", typedStep.signature_id)
             .maybeSingle();
@@ -490,31 +414,14 @@ async function processCampaignMessages() {
             body += `<br><br>${signature.body_html}`;
           }
         }
-
-        const conversationId = await sendEmail(
-          hsToken,
-          mailboxId,
-          typedClient,
-          subject,
-          body,
-        );
-        if (!(await markSent(db, step, {
-          helpscout_conversation_id: conversationId,
-        }))) {
-          continue;
-        }
-
+        const resendId = await sendEmail(db, step.tenant_id, typedClient, campaign.id, typedStep.id, subject, body);
+        if (!(await markSent(db, step, { resend_email_id: resendId }))) continue;
         await db.from("crm_activity_events").insert({
           tenant_id: step.tenant_id,
           client_id: step.client_id,
           event_type: "email_sent",
           created_by_profile_id: null,
-          metadata: {
-            source: "campaign",
-            campaign_id: campaign.id,
-            step_id: typedStep.id,
-            conversation_id: conversationId,
-          },
+          metadata: { source: "campaign", provider: "resend", campaign_id: campaign.id, step_id: typedStep.id, provider_message_id: resendId },
         });
       } else {
         const phone = normalizePhone(typedClient.phone);
@@ -524,64 +431,37 @@ async function processCampaignMessages() {
           continue;
         }
         rcToken ||= await getRingCentralToken();
-        await sendSms(
-          rcToken,
-          phone,
-          personalize(typedStep.sms_body_text || "", typedClient),
-        );
+        await sendSms(rcToken, phone, personalize(typedStep.sms_body_text || "", typedClient));
         if (!(await markSent(db, step))) continue;
-
         await db.from("crm_activity_events").insert({
           tenant_id: step.tenant_id,
           client_id: step.client_id,
           event_type: "sms_sent",
           created_by_profile_id: null,
-          metadata: {
-            source: "campaign",
-            campaign_id: campaign.id,
-            step_id: typedStep.id,
-          },
+          metadata: { source: "campaign", campaign_id: campaign.id, step_id: typedStep.id },
         });
       }
-
       await scheduleNext(db, enrollment, typedStep, campaign, step.tenant_id);
       result.processed++;
       result.sent++;
     } catch (error) {
       console.error("Campaign step failed:", step.id, error);
-      await releaseClaim(
-        db,
-        step,
-        "failed",
-        error instanceof Error ? error.message : "unknown_error",
-      );
+      await releaseClaim(db, step, "failed", error instanceof Error ? error.message : "unknown_error");
       result.failed++;
     }
   }
-
   return result;
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-
+Deno.serve(async (request: Request) => {
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const expected = Deno.env.get("CRON_SECRET");
   if (!expected) return json({ error: "Scheduler secret not configured" }, 500);
-  if (req.headers.get("X-Cron-Secret") !== expected) {
-    return json({ error: "Unauthorized" }, 401);
-  }
-
+  if (request.headers.get("X-Cron-Secret") !== expected) return json({ error: "Unauthorized" }, 401);
   try {
-    const result = await processCampaignMessages();
-    return json({ success: true, ...result, timestamp: new Date().toISOString() });
+    return json({ success: true, ...(await processCampaignMessages()), timestamp: new Date().toISOString() });
   } catch (error) {
     console.error("Campaign scheduler failed:", error);
-    return json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      },
-      500,
-    );
+    return json({ success: false, error: error instanceof Error ? error.message : String(error) }, 500);
   }
 });

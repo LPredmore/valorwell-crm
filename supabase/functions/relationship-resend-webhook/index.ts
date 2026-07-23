@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "npm:resend@6.0.2";
+import { Resend } from "npm:resend@6.18.0";
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -68,7 +68,10 @@ Deno.serve(async (request: Request) => {
     if (!emailId) return json({ error: "Inbound email ID is missing." }, 400);
 
     const contentResponse = await fetch(`https://api.resend.com/emails/receiving/${encodeURIComponent(emailId)}`, {
-      headers: { authorization: `Bearer ${resendApiKey}` },
+      headers: {
+        authorization: `Bearer ${resendApiKey}`,
+        "user-agent": "ValorWell-CRM-Relationship-Webhook/1.0",
+      },
     });
     const content = await contentResponse.json().catch(() => ({})) as Record<string, unknown>;
     if (!contentResponse.ok) return json({ error: "Inbound email content could not be retrieved." }, 502);

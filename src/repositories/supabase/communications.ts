@@ -3,142 +3,229 @@ import type { Tables } from '@/integrations/supabase/types';
 import type { CommunicationsRepository } from '../types';
 import type { CommunicationMessage, CommunicationPolicyResult } from '@/domain/operations';
 import { supabaseClientsRepository } from './clients';
-import { displayName } from '@/domain/canonical';
+import { resendEmailApi } from '@/lib/crm/resend-api';
 
 /**
- * Supabase-backed communications adapter.
+ * Canonical communications adapter.
  *
- * Reads a unified per-client timeline from:
- *   - crm_inbound_sms_logs       (inbound SMS)
- *   - crm_bulk_sms_recipients    (outbound bulk SMS)
- *   - crm_conversation_links     (email thread membership)
- *   - crm_conversation_cache     (email thread metadata / previews)
- *   - messages                   (internal staff↔client notes)
- *
- * Send is delegated to the existing helpscout-proxy / ringcentral-sms
- * edge functions — this adapter does not duplicate their delivery logic.
+ * Email delivery and receiving are provider-neutral in the database and use
+ * Resend exclusively at the transport boundary. SMS remains on RingCentral.
  */
 
 type BulkSmsRow = Tables<'crm_bulk_sms_recipients'>;
-type ConversationCacheRow = Tables<'crm_conversation_cache'>;
-type ConversationLinkRow = Tables<'crm_conversation_links'>;
 type InboundSmsRow = Tables<'crm_inbound_sms_logs'>;
 type CrmNoteRow = Tables<'crm_notes'>;
 
-function rowInboundSms(r: InboundSmsRow, tenantId: string): CommunicationMessage {
+type CrmEmailMessageRow = {
+  id: string;
+  tenant_id: string;
+  client_id: string | null;
+  campaign_id: string | null;
+  direction: 'inbound' | 'outbound';
+  status: string;
+  sender_email: string;
+  recipient_email: string;
+  subject: string | null;
+  body_html: string | null;
+  body_text: string | null;
+  provider_message_id: string | null;
+  provider_thread_id: string | null;
+  in_reply_to_message_id: string | null;
+  message_class: string | null;
+  error_message: string | null;
+  occurred_at: string;
+  created_at: string;
+};
+
+type UntypedQueryResult = {
+  data: unknown;
+  error: { message: string } | null;
+};
+
+type UntypedQuery = PromiseLike<UntypedQueryResult> & {
+  select: (columns: string) => UntypedQuery;
+  eq: (column: string, value: unknown) => UntypedQuery;
+  order: (column: string, options: { ascending: boolean }) => UntypedQuery;
+  limit: (count: number) => UntypedQuery;
+};
+
+const untypedSupabase = supabase as unknown as {
+  from: (relation: string) => UntypedQuery;
+};
+
+function mapEmailStatus(status: string): CommunicationMessage['status'] {
+  if (status === 'queued' || status === 'scheduled' || status === 'delivery_delayed') return 'queued';
+  if (status === 'sent') return 'sent';
+  if (status === 'delivered') return 'delivered';
+  if (status === 'received') return 'received';
+  if (status === 'suppressed') return 'suppressed';
+  return 'failed';
+}
+
+function rowInboundSms(row: InboundSmsRow, tenantId: string): CommunicationMessage {
   return {
-    id: `insms-${r.id}`,
+    id: `insms-${row.id}`,
     tenantId,
-    clientId: r.client_id ?? undefined,
+    clientId: row.client_id ?? undefined,
     channel: 'sms',
     direction: 'inbound',
-    from: r.from_phone,
-    to: r.to_phone,
-    body: r.message_body ?? '',
+    from: row.from_phone,
+    to: row.to_phone,
+    body: row.message_body ?? '',
     status: 'received',
-    threadId: `sms:${r.client_id ?? r.from_phone}`,
-    createdAt: r.received_at ?? r.created_at,
+    threadId: `sms:${row.client_id ?? row.from_phone}`,
+    createdAt: row.received_at ?? row.created_at,
   };
 }
 
-function rowBulkSms(r: BulkSmsRow, tenantId: string): CommunicationMessage {
+function rowBulkSms(row: BulkSmsRow, tenantId: string): CommunicationMessage {
   const status: CommunicationMessage['status'] =
-    r.status === 'sent' ? 'sent' :
-    r.status === 'failed' ? 'failed' :
-    r.status === 'suppressed' ? 'suppressed' : 'queued';
+    row.status === 'sent'
+      ? 'sent'
+      : row.status === 'failed'
+        ? 'failed'
+        : row.status === 'suppressed'
+          ? 'suppressed'
+          : 'queued';
   return {
-    id: `bulksms-${r.id}`,
+    id: `bulksms-${row.id}`,
     tenantId,
-    clientId: r.client_id,
+    clientId: row.client_id,
     channel: 'sms',
     direction: 'outbound',
     from: 'bulk-sms',
-    to: r.client_id,
-    body: r.error_message ?? '',
+    to: row.client_id,
+    body: row.error_message ?? '',
     status,
-    suppressionReason: r.status === 'suppressed' ? r.error_message ?? undefined : undefined,
-    threadId: `sms:${r.client_id}`,
-    createdAt: r.sent_at ?? r.created_at,
+    suppressionReason: row.status === 'suppressed' ? row.error_message ?? undefined : undefined,
+    threadId: `sms:${row.client_id}`,
+    createdAt: row.sent_at ?? row.created_at,
   };
 }
 
-function rowEmailThread(
-  link: ConversationLinkRow,
-  cache: ConversationCacheRow | undefined,
-  tenantId: string,
-): CommunicationMessage {
+function rowEmailMessage(row: CrmEmailMessageRow): CommunicationMessage {
+  const threadKey = row.provider_thread_id || row.in_reply_to_message_id || row.provider_message_id || row.id;
+  const status = mapEmailStatus(row.status);
   return {
-    id: `email-${link.helpscout_conversation_id}`,
-    tenantId,
-    clientId: link.client_id,
+    id: `email-${row.id}`,
+    tenantId: row.tenant_id,
+    clientId: row.client_id ?? undefined,
     channel: 'email',
-    direction: (cache?.needs_reply ? 'inbound' : 'outbound'),
-    from: cache?.customer_email ?? '',
-    to: cache?.customer_email ?? '',
-    subject: cache?.subject ?? undefined,
-    body: cache?.preview_text ?? '',
-    status: 'delivered',
-    threadId: `email:${link.helpscout_conversation_id}`,
-    createdAt: cache?.last_thread_at ?? link.linked_at ?? link.created_at,
+    direction: row.direction,
+    from: row.sender_email,
+    to: row.recipient_email,
+    subject: row.subject ?? undefined,
+    body: row.body_text ?? row.body_html ?? '',
+    status,
+    suppressionReason: status === 'failed' || status === 'suppressed' ? row.error_message ?? undefined : undefined,
+    campaignId: row.campaign_id ?? undefined,
+    messageClass: row.message_class as CommunicationMessage['messageClass'],
+    threadId: `email:${threadKey}`,
+    createdAt: row.occurred_at || row.created_at,
   };
 }
 
-function rowCrmNote(r: CrmNoteRow): CommunicationMessage {
+function rowCrmNote(row: CrmNoteRow): CommunicationMessage {
   return {
-    id: `note-${r.id}`,
-    tenantId: r.tenant_id,
-    clientId: r.client_id ?? undefined,
+    id: `note-${row.id}`,
+    tenantId: row.tenant_id,
+    clientId: row.client_id ?? undefined,
     channel: 'note',
     direction: 'outbound',
-    from: r.created_by_profile_id,
-    to: r.client_id ?? '',
-    body: r.note_content,
+    from: row.created_by_profile_id,
+    to: row.client_id ?? '',
+    body: row.note_content,
     status: 'delivered',
-    threadId: `note:${r.client_id ?? r.id}`,
-    createdAt: r.created_at,
+    threadId: `note:${row.client_id ?? row.id}`,
+    createdAt: row.created_at,
   };
 }
 
 async function tenantForClient(clientId: string): Promise<string> {
   const { data } = await supabase
-    .from('clients').select('tenant_id').eq('id', clientId).maybeSingle();
+    .from('clients')
+    .select('tenant_id')
+    .eq('id', clientId)
+    .maybeSingle();
   return data?.tenant_id ?? '';
+}
+
+async function evaluateCommunicationPolicy(input: {
+  clientId: string;
+  channel: 'sms' | 'email';
+  messageClass: import('@/domain/operations').CanonicalMessageClass;
+}): Promise<CommunicationPolicyResult> {
+  const { data, error } = await supabase.rpc('crm_evaluate_communication_policy', {
+    p_client_id: input.clientId,
+    p_channel: input.channel,
+    p_message_class: input.messageClass,
+  });
+  if (error) {
+    return {
+      allowed: false,
+      requiresReview: false,
+      reasons: [error.message],
+      suppressionCode: 'policy_check_failed',
+    };
+  }
+  const decision = (data ?? {}) as {
+    allowed?: boolean;
+    reason_code?: string;
+    policy_version?: string;
+  };
+  const allowed = !!decision.allowed;
+  const reason = decision.reason_code ?? (allowed ? 'ok' : 'unknown_canonical_state');
+  return {
+    allowed,
+    requiresReview: false,
+    reasons: allowed ? [] : [reason],
+    suppressionCode: allowed ? undefined : reason,
+  };
+}
+
+async function listEmailMessages(filters: { clientId?: string; limit: number }) {
+  let query = untypedSupabase
+    .from('crm_email_messages')
+    .select('*')
+    .order('occurred_at', { ascending: false })
+    .limit(filters.limit);
+  if (filters.clientId) query = query.eq('client_id', filters.clientId);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CrmEmailMessageRow[];
 }
 
 export const supabaseCommunicationsRepository: CommunicationsRepository = {
   async listForClient(clientId) {
     const tenantId = await tenantForClient(clientId);
-    const [inbound, bulk, links, internal] = await Promise.all([
+    const [inbound, bulk, emailRows, internal] = await Promise.all([
       supabase
         .from('crm_inbound_sms_logs')
-        .select('*').eq('client_id', clientId)
-        .order('received_at', { ascending: false }).limit(200),
+        .select('*')
+        .eq('client_id', clientId)
+        .order('received_at', { ascending: false })
+        .limit(200),
       supabase
         .from('crm_bulk_sms_recipients')
-        .select('*').eq('client_id', clientId)
-        .order('sent_at', { ascending: false, nullsFirst: false }).limit(200),
-      supabase
-        .from('crm_conversation_links')
-        .select('*').eq('client_id', clientId).limit(200),
+        .select('*')
+        .eq('client_id', clientId)
+        .order('sent_at', { ascending: false, nullsFirst: false })
+        .limit(200),
+      listEmailMessages({ clientId, limit: 400 }),
       supabase
         .from('crm_notes')
-        .select('*').eq('client_id', clientId).eq('note_type', 'internal')
-        .order('created_at', { ascending: false }).limit(200),
+        .select('*')
+        .eq('client_id', clientId)
+        .eq('note_type', 'internal')
+        .order('created_at', { ascending: false })
+        .limit(200),
     ]);
-
-    const convoIds = (links.data ?? []).map((link) => link.helpscout_conversation_id);
-    let cacheById = new Map<string, ConversationCacheRow>();
-    if (convoIds.length) {
-      const { data: cacheRows } = await supabase
-        .from('crm_conversation_cache').select('*').in('helpscout_conversation_id', convoIds);
-      cacheById = new Map((cacheRows ?? []).map((cache) => [cache.helpscout_conversation_id, cache]));
-    }
 
     const out: CommunicationMessage[] = [
       ...(inbound.data ?? []).map((row) => rowInboundSms(row, tenantId)),
       ...(bulk.data ?? []).map((row) => rowBulkSms(row, tenantId)),
-      ...(links.data ?? []).map((row) => rowEmailThread(row, cacheById.get(row.helpscout_conversation_id), tenantId)),
-      ...(internal.data ?? []).map((row) => rowCrmNote(row)),
+      ...emailRows.map(rowEmailMessage),
+      ...(internal.data ?? []).map(rowCrmNote),
     ];
     return out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   },
@@ -148,54 +235,48 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
       const [inbound, bulk] = await Promise.all([
         supabase
           .from('crm_inbound_sms_logs')
-          .select('*').order('received_at', { ascending: false }).limit(500),
+          .select('*')
+          .order('received_at', { ascending: false })
+          .limit(500),
         supabase
           .from('crm_bulk_sms_recipients')
-          .select('*').order('sent_at', { ascending: false, nullsFirst: false }).limit(500),
+          .select('*')
+          .order('sent_at', { ascending: false, nullsFirst: false })
+          .limit(500),
       ]);
       const all = [
         ...(inbound.data ?? []).map((row) => rowInboundSms(row, row.tenant_id ?? '')),
         ...(bulk.data ?? []).map((row) => rowBulkSms(row, row.tenant_id)),
       ];
       const byThread = new Map<string, CommunicationMessage>();
-      for (const m of all) {
-        const existing = byThread.get(m.threadId);
-        if (!existing || existing.createdAt < m.createdAt) byThread.set(m.threadId, m);
+      for (const message of all) {
+        const existing = byThread.get(message.threadId);
+        if (!existing || existing.createdAt < message.createdAt) {
+          byThread.set(message.threadId, message);
+        }
       }
       return Array.from(byThread.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     }
-    // email
-    const { data } = await supabase
-      .from('crm_conversation_cache')
-      .select('*')
-      .order('last_thread_at', { ascending: false, nullsFirst: false })
-      .limit(500);
-    return (data ?? []).map((cache) => ({
-      id: `email-${cache.helpscout_conversation_id}`,
-      tenantId: cache.tenant_id,
-      channel: 'email' as const,
-      direction: cache.needs_reply ? 'inbound' as const : 'outbound' as const,
-      from: cache.customer_email ?? '',
-      to: cache.customer_email ?? '',
-      subject: cache.subject ?? undefined,
-      body: cache.preview_text ?? '',
-      status: 'delivered' as const,
-      threadId: `email:${cache.helpscout_conversation_id}`,
-      createdAt: cache.last_thread_at ?? cache.cached_at,
-    }));
+
+    const messages = (await listEmailMessages({ limit: 500 })).map(rowEmailMessage);
+    const byThread = new Map<string, CommunicationMessage>();
+    for (const message of messages) {
+      const existing = byThread.get(message.threadId);
+      if (!existing || existing.createdAt < message.createdAt) {
+        byThread.set(message.threadId, message);
+      }
+    }
+    return Array.from(byThread.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
 
-  async send(msg) {
-    // Delegate to the existing delivery edge functions. The frontend already
-    // uses these directly; this adapter path exists so callers routed through
-    // the CrmDataProvider can send without knowing the transport.
-    if (msg.channel === 'sms') {
-      if (!msg.clientId) throw new Error('clientId is required for SMS send');
+  async send(message) {
+    if (message.channel === 'sms') {
+      if (!message.clientId) throw new Error('clientId is required for SMS send');
       const { data, error } = await supabase.functions.invoke('crm-send-client-sms', {
         body: {
-          clientId: msg.clientId,
-          body: msg.body,
-          campaignId: msg.campaignId,
+          clientId: message.clientId,
+          body: message.body,
+          campaignId: message.campaignId,
           messageClass: 'necessary_scheduling',
         },
       });
@@ -204,31 +285,41 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
         throw new Error(String((data as { error: string }).error));
       }
       return {
-        ...msg,
+        ...message,
         id: `sms-${Date.now()}`,
         createdAt: (data as { sentAt?: string } | null)?.sentAt ?? new Date().toISOString(),
         status: 'sent',
       };
     }
-    if (msg.channel === 'email') {
-      if (!msg.clientId) throw new Error('clientId is required for email send');
-      if (!msg.subject) throw new Error('subject is required for email send');
 
-      // Recipient email MUST come from canonical client record — operator
-      // cannot substitute a different address. msg.to is ignored.
-      const client = await supabaseClientsRepository.get(msg.clientId);
+    if (message.channel === 'email') {
+      if (!message.clientId) throw new Error('clientId is required for email send');
+      if (!message.subject) throw new Error('subject is required for email send');
+
+      const client = await supabaseClientsRepository.get(message.clientId);
       if (!client) throw new Error('Client not found');
       if (!client.email) {
-        return { ...msg, id: `email-${Date.now()}`, createdAt: new Date().toISOString(), status: 'failed', suppressionReason: 'INVALID_EMAIL' };
+        return {
+          ...message,
+          id: `email-${Date.now()}`,
+          createdAt: new Date().toISOString(),
+          status: 'failed',
+          suppressionReason: 'INVALID_EMAIL',
+        };
       }
 
-      const messageClass = (msg.messageClass ?? (msg.campaignId ? 'ordinary_campaign_follow_up' : 'necessary_scheduling'));
-
-      // Server-side policy evaluation before send.
-      const policy = await this.evaluatePolicy({ clientId: msg.clientId, channel: 'email', messageClass });
+      const messageClass =
+        message.messageClass ??
+        (message.campaignId ? 'ordinary_campaign_follow_up' : 'necessary_scheduling');
+      const policy = await evaluateCommunicationPolicy({
+        clientId: message.clientId,
+        channel: 'email',
+        messageClass,
+      });
       if (!policy.allowed) {
         return {
-          ...msg,
+          ...message,
+          to: client.email,
           id: `email-${Date.now()}`,
           createdAt: new Date().toISOString(),
           status: 'suppressed',
@@ -236,90 +327,71 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
         };
       }
 
-      const { helpscoutApi } = await import('@/lib/crm/helpscout-api');
-      const customerName = displayName(client) || undefined;
-      let result: { success: boolean; conversationId: string | null };
       try {
-        result = await helpscoutApi<{ success: boolean; conversationId: string | null }>(
-          'create-conversation',
-          {
-            method: 'POST',
-            body: {
-              subject: msg.subject,
-              customerEmail: client.email,
-              customerName,
-              text: msg.body,
-              messageClass,
-            },
+        const result = await resendEmailApi<{ message: CrmEmailMessageRow }>('send', {
+          method: 'POST',
+          body: {
+            tenantId: client.tenantId,
+            clientId: message.clientId,
+            subject: message.subject,
+            text: message.body,
+            campaignId: message.campaignId ?? null,
+            messageClass,
           },
-        );
-      } catch (e) {
+        });
+        return rowEmailMessage(result.message);
+      } catch (error) {
         return {
-          ...msg,
+          ...message,
           to: client.email,
           id: `email-${Date.now()}`,
           createdAt: new Date().toISOString(),
           status: 'failed',
-          suppressionReason: e instanceof Error ? e.message : 'PROVIDER_FAILURE',
+          suppressionReason: error instanceof Error ? error.message : 'PROVIDER_FAILURE',
         };
       }
-      return {
-        ...msg,
-        to: client.email,
-        id: result.conversationId ? `email-${result.conversationId}` : `email-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        status: 'sent',
-      };
     }
-    // Internal note — canonical crm_notes storage.
-    if (!msg.clientId) throw new Error('clientId is required for internal note');
-    const { data: { user }, error: userErr } = await supabase.auth.getUser();
-    if (userErr || !user) throw new Error('Not authenticated');
 
-    // Verify the client belongs to a tenant this user can operate in.
-    const { data: clientRow, error: clientErr } = await supabase
-      .from('clients').select('tenant_id').eq('id', msg.clientId).maybeSingle();
-    if (clientErr) throw new Error(clientErr.message);
+    if (!message.clientId) throw new Error('clientId is required for internal note');
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) throw new Error('Not authenticated');
+
+    const { data: clientRow, error: clientError } = await supabase
+      .from('clients')
+      .select('tenant_id')
+      .eq('id', message.clientId)
+      .maybeSingle();
+    if (clientError) throw new Error(clientError.message);
     if (!clientRow?.tenant_id) throw new Error('Client not found');
 
-    const { data, error } = await supabase.from('crm_notes').insert({
-      tenant_id: clientRow.tenant_id,
-      client_id: msg.clientId,
-      created_by_profile_id: user.id,
-      note_type: 'internal',
-      note_content: msg.body,
-    }).select('*').single();
+    const { data, error } = await supabase
+      .from('crm_notes')
+      .insert({
+        tenant_id: clientRow.tenant_id,
+        client_id: message.clientId,
+        created_by_profile_id: user.id,
+        note_type: 'internal',
+        note_content: message.body,
+      })
+      .select('*')
+      .single();
     if (error) throw new Error(error.message);
     return rowCrmNote(data);
   },
 
   async evaluatePolicy({ clientId, channel, messageClass }): Promise<CommunicationPolicyResult> {
-    // Server-authoritative: delegate ENTIRELY to `crm_evaluate_communication_policy`.
-    // No client-side re-interpretation of contact/service/lifecycle rules.
-    const { data, error } = await supabase.rpc('crm_evaluate_communication_policy', {
-      p_client_id: clientId,
-      p_channel: channel,
-      p_message_class: messageClass,
-    });
-    if (error) {
-      return { allowed: false, requiresReview: false, reasons: [error.message], suppressionCode: 'policy_check_failed' };
-    }
-    const d = (data ?? {}) as { allowed?: boolean; reason_code?: string; policy_version?: string };
-    const allowed = !!d.allowed;
-    const reason = d.reason_code ?? (allowed ? 'ok' : 'unknown_canonical_state');
-    return {
-      allowed,
-      requiresReview: false,
-      reasons: allowed ? [] : [reason],
-      suppressionCode: allowed ? undefined : reason,
-    };
+    return evaluateCommunicationPolicy({ clientId, channel, messageClass });
   },
 
-
-  async ingestInbound(msg) {
-    // Inbound is persisted by the RingCentral / HelpScout webhook edge
-    // functions directly into their canonical tables. This method is a
-    // pass-through so the interface remains symmetrical.
-    return { ...msg, id: `ingest-${Date.now()}`, createdAt: new Date().toISOString(), status: 'received' };
+  async ingestInbound(message) {
+    return {
+      ...message,
+      id: `ingest-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      status: 'received',
+    };
   },
 };
