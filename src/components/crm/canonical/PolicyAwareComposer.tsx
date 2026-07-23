@@ -141,7 +141,7 @@ export function PolicyAwareComposer({
   }, [open, activeClientId, channel, messageClass]);
 
   useEffect(() => {
-    if (!open || channel !== 'email' || templatesLoading || templates.length > 0) return;
+    if (!open || channel !== 'email' || templates.length > 0) return;
     let cancelled = false;
     setTemplatesLoading(true);
     setTemplateError(null);
