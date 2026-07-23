@@ -1,7 +1,6 @@
-// Generated from the live Billing Hub schema after migrations
-// 20260723164221 and 20260723165429. The global Supabase type file remains
-// unchanged until a runtime pass consumes these tables and can review the
-// full generated-schema diff.
+// Focused types from the live Billing Hub Email Studio schema after Passes 3 and 5.
+// Runtime integration remains isolated here so unrelated generated-schema changes do not
+// obscure review of the template, version, and delivery-content contracts.
 
 import type { Json } from './types';
 
@@ -31,6 +30,7 @@ export type CrmEmailTemplateRow = {
   created_at: string;
   updated_at: string;
   archived_at: string | null;
+  is_active: boolean;
 };
 
 export type CrmEmailTemplateInsert = {
@@ -55,6 +55,7 @@ export type CrmEmailTemplateInsert = {
   created_at?: string;
   updated_at?: string;
   archived_at?: string | null;
+  is_active?: boolean;
 };
 
 export type CrmEmailTemplateUpdate = Partial<Omit<CrmEmailTemplateInsert, 'tenant_id' | 'created_by_profile_id'>> & {
@@ -80,7 +81,6 @@ export type CrmEmailTemplateVersionRow = {
   change_summary: string | null;
   published_by_profile_id: string;
   published_at: string;
-  created_at: string;
 };
 
 export type CrmEmailTemplateVersionInsert = {
@@ -101,7 +101,6 @@ export type CrmEmailTemplateVersionInsert = {
   change_summary?: string | null;
   published_by_profile_id: string;
   published_at?: string;
-  created_at?: string;
 };
 
 export type ClientCampaignEmailContentColumns = {

@@ -17,6 +17,7 @@ import {
   HeartHandshake,
   Building2,
   CircleHelp,
+  Mail,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,7 @@ const clinicalNavItems: NavItem[] = [
   { label: 'Clients', href: '/crm/clients', icon: Users },
   { label: 'Communications', href: '/crm/inbox', icon: Inbox },
   { label: 'Campaigns', href: '/crm/campaigns', icon: Megaphone },
+  { label: 'Email Studio', href: '/crm/email-studio', icon: Mail },
   { label: 'Staff', href: '/crm/staff', icon: UserCog },
   { label: 'Reports', href: '/crm/reports', icon: BarChart3 },
   { label: 'Inbound Creator & Community Interest', href: '/crm/creator-community-interest', icon: HeartHandshake },
