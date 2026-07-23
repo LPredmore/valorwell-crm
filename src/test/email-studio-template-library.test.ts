@@ -51,8 +51,8 @@ describe('Email Studio template library policies', () => {
     );
   });
 
-  it('normalizes storage filenames without changing the extension', () => {
-    expect(sanitizeEmailAssetFilename('  BTY Update (Final)!!.PNG')).toBe('BTY-Update-Final.PNG');
+  it('normalizes storage filenames and extensions', () => {
+    expect(sanitizeEmailAssetFilename('  BTY Update (Final)!!.PNG')).toBe('BTY-Update-Final.png');
     expect(sanitizeEmailAssetFilename('🔥.webp')).toBe('email-image.webp');
   });
 });
