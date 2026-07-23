@@ -1,3 +1,4 @@
+import { validateEmailTemplateVariables } from '@/features/email-studio/contracts';
 import type {
   RelationshipCampaign,
   RelationshipCampaignBrief,
@@ -55,8 +56,28 @@ export function campaignDefinitionErrors(input: RelationshipCampaignDefinitionIn
     if (!Number.isInteger(step.delayDays) || step.delayDays < 0 || step.delayDays > 365) {
       errors.push(`Step ${index + 1} delay must be between 0 and 365 days.`);
     }
+
+    for (const issue of validateEmailTemplateVariables(step.subjectTemplate, 'relationship').errors) {
+      errors.push(`Step ${index + 1} subject: ${issue.message}`);
+    }
+    for (const issue of validateEmailTemplateVariables(step.bodyTemplate, 'relationship').errors) {
+      errors.push(`Step ${index + 1} body: ${issue.message}`);
+    }
   });
   return errors;
+}
+
+export function campaignDefinitionWarnings(input: RelationshipCampaignDefinitionInput) {
+  const warnings: string[] = [];
+  input.steps.forEach((step, index) => {
+    for (const issue of validateEmailTemplateVariables(step.subjectTemplate, 'relationship').warnings) {
+      warnings.push(`Step ${index + 1} subject: ${issue.message}`);
+    }
+    for (const issue of validateEmailTemplateVariables(step.bodyTemplate, 'relationship').warnings) {
+      warnings.push(`Step ${index + 1} body: ${issue.message}`);
+    }
+  });
+  return warnings;
 }
 
 export function campaignActivationErrors(input: RelationshipCampaignDefinitionInput) {

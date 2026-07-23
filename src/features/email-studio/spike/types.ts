@@ -1,19 +1,17 @@
-export const EMAIL_STUDIO_SPIKE_MODES = ['direct', 'campaign', 'newsletter'] as const;
+import {
+  EMAIL_CONTENT_MODES,
+  getEmailVariablesForScope,
+  type EmailContentMode,
+  type EmailEditorDocument,
+  type EmailEditorNode,
+  type EmailVariableDefinition,
+} from '../contracts';
 
-export type EmailStudioSpikeMode = (typeof EMAIL_STUDIO_SPIKE_MODES)[number];
+export const EMAIL_STUDIO_SPIKE_MODES = EMAIL_CONTENT_MODES;
 
-export type EmailStudioSpikeNode = {
-  type: string;
-  attrs?: Record<string, unknown>;
-  text?: string;
-  marks?: Array<{ type: string; attrs?: Record<string, unknown> }>;
-  content?: EmailStudioSpikeNode[];
-};
-
-export type EmailStudioSpikeDocument = {
-  type: 'doc';
-  content: EmailStudioSpikeNode[];
-};
+export type EmailStudioSpikeMode = EmailContentMode;
+export type EmailStudioSpikeNode = EmailEditorNode;
+export type EmailStudioSpikeDocument = EmailEditorDocument;
 
 export type EmailStudioSpikeSnapshot = {
   mode: EmailStudioSpikeMode;
@@ -23,33 +21,16 @@ export type EmailStudioSpikeSnapshot = {
   text: string;
 };
 
-export type EmailStudioSpikeVariable = {
-  key: string;
-  label: string;
-  scope: 'client' | 'relationship' | 'system';
-  sampleValue: string;
-};
+const SPIKE_VARIABLE_KEYS = new Set(['first_name', 'organization_name', 'unsubscribe_url']);
 
-export const EMAIL_STUDIO_SPIKE_VARIABLES: readonly EmailStudioSpikeVariable[] = [
-  {
-    key: 'first_name',
-    label: 'Client first name',
-    scope: 'client',
-    sampleValue: 'Jordan',
-  },
-  {
-    key: 'organization_name',
-    label: 'Organization name',
-    scope: 'relationship',
-    sampleValue: 'Community Veterans Network',
-  },
-  {
-    key: 'unsubscribe_url',
-    label: 'Unsubscribe URL',
-    scope: 'system',
-    sampleValue: 'https://crm.valorwell.org/unsubscribe/example',
-  },
-] as const;
+export const EMAIL_STUDIO_SPIKE_VARIABLES = [
+  ...getEmailVariablesForScope('client'),
+  ...getEmailVariablesForScope('relationship'),
+].filter(
+  (variable, index, variables): variable is EmailVariableDefinition =>
+    SPIKE_VARIABLE_KEYS.has(variable.key) &&
+    variables.findIndex((candidate) => candidate.key === variable.key) === index,
+);
 
 export const EMAIL_STUDIO_RENDERING_DECISION = {
   strategy: 'client_export_server_validation' as const,
