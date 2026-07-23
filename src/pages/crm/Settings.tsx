@@ -1,5 +1,5 @@
 import { KanbanConfigPanel } from '@/components/crm/settings/KanbanConfigPanel';
-import { HelpScoutConfigPanel } from '@/components/crm/settings/HelpScoutConfigPanel';
+import { ResendConfigPanel } from '@/components/crm/settings/ResendConfigPanel';
 import { EmailSignaturesPanel } from '@/components/crm/settings/EmailSignaturesPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -45,7 +45,7 @@ export default function CrmSettings() {
         </Card>
 
         <CrmMutationGate readOnlyFallback={ReadOnlyNotice}>
-          <HelpScoutConfigPanel />
+          <ResendConfigPanel />
         </CrmMutationGate>
         <CrmMutationGate readOnlyFallback={ReadOnlyNotice}>
           <KanbanConfigPanel />
