@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "npm:resend@6.0.2";
+import { Resend } from "npm:resend@6.18.0";
 import { checkSuppression, type MessageClass } from "../_shared/suppression.ts";
 
 const RESEND_API = "https://api.resend.com";
