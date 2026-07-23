@@ -16,11 +16,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.x
       - run: npm ci --legacy-peer-deps
-      - name: Bundle validated Edge source
+      - name: Build normal Edge module
         run: |
-          mkdir -p pass6-edge-deploy
-          npx esbuild supabase/functions/crm-resend-email/index.ts \
+          mkdir -p pass6-edge-build pass6-edge-deploy
+          grep -v 'edge-runtime.d.ts' \
+            supabase/functions/crm-resend-email/index.ts \
+            > pass6-edge-build/index.ts
+          cp supabase/functions/crm-resend-email/email-content.ts \
+            pass6-edge-build/email-content.ts
+          npx esbuild pass6-edge-build/index.ts \
             --bundle \
             --platform=neutral \
             --format=esm \
@@ -30,6 +38,31 @@ jobs:
             --external:jsr:* \
             --minify \
             --outfile=pass6-edge-deploy/index.ts
+      - name: Smoke-test Edge startup and auth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno run --allow-net --allow-env pass6-edge-deploy/index.ts \
+            > pass6-deno.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+
+          status=""
+          for _ in {1..45}; do
+            status=$(curl -sS -o pass6-response.json -w '%{http_code}' \
+              'http://127.0.0.1:8000/?action=invalid' || true)
+            if [ "$status" = "401" ]; then
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$status" != "401" ]; then
+            cat pass6-deno.log
+            cat pass6-response.json 2>/dev/null || true
+            exit 1
+          fi
+          grep -q 'UNAUTHORIZED' pass6-response.json
       - uses: actions/upload-artifact@v4
         with:
           name: pass6-edge-deploy
