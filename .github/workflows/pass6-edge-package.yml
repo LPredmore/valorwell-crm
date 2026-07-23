@@ -42,8 +42,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          deno run --allow-net --allow-env pass6-edge-deploy/index.ts \
-            > pass6-deno.log 2>&1 &
+          deno run -A pass6-edge-deploy/index.ts > pass6-deno.log 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
 
@@ -64,7 +63,11 @@ jobs:
           fi
           grep -q 'UNAUTHORIZED' pass6-response.json
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: pass6-edge-deploy
-          path: pass6-edge-deploy/index.ts
+          path: |
+            pass6-edge-deploy/index.ts
+            pass6-deno.log
+            pass6-response.json
           retention-days: 1
