@@ -20,7 +20,7 @@ jobs:
         with:
           deno-version: v2.x
       - run: npm ci --legacy-peer-deps
-      - name: Build normal Edge module
+      - name: Build exact deployment wrapper
         run: |
           mkdir -p pass6-edge-build pass6-edge-deploy
           grep -v 'edge-runtime.d.ts' \
@@ -37,7 +37,17 @@ jobs:
             --external:npm:* \
             --external:jsr:* \
             --minify \
-            --outfile=pass6-edge-deploy/index.ts
+            --outfile=pass6-edge-build/bundle.js
+          python - <<'PY'
+          import base64
+          from pathlib import Path
+
+          payload = base64.b64encode(Path('pass6-edge-build/bundle.js').read_bytes()).decode('ascii')
+          Path('pass6-edge-deploy/index.ts').write_text(
+              f'await import("data:application/javascript;base64,{payload}");\n',
+              encoding='utf-8',
+          )
+          PY
       - name: Smoke-test Edge startup and auth boundary
         shell: bash
         run: |
