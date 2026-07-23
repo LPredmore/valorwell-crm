@@ -1,0 +1,45 @@
+name: Temporary campaign import blocker patch
+
+on:
+  push:
+    branches: [agent/campaign-import-blockers]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/campaign-import-blockers
+      - name: Apply focused source patches
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          repository = Path('src/repositories/supabase/relationships-imports.ts')
+          text = repository.read_text()
+          old = "    // eslint-disable-next-line no-console\n    console.error('[relationship-import-operation-failed]', wrapped.diagnostic);"
+          new = "    console.error('[relationship-import-operation-failed]', wrapped.diagnostic);"
+          if old not in text:
+              raise SystemExit('Expected repository diagnostic logging block was not found.')
+          repository.write_text(text.replace(old, new), encoding='utf-8')
+
+          page = Path('src/pages/crm/business-development/RelationshipImportPage.tsx')
+          text = page.read_text()
+          old = "                {commitImport.isError && <p className=\"text-sm text-destructive\">{errorMessage(commitImport.error, 'The import could not be committed.')}</p>}"
+          new = """                {commitImport.isError && (\n                  <div className=\"space-y-1 rounded-md border border-destructive/40 bg-destructive/5 p-3\" role=\"alert\">\n                    <p className=\"text-sm text-destructive\">{errorMessage(commitImport.error, 'The import could not be committed.')}</p>\n                    <p className=\"text-xs text-muted-foreground\">If relationship data changed after this preview was created, return to step 2 and select Create server preview again. Review any newly detected matches before committing the refreshed preview.</p>\n                  </div>\n                )}"""
+          if old not in text:
+              raise SystemExit('Expected commit error block was not found.')
+          page.write_text(text.replace(old, new), encoding='utf-8')
+          PY
+      - name: Commit focused patches
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/repositories/supabase/relationships-imports.ts src/pages/crm/business-development/RelationshipImportPage.tsx
+          git commit -m "Clarify relationship import failure recovery"
+          git push origin HEAD:agent/campaign-import-blockers
