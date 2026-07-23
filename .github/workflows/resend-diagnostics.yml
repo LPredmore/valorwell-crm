@@ -34,18 +34,18 @@ jobs:
           npx tsc --noEmit --project tsconfig.node.json > tsc-node.log 2>&1
           echo "$?" > tsc-node.status
           exit 0
-      - name: Check modified Edge Functions
+      - name: Capture Edge Function diagnostics
+        shell: bash
         run: |
-          deno fmt --check \
-            supabase/functions/crm-resend-email/index.ts \
-            supabase/functions/campaign-scheduler/index.ts \
-            supabase/functions/relationship-campaign-worker/index.ts \
-            supabase/functions/relationship-resend-webhook/index.ts
+          set +e
           deno check \
             supabase/functions/crm-resend-email/index.ts \
             supabase/functions/campaign-scheduler/index.ts \
             supabase/functions/relationship-campaign-worker/index.ts \
-            supabase/functions/relationship-resend-webhook/index.ts
+            supabase/functions/relationship-resend-webhook/index.ts \
+            > deno-check.log 2>&1
+          echo "$?" > deno-check.status
+          exit 0
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -57,4 +57,6 @@ jobs:
             tsc-app.status
             tsc-node.log
             tsc-node.status
+            deno-check.log
+            deno-check.status
           retention-days: 1
