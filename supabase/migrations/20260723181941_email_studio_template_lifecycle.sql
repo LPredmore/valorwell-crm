@@ -1,0 +1,7 @@
+-- Live Billing Hub migration marker.
+--
+-- The original lifecycle functions applied under this version were immediately
+-- superseded during rollback-contract validation before application integration.
+-- The final reproducible function definitions are consolidated in
+-- 20260723182310_email_studio_template_lifecycle_capability_authority.sql so a
+-- fresh database never installs the rejected authorization assumptions.
