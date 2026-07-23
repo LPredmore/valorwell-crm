@@ -1,6 +1,39 @@
 export const RELATIONSHIP_DOMAIN_KEY = 'business_development_relationships' as const;
 
-export const RELATIONSHIP_ARCHITECTURE_FALLBACK = {
+export type RelationshipReleaseStatus = 'not_evaluated' | 'release_candidate' | 'accepted' | 'rejected';
+export type RelationshipActivationStatus = 'locked' | 'pilot_ready' | 'active' | 'suspended';
+
+export type RelationshipArchitectureContract = {
+  domain_key: string;
+  canonical_database: string;
+  canonical_application: string;
+  inbound_lane: string;
+  outbound_lane: string;
+  clinical_campaign_lane: string;
+  clinical_campaign_boundary_enforced: boolean;
+  implementation_status: string;
+  terminology: Record<string, string>;
+  contract_version: number;
+  schema_fingerprint: string | null;
+  generated_type_hash: string | null;
+  capability_manifest: Record<string, string>;
+  object_inventory: unknown;
+  rpc_signatures: unknown[];
+  grant_manifest: unknown;
+  release_status: RelationshipReleaseStatus;
+  activation_status: RelationshipActivationStatus;
+  activation_blockers: string[];
+  acceptance_evidence: Record<string, unknown>;
+  accepted_at: string | null;
+  effective_at?: string | null;
+  updated_at?: string | null;
+};
+
+/**
+ * Fail-closed fallback used only when the live Billing Hub contract cannot be loaded.
+ * It never claims acceptance or permits production delivery.
+ */
+export const RELATIONSHIP_ARCHITECTURE_FALLBACK: RelationshipArchitectureContract = {
   domain_key: RELATIONSHIP_DOMAIN_KEY,
   canonical_database: 'billing_hub_supabase',
   canonical_application: 'valorwell_crm',
@@ -8,7 +41,7 @@ export const RELATIONSHIP_ARCHITECTURE_FALLBACK = {
   outbound_lane: 'bty_relationship_outreach',
   clinical_campaign_lane: 'clinical_client_campaigns',
   clinical_campaign_boundary_enforced: true,
-  implementation_status: 'phase_1_established',
+  implementation_status: 'production_hardened',
   terminology: {
     organization:
       'The entity being considered for Beyond The Yellow or another managed relationship.',
@@ -23,19 +56,18 @@ export const RELATIONSHIP_ARCHITECTURE_FALLBACK = {
     campaign_enrollment:
       "A contact's participation in a relationship outreach sequence.",
   },
-} as const;
-
-export type RelationshipArchitectureContract = {
-  domain_key: string;
-  canonical_database: string;
-  canonical_application: string;
-  inbound_lane: string;
-  outbound_lane: string;
-  clinical_campaign_lane: string;
-  clinical_campaign_boundary_enforced: boolean;
-  implementation_status: string;
-  terminology: Record<string, string>;
-  effective_at?: string | null;
+  contract_version: 1,
+  schema_fingerprint: null,
+  generated_type_hash: null,
+  capability_manifest: {},
+  object_inventory: {},
+  rpc_signatures: [],
+  grant_manifest: {},
+  release_status: 'not_evaluated',
+  activation_status: 'locked',
+  activation_blockers: ['live_release_contract_unavailable'],
+  acceptance_evidence: {},
+  accepted_at: null,
 };
 
 export const RELATIONSHIP_MODULE_BOUNDARIES = {
