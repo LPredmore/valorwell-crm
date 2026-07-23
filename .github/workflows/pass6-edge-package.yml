@@ -42,7 +42,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          deno run -A pass6-edge-deploy/index.ts > pass6-deno.log 2>&1 &
+          deno run --node-modules-dir=auto -A pass6-edge-deploy/index.ts \
+            > pass6-deno.log 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
 
