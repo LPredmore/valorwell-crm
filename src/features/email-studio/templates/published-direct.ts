@@ -36,7 +36,7 @@ type DirectTemplateDatabase = {
 const client = supabase as unknown as SupabaseClient<DirectTemplateDatabase>;
 
 export async function listPublishedDirectEmailTemplates(): Promise<PublishedDirectEmailTemplate[]> {
-  const { data: templates, error: templateError } = await client
+  const { data: templateData, error: templateError } = await client
     .from('crm_email_templates')
     .select('*')
     .eq('content_scope', 'client')
@@ -46,20 +46,22 @@ export async function listPublishedDirectEmailTemplates(): Promise<PublishedDire
     .not('current_published_version_id', 'is', null)
     .order('name', { ascending: true });
   if (templateError) throw new Error(templateError.message);
+  const templates = (templateData || []) as unknown as RawTemplateRow[];
 
-  const versionIds = (templates || [])
+  const versionIds = templates
     .map((template) => template.current_published_version_id)
     .filter((value): value is string => Boolean(value));
   if (versionIds.length === 0) return [];
 
-  const { data: versions, error: versionError } = await client
+  const { data: versionData, error: versionError } = await client
     .from('crm_email_template_versions')
     .select('*')
     .in('id', versionIds);
   if (versionError) throw new Error(versionError.message);
+  const versions = (versionData || []) as unknown as CrmEmailTemplateVersionRow[];
 
-  const versionById = new Map((versions || []).map((version) => [version.id, version]));
-  return (templates || []).flatMap((template) => {
+  const versionById = new Map(versions.map((version) => [version.id, version]));
+  return templates.flatMap((template) => {
     const versionId = template.current_published_version_id;
     const version = versionId ? versionById.get(versionId) : undefined;
     if (!version || version.content_scope !== 'client' || version.content_mode !== 'direct') return [];
