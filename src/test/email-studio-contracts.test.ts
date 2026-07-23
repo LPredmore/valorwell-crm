@@ -153,7 +153,7 @@ describe('email studio canonical contracts', () => {
     expect(imported.requiresManualReview).toBe(true);
     expect(imported.warnings).toHaveLength(2);
     expect(imported.draft.renderedHtml).toContain('<script>');
-    expect(imported.draft.renderedText).toBe('Update\n\nHello team.');
+    expect(imported.draft.renderedText).toBe('Update\nHello team.');
     expect(imported.draft.editorDocument.content[0]?.type).toBe('paragraph');
   });
 
