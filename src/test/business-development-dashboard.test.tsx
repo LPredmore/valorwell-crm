@@ -74,30 +74,35 @@ describe('Business Development dashboard and system status', () => {
     expect(screen.queryByText(/this metric will appear after its integration is verified/i)).not.toBeInTheDocument();
   });
 
-  it('separates first-slice integration from full production readiness', () => {
+  it('separates accepted implementation from held outbound activation', () => {
     renderStatus();
-    expect(screen.getByText('Architecture established')).toBeInTheDocument();
-    expect(screen.getByText('Application code implemented')).toBeInTheDocument();
-    expect(screen.getByText('Production ready')).toBeInTheDocument();
-    expect(screen.getAllByText('Not verified').length).toBeGreaterThan(0);
+    expect(screen.getByText('Final acceptance status')).toBeInTheDocument();
+    expect(screen.getByText('Implementation accepted')).toBeInTheDocument();
+    expect(screen.getByText('Outbound activation')).toBeInTheDocument();
+    expect(screen.getByText(/Intentionally held/)).toBeInTheDocument();
+    expect(screen.getAllByText('Accepted').length).toBeGreaterThan(0);
+    expect(screen.getByText('Held')).toBeInTheDocument();
     expect(screen.getByText('Canonical database')).toBeInTheDocument();
   });
 
-  it('verifies integration only when organizations and contacts are available', () => {
+  it('accepts database contracts only when every capability is available', () => {
+    const allAvailable = Object.fromEntries(
+      relationshipCapabilities().map(({ capability }) => [capability, 'available']),
+    );
     useRelationshipCapabilities.mockReturnValue({
-      data: relationshipCapabilities({ organizations: 'available', contacts: 'available' }),
+      data: relationshipCapabilities(allAvailable),
       isLoading: false,
       isError: false,
     });
     renderStatus();
-    expect(screen.getByText('Organizations and contacts are verified against the selected Billing Hub tenant.')).toBeInTheDocument();
-    expect(screen.getByText('The first persistence slice is live; later workflow and operational-approval requirements remain.')).toBeInTheDocument();
+    expect(screen.getByText('Database contracts available')).toBeInTheDocument();
+    expect(screen.getByText(/capability contracts are available/)).toBeInTheDocument();
   });
 
   it('keeps database-dependent functions disabled when the snapshot cannot be loaded', () => {
     useRelationshipCapabilities.mockReturnValue({ data: undefined, isLoading: false, isError: true });
     renderStatus();
-    expect(screen.getByText(/Capability status could not be loaded/)).toBeInTheDocument();
-    expect(screen.getByText('Database support available')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/Capability status could not be loaded/);
+    expect(screen.getByText('Database contracts available')).toBeInTheDocument();
   });
 });
