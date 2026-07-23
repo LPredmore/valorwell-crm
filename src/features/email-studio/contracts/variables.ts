@@ -200,14 +200,26 @@ export function renderEmailTemplate(
   };
 }
 
-function variable(
-  key: string,
-  label: string,
-  scope: EmailVariableScope,
-  valueType: EmailVariableValueType,
+function variable<
+  const Key extends string,
+  const Label extends string,
+  const Scope extends EmailVariableScope,
+  const ValueType extends EmailVariableValueType,
+>(
+  key: Key,
+  label: Label,
+  scope: Scope,
+  valueType: ValueType,
   sampleValue: string,
   description: string,
-): EmailVariableDefinitionBase {
+): {
+  key: Key;
+  label: Label;
+  scope: Scope;
+  valueType: ValueType;
+  sampleValue: string;
+  description: string;
+} {
   return { key, label, scope, valueType, sampleValue, description };
 }
 
