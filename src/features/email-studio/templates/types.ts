@@ -58,6 +58,17 @@ export type EmailTemplateVersionRecord = {
   publishedAt: string;
 };
 
+export type PublishedDirectEmailTemplate = {
+  templateId: string;
+  versionId: string;
+  name: string;
+  description: string | null;
+  subject: string;
+  versionNumber: number;
+  content: EmailContentDocument;
+  publishedAt: string;
+};
+
 export type EmailTemplateMetadata = {
   name: string;
   description: string;

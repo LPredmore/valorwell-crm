@@ -21,6 +21,7 @@ import type {
   AuditEvent,
   CommunicationPolicyResult,
 } from '@/domain/operations';
+import type { EmailContentDocument } from '@/features/email-studio/contracts';
 import type { Tables } from '@/integrations/supabase/types';
 import type { RelationshipsRepository } from './relationships';
 
@@ -123,10 +124,21 @@ export interface CampaignsRepository {
   restartEnrollment(enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
 }
 
+export type CommunicationSendInput = Omit<CommunicationMessage, 'id' | 'createdAt' | 'status'> & {
+  /** Canonical Email Studio snapshot. Required by the manual Direct-email path. */
+  emailContent?: EmailContentDocument;
+  /** Immutable version attribution. Cleared as soon as version content is edited. */
+  emailTemplateVersionId?: string | null;
+  /** Canonical message UUID for provider-level reply headers. */
+  inReplyToMessageId?: string | null;
+  /** Stable workflow identifier written to the provider ledger and audit metadata. */
+  source?: string;
+};
+
 export interface CommunicationsRepository {
   listForClient(clientId: string): Promise<CommunicationMessage[]>;
   listThreads(channel: 'sms' | 'email'): Promise<CommunicationMessage[]>;
-  send(message: Omit<CommunicationMessage, 'id' | 'createdAt' | 'status'>): Promise<CommunicationMessage>;
+  send(message: CommunicationSendInput): Promise<CommunicationMessage>;
   evaluatePolicy(input: {
     clientId: string;
     channel: 'sms' | 'email';

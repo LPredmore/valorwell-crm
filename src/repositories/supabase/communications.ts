@@ -33,6 +33,9 @@ type CrmEmailMessageRow = {
   in_reply_to_message_id: string | null;
   message_class: string | null;
   error_message: string | null;
+  preheader: string | null;
+  render_hash: string | null;
+  template_version_id: string | null;
   occurred_at: string;
   created_at: string;
 };
@@ -309,8 +312,8 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
       }
 
       const messageClass =
-        message.messageClass ??
-        (message.campaignId ? 'ordinary_campaign_follow_up' : 'necessary_scheduling');
+        message.messageClass
+        ?? (message.campaignId ? 'ordinary_campaign_follow_up' : 'necessary_scheduling');
       const policy = await evaluateCommunicationPolicy({
         clientId: message.clientId,
         channel: 'email',
@@ -334,9 +337,13 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
             tenantId: client.tenantId,
             clientId: message.clientId,
             subject: message.subject,
-            text: message.body,
+            text: message.emailContent ? undefined : message.body,
+            canonicalContent: message.emailContent ?? undefined,
+            templateVersionId: message.emailTemplateVersionId ?? null,
             campaignId: message.campaignId ?? null,
             messageClass,
+            inReplyToMessageId: message.inReplyToMessageId ?? null,
+            source: message.source ?? (message.emailContent ? 'manual_email_studio' : 'manual'),
           },
         });
         return rowEmailMessage(result.message);
