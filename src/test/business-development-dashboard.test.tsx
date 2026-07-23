@@ -115,7 +115,7 @@ describe('Business Development dashboard and system status', () => {
     renderStatus();
     expect(screen.getByText('The live release contract could not be loaded. Production activation remains locked.')).toBeInTheDocument();
     expect(screen.getByText('Not accepted')).toBeInTheDocument();
-    expect(screen.getByText('Locked')).toBeInTheDocument();
+    expect(screen.getAllByText('Locked')).toHaveLength(2);
   });
 
   it('keeps database-dependent functions disabled when the capability snapshot cannot be loaded', () => {
