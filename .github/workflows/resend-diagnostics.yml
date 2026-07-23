@@ -1,0 +1,44 @@
+name: Resend migration diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Capture lint and type-check output
+        shell: bash
+        run: |
+          set +e
+          npx eslint src --max-warnings=0 > eslint.log 2>&1
+          echo "$?" > eslint.status
+          npx tsc --noEmit --project tsconfig.app.json > tsc-app.log 2>&1
+          echo "$?" > tsc-app.status
+          npx tsc --noEmit --project tsconfig.node.json > tsc-node.log 2>&1
+          echo "$?" > tsc-node.status
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: resend-migration-diagnostics
+          path: |
+            eslint.log
+            eslint.status
+            tsc-app.log
+            tsc-app.status
+            tsc-node.log
+            tsc-node.status
+          retention-days: 1
