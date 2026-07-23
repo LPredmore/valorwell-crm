@@ -15,6 +15,7 @@ export class ResendEmailApiError extends Error {
     message: string,
     public statusCode: number,
     public responseBody?: unknown,
+    public requestId?: string,
   ) {
     super(message);
     this.name = 'ResendEmailApiError';
@@ -53,11 +54,16 @@ export async function resendEmailApi<T = unknown>(
     : await response.text();
 
   if (!response.ok) {
-    const message =
-      typeof responseData === 'object' && responseData !== null && 'error' in responseData
-        ? String((responseData as { error: unknown }).error)
-        : `Resend email API error: ${response.status}`;
-    throw new ResendEmailApiError(message, response.status, responseData);
+    const responseObject =
+      typeof responseData === 'object' && responseData !== null
+        ? (responseData as Record<string, unknown>)
+        : null;
+    const requestId = responseObject?.requestId ? String(responseObject.requestId) : undefined;
+    const baseMessage = responseObject && 'error' in responseObject
+      ? String(responseObject.error)
+      : `Resend email API error: ${response.status}`;
+    const message = requestId ? `${baseMessage} (Request ID: ${requestId})` : baseMessage;
+    throw new ResendEmailApiError(message, response.status, responseData, requestId);
   }
 
   return responseData as T;
