@@ -60,11 +60,18 @@ export async function prepareDirectEmailDelivery(input: {
     throw new Error("CANONICAL_RENDER_HASH_MISMATCH");
   }
 
-  const subject = renderTemplate(input.subjectTemplate, input.values, "text");
-  const html = renderTemplate(content.renderedHtml, input.values, "html");
-  const text = renderTemplate(content.renderedText, input.values, "text");
+  validateTemplateVariables([
+    input.subjectTemplate,
+    content.renderedHtml,
+    content.renderedText,
+    content.preheader ?? "",
+  ], input.values);
+
+  const subject = renderTemplateUnchecked(input.subjectTemplate, input.values, "text");
+  const html = renderTemplateUnchecked(content.renderedHtml, input.values, "html");
+  const text = renderTemplateUnchecked(content.renderedText, input.values, "text");
   const preheader = content.preheader
-    ? renderTemplate(content.preheader, input.values, "text")
+    ? renderTemplateUnchecked(content.preheader, input.values, "text")
     : null;
 
   if (!subject.trim()) throw new Error("EMAIL_SUBJECT_REQUIRED");
@@ -160,39 +167,59 @@ export function stableSerialize(value: unknown): string {
     .join(",")}}`;
 }
 
+export function validateTemplateVariables(
+  templates: readonly string[],
+  values: DirectEmailVariableValues,
+): void {
+  const unknown = new Set<string>();
+  const missing = new Set<string>();
+  const invalid = new Set<string>();
+
+  for (const template of templates) {
+    for (const match of template.matchAll(TOKEN_PATTERN)) {
+      const rawKey = match[1];
+      const key = rawKey as DirectEmailVariableKey;
+      const definition = VARIABLE_BY_KEY.get(key);
+      if (!definition) {
+        unknown.add(rawKey);
+        continue;
+      }
+
+      const value = values[key];
+      if (value === undefined || !value.trim()) {
+        missing.add(key);
+        continue;
+      }
+      if (definition.valueType === "url" && !isSafeUrl(value)) {
+        invalid.add(key);
+      }
+    }
+  }
+
+  if (unknown.size) throw new Error(`UNKNOWN_EMAIL_VARIABLE:${Array.from(unknown).sort().join(",")}`);
+  if (missing.size) throw new Error(`MISSING_EMAIL_VARIABLE:${Array.from(missing).sort().join(",")}`);
+  if (invalid.size) throw new Error(`INVALID_EMAIL_VARIABLE:${Array.from(invalid).sort().join(",")}`);
+}
+
 export function renderTemplate(
   template: string,
   values: DirectEmailVariableValues,
   outputFormat: "html" | "text",
 ): string {
-  const unknown = new Set<string>();
-  const missing = new Set<string>();
-  const invalid = new Set<string>();
+  validateTemplateVariables([template], values);
+  return renderTemplateUnchecked(template, values, outputFormat);
+}
 
-  const output = template.replace(TOKEN_PATTERN, (token, rawKey: string) => {
+function renderTemplateUnchecked(
+  template: string,
+  values: DirectEmailVariableValues,
+  outputFormat: "html" | "text",
+): string {
+  return template.replace(TOKEN_PATTERN, (_token, rawKey: string) => {
     const key = rawKey as DirectEmailVariableKey;
-    const definition = VARIABLE_BY_KEY.get(key);
-    if (!definition) {
-      unknown.add(rawKey);
-      return token;
-    }
-
-    const value = values[key];
-    if (value === undefined || !value.trim()) {
-      missing.add(key);
-      return token;
-    }
-    if (definition.valueType === "url" && !isSafeUrl(value)) {
-      invalid.add(key);
-      return token;
-    }
+    const value = values[key] ?? "";
     return outputFormat === "html" ? escapeHtml(value) : value;
   });
-
-  if (unknown.size) throw new Error(`UNKNOWN_EMAIL_VARIABLE:${Array.from(unknown).sort().join(",")}`);
-  if (missing.size) throw new Error(`MISSING_EMAIL_VARIABLE:${Array.from(missing).sort().join(",")}`);
-  if (invalid.size) throw new Error(`INVALID_EMAIL_VARIABLE:${Array.from(invalid).sort().join(",")}`);
-  return output;
 }
 
 export function prependHiddenPreheader(html: string, preheader: string | null): string {
