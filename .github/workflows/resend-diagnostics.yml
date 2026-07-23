@@ -38,7 +38,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          deno check \
+          deno check --node-modules-dir=auto \
             supabase/functions/crm-resend-email/index.ts \
             supabase/functions/campaign-scheduler/index.ts \
             supabase/functions/relationship-campaign-worker/index.ts \
