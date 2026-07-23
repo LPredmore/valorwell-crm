@@ -10,6 +10,7 @@ import RelationshipUnsubscribePage from "./pages/RelationshipUnsubscribePage";
 import { CrmLayout } from "./components/crm/layout/CrmLayout";
 import CrmIndex from "./pages/crm/Index";
 import CrmSettings from "./pages/crm/Settings";
+import EmailStudioSpikePage from "./pages/crm/EmailStudioSpikePage";
 import CrmCampaignEditor from "./pages/crm/CampaignEditor";
 import CrmCampaignEnrollments from "./pages/crm/CampaignEnrollments";
 import BusinessDevelopmentArchitecture from "./pages/crm/BusinessDevelopmentArchitecture";
@@ -93,6 +94,7 @@ const App = () => (
             <Route path="business-development/reports" element={<RelationshipReportsPage />} />
             <Route path="creator-community-interest" element={<CreatorCommunityInterestQueue />} />
             <Route path="creator-community-interest/:id" element={<CreatorCommunityInterestDetail />} />
+            <Route path="email-studio-spike" element={<EmailStudioSpikePage />} />
             <Route path="settings" element={<CrmSettings />} />
             <Route path="canonical" element={<CanonicalDashboard />} />
             <Route path="canonical/clients" element={<CanonicalClients />} />
