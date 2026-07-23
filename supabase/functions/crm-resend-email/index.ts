@@ -1,17 +1,27 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@6.18.0";
-import { checkSuppression, type MessageClass } from "../_shared/suppression.ts";
+import {
+  prepareDirectEmailDelivery,
+  stableSerialize,
+  type CanonicalDirectEmailContent,
+  type DirectEmailVariableValues,
+} from "./email-content.ts";
 
 const RESEND_API = "https://api.resend.com";
-const USER_AGENT = "ValorWell-CRM/1.0";
+const USER_AGENT = "ValorWell-CRM/1.2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 type Db = ReturnType<typeof createClient>;
-type Auth = { userId: string; tenantId: string; db: Db };
+type AuthContext = {
+  userId: string;
+  tenantId: string;
+  crmRole: string;
+  db: Db;
+};
 type Settings = {
   tenant_id: string;
   from_name: string | null;
@@ -26,30 +36,24 @@ type SendInput = {
   subject: string;
   text?: string;
   html?: string;
-  messageClass?: MessageClass;
+  canonicalContent?: CanonicalDirectEmailContent;
+  templateVersionId?: string | null;
+  messageClass?: string;
   campaignId?: string | null;
   bulkSendId?: string | null;
   inReplyToMessageId?: string | null;
   source?: string;
 };
-type EmailRow = {
-  id: string;
-  tenant_id: string;
-  client_id: string | null;
-  campaign_id: string | null;
-  bulk_send_id: string | null;
-  sender_email: string;
-  recipient_email: string;
-  subject: string | null;
-  body_html: string | null;
-  body_text: string | null;
-  provider_message_id: string | null;
-  provider_thread_id: string | null;
-  in_reply_to_message_id: string | null;
-  message_class: string | null;
-  status: string;
-  occurred_at: string;
-  created_at: string;
+type DeliveryInput = Omit<SendInput, "clientId" | "canonicalContent"> & {
+  clientId: string | null;
+  subject: string;
+  text: string;
+  html: string;
+  preheader?: string | null;
+  renderHash?: string | null;
+  templateVersionId?: string | null;
+  schemaVersion?: number | null;
+  themeKey?: string | null;
 };
 type OutboundReplyContext = {
   id: string;
@@ -59,10 +63,17 @@ type OutboundReplyContext = {
   provider_thread_id: string | null;
 };
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { ...corsHeaders, "content-type": "application/json" },
-});
+const json = (body: unknown, status = 200, requestId?: string) => new Response(
+  JSON.stringify(body),
+  {
+    status,
+    headers: {
+      ...corsHeaders,
+      "content-type": "application/json",
+      ...(requestId ? { "x-request-id": requestId } : {}),
+    },
+  },
+);
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
 const firstAddress = (value: unknown) => Array.isArray(value)
@@ -75,11 +86,18 @@ const htmlFromText = (text: string) => text
   .replace(/>/g, "&gt;")
   .replace(/\n/g, "<br>");
 
+function safeLog(level: "info" | "warn" | "error", event: string, fields: Record<string, unknown> = {}) {
+  const payload = JSON.stringify({ component: "crm-resend-email", event, ...fields });
+  if (level === "error") console.error(payload);
+  else if (level === "warn") console.warn(payload);
+  else console.log(payload);
+}
+
 function headerValue(headers: unknown, name: string): string | undefined {
   if (Array.isArray(headers)) {
     const row = headers.find((item) =>
-      typeof item === "object" && item !== null &&
-      String((item as Record<string, unknown>).name ?? "").toLowerCase() === name.toLowerCase()
+      typeof item === "object" && item !== null
+      && String((item as Record<string, unknown>).name ?? "").toLowerCase() === name.toLowerCase()
     );
     return row ? String((row as Record<string, unknown>).value ?? "") || undefined : undefined;
   }
@@ -108,7 +126,7 @@ function messageHintFromRecipient(value: unknown): string | null {
   return local.match(/\+crm-([0-9a-f-]{36})$/i)?.[1] ?? null;
 }
 
-async function authenticate(request: Request, requestedTenantId?: string): Promise<Auth> {
+async function authenticate(request: Request, requestedTenantId?: string): Promise<AuthContext> {
   const authorization = request.headers.get("authorization") ?? "";
   if (!authorization.startsWith("Bearer ")) throw new Error("UNAUTHORIZED");
 
@@ -121,7 +139,8 @@ async function authenticate(request: Request, requestedTenantId?: string): Promi
     global: { headers: { Authorization: authorization } },
     auth: { persistSession: false },
   });
-  const { data, error } = await userDb.auth.getClaims(authorization.slice(7));
+  const token = authorization.slice(7);
+  const { data, error } = await userDb.auth.getClaims(token);
   const userId = data?.claims?.sub;
   if (error || !userId) throw new Error("UNAUTHORIZED");
 
@@ -134,7 +153,18 @@ async function authenticate(request: Request, requestedTenantId?: string): Promi
   const { data: capability, error: capabilityError } = await query.limit(1).maybeSingle();
   if (capabilityError || !capability?.tenant_id) throw new Error("FORBIDDEN");
 
-  return { userId, tenantId: capability.tenant_id, db };
+  return {
+    userId,
+    tenantId: capability.tenant_id,
+    crmRole: capability.crm_role,
+    db,
+  };
+}
+
+function requireMutationAccess(auth: AuthContext) {
+  if (auth.crmRole !== "crm_admin" && auth.crmRole !== "crm_operator") {
+    throw new Error("FORBIDDEN");
+  }
 }
 
 async function settingsFor(db: Db, tenantId: string, requireConnected = true): Promise<Settings> {
@@ -152,7 +182,7 @@ async function settingsFor(db: Db, tenantId: string, requireConnected = true): P
 
 async function clientFor(db: Db, tenantId: string, clientId: string) {
   const { data, error } = await db.from("clients")
-    .select("id, tenant_id, email")
+    .select("id, tenant_id, email, pat_name_f, pat_name_l, pat_name_preferred, primary_staff_id")
     .eq("id", clientId)
     .eq("tenant_id", tenantId)
     .maybeSingle();
@@ -162,27 +192,50 @@ async function clientFor(db: Db, tenantId: string, clientId: string) {
 }
 
 async function enforcePolicy(
+  db: Db,
   tenantId: string,
   clientId: string,
-  messageClass: MessageClass,
+  messageClass: string,
   workflow: string,
   correlationId?: string | null,
   campaignId?: string | null,
 ) {
-  const decision = await checkSuppression(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { tenantId, clientId, channel: "email", messageClass, workflow, correlationId, campaignId },
-  );
-  if (!decision.allowed) throw new Error(`SUPPRESSED:${decision.reason_code}`);
+  const { data: target, error: targetError } = await db.from("clients")
+    .select("tenant_id")
+    .eq("id", clientId)
+    .maybeSingle();
+  if (targetError || !target || target.tenant_id !== tenantId) {
+    throw new Error("SUPPRESSED:unknown_canonical_state");
+  }
+
+  const { data, error } = await db.rpc("crm_evaluate_communication_policy", {
+    p_client_id: clientId,
+    p_channel: "email",
+    p_message_class: messageClass,
+  });
+  const decision = data as { allowed?: boolean; reason_code?: string; policy_version?: string } | null;
+  if (error || !decision) throw new Error("SUPPRESSED:unknown_canonical_state");
+  if (!decision.allowed) {
+    await db.from("crm_activity_events").insert({
+      tenant_id: tenantId,
+      client_id: clientId,
+      event_type: "email_suppressed",
+      created_by_profile_id: null,
+      metadata: {
+        reason_code: decision.reason_code ?? "unknown",
+        policy_version: decision.policy_version ?? "unknown",
+        channel: "email",
+        message_class: messageClass,
+        workflow,
+        correlation_id: correlationId ?? null,
+        campaign_id: campaignId ?? null,
+      },
+    });
+    throw new Error(`SUPPRESSED:${decision.reason_code ?? "unknown"}`);
+  }
 }
 
-async function markFailed(
-  db: Db,
-  messageId: string,
-  errorCode: string,
-  errorMessage: string,
-): Promise<void> {
+async function markFailed(db: Db, messageId: string, errorCode: string, errorMessage: string) {
   const failedAt = new Date().toISOString();
   await db.from("crm_email_messages").update({
     status: "failed",
@@ -193,15 +246,100 @@ async function markFailed(
   }).eq("id", messageId);
 }
 
+async function resolveDirectEmail(
+  auth: AuthContext,
+  settings: Settings,
+  client: Awaited<ReturnType<typeof clientFor>>,
+  input: SendInput,
+): Promise<DeliveryInput> {
+  if (!input.canonicalContent) {
+    if (input.templateVersionId) throw new Error("TEMPLATE_VERSION_REQUIRES_CANONICAL_CONTENT");
+    const text = String(input.text ?? "");
+    const html = String(input.html ?? (text ? htmlFromText(text) : ""));
+    if (!text.trim() && !html.trim()) throw new Error("Email body is required");
+    return {
+      ...input,
+      clientId: input.clientId,
+      subject: input.subject,
+      text,
+      html,
+      preheader: null,
+      renderHash: null,
+      templateVersionId: null,
+      schemaVersion: null,
+      themeKey: null,
+    };
+  }
+
+  let therapistName = "ValorWell Care Team";
+  if (client.primary_staff_id) {
+    const { data: staff } = await auth.db.from("staff")
+      .select("prov_name_f, prov_name_l, prov_name_for_clients")
+      .eq("tenant_id", auth.tenantId)
+      .eq("id", client.primary_staff_id)
+      .maybeSingle();
+    if (staff) {
+      therapistName = staff.prov_name_for_clients
+        || [staff.prov_name_f, staff.prov_name_l].filter(Boolean).join(" ")
+        || therapistName;
+    }
+  }
+
+  const values: DirectEmailVariableValues = {
+    first_name: client.pat_name_f || "Client",
+    preferred_name: client.pat_name_preferred || client.pat_name_f || "Client",
+    last_name: client.pat_name_l || "Client",
+    therapist_name: therapistName,
+    sender_name: settings.from_name || "ValorWell Care Team",
+  };
+  const prepared = await prepareDirectEmailDelivery({
+    subjectTemplate: input.subject,
+    content: input.canonicalContent,
+    values,
+  });
+
+  if (input.templateVersionId) {
+    const { data: version, error } = await auth.db.from("crm_email_template_versions")
+      .select("id, content_scope, content_mode, subject, editor_document, rendered_html, rendered_text, preheader, theme_key, editor_schema_version, render_hash")
+      .eq("tenant_id", auth.tenantId)
+      .eq("id", input.templateVersionId)
+      .maybeSingle();
+    if (error || !version) throw new Error("EMAIL_TEMPLATE_VERSION_NOT_FOUND");
+    if (version.content_scope !== "client" || version.content_mode !== "direct") {
+      throw new Error("EMAIL_TEMPLATE_VERSION_SCOPE_INVALID");
+    }
+    const exactVersion = version.subject === input.subject
+      && version.editor_schema_version === input.canonicalContent.schemaVersion
+      && version.render_hash === input.canonicalContent.renderHash
+      && version.rendered_html === input.canonicalContent.renderedHtml
+      && version.rendered_text === input.canonicalContent.renderedText
+      && (version.preheader ?? null) === (input.canonicalContent.preheader ?? null)
+      && version.theme_key === input.canonicalContent.themeKey
+      && stableSerialize(version.editor_document) === stableSerialize(input.canonicalContent.editorDocument);
+    if (!exactVersion) throw new Error("EMAIL_TEMPLATE_VERSION_CONTENT_MISMATCH");
+  }
+
+  return {
+    ...input,
+    clientId: input.clientId,
+    subject: prepared.subject,
+    text: prepared.text,
+    html: prepared.html,
+    preheader: prepared.preheader,
+    renderHash: prepared.renderHash,
+    templateVersionId: input.templateVersionId ?? null,
+    schemaVersion: prepared.schemaVersion,
+    themeKey: prepared.themeKey,
+  };
+}
+
 async function deliver(
   db: Db,
   auth: { tenantId: string; userId: string | null },
   recipient: string,
   settings: Settings,
-  input: Omit<SendInput, "clientId"> & { clientId: string | null },
-): Promise<EmailRow> {
-  const text = String(input.text ?? "");
-  const html = String(input.html ?? (text ? htmlFromText(text) : ""));
+  input: DeliveryInput,
+) {
   const now = new Date().toISOString();
   const { data: queued, error: insertError } = await db.from("crm_email_messages").insert({
     tenant_id: auth.tenantId,
@@ -214,12 +352,20 @@ async function deliver(
     recipient_email: normalizeEmail(recipient),
     reply_to_email: settings.reply_to_email ? normalizeEmail(settings.reply_to_email) : null,
     subject: input.subject,
-    body_html: html || null,
-    body_text: text || null,
+    body_html: input.html || null,
+    body_text: input.text || null,
+    preheader: input.preheader ?? null,
+    render_hash: input.renderHash ?? null,
+    template_version_id: input.templateVersionId ?? null,
     provider: "resend",
     message_class: input.messageClass ?? "necessary_scheduling",
     source: input.source ?? "manual",
     in_reply_to_message_id: input.inReplyToMessageId ?? null,
+    metadata: {
+      email_content_mode: input.renderHash ? "direct" : null,
+      editor_schema_version: input.schemaVersion ?? null,
+      theme_key: input.themeKey ?? null,
+    },
     created_by_profile_id: auth.userId,
     occurred_at: now,
   }).select("*").single();
@@ -235,10 +381,10 @@ async function deliver(
     priorProviderId = data?.provider_thread_id ?? data?.provider_message_id ?? null;
   }
 
-  const headers: Record<string, string> = { "X-CRM-Email-Message-ID": queued.id };
+  const providerHeaders: Record<string, string> = { "X-CRM-Email-Message-ID": queued.id };
   if (priorProviderId) {
-    headers["In-Reply-To"] = priorProviderId;
-    headers.References = priorProviderId;
+    providerHeaders["In-Reply-To"] = priorProviderId;
+    providerHeaders.References = priorProviderId;
   }
 
   const apiKey = Deno.env.get("RESEND_API_KEY") ?? "";
@@ -262,9 +408,9 @@ async function deliver(
         to: [normalizeEmail(recipient)],
         reply_to: taggedReplyTo(settings, queued.id),
         subject: input.subject,
-        text: text || undefined,
-        html: html || undefined,
-        headers,
+        text: input.text || undefined,
+        html: input.html || undefined,
+        headers: providerHeaders,
       }),
     });
   } catch (error) {
@@ -281,7 +427,7 @@ async function deliver(
   if (!response.ok || !provider.id) {
     const message = provider.message ?? "Resend rejected the delivery request";
     await markFailed(db, queued.id, provider.name ?? `http_${response.status}`, message);
-    throw new Error(provider.message ?? `Resend send failed: ${response.status}`);
+    throw new Error(message);
   }
 
   const sentAt = new Date().toISOString();
@@ -304,6 +450,8 @@ async function deliver(
         email_message_id: queued.id,
         provider_message_id: provider.id,
         source: input.source ?? "manual",
+        render_hash: input.renderHash ?? null,
+        template_version_id: input.templateVersionId ?? null,
       },
     });
     await db.from("clients").update({
@@ -313,19 +461,19 @@ async function deliver(
     }).eq("id", input.clientId).eq("tenant_id", auth.tenantId);
   }
 
-  return sent as EmailRow;
+  return sent;
 }
 
-async function sendClient(auth: Auth, input: SendInput): Promise<EmailRow> {
+async function sendClient(auth: AuthContext, input: SendInput) {
+  requireMutationAccess(auth);
   if (!input.clientId || !input.subject?.trim()) throw new Error("clientId and subject are required");
-  if (!input.text?.trim() && !input.html?.trim()) throw new Error("Email body is required");
-
   const client = await clientFor(auth.db, auth.tenantId, input.clientId);
   if (!client.email || !isEmail(client.email)) throw new Error("Client does not have a valid email address");
 
-  const messageClass = input.messageClass ??
-    (input.campaignId ? "ordinary_campaign_follow_up" : "necessary_scheduling");
+  const messageClass = input.messageClass
+    ?? (input.campaignId ? "ordinary_campaign_follow_up" : "necessary_scheduling");
   await enforcePolicy(
+    auth.db,
     auth.tenantId,
     input.clientId,
     messageClass,
@@ -334,16 +482,13 @@ async function sendClient(auth: Auth, input: SendInput): Promise<EmailRow> {
     input.campaignId,
   );
 
-  return deliver(
-    auth.db,
-    auth,
-    client.email,
-    await settingsFor(auth.db, auth.tenantId),
-    { ...input, messageClass },
-  );
+  const settings = await settingsFor(auth.db, auth.tenantId);
+  const resolved = await resolveDirectEmail(auth, settings, client, { ...input, messageClass });
+  return deliver(auth.db, auth, client.email, settings, resolved);
 }
 
-async function processBulk(auth: Auth, bulkSendId: string) {
+async function processBulk(auth: AuthContext, bulkSendId: string) {
+  requireMutationAccess(auth);
   const { data: log, error } = await auth.db.from("crm_bulk_send_logs")
     .select("*")
     .eq("id", bulkSendId)
@@ -383,6 +528,7 @@ async function processBulk(auth: Auth, bulkSendId: string) {
       if (!email || !isEmail(email)) throw new Error("No valid email address");
       if (clientId) {
         await enforcePolicy(
+          auth.db,
           auth.tenantId,
           clientId,
           "ordinary_promotional",
@@ -390,20 +536,15 @@ async function processBulk(auth: Auth, bulkSendId: string) {
           bulkSendId,
         );
       }
-      await deliver(
-        auth.db,
-        { tenantId: auth.tenantId, userId: auth.userId },
-        email,
-        settings,
-        {
-          clientId,
-          subject: log.subject,
-          html: log.body_html,
-          messageClass: "ordinary_promotional",
-          bulkSendId,
-          source: "bulk",
-        },
-      );
+      await deliver(auth.db, auth, email, settings, {
+        clientId,
+        subject: log.subject,
+        text: log.body_text || "",
+        html: log.body_html || htmlFromText(log.body_text || ""),
+        messageClass: "ordinary_promotional",
+        bulkSendId,
+        source: "bulk",
+      });
       await auth.db.from(table).update({
         status: "sent",
         sent_at: new Date().toISOString(),
@@ -432,21 +573,26 @@ async function processBulk(auth: Auth, bulkSendId: string) {
     failed_count: failed,
     completed_at: new Date().toISOString(),
   }).eq("id", bulkSendId);
-
   return { bulkSendId, sent, failed };
 }
 
-async function testConnection(auth: Auth) {
+async function testConnection(auth: AuthContext, requestId: string) {
+  requireMutationAccess(auth);
   const settings = await settingsFor(auth.db, auth.tenantId, false);
   const from = normalizeEmail(settings.from_email ?? "");
   const inbound = normalizeEmail(settings.inbound_email ?? "");
   if (!isEmail(from) || !isEmail(inbound)) {
+    safeLog("warn", "test_connection_invalid_settings", {
+      requestId,
+      tenantId: auth.tenantId,
+      hasFromEmail: Boolean(from),
+      hasInboundEmail: Boolean(inbound),
+    });
     throw new Error("Valid sender and inbound receiving addresses are required");
   }
 
   const apiKey = Deno.env.get("RESEND_API_KEY") ?? "";
   if (!apiKey) throw new Error("RESEND_API_KEY not configured");
-
   const response = await fetch(`${RESEND_API}/domains`, {
     headers: { authorization: `Bearer ${apiKey}`, "user-agent": USER_AGENT },
   });
@@ -454,24 +600,30 @@ async function testConnection(auth: Auth) {
     data?: Array<{ name?: string; status?: string }>;
     message?: string;
   };
+  safeLog(response.ok ? "info" : "warn", "test_connection_resend_response", {
+    requestId,
+    tenantId: auth.tenantId,
+    status: response.status,
+    fromDomain: from.split("@")[1] ?? null,
+    inboundDomain: inbound.split("@")[1] ?? null,
+    providerMessage: response.ok ? undefined : payload.message,
+  });
   if (!response.ok) throw new Error(payload.message ?? `Resend connection failed: ${response.status}`);
 
   const domains = Array.from(new Set([from.split("@")[1], inbound.split("@")[1]].filter(Boolean)));
   for (const domain of domains) {
     const found = (payload.data ?? []).find((row) => normalizeEmail(row.name ?? "") === domain);
     if (!found) throw new Error(`The ${domain} domain was not found in Resend`);
-    if (found.status !== "verified") {
-      throw new Error(`The ${domain} domain is ${found.status ?? "not verified"} in Resend`);
-    }
+    if (found.status !== "verified") throw new Error(`The ${domain} domain is ${found.status ?? "not verified"} in Resend`);
   }
 
   const verifiedAt = new Date().toISOString();
-  await auth.db.from("crm_resend_email_settings").update({
+  const { error: updateError } = await auth.db.from("crm_resend_email_settings").update({
     connection_status: "connected",
     last_verified_at: verifiedAt,
     updated_at: verifiedAt,
   }).eq("tenant_id", auth.tenantId);
-
+  if (updateError) throw new Error(`Unable to save connection status: ${updateError.message}`);
   return {
     connected: true,
     provider: "resend",
@@ -480,6 +632,7 @@ async function testConnection(auth: Auth) {
     domains,
     domainStatus: "verified",
     verifiedAt,
+    requestId,
   };
 }
 
@@ -489,7 +642,7 @@ async function eventAlreadyExists(db: Db, eventId: string) {
     .eq("provider", "resend")
     .eq("provider_event_id", eventId)
     .maybeSingle();
-  return !!data;
+  return Boolean(data);
 }
 
 async function handleInbound(
@@ -499,20 +652,21 @@ async function handleInbound(
   eventId: string,
   occurredAt: string,
   apiKey: string,
+  requestId: string,
 ) {
   const receivedId = String(data.email_id ?? data.id ?? "");
-  if (!receivedId) return json({ error: "Inbound email ID is missing" }, 400);
+  if (!receivedId) return json({ error: "Inbound email ID is missing", requestId }, 400, requestId);
 
   const response = await fetch(`${RESEND_API}/emails/receiving/${encodeURIComponent(receivedId)}`, {
     headers: { authorization: `Bearer ${apiKey}`, "user-agent": USER_AGENT },
   });
   const content = await response.json().catch(() => ({})) as Record<string, unknown>;
-  if (!response.ok) return json({ error: "Inbound email content could not be retrieved" }, 502);
+  if (!response.ok) return json({ error: "Inbound email content could not be retrieved", requestId }, 502, requestId);
 
   const toEmail = bareEmail(firstAddress(content.to ?? data.to));
   const fromEmail = bareEmail(firstAddress(content.from ?? data.from));
   if (!isEmail(toEmail) || !isEmail(fromEmail)) {
-    return json({ received: true, ignored: true, reason: "invalid_inbound_address" });
+    return json({ received: true, ignored: true, reason: "invalid_inbound_address", requestId }, 200, requestId);
   }
 
   const baseTo = toEmail.replace(/\+crm-[0-9a-f-]{36}(?=@)/i, "");
@@ -522,12 +676,12 @@ async function handleInbound(
     .limit(1)
     .maybeSingle();
   if (!settings?.tenant_id) {
-    return json({ received: true, ignored: true, reason: "tenant_route_not_found" });
+    return json({ received: true, ignored: true, reason: "tenant_route_not_found", requestId }, 200, requestId);
   }
 
   const headers = content.headers;
-  const hintedId = headerValue(headers, "x-crm-email-message-id") ??
-    messageHintFromRecipient(content.to ?? data.to);
+  const hintedId = headerValue(headers, "x-crm-email-message-id")
+    ?? messageHintFromRecipient(content.to ?? data.to);
   const inReplyTo = headerValue(headers, "in-reply-to");
   let outbound: OutboundReplyContext | null = null;
 
@@ -582,8 +736,8 @@ async function handleInbound(
     received_at: occurredAt,
     occurred_at: occurredAt,
   }).select("*").single();
-  if (error?.code === "23505") return json({ received: true, duplicate: true });
-  if (error) return json({ error: error.message }, 500);
+  if (error?.code === "23505") return json({ received: true, duplicate: true, requestId }, 200, requestId);
+  if (error) return json({ error: error.message, requestId }, 500, requestId);
 
   const { error: eventError } = await db.from("crm_email_events").insert({
     tenant_id: settings.tenant_id,
@@ -594,7 +748,7 @@ async function handleInbound(
     occurred_at: occurredAt,
     payload: event,
   });
-  if (eventError && eventError.code !== "23505") return json({ error: eventError.message }, 500);
+  if (eventError && eventError.code !== "23505") return json({ error: eventError.message, requestId }, 500, requestId);
 
   if (clientId) {
     await db.from("crm_activity_events").insert({
@@ -615,31 +769,34 @@ async function handleInbound(
       .eq("tenant_id", settings.tenant_id)
       .eq("client_id", clientId)
       .eq("status", "active");
-    if (active?.length) {
-      const activeIds = active
-        .map((row: { id?: string }) => row.id)
-        .filter((id: string | undefined): id is string => !!id);
-      if (activeIds.length) {
-        await db.from("crm_campaign_enrollments").update({
-          status: "responded",
-          paused_at: occurredAt,
-          pause_reason: "email_response",
-          updated_at: occurredAt,
-        }).in("id", activeIds);
-      }
+    const activeIds = (active ?? []).map((row: { id?: string }) => row.id).filter(Boolean);
+    if (activeIds.length) {
+      await db.from("crm_campaign_enrollments").update({
+        status: "responded",
+        paused_at: occurredAt,
+        pause_reason: "email_response",
+        updated_at: occurredAt,
+      }).in("id", activeIds);
     }
   }
 
-  return json({ received: true, emailMessageId: inbound.id, clientId });
+  return json({ received: true, emailMessageId: inbound.id, clientId, requestId }, 200, requestId);
 }
 
-async function handleWebhook(request: Request) {
+async function handleWebhook(request: Request, requestId: string) {
   const secret = Deno.env.get("RESEND_CRM_WEBHOOK_SECRET") ?? "";
   const apiKey = Deno.env.get("RESEND_API_KEY") ?? "";
   const url = Deno.env.get("SUPABASE_URL") ?? "";
   const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   if (!secret || !apiKey || !url || !service) {
-    return json({ error: "Resend webhook runtime is not configured" }, 503);
+    safeLog("error", "webhook_runtime_not_configured", {
+      requestId,
+      hasWebhookSecret: Boolean(secret),
+      hasApiKey: Boolean(apiKey),
+      hasSupabaseUrl: Boolean(url),
+      hasServiceRoleKey: Boolean(service),
+    });
+    return json({ error: "Resend webhook runtime is not configured", requestId }, 503, requestId);
   }
 
   const rawBody = await request.text();
@@ -647,7 +804,7 @@ async function handleWebhook(request: Request) {
   const timestamp = request.headers.get("svix-timestamp") ?? "";
   const signature = request.headers.get("svix-signature") ?? "";
   if (!eventId || !timestamp || !signature) {
-    return json({ error: "Resend webhook headers are missing" }, 400);
+    return json({ error: "Resend webhook headers are missing", requestId }, 400, requestId);
   }
 
   let event: Record<string, unknown>;
@@ -657,25 +814,31 @@ async function handleWebhook(request: Request) {
       headers: { id: eventId, timestamp, signature },
       webhookSecret: secret,
     }) as unknown as Record<string, unknown>;
-  } catch {
-    return json({ error: "Invalid webhook signature" }, 401);
+  } catch (error) {
+    safeLog("warn", "webhook_signature_invalid", {
+      requestId,
+      eventId,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return json({ error: "Invalid webhook signature", requestId }, 401, requestId);
   }
 
   const db = createClient(url, service, { auth: { persistSession: false } });
   if (await eventAlreadyExists(db, eventId)) {
-    return json({ received: true, duplicate: true });
+    return json({ received: true, duplicate: true, requestId }, 200, requestId);
   }
 
   const type = String(event.type ?? "");
   const data = (event.data && typeof event.data === "object" ? event.data : {}) as Record<string, unknown>;
   const occurredAt = String(event.created_at ?? new Date().toISOString());
+  safeLog("info", "webhook_received", { requestId, eventId, type });
   if (type === "email.received") {
-    return handleInbound(db, event, data, eventId, occurredAt, apiKey);
+    return handleInbound(db, event, data, eventId, occurredAt, apiKey, requestId);
   }
 
   const providerId = String(data.email_id ?? data.id ?? "");
   if (!providerId) {
-    return json({ received: true, ignored: true, reason: "provider_message_id_missing" });
+    return json({ received: true, ignored: true, reason: "provider_message_id_missing", requestId }, 200, requestId);
   }
 
   const { data: message } = await db.from("crm_email_messages")
@@ -684,7 +847,7 @@ async function handleWebhook(request: Request) {
     .eq("provider_message_id", providerId)
     .maybeSingle();
   if (!message) {
-    return json({ received: true, ignored: true, reason: "email_message_not_found" });
+    return json({ received: true, ignored: true, reason: "email_message_not_found", requestId }, 200, requestId);
   }
 
   const { error: eventError } = await db.from("crm_email_events").insert({
@@ -696,8 +859,8 @@ async function handleWebhook(request: Request) {
     occurred_at: occurredAt,
     payload: event,
   });
-  if (eventError?.code === "23505") return json({ received: true, duplicate: true });
-  if (eventError) return json({ error: eventError.message }, 500);
+  if (eventError?.code === "23505") return json({ received: true, duplicate: true, requestId }, 200, requestId);
+  if (eventError) return json({ error: eventError.message, requestId }, 500, requestId);
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   const statusByEvent: Record<string, string> = {
@@ -718,24 +881,29 @@ async function handleWebhook(request: Request) {
   }
 
   await db.from("crm_email_messages").update(updates).eq("id", message.id);
-  return json({ received: true, emailMessageId: message.id, eventType: type });
+  return json({ received: true, emailMessageId: message.id, eventType: type, requestId }, 200, requestId);
 }
 
 Deno.serve(async (request: Request) => {
-  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
+  if (request.method === "OPTIONS") {
+    safeLog("info", "cors_preflight", { requestId });
+    return new Response("ok", { headers: { ...corsHeaders, "x-request-id": requestId } });
+  }
 
   const url = new URL(request.url);
   const action = url.searchParams.get("action");
-  if (action === "webhook") return handleWebhook(request);
+  safeLog("info", "request_started", { requestId, method: request.method, action });
+  if (action === "webhook") return handleWebhook(request, requestId);
 
   let body: SendInput | null = null;
   try {
     if (action === "send") body = await request.json() as SendInput;
   } catch {
-    return json({ error: "Invalid request body" }, 400);
+    return json({ error: "Invalid request body", requestId }, 400, requestId);
   }
 
-  let auth: Auth;
+  let auth: AuthContext;
   try {
     auth = await authenticate(
       request,
@@ -743,26 +911,37 @@ Deno.serve(async (request: Request) => {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "UNAUTHORIZED";
-    return json({ error: message }, message === "FORBIDDEN" ? 403 : 401);
+    safeLog("warn", "authentication_failed", { requestId, action, message });
+    return json({ error: message, requestId }, message === "FORBIDDEN" ? 403 : 401, requestId);
   }
 
   try {
-    if (action === "test-connection") return json(await testConnection(auth));
+    if (action === "test-connection") return json(await testConnection(auth, requestId), 200, requestId);
     if (action === "send") {
-      return json({ success: true, message: await sendClient(auth, body as SendInput) });
+      return json({ success: true, message: await sendClient(auth, body as SendInput), requestId }, 200, requestId);
     }
     if (action === "bulk-send") {
       const bulkSendId = url.searchParams.get("bulkSendId") ?? "";
-      if (!bulkSendId) return json({ error: "bulkSendId required" }, 400);
-      return json(await processBulk(auth, bulkSendId));
+      if (!bulkSendId) return json({ error: "bulkSendId required", requestId }, 400, requestId);
+      return json({ ...(await processBulk(auth, bulkSendId)), requestId }, 200, requestId);
     }
-    return json({ error: "Invalid action" }, 400);
+    return json({ error: "Invalid action", requestId }, 400, requestId);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    safeLog("error", "request_failed", {
+      requestId,
+      action,
+      tenantId: auth.tenantId,
+      message,
+    });
     if (message.startsWith("SUPPRESSED:")) {
-      return json({ error: "Communication suppressed", reason_code: message.slice(11) }, 403);
+      return json({
+        error: "Communication suppressed",
+        reason_code: message.slice(11),
+        requestId,
+      }, 403, requestId);
     }
-    console.error("CRM Resend email function failed:", error);
-    return json({ error: message }, 500);
+    const status = message === "FORBIDDEN" ? 403 : 500;
+    return json({ error: message, requestId }, status, requestId);
   }
 });
