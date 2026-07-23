@@ -4,6 +4,10 @@ import type {
   CapabilityAvailability,
   CapabilityStatus,
 } from '@/domain/relationships/contracts';
+import {
+  createRelationshipImportOperationError,
+  type RelationshipImportOperation,
+} from '@/domain/relationships/import-diagnostics';
 import type { RelationshipImportPreviewResult } from '@/domain/relationships/import-contracts';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
@@ -134,6 +138,24 @@ function replaceCapability(
   return capabilities;
 }
 
+async function runImportOperation<T>(
+  context: {
+    operation: RelationshipImportOperation;
+    previewId?: string;
+    expectedVersion?: number;
+  },
+  action: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await action();
+  } catch (error) {
+    const wrapped = createRelationshipImportOperationError(error, context);
+    // Privacy-safe diagnostics only: no CSV content, normalized rows, or candidate data.
+    console.error('[relationship-import-operation-failed]', wrapped.diagnostic);
+    throw wrapped;
+  }
+}
+
 async function importCapabilities(): Promise<CapabilityAvailability[]> {
   const capabilities = await baseRelationshipsRepository.capabilities();
   try {
@@ -158,62 +180,78 @@ async function importCapabilities(): Promise<CapabilityAvailability[]> {
 }
 
 async function getImportPreview(previewId: string): Promise<RelationshipImportPreviewResult> {
-  await operatingContext();
-  const { data, error } = await importSupabase.rpc('get_relationship_import_preview', {
-    p_import_id: previewId,
+  return runImportOperation({ operation: 'reload', previewId }, async () => {
+    await operatingContext();
+    const { data, error } = await importSupabase.rpc('get_relationship_import_preview', {
+      p_import_id: previewId,
+    });
+    if (error) throw error;
+    return mapRelationshipImportPreview(data);
   });
-  if (error) throw new Error(error.message);
-  return mapRelationshipImportPreview(data);
 }
 
 async function previewImport(
   input: Parameters<RelationshipsRepository['previewImport']>[0],
 ): Promise<RelationshipImportPreviewResult> {
-  const context = await operatingContext();
-  requireMutation(context);
-  const parsed = parseRelationshipImportCsv(input.csv, input.mapping);
-  const { data, error } = await importSupabase.rpc('create_relationship_import_preview', {
-    p_filename: input.filename?.trim() || 'relationship-import.csv',
-    p_source_type: input.sourceType?.trim() || 'csv',
-    p_mapping: input.mapping as unknown as Json,
-    p_headers: parsed.headers,
-    p_rows: parsed.rows as unknown as Json,
+  return runImportOperation({ operation: 'preview' }, async () => {
+    const context = await operatingContext();
+    requireMutation(context);
+    const parsed = parseRelationshipImportCsv(input.csv, input.mapping);
+    const { data, error } = await importSupabase.rpc('create_relationship_import_preview', {
+      p_filename: input.filename?.trim() || 'relationship-import.csv',
+      p_source_type: input.sourceType?.trim() || 'csv',
+      p_mapping: input.mapping as unknown as Json,
+      p_headers: parsed.headers,
+      p_rows: parsed.rows as unknown as Json,
+    });
+    if (error) throw error;
+    return mapRelationshipImportPreview(data);
   });
-  if (error) throw new Error(error.message);
-  return mapRelationshipImportPreview(data);
 }
 
 async function resolveImportConflicts(
   input: Parameters<RelationshipsRepository['resolveImportConflicts']>[0],
 ): Promise<RelationshipImportPreviewResult> {
-  const context = await operatingContext();
-  requireMutation(context);
-  const expectedVersion = input.expectedVersion
-    ?? (await getImportPreview(input.previewId)).version;
-  const { data, error } = await importSupabase.rpc('resolve_relationship_import_conflicts', {
-    p_import_id: input.previewId,
-    p_resolutions: relationshipImportResolutions(input.conflicts),
-    p_expected_version: expectedVersion,
+  return runImportOperation({
+    operation: 'resolve',
+    previewId: input.previewId,
+    expectedVersion: input.expectedVersion,
+  }, async () => {
+    const context = await operatingContext();
+    requireMutation(context);
+    const expectedVersion = input.expectedVersion
+      ?? (await getImportPreview(input.previewId)).version;
+    const { data, error } = await importSupabase.rpc('resolve_relationship_import_conflicts', {
+      p_import_id: input.previewId,
+      p_resolutions: relationshipImportResolutions(input.conflicts),
+      p_expected_version: expectedVersion,
+    });
+    if (error) throw error;
+    return mapRelationshipImportPreview(data);
   });
-  if (error) throw new Error(error.message);
-  return mapRelationshipImportPreview(data);
 }
 
 async function commitImport(
   input: Parameters<RelationshipsRepository['commitImport']>[0],
 ): Promise<{ importId: string }> {
-  const context = await operatingContext();
-  requireMutation(context);
-  const expectedVersion = input.expectedVersion
-    ?? (await getImportPreview(input.previewId)).version;
-  const { data, error } = await importSupabase.rpc('commit_relationship_import', {
-    p_import_id: input.previewId,
-    p_expected_version: expectedVersion,
-    p_idempotency_key: input.idempotencyKey?.trim() || `relationship-import:${input.previewId}`,
+  return runImportOperation({
+    operation: 'commit',
+    previewId: input.previewId,
+    expectedVersion: input.expectedVersion,
+  }, async () => {
+    const context = await operatingContext();
+    requireMutation(context);
+    const expectedVersion = input.expectedVersion
+      ?? (await getImportPreview(input.previewId)).version;
+    const { data, error } = await importSupabase.rpc('commit_relationship_import', {
+      p_import_id: input.previewId,
+      p_expected_version: expectedVersion,
+      p_idempotency_key: input.idempotencyKey?.trim() || `relationship-import:${input.previewId}`,
+    });
+    if (error) throw error;
+    const result = mapRelationshipImportPreview(data);
+    return { importId: result.previewId };
   });
-  if (error) throw new Error(error.message);
-  const result = mapRelationshipImportPreview(data);
-  return { importId: result.previewId };
 }
 
 export const supabaseRelationshipsRepository: RelationshipsRepository = {
