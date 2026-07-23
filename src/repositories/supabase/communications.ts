@@ -37,8 +37,20 @@ type CrmEmailMessageRow = {
   created_at: string;
 };
 
+type UntypedQueryResult = {
+  data: unknown;
+  error: { message: string } | null;
+};
+
+type UntypedQuery = PromiseLike<UntypedQueryResult> & {
+  select: (columns: string) => UntypedQuery;
+  eq: (column: string, value: unknown) => UntypedQuery;
+  order: (column: string, options: { ascending: boolean }) => UntypedQuery;
+  limit: (count: number) => UntypedQuery;
+};
+
 const untypedSupabase = supabase as unknown as {
-  from: (relation: string) => any;
+  from: (relation: string) => UntypedQuery;
 };
 
 function mapEmailStatus(status: string): CommunicationMessage['status'] {
