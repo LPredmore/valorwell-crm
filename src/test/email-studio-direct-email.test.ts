@@ -7,7 +7,9 @@ import {
   renderTemplate,
 } from '../../supabase/functions/crm-resend-email/email-content';
 
-function directDraft(overrides: Partial<EmailContentDraft> = {}): EmailContentDraft {
+type DirectDraft = EmailContentDraft & { mode: 'direct' };
+
+function directDraft(overrides: Partial<Omit<DirectDraft, 'mode'>> = {}): DirectDraft {
   return {
     schemaVersion: 1,
     mode: 'direct',
@@ -29,7 +31,7 @@ function directDraft(overrides: Partial<EmailContentDraft> = {}): EmailContentDr
   };
 }
 
-async function canonicalContent(overrides: Partial<EmailContentDraft> = {}) {
+async function canonicalContent(overrides: Partial<Omit<DirectDraft, 'mode'>> = {}) {
   const draft = directDraft(overrides);
   return { ...draft, renderHash: await createEmailRenderHash(draft) };
 }
