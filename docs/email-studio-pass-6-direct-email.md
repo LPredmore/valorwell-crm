@@ -159,6 +159,19 @@ Repository tests cover:
 
 No test email is sent during implementation or validation.
 
+## Production deployment validation
+
+`crm-resend-email` version 4 is active in Billing Hub with `verify_jwt=false` and is pinned to immutable repository commit `90b02152a6c933668051afe4e50776528de8c8c6` through an ordinary static module import. Supabase therefore resolves and bundles the reviewed function source and its relative canonical-content helper through the normal Deno module path.
+
+The deployed function passed two no-write probes:
+
+- an unauthenticated CRM request returned HTTP `401` with `UNAUTHORIZED`
+- a webhook request without Svix signature headers returned HTTP `400` with `Resend webhook headers are missing`
+
+The database contained zero `manual_email_studio` messages after deployment validation. No test email was sent and neither probe could reach policy evaluation, message insertion, or Resend delivery.
+
+Two experimental runtime-generated packaging variants were briefly deployed while working around connector source-size limits. Both failed at worker startup and were immediately superseded by version 4. Requests handled by those variants failed before authentication or database mutation. The final version uses no runtime-generated module or data URL.
+
 ## Explicit boundaries
 
 Pass 6 does not:
