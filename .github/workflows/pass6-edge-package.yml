@@ -13,41 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
       - uses: denoland/setup-deno@v1
         with:
           deno-version: v2.x
-      - run: npm ci --legacy-peer-deps
-      - name: Build exact deployment wrapper
+      - name: Create immutable deployment entrypoint
         run: |
-          mkdir -p pass6-edge-build pass6-edge-deploy
-          grep -v 'edge-runtime.d.ts' \
-            supabase/functions/crm-resend-email/index.ts \
-            > pass6-edge-build/index.ts
-          cp supabase/functions/crm-resend-email/email-content.ts \
-            pass6-edge-build/email-content.ts
-          npx esbuild pass6-edge-build/index.ts \
-            --bundle \
-            --platform=neutral \
-            --format=esm \
-            --target=es2022 \
-            --external:https://* \
-            --external:npm:* \
-            --external:jsr:* \
-            --minify \
-            --outfile=pass6-edge-build/bundle.js
-          python - <<'PY'
-          import base64
-          from pathlib import Path
-
-          payload = base64.b64encode(Path('pass6-edge-build/bundle.js').read_bytes()).decode('ascii')
-          Path('pass6-edge-deploy/index.ts').write_text(
-              f'await import("data:application/javascript;base64,{payload}");\n',
-              encoding='utf-8',
-          )
-          PY
+          mkdir -p pass6-edge-deploy
+          cat > pass6-edge-deploy/index.ts <<'EOF'
+          import "https://raw.githubusercontent.com/LPredmore/valorwell-crm/90b02152a6c933668051afe4e50776528de8c8c6/supabase/functions/crm-resend-email/index.ts";
+          EOF
       - name: Smoke-test Edge startup and auth boundary
         shell: bash
         run: |
@@ -58,7 +32,7 @@ jobs:
           trap 'kill "$pid" 2>/dev/null || true' EXIT
 
           status=""
-          for _ in {1..45}; do
+          for _ in {1..60}; do
             status=$(curl -sS -o pass6-response.json -w '%{http_code}' \
               'http://127.0.0.1:8000/?action=invalid' || true)
             if [ "$status" = "401" ]; then
