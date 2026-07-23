@@ -1,6 +1,0 @@
--- Live Billing Hub migration marker.
---
--- Rollback-contract testing proved that the legacy crm_has_role helper was not
--- the canonical Email Studio authority. The final capability-view authorization
--- and all lifecycle function definitions are consolidated in the following
--- 20260723184929 migration for safe fresh-database reproduction.
