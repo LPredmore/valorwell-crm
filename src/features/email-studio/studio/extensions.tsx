@@ -12,16 +12,17 @@ export type EmailStudioBlockAttributes = {
   locked: boolean;
 };
 
-function blockAttributes(node: { attrs: Record<string, unknown> }): EmailStudioBlockAttributes {
+function blockAttributes(node: { attrs?: Record<string, unknown> }): EmailStudioBlockAttributes {
+  const attrs = node.attrs ?? {};
   return {
-    kind: String(node.attrs.kind || 'text') as EmailStudioBlockKind,
-    title: String(node.attrs.title || ''),
-    body: String(node.attrs.body || ''),
-    href: String(node.attrs.href || ''),
-    imageUrl: String(node.attrs.imageUrl || ''),
-    altText: String(node.attrs.altText || ''),
-    themeKey: String(node.attrs.themeKey || 'valorwell'),
-    locked: Boolean(node.attrs.locked),
+    kind: String(attrs.kind || 'text') as EmailStudioBlockKind,
+    title: String(attrs.title || ''),
+    body: String(attrs.body || ''),
+    href: String(attrs.href || ''),
+    imageUrl: String(attrs.imageUrl || ''),
+    altText: String(attrs.altText || ''),
+    themeKey: String(attrs.themeKey || 'valorwell'),
+    locked: Boolean(attrs.locked),
   };
 }
 
@@ -210,7 +211,7 @@ export const EmailStudioVariable = EmailNode.create({
   },
 
   renderToReactEmail({ node, style }) {
-    const key = String(node.attrs.key || 'first_name');
+    const key = String(node.attrs?.key || 'first_name');
     return <span style={style}>{`{{${key}}}`}</span>;
   },
 });
