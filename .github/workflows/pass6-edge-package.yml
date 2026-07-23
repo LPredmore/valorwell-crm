@@ -13,8 +13,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci --legacy-peer-deps
+      - name: Bundle validated Edge source
+        run: |
+          mkdir -p pass6-edge-deploy
+          npx esbuild supabase/functions/crm-resend-email/index.ts \
+            --bundle \
+            --platform=neutral \
+            --format=esm \
+            --target=es2022 \
+            --external:https://* \
+            --external:npm:* \
+            --external:jsr:* \
+            --minify \
+            --outfile=pass6-edge-deploy/index.ts
       - uses: actions/upload-artifact@v4
         with:
-          name: pass6-edge-source
-          path: supabase/functions/crm-resend-email
+          name: pass6-edge-deploy
+          path: pass6-edge-deploy/index.ts
           retention-days: 1
