@@ -30,8 +30,21 @@ type ResendSettingsUpdate = Pick<
   'from_name' | 'from_email' | 'reply_to_email' | 'inbound_email'
 >;
 
+type UntypedQueryResult = {
+  data: unknown;
+  error: { message: string } | null;
+};
+
+type UntypedQuery = PromiseLike<UntypedQueryResult> & {
+  select: (columns: string) => UntypedQuery;
+  eq: (column: string, value: unknown) => UntypedQuery;
+  maybeSingle: () => Promise<UntypedQueryResult>;
+  upsert: (values: Record<string, unknown>, options?: { onConflict?: string }) => UntypedQuery;
+  single: () => Promise<UntypedQueryResult>;
+};
+
 const untypedSupabase = supabase as unknown as {
-  from: (relation: string) => any;
+  from: (relation: string) => UntypedQuery;
 };
 
 export function useResendSettings() {
