@@ -1,8 +1,10 @@
 import {
   EMAIL_CONTENT_MODES,
+  getEmailVariablesForScope,
   type EmailContentMode,
   type EmailEditorDocument,
   type EmailEditorNode,
+  type EmailVariableDefinition,
 } from '../contracts';
 
 export const EMAIL_STUDIO_SPIKE_MODES = EMAIL_CONTENT_MODES;
@@ -18,6 +20,17 @@ export type EmailStudioSpikeSnapshot = {
   html: string;
   text: string;
 };
+
+const SPIKE_VARIABLE_KEYS = new Set(['first_name', 'organization_name', 'unsubscribe_url']);
+
+export const EMAIL_STUDIO_SPIKE_VARIABLES = [
+  ...getEmailVariablesForScope('client'),
+  ...getEmailVariablesForScope('relationship'),
+].filter(
+  (variable, index, variables): variable is EmailVariableDefinition =>
+    SPIKE_VARIABLE_KEYS.has(variable.key) &&
+    variables.findIndex((candidate) => candidate.key === variable.key) === index,
+);
 
 export const EMAIL_STUDIO_RENDERING_DECISION = {
   strategy: 'client_export_server_validation' as const,
