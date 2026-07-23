@@ -1,0 +1,20 @@
+name: Pass 6 Edge Source Package
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    if: github.head_ref == 'agent/email-studio-pass-6-direct-email'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pass6-edge-source
+          path: supabase/functions/crm-resend-email
+          retention-days: 1
