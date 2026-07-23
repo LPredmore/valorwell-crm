@@ -2,13 +2,17 @@ import { describe, expect, it } from 'vitest';
 import type { EmailEditorDocument } from '@/features/email-studio/contracts';
 import {
   EMAIL_STUDIO_THEME_KEYS,
+  getEmailStudioBlocksForMode,
+} from '@/features/email-studio/studio/config';
+import {
   createEmailStudioBlockNodeByKind,
   createEmailStudioDocument,
   createEmailStudioPresetDocument,
-  getEmailStudioBlocksForMode,
+} from '@/features/email-studio/studio/documents';
+import {
   isSafeEmailUrl,
   validateEmailStudioEditorDocument,
-} from '@/features/email-studio/studio';
+} from '@/features/email-studio/studio/validation';
 
 describe('shared Email Studio', () => {
   it('exposes the four approved themes', () => {
