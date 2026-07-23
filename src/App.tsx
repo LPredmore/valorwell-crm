@@ -11,7 +11,9 @@ import { CrmLayout } from "./components/crm/layout/CrmLayout";
 import CrmIndex from "./pages/crm/Index";
 import CrmSettings from "./pages/crm/Settings";
 import EmailStudioPage from "./pages/crm/EmailStudioPage";
+import EmailStudioPlaygroundPage from "./pages/crm/EmailStudioPlaygroundPage";
 import EmailStudioSpikePage from "./pages/crm/EmailStudioSpikePage";
+import EmailTemplateEditorPage from "./pages/crm/EmailTemplateEditorPage";
 import CrmCampaignEditor from "./pages/crm/CampaignEditor";
 import CrmCampaignEnrollments from "./pages/crm/CampaignEnrollments";
 import BusinessDevelopmentArchitecture from "./pages/crm/BusinessDevelopmentArchitecture";
@@ -96,6 +98,9 @@ const App = () => (
             <Route path="creator-community-interest" element={<CreatorCommunityInterestQueue />} />
             <Route path="creator-community-interest/:id" element={<CreatorCommunityInterestDetail />} />
             <Route path="email-studio" element={<EmailStudioPage />} />
+            <Route path="email-studio/new" element={<EmailTemplateEditorPage />} />
+            <Route path="email-studio/templates/:id" element={<EmailTemplateEditorPage />} />
+            <Route path="email-studio/playground" element={<EmailStudioPlaygroundPage />} />
             <Route path="email-studio-spike" element={<EmailStudioSpikePage />} />
             <Route path="settings" element={<CrmSettings />} />
             <Route path="canonical" element={<CanonicalDashboard />} />
