@@ -373,7 +373,12 @@ export default function RelationshipImportPage() {
               <CardHeader><CardTitle>4. Resolve and commit</CardTitle><CardDescription>Resolution updates are version-checked. Commit is transactional and idempotent.</CardDescription></CardHeader>
               <CardContent className="space-y-3">
                 {applyResolutions.isError && <p className="text-sm text-destructive">{errorMessage(applyResolutions.error, 'The row resolutions could not be applied.')}</p>}
-                {commitImport.isError && <p className="text-sm text-destructive">{errorMessage(commitImport.error, 'The import could not be committed.')}</p>}
+                {commitImport.isError && (
+                  <div className="space-y-1 rounded-md border border-destructive/40 bg-destructive/5 p-3" role="alert">
+                    <p className="text-sm text-destructive">{errorMessage(commitImport.error, 'The import could not be committed.')}</p>
+                    <p className="text-xs text-muted-foreground">If relationship data changed after this preview was created, return to step 2 and select Create server preview again. Review any newly detected matches before committing the refreshed preview.</p>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-3">
                   <Button type="button" variant="outline" disabled={anyPending || !preview.rows.some((row) => isUnresolved(row) && resolutionDrafts[row.row]?.decision)} onClick={() => applyResolutions.mutate()}>{applyResolutions.isPending ? 'Applying decisions…' : 'Apply selected decisions'}</Button>
                   <Button type="button" disabled={anyPending || preview.status !== 'ready' || preview.conflictCount > 0} onClick={() => commitImport.mutate()}>{commitImport.isPending ? 'Committing import…' : 'Commit import'}</Button>

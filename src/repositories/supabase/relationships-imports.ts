@@ -151,7 +151,6 @@ async function runImportOperation<T>(
   } catch (error) {
     const wrapped = createRelationshipImportOperationError(error, context);
     // Privacy-safe diagnostics only: no CSV content, normalized rows, or candidate data.
-    // eslint-disable-next-line no-console
     console.error('[relationship-import-operation-failed]', wrapped.diagnostic);
     throw wrapped;
   }
