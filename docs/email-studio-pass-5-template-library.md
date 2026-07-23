@@ -18,9 +18,9 @@ The CRM workspace at `/crm/email-studio` now provides:
 
 The following migrations were applied to Billing Hub during implementation:
 
-- `20260723183415_email_studio_template_lifecycle`
-- `20260723184105_email_studio_template_lifecycle_role_order_fix`
-- `20260723184929_email_studio_template_lifecycle_capability_authority`
+- `20260723181941_email_studio_template_lifecycle`
+- `20260723182141_email_studio_template_lifecycle_role_order_fix`
+- `20260723182310_email_studio_template_lifecycle_capability_authority`
 
 The first two versions capture corrections discovered by rollback-only contract testing. The repository keeps marker files for those live migration versions and consolidates the final accepted function definitions in the third file. A fresh database therefore reproduces the final state without temporarily installing rejected authorization assumptions.
 
