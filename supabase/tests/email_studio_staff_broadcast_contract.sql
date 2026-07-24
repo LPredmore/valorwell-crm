@@ -4,6 +4,7 @@ do $$
 declare
   v_tenant constant uuid := '00000000-0000-0000-0000-000000000001';
   v_admin constant uuid := 'd2dc0624-1e71-49d6-8b04-76cf1e822074';
+  v_unauthorized constant uuid := '00000000-0000-0000-0000-000000000099';
   v_staff uuid;
   v_bulk uuid;
   v_recipient uuid;
@@ -95,13 +96,13 @@ begin
   end;
   if not v_rejected then raise exception 'New legacy staff bulk-send creation was not blocked'; end if;
 
-  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claim.sub', v_unauthorized::text, true);
   v_rejected := false;
   begin
     perform public.crm_create_bulk_staff_broadcast(v_tenant, array[v_staff], 'Unauthorized', v_content);
   exception when insufficient_privilege then v_rejected := true;
   end;
-  if not v_rejected then raise exception 'Unauthenticated staff broadcast creation was accepted'; end if;
+  if not v_rejected then raise exception 'Unauthorized staff broadcast creation was accepted'; end if;
 end;
 $$;
 
