@@ -95,10 +95,6 @@ export interface OperationalException {
   }[];
 }
 
-/**
- * Canonical message-class vocabulary — MUST mirror the backend enum used by
- * `crm_evaluate_communication_policy` and the suppression edge helper.
- */
 export type CanonicalMessageClass =
   | 'ordinary_promotional'
   | 'ordinary_campaign_follow_up'
@@ -113,7 +109,6 @@ export interface CommunicationPolicyResult {
   allowed: boolean;
   requiresReview: boolean;
   reasons: string[];
-  /** Backend reason code (see REASON_COPY in PolicyAwareComposer) or a legacy code. */
   suppressionCode?: string;
 }
 
@@ -211,6 +206,7 @@ export interface StaffMember {
   displayName: string;
   role: 'admin' | 'clinician' | 'operations' | 'staff';
   status: 'Active' | 'On Leave' | 'Inactive';
+  lifecycleStatus?: 'Invited' | 'New' | 'Active' | 'Inactive';
   states: string[];
   email: string;
   phone?: string;
@@ -224,9 +220,7 @@ export interface AuditEvent {
   id: string;
   tenantId: string;
   clientId?: string;
-  /** Stable machine identifier (matches crm_client_state_audit.dimension). */
   eventType: string;
-  /** Human-readable label derived from eventType — safe to change without breaking filters. */
   eventLabel: string;
   previousValue?: string | null;
   newValue?: string | null;

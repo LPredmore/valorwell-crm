@@ -85,7 +85,7 @@ export function validateEmailStudioEditorDocument(
     }
   });
 
-  if (mode === 'newsletter' && complianceFooterCount === 0) {
+  if (mode === 'newsletter' && scope !== 'staff' && complianceFooterCount === 0) {
     issues.push(error(
       'missing_compliance_footer',
       'Newsletter mode requires a compliance footer before export.',
@@ -105,7 +105,13 @@ export function validateEmailStudioEditorDocument(
     ));
   }
 
-  if (complianceFooterCount > 1) {
+  if (scope === 'staff' && complianceFooterCount > 0) {
+    issues.push(warning(
+      'staff_compliance_footer_unnecessary',
+      'Internal staff broadcasts do not require a promotional unsubscribe footer.',
+      'editorDocument',
+    ));
+  } else if (complianceFooterCount > 1) {
     issues.push(warning(
       'duplicate_compliance_footer',
       'Only one compliance footer is normally needed.',

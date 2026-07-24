@@ -41,6 +41,11 @@ function mapStatus(s: string | null | undefined): StaffMember['status'] {
   return 'Active';
 }
 
+function mapLifecycleStatus(value: string | null | undefined): StaffMember['lifecycleStatus'] {
+  if (value === 'Invited' || value === 'New' || value === 'Active' || value === 'Inactive') return value;
+  return undefined;
+}
+
 async function buildStaff(rows: StaffRow[]): Promise<StaffMember[]> {
   if (!rows.length) return [];
   const profileIds = Array.from(new Set(rows.map((r) => r.profile_id)));
@@ -62,7 +67,6 @@ async function buildStaff(rows: StaffRow[]): Promise<StaffMember[]> {
   );
   const roleByProfile = new Map<string, string>();
   for (const r of rolesRes.data ?? []) {
-    // prefer higher-privilege roles
     const existing = roleByProfile.get(r.user_id);
     const next = r.role;
     if (!existing || next === 'admin') roleByProfile.set(r.user_id, next);
@@ -96,6 +100,7 @@ async function buildStaff(rows: StaffRow[]): Promise<StaffMember[]> {
       displayName: display,
       role,
       status: mapStatus(r.prov_status),
+      lifecycleStatus: mapLifecycleStatus(r.prov_status),
       states: r.prov_state ? [r.prov_state] : [],
       email: (r.profile_id && emailByProfile.get(r.profile_id)) || '',
       phone: r.prov_phone ?? undefined,
