@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useResendSettings } from '@/hooks/crm/useResendSettings';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,12 +16,14 @@ export function ResendConfigPanel() {
   const [fromEmail, setFromEmail] = useState('');
   const [replyToEmail, setReplyToEmail] = useState('');
   const [inboundEmail, setInboundEmail] = useState('');
+  const [postalAddress, setPostalAddress] = useState('');
 
   useEffect(() => {
     setFromName(settings?.from_name ?? '');
     setFromEmail(settings?.from_email ?? '');
     setReplyToEmail(settings?.reply_to_email ?? '');
     setInboundEmail(settings?.inbound_email ?? '');
+    setPostalAddress(settings?.postal_address ?? '');
   }, [settings]);
 
   const handleTestConnection = async () => {
@@ -46,10 +49,11 @@ export function ResendConfigPanel() {
         from_email: fromEmail.trim().toLowerCase() || null,
         reply_to_email: replyToEmail.trim().toLowerCase() || null,
         inbound_email: inboundEmail.trim().toLowerCase() || null,
+        postal_address: postalAddress.trim() || null,
       });
       toast({
         title: 'Settings saved',
-        description: 'Resend sender and reply routing settings were updated. Re-test before sending.',
+        description: 'Resend sender, reply routing, and newsletter compliance settings were updated. Re-test before sending.',
       });
     } catch (error) {
       toast({
@@ -99,11 +103,7 @@ export function ResendConfigPanel() {
             disabled={testConnection.isPending || !fromEmail.trim() || !inboundEmail.trim()}
             variant={isConnected ? 'outline' : 'default'}
           >
-            {testConnection.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
+            {testConnection.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
             {isConnected ? 'Re-test' : 'Test connection'}
           </Button>
         </div>
@@ -111,51 +111,33 @@ export function ResendConfigPanel() {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="resend-from-name">From name</Label>
-            <Input
-              id="resend-from-name"
-              placeholder="ValorWell Support"
-              value={fromName}
-              onChange={(event) => setFromName(event.target.value)}
-            />
+            <Input id="resend-from-name" placeholder="ValorWell Support" value={fromName} onChange={(event) => setFromName(event.target.value)} />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="resend-from-email">From email</Label>
-            <Input
-              id="resend-from-email"
-              type="email"
-              placeholder="support@valorwell.org"
-              value={fromEmail}
-              onChange={(event) => setFromEmail(event.target.value)}
-            />
+            <Input id="resend-from-email" type="email" placeholder="support@valorwell.org" value={fromEmail} onChange={(event) => setFromEmail(event.target.value)} />
             <p className="text-xs text-muted-foreground">The domain must be verified in Resend.</p>
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="resend-reply-to">Reply-to email</Label>
-            <Input
-              id="resend-reply-to"
-              type="email"
-              placeholder="support@reply.valorwell.org"
-              value={replyToEmail}
-              onChange={(event) => setReplyToEmail(event.target.value)}
-            />
+            <Input id="resend-reply-to" type="email" placeholder="support@reply.valorwell.org" value={replyToEmail} onChange={(event) => setReplyToEmail(event.target.value)} />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="resend-inbound-email">Inbound receiving address</Label>
-            <Input
-              id="resend-inbound-email"
-              type="email"
-              placeholder="support@reply.valorwell.org"
-              value={inboundEmail}
-              onChange={(event) => setInboundEmail(event.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Resend Receiving and the CRM webhook must route this address into the CRM inbox.
-            </p>
+            <Input id="resend-inbound-email" type="email" placeholder="support@reply.valorwell.org" value={inboundEmail} onChange={(event) => setInboundEmail(event.target.value)} />
+            <p className="text-xs text-muted-foreground">Resend Receiving and the CRM webhook must route this address into the CRM inbox.</p>
           </div>
-
+          <div className="space-y-2">
+            <Label htmlFor="resend-postal-address">Organization mailing address</Label>
+            <Textarea
+              id="resend-postal-address"
+              value={postalAddress}
+              onChange={(event) => setPostalAddress(event.target.value)}
+              placeholder="Complete physical mailing address used in promotional email footers"
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">Required before Newsletter-mode bulk email can be sent. Enter the verified address exactly as it should appear to recipients.</p>
+          </div>
           <Button onClick={handleSaveSettings} disabled={updateSettings.isPending}>
             {updateSettings.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save settings
@@ -172,20 +154,10 @@ export function ResendConfigPanel() {
 
 function ConnectionStatusBadge({ status }: { status: string }) {
   if (status === 'connected') {
-    return (
-      <Badge variant="default">
-        <CheckCircle className="mr-1 h-3 w-3" />
-        Connected
-      </Badge>
-    );
+    return <Badge variant="default"><CheckCircle className="mr-1 h-3 w-3" />Connected</Badge>;
   }
   if (status === 'error') {
-    return (
-      <Badge variant="destructive">
-        <XCircle className="mr-1 h-3 w-3" />
-        Error
-      </Badge>
-    );
+    return <Badge variant="destructive"><XCircle className="mr-1 h-3 w-3" />Error</Badge>;
   }
   return <Badge variant="secondary">Disconnected</Badge>;
 }
