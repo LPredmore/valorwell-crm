@@ -1,6 +1,8 @@
-export type CanonicalDirectEmailContent = {
+export type CanonicalClientEmailMode = "direct" | "newsletter";
+
+export type CanonicalClientEmailContent = {
   schemaVersion: number;
-  mode: "direct";
+  mode: CanonicalClientEmailMode;
   editorDocument: Record<string, unknown>;
   renderedHtml: string;
   renderedText: string;
@@ -9,9 +11,14 @@ export type CanonicalDirectEmailContent = {
   renderHash: string;
 };
 
-export type DirectEmailVariableValues = Partial<Record<DirectEmailVariableKey, string>>;
+export type CanonicalDirectEmailContent = CanonicalClientEmailContent & { mode: "direct" };
+export type CanonicalNewsletterEmailContent = CanonicalClientEmailContent & { mode: "newsletter" };
 
-export type PreparedDirectEmail = {
+export type ClientEmailVariableValues = Partial<Record<ClientEmailVariableKey, string>>;
+export type DirectEmailVariableValues = ClientEmailVariableValues;
+
+export type PreparedClientEmail = {
+  mode: CanonicalClientEmailMode;
   subject: string;
   html: string;
   text: string;
@@ -21,7 +28,10 @@ export type PreparedDirectEmail = {
   themeKey: string;
 };
 
-type DirectEmailVariableKey =
+export type PreparedDirectEmail = PreparedClientEmail & { mode: "direct" };
+export type PreparedNewsletterEmail = PreparedClientEmail & { mode: "newsletter" };
+
+type ClientEmailVariableKey =
   | "first_name"
   | "preferred_name"
   | "last_name"
@@ -31,7 +41,7 @@ type DirectEmailVariableKey =
   | "postal_address";
 
 type VariableDefinition = {
-  key: DirectEmailVariableKey;
+  key: ClientEmailVariableKey;
   valueType: "text" | "url";
 };
 
@@ -52,9 +62,26 @@ const HASH_PATTERN = /^(sha256:[0-9a-f]{64}|fnv1a32:[0-9a-f]{8})$/;
 export async function prepareDirectEmailDelivery(input: {
   subjectTemplate: string;
   content: unknown;
-  values: DirectEmailVariableValues;
+  values: ClientEmailVariableValues;
 }): Promise<PreparedDirectEmail> {
-  const content = parseCanonicalDirectEmailContent(input.content);
+  return prepareCanonicalClientEmailDelivery({ ...input, expectedMode: "direct" }) as Promise<PreparedDirectEmail>;
+}
+
+export async function prepareNewsletterEmailDelivery(input: {
+  subjectTemplate: string;
+  content: unknown;
+  values: ClientEmailVariableValues;
+}): Promise<PreparedNewsletterEmail> {
+  return prepareCanonicalClientEmailDelivery({ ...input, expectedMode: "newsletter" }) as Promise<PreparedNewsletterEmail>;
+}
+
+export async function prepareCanonicalClientEmailDelivery(input: {
+  subjectTemplate: string;
+  content: unknown;
+  values: ClientEmailVariableValues;
+  expectedMode: CanonicalClientEmailMode;
+}): Promise<PreparedClientEmail> {
+  const content = parseCanonicalClientEmailContent(input.content, input.expectedMode);
   const expectedHash = await createCanonicalEmailRenderHash(content);
   if (expectedHash !== content.renderHash) {
     throw new Error("CANONICAL_RENDER_HASH_MISMATCH");
@@ -78,6 +105,7 @@ export async function prepareDirectEmailDelivery(input: {
   if (!html.trim() || !text.trim()) throw new Error("CANONICAL_EMAIL_BODY_REQUIRED");
 
   return {
+    mode: content.mode,
     subject,
     html: prependHiddenPreheader(html, preheader),
     text,
@@ -89,11 +117,27 @@ export async function prepareDirectEmailDelivery(input: {
 }
 
 export function parseCanonicalDirectEmailContent(value: unknown): CanonicalDirectEmailContent {
+  return parseCanonicalClientEmailContent(value, "direct") as CanonicalDirectEmailContent;
+}
+
+export function parseCanonicalNewsletterEmailContent(value: unknown): CanonicalNewsletterEmailContent {
+  return parseCanonicalClientEmailContent(value, "newsletter") as CanonicalNewsletterEmailContent;
+}
+
+export function parseCanonicalClientEmailContent(
+  value: unknown,
+  expectedMode?: CanonicalClientEmailMode,
+): CanonicalClientEmailContent {
   if (!isRecord(value)) throw new Error("CANONICAL_CONTENT_REQUIRED");
   if (!Number.isInteger(value.schemaVersion) || Number(value.schemaVersion) < 1) {
     throw new Error("CANONICAL_SCHEMA_VERSION_INVALID");
   }
-  if (value.mode !== "direct") throw new Error("CANONICAL_MODE_MUST_BE_DIRECT");
+  if (value.mode !== "direct" && value.mode !== "newsletter") {
+    throw new Error("CANONICAL_MODE_INVALID");
+  }
+  if (expectedMode && value.mode !== expectedMode) {
+    throw new Error(`CANONICAL_MODE_MUST_BE_${expectedMode.toUpperCase()}`);
+  }
   if (!isRecord(value.editorDocument)
       || value.editorDocument.type !== "doc"
       || !Array.isArray(value.editorDocument.content)) {
@@ -117,7 +161,7 @@ export function parseCanonicalDirectEmailContent(value: unknown): CanonicalDirec
 
   return {
     schemaVersion: Number(value.schemaVersion),
-    mode: "direct",
+    mode: value.mode,
     editorDocument: value.editorDocument,
     renderedHtml: value.renderedHtml,
     renderedText: value.renderedText,
@@ -130,7 +174,7 @@ export function parseCanonicalDirectEmailContent(value: unknown): CanonicalDirec
 }
 
 export async function createCanonicalEmailRenderHash(
-  content: Omit<CanonicalDirectEmailContent, "renderHash"> | CanonicalDirectEmailContent,
+  content: Omit<CanonicalClientEmailContent, "renderHash"> | CanonicalClientEmailContent,
 ): Promise<string> {
   const serialized = stableSerialize({
     schemaVersion: content.schemaVersion,
@@ -169,7 +213,7 @@ export function stableSerialize(value: unknown): string {
 
 export function validateTemplateVariables(
   templates: readonly string[],
-  values: DirectEmailVariableValues,
+  values: ClientEmailVariableValues,
 ): void {
   const unknown = new Set<string>();
   const missing = new Set<string>();
@@ -178,7 +222,7 @@ export function validateTemplateVariables(
   for (const template of templates) {
     for (const match of template.matchAll(TOKEN_PATTERN)) {
       const rawKey = match[1];
-      const key = rawKey as DirectEmailVariableKey;
+      const key = rawKey as ClientEmailVariableKey;
       const definition = VARIABLE_BY_KEY.get(key);
       if (!definition) {
         unknown.add(rawKey);
@@ -201,22 +245,25 @@ export function validateTemplateVariables(
   if (invalid.size) throw new Error(`INVALID_EMAIL_VARIABLE:${Array.from(invalid).sort().join(",")}`);
 }
 
-export function renderTemplate(
+export function renderEmailTemplate(
   template: string,
-  values: DirectEmailVariableValues,
+  values: ClientEmailVariableValues,
   outputFormat: "html" | "text",
 ): string {
   validateTemplateVariables([template], values);
   return renderTemplateUnchecked(template, values, outputFormat);
 }
 
+/** Backwards-compatible export retained for existing Direct-email tests and callers. */
+export const renderTemplate = renderEmailTemplate;
+
 function renderTemplateUnchecked(
   template: string,
-  values: DirectEmailVariableValues,
+  values: ClientEmailVariableValues,
   outputFormat: "html" | "text",
 ): string {
   return template.replace(TOKEN_PATTERN, (_token, rawKey: string) => {
-    const key = rawKey as DirectEmailVariableKey;
+    const key = rawKey as ClientEmailVariableKey;
     const value = values[key] ?? "";
     return outputFormat === "html" ? escapeHtml(value) : value;
   });

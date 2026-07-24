@@ -71,6 +71,7 @@ export type PublishedDirectEmailTemplate = {
 
 export type PublishedClientCampaignTemplate = PublishedDirectEmailTemplate;
 export type PublishedRelationshipCampaignTemplate = PublishedDirectEmailTemplate;
+export type PublishedClientNewsletterTemplate = PublishedDirectEmailTemplate;
 
 export type EmailTemplateMetadata = {
   name: string;

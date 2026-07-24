@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCanonicalClients } from '@/hooks/canonical/useCanonicalClients';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import {
   ENGAGEMENT_STATES,
   ELIGIBILITY_STATES,
   displayName,
+  type CanonicalClient,
   type LifecycleStage,
   type EngagementState,
   type EligibilityState,
@@ -17,12 +18,17 @@ import {
 import { LifecycleBadge, EngagementBadge, EligibilityBadge, ContactPolicyBadge, AtRiskBadge } from '@/components/crm/canonical/StateBadges';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Filter, LayoutGrid, List, Search } from 'lucide-react';
+import { Filter, LayoutGrid, List, Mail, Search } from 'lucide-react';
+import { useCanMutate } from '@/hooks/crm/useCanMutate';
+import { BulkNewsletterDialog } from '@/components/crm/canonical/BulkNewsletterDialog';
 
 export default function CanonicalClients() {
   const [params, setParams] = useSearchParams();
   const [view, setView] = useState<'table' | 'kanban'>('table');
   const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [newsletterOpen, setNewsletterOpen] = useState(false);
+  const canCommunicate = useCanMutate([], 'communicate');
   const lifecycle = params.getAll('lifecycle') as LifecycleStage[];
   const engagement = params.getAll('engagement') as EngagementState[];
   const eligibility = params.getAll('eligibility') as EligibilityState[];
@@ -38,6 +44,15 @@ export default function CanonicalClients() {
   };
 
   const { data, isLoading } = useCanonicalClients(query);
+  const eligibleRows = useMemo(
+    () => (data?.rows ?? []).filter(isNewsletterEligible),
+    [data?.rows],
+  );
+  const selectedClients = useMemo(
+    () => (data?.rows ?? []).filter((client) => selectedIds.has(client.id)),
+    [data?.rows, selectedIds],
+  );
+  const allEligibleSelected = eligibleRows.length > 0 && eligibleRows.every((client) => selectedIds.has(client.id));
 
   const toggleParam = (key: string, value: string) => {
     const cur = params.getAll(key);
@@ -47,14 +62,38 @@ export default function CanonicalClients() {
     setParams(params);
   };
 
+  const toggleSelected = (clientId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(clientId)) next.delete(clientId);
+      else next.add(clientId);
+      return next;
+    });
+  };
+
+  const toggleAllEligible = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allEligibleSelected) eligibleRows.forEach((client) => next.delete(client.id));
+      else eligibleRows.forEach((client) => next.add(client.id));
+      return next;
+    });
+  };
+
   return (
     <div className="space-y-4 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Clients</h1>
           <p className="text-sm text-muted-foreground">{data?.total ?? 0} canonical records</p>
         </div>
         <div className="flex items-center gap-2">
+          {canCommunicate ? (
+            <Button onClick={() => setNewsletterOpen(true)} disabled={selectedClients.length === 0}>
+              <Mail className="mr-2 h-4 w-4" />
+              Compose newsletter{selectedClients.length ? ` · ${selectedClients.length}` : ''}
+            </Button>
+          ) : null}
           <div className="flex rounded-md border">
             <Button variant={view === 'table' ? 'secondary' : 'ghost'} size="sm" onClick={() => setView('table')}><List className="h-4 w-4" /></Button>
             <Button variant={view === 'kanban' ? 'secondary' : 'ghost'} size="sm" onClick={() => setView('kanban')}><LayoutGrid className="h-4 w-4" /></Button>
@@ -83,6 +122,16 @@ export default function CanonicalClients() {
           <Table>
             <TableHeader>
               <TableRow>
+                {canCommunicate ? (
+                  <TableHead className="w-10">
+                    <Checkbox
+                      aria-label="Select all newsletter-eligible clients on this page"
+                      checked={allEligibleSelected}
+                      onCheckedChange={toggleAllEligible}
+                      disabled={eligibleRows.length === 0}
+                    />
+                  </TableHead>
+                ) : null}
                 <TableHead>Client</TableHead>
                 <TableHead>Lifecycle</TableHead>
                 <TableHead>Engagement</TableHead>
@@ -93,21 +142,35 @@ export default function CanonicalClients() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>}
-              {data?.rows.map(c => (
-                <TableRow key={c.id} className="cursor-pointer">
-                  <TableCell>
-                    <Link to={`/crm/canonical/clients/${c.id}`} className="font-medium hover:underline">{displayName(c)}</Link>
-                    <div className="text-xs text-muted-foreground">{c.email ?? c.phone ?? '—'}</div>
-                  </TableCell>
-                  <TableCell><LifecycleBadge v={c.lifecycle} /></TableCell>
-                  <TableCell><EngagementBadge v={c.engagement} /></TableCell>
-                  <TableCell><EligibilityBadge v={c.eligibility} /></TableCell>
-                  <TableCell className="space-x-1"><ContactPolicyBadge v={c.contactPolicy} /></TableCell>
-                  <TableCell><AtRiskBadge r={c.risk} /></TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{c.lastContactAt ? new Date(c.lastContactAt).toLocaleDateString() : '—'}</TableCell>
-                </TableRow>
-              ))}
+              {isLoading && <TableRow><TableCell colSpan={canCommunicate ? 8 : 7} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>}
+              {data?.rows.map(c => {
+                const eligible = isNewsletterEligible(c);
+                return (
+                  <TableRow key={c.id} className="cursor-pointer">
+                    {canCommunicate ? (
+                      <TableCell>
+                        <Checkbox
+                          aria-label={`Select ${displayName(c)} for newsletter`}
+                          checked={selectedIds.has(c.id)}
+                          onCheckedChange={() => toggleSelected(c.id)}
+                          disabled={!eligible}
+                          title={eligible ? 'Select for newsletter' : newsletterIneligibleReason(c)}
+                        />
+                      </TableCell>
+                    ) : null}
+                    <TableCell>
+                      <Link to={`/crm/canonical/clients/${c.id}`} className="font-medium hover:underline">{displayName(c)}</Link>
+                      <div className="text-xs text-muted-foreground">{c.email ?? c.phone ?? '—'}</div>
+                    </TableCell>
+                    <TableCell><LifecycleBadge v={c.lifecycle} /></TableCell>
+                    <TableCell><EngagementBadge v={c.engagement} /></TableCell>
+                    <TableCell><EligibilityBadge v={c.eligibility} /></TableCell>
+                    <TableCell className="space-x-1"><ContactPolicyBadge v={c.contactPolicy} /></TableCell>
+                    <TableCell><AtRiskBadge r={c.risk} /></TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{c.lastContactAt ? new Date(c.lastContactAt).toLocaleDateString() : '—'}</TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </Card>
@@ -136,8 +199,30 @@ export default function CanonicalClients() {
           })}
         </div>
       )}
+
+      <BulkNewsletterDialog
+        open={newsletterOpen}
+        onOpenChange={setNewsletterOpen}
+        clients={selectedClients}
+        onComplete={() => setSelectedIds(new Set())}
+      />
     </div>
   );
+}
+
+function isNewsletterEligible(client: CanonicalClient): boolean {
+  return Boolean(client.email?.trim())
+    && client.contactPolicy === 'Contact Allowed'
+    && client.servicePolicy === 'Service Allowed'
+    && client.lifecycle !== 'Closed';
+}
+
+function newsletterIneligibleReason(client: CanonicalClient): string {
+  if (!client.email?.trim()) return 'No email address';
+  if (client.contactPolicy === 'Do Not Contact') return 'Do Not Contact';
+  if (client.servicePolicy === 'Service Blocked') return 'Service Blocked';
+  if (client.lifecycle === 'Closed') return 'Closed clients are excluded from ordinary promotional outreach';
+  return 'Not eligible for newsletter outreach';
 }
 
 function FilterMenu<T extends string>({ label, options, selected, onToggle }: { label: string; options: readonly T[]; selected: string[]; onToggle: (v: T) => void }) {

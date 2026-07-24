@@ -9,6 +9,7 @@ export interface ResendSettings {
   from_email: string | null;
   reply_to_email: string | null;
   inbound_email: string | null;
+  postal_address: string | null;
   connection_status: 'disconnected' | 'connected' | 'error';
   last_verified_at: string | null;
   created_at: string;
@@ -27,7 +28,7 @@ interface TestConnectionResult {
 
 type ResendSettingsUpdate = Pick<
   ResendSettings,
-  'from_name' | 'from_email' | 'reply_to_email' | 'inbound_email'
+  'from_name' | 'from_email' | 'reply_to_email' | 'inbound_email' | 'postal_address'
 >;
 
 type UntypedQueryResult = {
