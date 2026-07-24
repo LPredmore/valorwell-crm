@@ -53,17 +53,10 @@ export async function prepareCampaignEmail(input: {
 }): Promise<PreparedCampaignEmail> {
   const { step, values } = input;
   const isCanonical = step.editorDocument !== null && step.editorDocument !== undefined;
-  const templates = [
-    step.subjectTemplate,
-    step.renderedHtml,
-    step.renderedText || "",
-    step.preheader || "",
-  ];
-  validateVariables(templates, values);
 
   if (!isCanonical) {
-    const subject = render(step.subjectTemplate || "Message from your care team", values, "text");
-    const html = render(step.renderedHtml || "", values, "html");
+    const subject = renderLegacy(step.subjectTemplate || "Message from your care team", values, "text");
+    const html = renderLegacy(step.renderedHtml || "", values, "html");
     if (!html.trim()) throw new Error("EMAIL_BODY_REQUIRED");
     return {
       canonical: false,
@@ -76,6 +69,14 @@ export async function prepareCampaignEmail(input: {
       themeKey: null,
     };
   }
+
+  const templates = [
+    step.subjectTemplate,
+    step.renderedHtml,
+    step.renderedText || "",
+    step.preheader || "",
+  ];
+  validateVariables(templates, values);
 
   if (step.contentMode !== "campaign") throw new Error("CANONICAL_MODE_MUST_BE_CAMPAIGN");
   if (!isEditorDocument(step.editorDocument)) throw new Error("CANONICAL_EDITOR_DOCUMENT_INVALID");
@@ -196,6 +197,16 @@ function render(template: string, values: ClientCampaignVariableValues, format: 
   });
 }
 
+function renderLegacy(template: string, values: ClientCampaignVariableValues, format: "html" | "text") {
+  return template.replace(TOKEN_PATTERN, (token, rawKey: string) => {
+    const key = rawKey as ClientCampaignVariableKey;
+    if (!VARIABLE_KEYS.has(key)) return token;
+    const value = values[key];
+    if (value === undefined) return token;
+    return format === "html" ? escapeHtml(value) : value;
+  });
+}
+
 function prependHiddenPreheader(html: string, preheader: string | null) {
   if (!preheader?.trim()) return html;
   return `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">${escapeHtml(preheader)}</div>${html}`;
@@ -222,7 +233,7 @@ function isSafeUrl(value: string) {
 }
 
 function escapeHtml(value: string) {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 function escapeAttribute(value: string) {
