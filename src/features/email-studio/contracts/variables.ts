@@ -4,7 +4,7 @@ import {
   type EmailValidationResult,
 } from './document';
 
-export type EmailContentScope = 'client' | 'relationship';
+export type EmailContentScope = 'client' | 'relationship' | 'staff';
 export type EmailVariableScope = EmailContentScope | 'system';
 export type EmailVariableValueType = 'text' | 'url';
 
@@ -37,6 +37,14 @@ export const RELATIONSHIP_EMAIL_VARIABLES = [
   variable('sender_name', 'Sender name', 'relationship', 'text', 'Luke Predmore', 'Approved relationship-outreach sender name.'),
 ] as const satisfies readonly EmailVariableDefinitionBase[];
 
+export const STAFF_EMAIL_VARIABLES = [
+  variable('staff_first_name', 'Staff first name', 'staff', 'text', 'Morgan', 'Canonical staff first name.'),
+  variable('staff_last_name', 'Staff last name', 'staff', 'text', 'Lee', 'Canonical staff last name.'),
+  variable('staff_display_name', 'Staff display name', 'staff', 'text', 'Morgan Lee', 'Best available staff display name.'),
+  variable('staff_role', 'Staff role', 'staff', 'text', 'Clinician', 'Current internal staff role.'),
+  variable('sender_name', 'Sender name', 'staff', 'text', 'ValorWell Operations', 'Approved internal sender name.'),
+] as const satisfies readonly EmailVariableDefinitionBase[];
+
 export const SYSTEM_EMAIL_VARIABLES = [
   variable('unsubscribe_url', 'Unsubscribe URL', 'system', 'url', 'https://crm.valorwell.org/unsubscribe/example', 'Recipient-specific unsubscribe URL.'),
   variable('postal_address', 'Postal address', 'system', 'text', 'ValorWell, Lee’s Summit, Missouri', 'Approved physical mailing address.'),
@@ -45,6 +53,7 @@ export const SYSTEM_EMAIL_VARIABLES = [
 export const EMAIL_VARIABLES = [
   ...CLIENT_EMAIL_VARIABLES,
   ...RELATIONSHIP_EMAIL_VARIABLES,
+  ...STAFF_EMAIL_VARIABLES,
   ...SYSTEM_EMAIL_VARIABLES,
 ] as const;
 
@@ -59,6 +68,7 @@ export const LEGACY_EMAIL_VARIABLE_ALIASES = {
     unsubscribe_link: 'unsubscribe_url',
     valorwell_postal_address: 'postal_address',
   },
+  staff: {},
 } as const satisfies Record<EmailContentScope, Record<string, EmailVariableKey>>;
 
 export type EmailVariableResolution = {
@@ -77,6 +87,7 @@ export type EmailTemplateRenderResult = {
 const TOKEN_PATTERN = /{{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*}}/g;
 
 export function getEmailVariablesForScope(scope: EmailContentScope): readonly EmailVariableDefinition[] {
+  if (scope === 'staff') return [...STAFF_EMAIL_VARIABLES];
   const scoped = scope === 'client' ? CLIENT_EMAIL_VARIABLES : RELATIONSHIP_EMAIL_VARIABLES;
   return [...scoped, ...SYSTEM_EMAIL_VARIABLES];
 }

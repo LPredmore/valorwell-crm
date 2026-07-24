@@ -59,7 +59,9 @@ export function createEmailStudioDocument(input: {
   const themeKey = input.themeKey || 'valorwell';
   const firstName = input.scope === 'client'
     ? variable('first_name', 'Client first name')
-    : variable('contact_first_name', 'Contact first name');
+    : input.scope === 'staff'
+      ? variable('staff_first_name', 'Staff first name')
+      : variable('contact_first_name', 'Contact first name');
 
   if (input.mode === 'direct') {
     return {
@@ -83,7 +85,24 @@ export function createEmailStudioDocument(input: {
         paragraph(text('This campaign message uses structured content that remains readable in HTML and plain text.')),
         createEmailStudioBlockNodeByKind('callout', themeKey),
         createEmailStudioBlockNodeByKind('cta', themeKey),
-        createEmailStudioBlockNodeByKind('compliance-footer', themeKey),
+        ...(input.scope === 'staff' ? [] : [createEmailStudioBlockNodeByKind('compliance-footer', themeKey)]),
+      ],
+    };
+  }
+
+  if (input.scope === 'staff') {
+    return {
+      type: 'doc',
+      content: [
+        createEmailStudioBlockNodeByKind('hero', themeKey),
+        paragraph(text('Hi '), firstName, text(',')),
+        heading('Staff update'),
+        createEmailStudioBlockNodeByKind('story', themeKey),
+        createEmailStudioBlockNodeByKind('callout', themeKey),
+        createEmailStudioBlockNodeByKind('cta', themeKey),
+        createEmailStudioBlockNodeByKind('divider', themeKey),
+        paragraph(text('Thank you,')),
+        paragraph(variable('sender_name', 'Sender name')),
       ],
     };
   }
@@ -141,10 +160,11 @@ export function createEmailStudioPresetDocument(
   scope: EmailContentScope,
 ): { mode: EmailContentMode; themeKey: EmailStudioThemeKey; document: EmailEditorDocument } {
   const preset = EMAIL_STUDIO_PRESETS.find((entry) => entry.key === presetKey) || EMAIL_STUDIO_PRESETS[0];
+  const mode = scope === 'staff' ? 'newsletter' : preset.mode;
   return {
-    mode: preset.mode,
+    mode,
     themeKey: preset.themeKey,
-    document: createEmailStudioDocument({ mode: preset.mode, scope, themeKey: preset.themeKey }),
+    document: createEmailStudioDocument({ mode, scope, themeKey: preset.themeKey }),
   };
 }
 
