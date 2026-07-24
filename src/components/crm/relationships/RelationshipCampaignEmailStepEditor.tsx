@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, Loader2, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -140,7 +140,7 @@ export function RelationshipCampaignEmailStepEditor({
 
         <div className="flex flex-wrap items-center gap-3">
           <Button type="button" variant="outline" disabled={disabled} onClick={() => void capture()}>
-            {false && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Capture step content
+            Capture step content
           </Button>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={step.stopOnReply} disabled={disabled} onChange={(event) => onChange({ ...step, stopOnReply: event.target.checked })} />Stop on reply</label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={step.isActive} disabled={disabled} onChange={(event) => onChange({ ...step, isActive: event.target.checked })} />Active step</label>
