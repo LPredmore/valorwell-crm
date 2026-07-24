@@ -55,6 +55,10 @@ begin
   perform set_config('request.jwt.claim.sub', v_admin::text, true);
   perform set_config('request.jwt.claim.role', 'authenticated', true);
 
+  update public.staff
+  set prov_status = null
+  where id = v_staff;
+
   v_result := public.crm_create_bulk_staff_broadcast(
     v_tenant, array[v_staff], 'Staff update', v_content
   );

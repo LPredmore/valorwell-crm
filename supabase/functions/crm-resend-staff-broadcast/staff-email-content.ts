@@ -28,6 +28,8 @@ type StaffEmailVariableKey =
   | 'staff_role'
   | 'sender_name';
 
+type EmailRenderHashAlgorithm = 'sha256' | 'fnv1a32';
+
 const ALLOWED_VARIABLES = new Set<StaffEmailVariableKey>([
   'staff_first_name',
   'staff_last_name',
@@ -44,7 +46,10 @@ export async function prepareStaffBroadcastDelivery(input: {
   values: StaffEmailVariableValues;
 }): Promise<PreparedStaffBroadcast> {
   const content = parseCanonicalStaffNewsletterContent(input.content);
-  const expectedHash = await createCanonicalStaffEmailRenderHash(content);
+  const algorithm: EmailRenderHashAlgorithm = content.renderHash.startsWith('sha256:')
+    ? 'sha256'
+    : 'fnv1a32';
+  const expectedHash = await createCanonicalStaffEmailRenderHash(content, algorithm);
   if (expectedHash !== content.renderHash) throw new Error('CANONICAL_RENDER_HASH_MISMATCH');
 
   validateStaffVariables([
@@ -125,6 +130,7 @@ export function parseCanonicalStaffNewsletterContent(value: unknown): CanonicalS
 
 export async function createCanonicalStaffEmailRenderHash(
   content: Omit<CanonicalStaffNewsletterContent, 'renderHash'> | CanonicalStaffNewsletterContent,
+  algorithm: EmailRenderHashAlgorithm = 'sha256',
 ): Promise<string> {
   const serialized = stableSerialize({
     schemaVersion: content.schemaVersion,
@@ -135,7 +141,8 @@ export async function createCanonicalStaffEmailRenderHash(
     preheader: content.preheader,
     themeKey: content.themeKey,
   });
-  if (globalThis.crypto?.subtle) {
+  if (algorithm === 'sha256') {
+    if (!globalThis.crypto?.subtle) throw new Error('CANONICAL_RENDER_HASH_UNSUPPORTED');
     const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(serialized));
     const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
     return `sha256:${hex}`;

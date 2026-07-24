@@ -27,7 +27,7 @@ The Staff page allows authorized CRM communicators to select staff members who:
 - have a valid profile email address
 - are not in the canonical `Inactive` clinician lifecycle status
 
-`Invited`, `New`, and `Active` staff remain eligible because internal onboarding, training, and operational notices may legitimately apply before provider activation.
+`Invited`, `New`, `Active`, and a temporarily missing lifecycle status remain eligible because internal onboarding, training, and operational notices may legitimately apply before provider activation. Only the explicit canonical `Inactive` value is excluded.
 
 The transactional creation RPC repeats these checks. The delivery worker repeats them again immediately before provider delivery.
 
@@ -52,7 +52,7 @@ Staff broadcasts use Newsletter mode for structured multi-recipient content, but
 - authenticated CRM administrator or operator capability
 - 1–500 distinct staff recipients
 - current tenant ownership
-- current non-Inactive lifecycle state
+- current lifecycle state is not explicitly `Inactive`
 - valid profile email
 - verified Resend sender configuration
 - canonical Newsletter-mode JSON, HTML, text, theme, schema version, and render hash
@@ -67,7 +67,7 @@ The dedicated `crm-resend-staff-broadcast` Edge Function:
 - claims up to 25 staff recipient rows with `FOR UPDATE SKIP LOCKED`
 - recovers stale claims after ten minutes
 - revalidates each staff record and email immediately before delivery
-- recomputes and verifies the canonical render hash
+- recomputes and verifies the canonical render hash using the algorithm recorded by its `sha256:` or `fnv1a32:` prefix
 - renders only staff-scoped variables
 - sends HTML and plain text through Resend
 - uses deterministic provider idempotency keys
@@ -95,7 +95,7 @@ Pass 10 does not:
 Required acceptance evidence includes:
 
 - exact-head repository policy and application CI
-- browser/server deterministic render-hash parity
+- browser/server deterministic render-hash parity for both SHA-256 and FNV-1a32 records
 - staff variable scope isolation and HTML escaping
 - rollback-only staff job creation and claim contract
 - rejection of unauthenticated creation
@@ -116,8 +116,10 @@ Implemented hardening:
 - Resend requests have a 10-second abort timeout and explicit timeout failure code
 - non-numeric `schemaVersion` values are rejected through the canonical validation error rather than a raw cast error
 - `processing` recipients with a missing `claimed_at` value are reclaimable
+- stored FNV-1a32 render hashes remain verifiable in Deno instead of being recomputed as SHA-256
+- nullable lifecycle status is handled consistently across the UI, creation RPC, and delivery worker
 
 Verified but intentionally unchanged:
 
-- `staff.prov_status` is the canonical `clinician_status_enum`, whose only values are `Invited`, `New`, `Active`, and `Inactive`; exact comparison to the enum value is correct
+- `staff.prov_status` is the canonical `clinician_status_enum`, whose only non-null values are `Invited`, `New`, `Active`, and `Inactive`; exact comparison to the enum value is correct
 - production preflight confirmed zero duplicate `(bulk_send_id, staff_id)` pairs and no out-of-contract recipient statuses before the original constraint/index migration was applied successfully

@@ -7,7 +7,10 @@ import {
 } from '@/features/email-studio/contracts';
 import { createEmailStudioDocument } from '@/features/email-studio/studio/documents';
 import { validateEmailStudioEditorDocument } from '@/features/email-studio/studio/validation';
-import { prepareStaffBroadcastDelivery } from '../../supabase/functions/crm-resend-staff-broadcast/staff-email-content';
+import {
+  createCanonicalStaffEmailRenderHash,
+  prepareStaffBroadcastDelivery,
+} from '../../supabase/functions/crm-resend-staff-broadcast/staff-email-content';
 
 describe('staff Email Studio scope', () => {
   it('allows internal Newsletter mode without a promotional compliance footer', () => {
@@ -56,6 +59,34 @@ describe('staff Email Studio scope', () => {
     expect(prepared.subject).toBe('Update for M & M');
     expect(prepared.html).toContain('M &amp; M');
     expect(prepared.text).toContain('M & M');
+  });
+
+  it('verifies a stored FNV-1a32 hash even when SHA-256 is available', async () => {
+    const content = {
+      schemaVersion: 1,
+      mode: 'newsletter' as const,
+      editorDocument: createEmailStudioDocument({ mode: 'newsletter', scope: 'staff' }),
+      renderedHtml: '<p>Hi {{staff_first_name}}</p>',
+      renderedText: 'Hi {{staff_first_name}}',
+      preheader: 'For {{staff_display_name}}',
+      themeKey: 'valorwell',
+    };
+    const renderHash = await createCanonicalStaffEmailRenderHash(content, 'fnv1a32');
+    expect(renderHash).toMatch(/^fnv1a32:[0-9a-f]{8}$/);
+
+    const prepared = await prepareStaffBroadcastDelivery({
+      subjectTemplate: 'Staff update',
+      content: { ...content, renderHash },
+      values: {
+        staff_first_name: 'Morgan',
+        staff_last_name: 'Lee',
+        staff_display_name: 'Morgan Lee',
+        staff_role: 'Clinician',
+        sender_name: 'ValorWell Operations',
+      },
+    });
+    expect(prepared.renderHash).toBe(renderHash);
+    expect(prepared.html).toContain('Morgan');
   });
 
   it('fails closed when a required staff value is missing', async () => {
