@@ -5,6 +5,10 @@ project_id = "ahqauomkgflopxgnlndd"
 # The function performs signature verification or user/capability authorization internally.
 verify_jwt = false
 
+[functions.crm-resend-staff-broadcast]
+# The function verifies the user JWT and CRM capability internally before claiming or sending work.
+verify_jwt = false
+
 [functions.ringcentral-sms]
 verify_jwt = false
 
