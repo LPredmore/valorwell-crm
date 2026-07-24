@@ -1,3 +1,4 @@
+import type { EmailContentDocument } from '@/features/email-studio/contracts';
 import type { AuditMetadata, PageResult, SortDirection } from './contracts';
 
 export const relationshipCampaignStatuses = ['draft', 'active', 'paused', 'completed', 'archived'] as const;
@@ -43,6 +44,9 @@ export type RelationshipCampaignStep = {
   position: number;
   subjectTemplate: string;
   bodyTemplate: string;
+  emailContent?: EmailContentDocument;
+  templateId?: string;
+  templateVersionId?: string;
   delayDays: number;
   stopOnReply: boolean;
   isActive: boolean;
