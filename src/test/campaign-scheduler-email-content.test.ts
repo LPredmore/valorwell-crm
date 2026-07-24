@@ -11,14 +11,18 @@ const editorDocument = {
   content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello {{first_name}}' }] }],
 };
 
-async function canonicalStep() {
+async function canonicalStep(overrides: {
+  renderedHtml?: string;
+  renderedText?: string;
+  preheader?: string | null;
+} = {}) {
   const content = {
     schemaVersion: 1,
     mode: 'campaign' as const,
     editorDocument,
-    renderedHtml: '<p>Hello {{first_name}} from {{therapist_name}}</p>',
-    renderedText: 'Hello {{first_name}} from {{therapist_name}}',
-    preheader: 'Update for {{first_name}}',
+    renderedHtml: overrides.renderedHtml ?? '<p>Hello {{first_name}} from {{therapist_name}}</p>',
+    renderedText: overrides.renderedText ?? 'Hello {{first_name}} from {{therapist_name}}',
+    preheader: overrides.preheader === undefined ? 'Update for {{first_name}}' : overrides.preheader,
     themeKey: 'valorwell',
   };
   return {
@@ -57,6 +61,40 @@ describe('client campaign scheduler email content', () => {
     });
   });
 
+  it('supplies safe runtime defaults for canonical system variables', async () => {
+    const prepared = await prepareCampaignEmail({
+      step: await canonicalStep({
+        renderedHtml: '<p>{{unsubscribe_url}}</p><p>{{postal_address}}</p>',
+        renderedText: '{{unsubscribe_url}}\n{{postal_address}}',
+        preheader: null,
+      }),
+      values: { first_name: 'Jordan' },
+    });
+
+    expect(prepared.html).toContain('https://crm.valorwell.org/unsubscribe');
+    expect(prepared.html).toContain('ValorWell, Lee’s Summit, Missouri');
+    expect(prepared.text).toContain('https://crm.valorwell.org/unsubscribe');
+    expect(prepared.text).toContain('ValorWell, Lee’s Summit, Missouri');
+  });
+
+  it('prefers supplied system values over runtime defaults', async () => {
+    const prepared = await prepareCampaignEmail({
+      step: await canonicalStep({
+        renderedHtml: '<p>{{unsubscribe_url}}</p><p>{{postal_address}}</p>',
+        renderedText: '{{unsubscribe_url}}\n{{postal_address}}',
+        preheader: null,
+      }),
+      values: {
+        first_name: 'Jordan',
+        unsubscribe_url: 'https://example.org/unsubscribe/token',
+        postal_address: '123 Main Street, Kansas City, MO',
+      },
+    });
+
+    expect(prepared.html).toContain('https://example.org/unsubscribe/token');
+    expect(prepared.text).toContain('123 Main Street, Kansas City, MO');
+  });
+
   it('fails closed when canonical content is altered after hashing', async () => {
     const step = await canonicalStep();
     await expect(prepareCampaignEmail({
@@ -65,7 +103,7 @@ describe('client campaign scheduler email content', () => {
     })).rejects.toThrow('CANONICAL_RENDER_HASH_MISMATCH');
   });
 
-  it('fails closed when a required variable value is unavailable', async () => {
+  it('fails closed when a required canonical client variable is unavailable', async () => {
     await expect(prepareCampaignEmail({
       step: await canonicalStep(),
       values: { first_name: 'Jordan' },
@@ -94,6 +132,19 @@ describe('client campaign scheduler email content', () => {
       subject: 'Hello Jordan',
       html: '<p>Legacy Jordan</p>',
     });
+  });
+
+  it('preserves unknown and unavailable tokens in legacy HTML', async () => {
+    const prepared = await prepareCampaignEmail({
+      step: {
+        subjectTemplate: 'Hello {{first_name}} {{legacy_subject_token}}',
+        renderedHtml: '<p>{{organization_name}} {{therapist_name}}</p>',
+      },
+      values: { first_name: 'Jordan' },
+    });
+
+    expect(prepared.subject).toBe('Hello Jordan {{legacy_subject_token}}');
+    expect(prepared.html).toBe('<p>{{organization_name}} {{therapist_name}}</p>');
   });
 
   it('adds text and HTML signatures without changing canonical metadata', async () => {
