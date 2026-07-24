@@ -5,9 +5,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { EmailEditor, type EmailEditorRef } from '@react-email/editor';
-import { StarterKit } from '@react-email/editor/extensions';
-import { EmailTheming } from '@react-email/editor/plugins';
+import type { EmailEditorRef } from '@react-email/editor';
 import {
   createEmailContentDraftFromEditorExport,
   finalizeEmailContentDocument,
@@ -37,18 +35,10 @@ import {
   createEmailStudioBlockNode,
   createEmailStudioDocument,
 } from '../studio/documents';
-import { EmailStudioBlock, EmailStudioVariable } from '../studio/extensions';
 import {
   validateEmailStudioDraft,
   validateEmailStudioEditorDocument,
 } from '../studio/validation';
-
-const CAMPAIGN_EXTENSIONS = [
-  StarterKit,
-  EmailTheming.configure({ theme: 'basic' }),
-  EmailStudioBlock,
-  EmailStudioVariable,
-];
 
 export type RelationshipCampaignEmailStudioHandle = {
   exportContent: () => Promise<EmailContentDocument | null>;
@@ -56,6 +46,7 @@ export type RelationshipCampaignEmailStudioHandle = {
 
 export type RelationshipCampaignEmailStudioComposerProps = {
   initialContent?: EmailContentDocument | null;
+  legacyBodyText?: string;
   readOnly?: boolean;
   onDirty?: () => void;
 };
@@ -63,11 +54,19 @@ export type RelationshipCampaignEmailStudioComposerProps = {
 export const RelationshipCampaignEmailStudioComposer = forwardRef<
   RelationshipCampaignEmailStudioHandle,
   RelationshipCampaignEmailStudioComposerProps
->(function RelationshipCampaignEmailStudioComposer({ initialContent, readOnly = false, onDirty }, ref) {
+>(function RelationshipCampaignEmailStudioComposer({
+  initialContent,
+  legacyBodyText = '',
+  readOnly = false,
+  onDirty,
+}, ref) {
   const editorRef = useRef<EmailEditorRef>(null);
+  const isLegacyConversion = !initialContent && Boolean(legacyBodyText.trim());
   const initialThemeKey = normalizeThemeKey(initialContent?.themeKey);
   const initialDocument = initialContent?.editorDocument
-    || createEmailStudioDocument({ mode: 'campaign', scope: 'relationship', themeKey: initialThemeKey });
+    || (isLegacyConversion
+      ? createLegacyTextDocument(legacyBodyText)
+      : createEmailStudioDocument({ mode: 'campaign', scope: 'relationship', themeKey: initialThemeKey }));
   const [themeKey, setThemeKey] = useState<EmailStudioThemeKey>(initialThemeKey);
   const [content, setContent] = useState<EmailEditorDocument>(() => cloneEmailStudioDocument(initialDocument));
   const [preheader, setPreheader] = useState(initialContent?.preheader || '');
@@ -163,6 +162,11 @@ export const RelationshipCampaignEmailStudioComposer = forwardRef<
 
   return (
     <div className="space-y-4">
+      {isLegacyConversion && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-50/60 p-3 text-sm text-amber-950 dark:bg-amber-950/20 dark:text-amber-100">
+          This text-only legacy step was imported into an editable Email Studio document. Review the layout before saving; the original subject and body remain unchanged until a canonical export succeeds.
+        </div>
+      )}
       <EmailStudioToolbar
         mode="campaign"
         allowedModes={['campaign']}
@@ -219,6 +223,17 @@ export const RelationshipCampaignEmailStudioComposer = forwardRef<
     </div>
   );
 });
+
+function createLegacyTextDocument(body: string): EmailEditorDocument {
+  const lines = body.split(/\r?\n/);
+  return {
+    type: 'doc',
+    content: lines.map((line) => ({
+      type: 'paragraph',
+      content: line ? [{ type: 'text', text: line }] : [],
+    })),
+  };
+}
 
 function getCurrentDocument(ref: EmailEditorRef | null, fallback: EmailEditorDocument): EmailEditorDocument {
   const value = ref?.getJSON();
