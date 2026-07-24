@@ -66,6 +66,7 @@ export function RelationshipCampaignEmailStepEditor({
         templateVersionId: undefined,
       });
       setEditorKey((value) => value + 1);
+      setMessage(null);
       return;
     }
     const template = templates.data?.find((entry) => entry.versionId === versionId);
@@ -134,6 +135,7 @@ export function RelationshipCampaignEmailStepEditor({
           key={editorKey}
           ref={studioRef}
           initialContent={step.emailContent}
+          legacyBodyText={step.emailContent ? '' : step.bodyTemplate}
           readOnly={disabled}
           onDirty={() => setMessage(null)}
         />
