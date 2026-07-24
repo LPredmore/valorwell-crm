@@ -33,13 +33,15 @@ export function RelationshipCampaignEmailStepEditor({
 }) {
   const studioRef = useRef<RelationshipCampaignEmailStudioHandle>(null);
   const [editorKey, setEditorKey] = useState(0);
-  const [selectedTemplateId, setSelectedTemplateId] = useState(step.templateVersionId || 'blank');
   const [message, setMessage] = useState<string | null>(null);
   const templates = useQuery({
     queryKey: ['email-studio', 'published-relationship-campaign-templates'],
     queryFn: listPublishedRelationshipCampaignTemplates,
     staleTime: 30_000,
   });
+  const contentIdentity = step.emailContent?.renderHash
+    ?? step.templateVersionId
+    ?? `legacy:${step.subjectTemplate}:${step.bodyTemplate}`;
 
   useEffect(() => {
     registerExporter(index, async () => {
@@ -55,7 +57,6 @@ export function RelationshipCampaignEmailStepEditor({
   }, [index, registerExporter, step]);
 
   const applyTemplate = (versionId: string) => {
-    setSelectedTemplateId(versionId);
     if (versionId === 'blank') {
       onChange({
         ...step,
@@ -110,7 +111,7 @@ export function RelationshipCampaignEmailStepEditor({
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
             <Label>Published relationship campaign template</Label>
-            <Select value={selectedTemplateId} onValueChange={applyTemplate} disabled={disabled || templates.isLoading}>
+            <Select value={step.templateVersionId || 'blank'} onValueChange={applyTemplate} disabled={disabled || templates.isLoading}>
               <SelectTrigger><SelectValue placeholder={templates.isLoading ? 'Loading templates…' : 'Start blank or select a published template'} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="blank">Start with blank Campaign Email Studio content</SelectItem>
@@ -132,7 +133,7 @@ export function RelationshipCampaignEmailStepEditor({
         </div>
 
         <RelationshipCampaignEmailStudioComposer
-          key={editorKey}
+          key={`${editorKey}:${contentIdentity}`}
           ref={studioRef}
           initialContent={step.emailContent}
           legacyBodyText={step.emailContent ? '' : step.bodyTemplate}
