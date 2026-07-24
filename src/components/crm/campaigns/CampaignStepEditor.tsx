@@ -63,7 +63,7 @@ export function CampaignStepEditor({
   });
   const contentIdentity = step.email_content?.renderHash
     ?? step.email_template_version_id
-    ?? `legacy:${step.email_subject}:${step.email_body_html}`;
+    ?? `legacy:${step.email_body_html}`;
 
   useEffect(() => {
     if (step.channel !== 'email') {
