@@ -9,6 +9,7 @@ import {
 const RESEND_API = "https://api.resend.com";
 const USER_AGENT = "ValorWell-CRM-Staff-Broadcast/1.0";
 const BATCH_SIZE = 25;
+const RESEND_TIMEOUT_MS = 10_000;
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -31,6 +32,28 @@ type StaffRecipient = {
   lastName: string;
   displayName: string;
   role: string;
+  status: string;
+};
+type StaffBroadcastJob = {
+  id: string;
+  subject: string;
+  body_html: string;
+  body_text: string;
+  editor_document: Record<string, unknown> | null;
+  preheader: string | null;
+  content_mode: string | null;
+  theme_key: string;
+  editor_schema_version: number;
+  render_hash: string;
+};
+type StaffClaim = {
+  id: string;
+  staff_id: string;
+  email_message_id: string | null;
+  claim_token: string;
+};
+type EmailMessageRecord = {
+  id: string;
   status: string;
 };
 
@@ -139,28 +162,29 @@ async function createOrReuseMessage(
   db: Db,
   auth: AuthContext,
   settings: Settings,
-  job: Record<string, any>,
-  claim: Record<string, any>,
+  job: StaffBroadcastJob,
+  claim: StaffClaim,
   recipient: StaffRecipient,
   prepared: Awaited<ReturnType<typeof prepareStaffBroadcastDelivery>>,
-) {
+): Promise<EmailMessageRecord> {
   if (claim.email_message_id) {
     const { data } = await db.from("crm_email_messages")
       .select("*")
       .eq("tenant_id", auth.tenantId)
       .eq("id", claim.email_message_id)
       .maybeSingle();
-    if (data && ["sent", "delivered", "delivery_delayed"].includes(data.status)) return data;
-    if (data) {
+    const existing = data as EmailMessageRecord | null;
+    if (existing && ["sent", "delivered", "delivery_delayed"].includes(existing.status)) return existing;
+    if (existing) {
       const { data: reset, error } = await db.from("crm_email_messages").update({
         status: "queued", error_code: null, error_message: null, failed_at: null, updated_at: new Date().toISOString(),
-      }).eq("id", data.id).select("*").single();
+      }).eq("id", existing.id).select("*").single();
       if (error) throw new Error(error.message);
-      return reset;
+      return reset as EmailMessageRecord;
     }
   }
 
-  const { data: message, error } = await db.from("crm_email_messages").insert({
+  const { data: inserted, error } = await db.from("crm_email_messages").insert({
     tenant_id: auth.tenantId,
     client_id: null,
     bulk_send_id: job.id,
@@ -189,30 +213,43 @@ async function createOrReuseMessage(
     occurred_at: new Date().toISOString(),
   }).select("*").single();
   if (error) throw new Error(`Email log creation failed: ${error.message}`);
+  const message = inserted as EmailMessageRecord;
 
   const { error: linkError } = await db.from("crm_bulk_send_staff_recipients").update({
     email_message_id: message.id,
   }).eq("id", claim.id).eq("claim_token", claim.claim_token);
-  if (linkError) throw new Error(linkError.message);
+  if (linkError) {
+    await markMessageFailed(db, message.id, "recipient_link_failed", linkError.message);
+    throw new Error(linkError.message);
+  }
   return message;
 }
 
 async function markMessageFailed(db: Db, messageId: string, code: string, message: string) {
   const now = new Date().toISOString();
-  await db.from("crm_email_messages").update({
+  const { error } = await db.from("crm_email_messages").update({
     status: "failed", failed_at: now, error_code: code, error_message: message, updated_at: now,
   }).eq("id", messageId);
+  if (error) {
+    console.error(JSON.stringify({
+      component: "crm-resend-staff-broadcast",
+      action: "mark_message_failed",
+      messageId,
+      code,
+      error: error.message,
+    }));
+  }
 }
 
 async function deliver(
   db: Db,
   auth: AuthContext,
   settings: Settings,
-  job: Record<string, any>,
-  claim: Record<string, any>,
+  job: StaffBroadcastJob,
+  claim: StaffClaim,
   recipient: StaffRecipient,
   prepared: Awaited<ReturnType<typeof prepareStaffBroadcastDelivery>>,
-) {
+): Promise<EmailMessageRecord> {
   const message = await createOrReuseMessage(db, auth, settings, job, claim, recipient, prepared);
   if (["sent", "delivered", "delivery_delayed"].includes(message.status)) return message;
   const apiKey = Deno.env.get("RESEND_API_KEY") ?? "";
@@ -221,6 +258,8 @@ async function deliver(
     throw new Error("RESEND_API_KEY not configured");
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), RESEND_TIMEOUT_MS);
   let response: Response;
   try {
     response = await fetch(`${RESEND_API}/emails`, {
@@ -240,11 +279,17 @@ async function deliver(
         text: prepared.text,
         headers: { "X-CRM-Email-Message-ID": message.id },
       }),
+      signal: controller.signal,
     });
   } catch (error) {
-    const text = error instanceof Error ? error.message : String(error);
-    await markMessageFailed(db, message.id, "network_error", text);
-    throw error;
+    const timedOut = error instanceof DOMException && error.name === "AbortError";
+    const text = timedOut
+      ? `Resend request exceeded ${RESEND_TIMEOUT_MS}ms`
+      : error instanceof Error ? error.message : String(error);
+    await markMessageFailed(db, message.id, timedOut ? "provider_timeout" : "network_error", text);
+    throw new Error(text);
+  } finally {
+    clearTimeout(timeout);
   }
 
   const provider = await response.json().catch(() => ({})) as { id?: string; message?: string; name?: string };
@@ -259,7 +304,7 @@ async function deliver(
     status: "sent", provider_message_id: provider.id, sent_at: now, updated_at: now,
   }).eq("id", message.id).select("*").single();
   if (error) throw new Error(error.message);
-  return sent;
+  return sent as EmailMessageRecord;
 }
 
 async function counts(db: Db, bulkSendId: string) {
@@ -279,31 +324,33 @@ async function counts(db: Db, bulkSendId: string) {
 }
 
 async function processBroadcast(auth: AuthContext, bulkSendId: string) {
-  const { data: job, error: jobError } = await auth.db.from("crm_bulk_send_logs")
+  const { data: jobData, error: jobError } = await auth.db.from("crm_bulk_send_logs")
     .select("*")
     .eq("id", bulkSendId)
     .eq("tenant_id", auth.tenantId)
     .eq("recipient_type", "staff")
     .maybeSingle();
+  const job = jobData as StaffBroadcastJob | null;
   if (jobError || !job) throw new Error("Staff broadcast job not found");
   if (!job.editor_document || job.content_mode !== "newsletter") throw new Error("Canonical staff broadcast content is required");
-  const content = canonicalStaffContentFromLog(job);
+  const content = canonicalStaffContentFromLog(job as unknown as Record<string, unknown>);
   const settings = await settingsFor(auth.db, auth.tenantId);
 
   await auth.db.from("crm_bulk_send_logs").update({
     status: "in_progress", heartbeat_at: new Date().toISOString(),
   }).eq("id", job.id).eq("tenant_id", auth.tenantId);
 
-  const { data: claims, error: claimError } = await auth.db.rpc("crm_claim_bulk_staff_recipients", {
+  const { data: claimRows, error: claimError } = await auth.db.rpc("crm_claim_bulk_staff_recipients", {
     p_tenant_id: auth.tenantId,
     p_bulk_send_id: job.id,
     p_limit: BATCH_SIZE,
   });
   if (claimError) throw new Error(claimError.message);
+  const claims = (claimRows ?? []) as StaffClaim[];
 
   let batchSent = 0;
   let batchFailed = 0;
-  for (const claim of claims ?? []) {
+  for (const claim of claims) {
     try {
       const recipient = await staffRecipient(auth.db, auth.tenantId, claim.staff_id);
       const values: StaffEmailVariableValues = {

@@ -17,7 +17,10 @@ export default function CanonicalStaff() {
   const [broadcastOpen, setBroadcastOpen] = useState(false);
 
   const eligible = useMemo(() => (data ?? []).filter(isBroadcastEligible), [data]);
-  const selectedStaff = useMemo(() => (data ?? []).filter((staff) => selectedIds.has(staff.id)), [data, selectedIds]);
+  const selectedStaff = useMemo(
+    () => (data ?? []).filter((staff) => selectedIds.has(staff.id) && isBroadcastEligible(staff)),
+    [data, selectedIds],
+  );
   const allEligibleSelected = eligible.length > 0 && eligible.every((staff) => selectedIds.has(staff.id));
 
   const toggleSelected = (staffId: string) => {

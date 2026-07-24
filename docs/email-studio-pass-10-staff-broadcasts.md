@@ -103,3 +103,21 @@ Required acceptance evidence includes:
 - Edge Function authorization smoke tests
 - Supabase security and performance advisor review
 - zero validation emails sent
+
+## Review hardening
+
+Before merge, unresolved PR review feedback was re-evaluated against the live Billing Hub schema and production state.
+
+Implemented hardening:
+
+- stale client-side selections are filtered through current broadcast eligibility before job creation
+- the subject field resets after a completed send
+- a ledger row is marked failed if recipient linking fails after creation
+- Resend requests have a 10-second abort timeout and explicit timeout failure code
+- non-numeric `schemaVersion` values are rejected through the canonical validation error rather than a raw cast error
+- `processing` recipients with a missing `claimed_at` value are reclaimable
+
+Verified but intentionally unchanged:
+
+- `staff.prov_status` is the canonical `clinician_status_enum`, whose only values are `Invited`, `New`, `Active`, and `Inactive`; exact comparison to the enum value is correct
+- production preflight confirmed zero duplicate `(bulk_send_id, staff_id)` pairs and no out-of-contract recipient statuses before the original constraint/index migration was applied successfully

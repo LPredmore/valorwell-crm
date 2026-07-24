@@ -103,6 +103,7 @@ export function StaffBroadcastDialog({
         variant: result.sent === 0 && result.failed > 0 ? 'destructive' : 'default',
       });
       onComplete();
+      setSubject('');
       onOpenChange(false);
     } catch (error) {
       toast({

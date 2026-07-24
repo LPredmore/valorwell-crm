@@ -9,6 +9,7 @@ declare
   v_bulk uuid;
   v_recipient uuid;
   v_claim_token uuid;
+  v_reclaimed_token uuid;
   v_result jsonb;
   v_rejected boolean;
   v_doc jsonb := '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Hi {{staff_first_name}}"}]}]}'::jsonb;
@@ -23,7 +24,7 @@ begin
   from public.staff staff_member
   join public.profiles profile on profile.id = staff_member.profile_id
   where staff_member.tenant_id = v_tenant
-    and staff_member.prov_status <> 'Inactive'
+    and staff_member.prov_status <> 'Inactive'::public.clinician_status_enum
     and lower(btrim(profile.email)) ~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'
   order by staff_member.created_at
   limit 1;
@@ -82,7 +83,30 @@ begin
   from public.crm_claim_bulk_staff_recipients(v_tenant, v_bulk, 25) claim;
   if v_claim_token is null then raise exception 'Staff recipient claim was not created'; end if;
 
+  update public.crm_bulk_send_staff_recipients
+  set claimed_at = null
+  where id = v_recipient;
+
+  select claim.claim_token into v_reclaimed_token
+  from public.crm_claim_bulk_staff_recipients(v_tenant, v_bulk, 25) claim
+  where claim.id = v_recipient;
+  if v_reclaimed_token is null or v_reclaimed_token = v_claim_token then
+    raise exception 'NULL claimed_at processing recipient was not reclaimed';
+  end if;
+
   perform set_config('request.jwt.claim.role', 'authenticated', true);
+  v_rejected := false;
+  begin
+    perform public.crm_create_bulk_staff_broadcast(
+      v_tenant,
+      array[v_staff],
+      'Invalid schema version',
+      v_content || jsonb_build_object('schemaVersion', 'not-a-number')
+    );
+  exception when check_violation then v_rejected := true;
+  end;
+  if not v_rejected then raise exception 'Non-numeric schemaVersion was accepted'; end if;
+
   v_rejected := false;
   begin
     insert into public.crm_bulk_send_logs (
