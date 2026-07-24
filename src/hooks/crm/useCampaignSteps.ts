@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { useCrmAuth } from './useCrmAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { CrmCampaignStep, CampaignStepFormData } from '@/lib/crm/campaign-types';
@@ -70,7 +71,7 @@ export function useSaveCampaignSteps() {
       const { error } = await supabase.rpc('crm_save_campaign_steps', {
         p_campaign_id: campaignId,
         p_tenant_id: tenantId,
-        p_steps: campaignStepsPayload(steps),
+        p_steps: campaignStepsPayload(steps) as unknown as Json,
       });
       if (error) throw error;
     },
