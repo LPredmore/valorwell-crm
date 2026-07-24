@@ -46,6 +46,8 @@ const VARIABLE_KEYS = new Set<ClientCampaignVariableKey>([
 const URL_KEYS = new Set<ClientCampaignVariableKey>(["unsubscribe_url"]);
 const TOKEN_PATTERN = /{{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*}}/g;
 const HASH_PATTERN = /^(sha256:[0-9a-f]{64}|fnv1a32:[0-9a-f]{8})$/;
+const DEFAULT_UNSUBSCRIBE_URL = "https://crm.valorwell.org/unsubscribe";
+const DEFAULT_POSTAL_ADDRESS = "ValorWell, Lee’s Summit, Missouri";
 
 export async function prepareCampaignEmail(input: {
   step: CampaignEmailStepContent;
@@ -70,13 +72,14 @@ export async function prepareCampaignEmail(input: {
     };
   }
 
+  const canonicalValues = withRuntimeSystemValues(values);
   const templates = [
     step.subjectTemplate,
     step.renderedHtml,
     step.renderedText || "",
     step.preheader || "",
   ];
-  validateVariables(templates, values);
+  validateVariables(templates, canonicalValues);
 
   if (step.contentMode !== "campaign") throw new Error("CANONICAL_MODE_MUST_BE_CAMPAIGN");
   if (!isEditorDocument(step.editorDocument)) throw new Error("CANONICAL_EDITOR_DOCUMENT_INVALID");
@@ -98,10 +101,10 @@ export async function prepareCampaignEmail(input: {
   });
   if (expectedHash !== step.renderHash) throw new Error("CANONICAL_RENDER_HASH_MISMATCH");
 
-  const subject = render(step.subjectTemplate, values, "text");
-  const html = render(step.renderedHtml, values, "html");
-  const text = render(step.renderedText, values, "text");
-  const preheader = step.preheader ? render(step.preheader, values, "text") : null;
+  const subject = render(step.subjectTemplate, canonicalValues, "text");
+  const html = render(step.renderedHtml, canonicalValues, "html");
+  const text = render(step.renderedText, canonicalValues, "text");
+  const preheader = step.preheader ? render(step.preheader, canonicalValues, "text") : null;
   if (!subject.trim()) throw new Error("EMAIL_SUBJECT_REQUIRED");
 
   return {
@@ -163,6 +166,22 @@ export function stableSerialize(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableSerialize).join(",")}]`;
   const record = value as Record<string, unknown>;
   return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableSerialize(record[key])}`).join(",")}}`;
+}
+
+function withRuntimeSystemValues(values: ClientCampaignVariableValues): ClientCampaignVariableValues {
+  const runtime = globalThis as typeof globalThis & {
+    Deno?: { env?: { get?: (name: string) => string | undefined } };
+  };
+  const getEnv = runtime.Deno?.env?.get;
+  return {
+    ...values,
+    unsubscribe_url: values.unsubscribe_url
+      || getEnv?.("CRM_UNSUBSCRIBE_URL")
+      || DEFAULT_UNSUBSCRIBE_URL,
+    postal_address: values.postal_address
+      || getEnv?.("VALORWELL_POSTAL_ADDRESS")
+      || DEFAULT_POSTAL_ADDRESS,
+  };
 }
 
 function validateVariables(templates: readonly string[], values: ClientCampaignVariableValues) {
