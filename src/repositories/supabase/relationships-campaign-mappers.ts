@@ -237,21 +237,27 @@ export function relationshipCampaignPayload(input: RelationshipCampaignDefinitio
 }
 
 export function relationshipCampaignStepsPayload(input: RelationshipCampaignDefinitionInput): Json {
-  return input.steps.map((step) => ({
-    subjectTemplate: step.subjectTemplate.trim(),
-    bodyTemplate: step.emailContent?.renderedText.trim() || step.bodyTemplate.trim(),
-    contentMode: step.emailContent?.mode ?? null,
-    editorDocument: step.emailContent?.editorDocument ?? null,
-    renderedHtml: step.emailContent?.renderedHtml ?? null,
-    renderedText: step.emailContent?.renderedText ?? null,
-    preheader: step.emailContent?.preheader ?? null,
-    themeKey: step.emailContent?.themeKey ?? null,
-    editorSchemaVersion: step.emailContent?.schemaVersion ?? null,
-    renderHash: step.emailContent?.renderHash ?? null,
-    templateId: step.templateId ?? null,
-    templateVersionId: step.templateVersionId ?? null,
-    delayDays: step.delayDays,
-    stopOnReply: step.stopOnReply,
-    isActive: step.isActive,
-  })) as Json;
+  return input.steps.map((step) => {
+    const legacy = {
+      subjectTemplate: step.subjectTemplate.trim(),
+      bodyTemplate: step.emailContent?.renderedText.trim() || step.bodyTemplate.trim(),
+      delayDays: step.delayDays,
+      stopOnReply: step.stopOnReply,
+      isActive: step.isActive,
+    };
+    if (!step.emailContent && !step.templateVersionId) return legacy;
+    return {
+      ...legacy,
+      contentMode: step.emailContent?.mode ?? null,
+      editorDocument: step.emailContent?.editorDocument ?? null,
+      renderedHtml: step.emailContent?.renderedHtml ?? null,
+      renderedText: step.emailContent?.renderedText ?? null,
+      preheader: step.emailContent?.preheader ?? null,
+      themeKey: step.emailContent?.themeKey ?? null,
+      editorSchemaVersion: step.emailContent?.schemaVersion ?? null,
+      renderHash: step.emailContent?.renderHash ?? null,
+      templateId: step.templateId ?? null,
+      templateVersionId: step.templateVersionId ?? null,
+    };
+  }) as Json;
 }
