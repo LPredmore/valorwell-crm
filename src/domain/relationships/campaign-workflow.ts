@@ -173,6 +173,9 @@ export function campaignToDefinition(campaign: RelationshipCampaign): Relationsh
     steps: campaign.steps.map((step) => ({
       subjectTemplate: step.subjectTemplate,
       bodyTemplate: step.bodyTemplate,
+      emailContent: step.emailContent,
+      templateId: step.templateId,
+      templateVersionId: step.templateVersionId,
       delayDays: step.delayDays,
       stopOnReply: step.stopOnReply,
       isActive: step.isActive,

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RelationshipCapabilityState } from '@/components/crm/relationships/RelationshipCapabilityState';
+import { RelationshipCampaignEmailStepEditor } from '@/components/crm/relationships/RelationshipCampaignEmailStepEditor';
 import {
   relationshipCampaignMarketingStages,
-  type RelationshipCampaign,
   type RelationshipCampaignDefinitionInput,
   type RelationshipCampaignStatus,
 } from '@/domain/relationships/campaign-contracts';
@@ -45,6 +45,8 @@ const statusLabels: Record<RelationshipCampaignStatus, string> = {
   archived: 'Archive',
 };
 
+type Step = RelationshipCampaignDefinitionInput['steps'][number];
+
 export default function RelationshipCampaignEditorPage() {
   const { id } = useParams();
   const isNew = !id;
@@ -55,6 +57,7 @@ export default function RelationshipCampaignEditorPage() {
   const [definition, setDefinition] = useState<RelationshipCampaignDefinitionInput>(emptyRelationshipCampaignDefinition);
   const [loadedVersion, setLoadedVersion] = useState<number>();
   const [transitionReason, setTransitionReason] = useState('');
+  const stepExporters = useRef(new Map<number, () => Promise<Step>>());
 
   const campaignQuery = useQuery({
     queryKey: ['relationship-campaign', id],
@@ -74,15 +77,30 @@ export default function RelationshipCampaignEditorPage() {
   const definitionErrors = useMemo(() => campaignDefinitionErrors(definition), [definition]);
   const activationErrors = useMemo(() => campaignActivationErrors(definition), [definition]);
 
+  const registerExporter = useCallback((index: number, exporter: (() => Promise<Step>) | null) => {
+    if (exporter) stepExporters.current.set(index, exporter);
+    else stepExporters.current.delete(index);
+  }, []);
+
+  const exportCurrentDefinition = async () => {
+    const steps = await Promise.all(definition.steps.map(async (step, index) => {
+      const exporter = stepExporters.current.get(index);
+      return exporter ? exporter() : step;
+    }));
+    const current = { ...definition, steps };
+    const errors = campaignDefinitionErrors(current);
+    if (errors.length) throw new Error(errors.join(' '));
+    setDefinition(current);
+    return current;
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (definitionErrors.length) throw new Error(definitionErrors.join(' '));
-      if (isNew) {
-        return dataProvider.relationships.createCampaign({ definition });
-      }
+      const current = await exportCurrentDefinition();
+      if (isNew) return dataProvider.relationships.createCampaign({ definition: current });
       if (!id || loadedVersion === undefined) throw new Error('Campaign version is unavailable. Refresh and retry.');
       return dataProvider.relationships.updateCampaign(id, {
-        definition,
+        definition: current,
         expectedVersion: loadedVersion,
       });
     },
@@ -98,9 +116,7 @@ export default function RelationshipCampaignEditorPage() {
   const transitionMutation = useMutation({
     mutationFn: async (status: RelationshipCampaignStatus) => {
       if (!campaign || loadedVersion === undefined) throw new Error('Load the current campaign before changing status.');
-      if (status === 'active' && activationErrors.length) {
-        throw new Error(activationErrors.join(' '));
-      }
+      if (status === 'active' && activationErrors.length) throw new Error(activationErrors.join(' '));
       return dataProvider.relationships.transitionCampaignStatus(campaign.id, {
         status,
         expectedVersion: loadedVersion,
@@ -138,11 +154,8 @@ export default function RelationshipCampaignEditorPage() {
 
       <Card className="border-amber-500/40 bg-amber-50/40 dark:bg-amber-950/10">
         <CardHeader>
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle>Execution boundary</CardTitle>
-            <Badge variant="outline">Hard disabled</Badge>
-          </div>
-          <CardDescription>An active campaign in this pass means the definition passed review. It does not enroll, schedule, send, or contact anyone. The database enforces execution_enabled = false.</CardDescription>
+          <div className="flex flex-wrap items-center gap-2"><CardTitle>Execution boundary</CardTitle><Badge variant="outline">Hard disabled</Badge></div>
+          <CardDescription>Campaign-mode authoring and immutable template attribution do not enable execution. Enrollment, suppression, service claims, Resend delivery, and webhook processing remain unchanged and independently guarded.</CardDescription>
         </CardHeader>
       </Card>
 
@@ -167,7 +180,7 @@ export default function RelationshipCampaignEditorPage() {
                     <Button key={status} type="button" variant={status === 'active' ? 'default' : 'outline'} disabled={pending} onClick={() => transitionMutation.mutate(status)}>{statusLabels[status]}</Button>
                   ))}
                 </div>
-                {campaign.status === 'active' && <p className="text-sm text-muted-foreground">Definition active. Campaign execution remains disabled.</p>}
+                {campaign.status === 'active' && <p className="text-sm text-muted-foreground">Definition active. Campaign execution remains independently controlled.</p>}
                 {transitionMutation.isError && <p className="text-sm text-destructive">{errorMessage(transitionMutation.error, 'Status could not be changed.')}</p>}
               </CardContent>
             </Card>
@@ -214,7 +227,7 @@ export default function RelationshipCampaignEditorPage() {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle>Definition timing</CardTitle><CardDescription>These fields define intended timing only. They do not create scheduled work in Pass 9.</CardDescription></CardHeader>
+              <CardHeader><CardTitle>Definition timing</CardTitle><CardDescription>These fields define intended timing only. They do not create scheduled work.</CardDescription></CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Field label="Default timezone" id="campaign-timezone"><Input id="campaign-timezone" value={definition.defaultTimezone} onChange={(event) => update('defaultTimezone', event.target.value)} /></Field>
                 <Field label="Send window start" id="campaign-window-start"><Input id="campaign-window-start" type="time" value={definition.sendWindowStart ?? ''} onChange={(event) => update('sendWindowStart', event.target.value)} /></Field>
@@ -224,21 +237,33 @@ export default function RelationshipCampaignEditorPage() {
             </Card>
 
             <Card>
-              <CardHeader><div className="flex flex-wrap items-start justify-between gap-3"><div><CardTitle>Ordered campaign steps</CardTitle><CardDescription>Templates are definitions only. Stop-on-reply is preserved now so later orchestration can honor it.</CardDescription></div><Button type="button" variant="outline" onClick={() => update('steps', [...definition.steps, { subjectTemplate: '', bodyTemplate: '', delayDays: 0, stopOnReply: true, isActive: true }])}><Plus className="mr-2 h-4 w-4" />Add step</Button></div></CardHeader>
+              <CardHeader><div className="flex flex-wrap items-start justify-between gap-3"><div><CardTitle>Ordered campaign steps</CardTitle><CardDescription>Each step stores canonical JSON, rendered HTML/text, preheader, theme, render hash, and optional immutable template-version attribution.</CardDescription></div><Button type="button" variant="outline" onClick={() => update('steps', [...definition.steps, { subjectTemplate: '', bodyTemplate: '', delayDays: 0, stopOnReply: true, isActive: true }])}><Plus className="mr-2 h-4 w-4" />Add step</Button></div></CardHeader>
               <CardContent className="space-y-4">
                 {definition.steps.length === 0 && <p className="text-sm text-muted-foreground">No steps. A campaign cannot be activated without at least one active step.</p>}
-                {definition.steps.map((step, index) => <StepEditor key={index} index={index} step={step} total={definition.steps.length} onChange={(next) => update('steps', definition.steps.map((value, currentIndex) => currentIndex === index ? next : value))} onMove={(direction) => update('steps', moveItem(definition.steps, index, index + direction))} onDelete={() => update('steps', definition.steps.filter((_, currentIndex) => currentIndex !== index))} />)}
+                {definition.steps.map((step, index) => (
+                  <RelationshipCampaignEmailStepEditor
+                    key={`${index}:${step.templateVersionId ?? 'adhoc'}`}
+                    index={index}
+                    step={step}
+                    total={definition.steps.length}
+                    disabled={!editable || pending}
+                    onChange={(next) => update('steps', definition.steps.map((value, currentIndex) => currentIndex === index ? next : value))}
+                    onMove={(direction) => update('steps', moveItem(definition.steps, index, index + direction))}
+                    onDelete={() => update('steps', definition.steps.filter((_, currentIndex) => currentIndex !== index))}
+                    registerExporter={registerExporter}
+                  />
+                ))}
               </CardContent>
             </Card>
           </fieldset>
 
           <Card>
-            <CardHeader><CardTitle>Save definition</CardTitle><CardDescription>{editable ? 'Saving replaces the ordered step definition atomically and uses optimistic version control.' : 'This campaign must be paused before its definition can be edited.'}</CardDescription></CardHeader>
+            <CardHeader><CardTitle>Save definition</CardTitle><CardDescription>{editable ? 'Every Email Studio step is freshly exported, validated, and persisted atomically with optimistic version control.' : 'This campaign must be paused before its definition can be edited.'}</CardDescription></CardHeader>
             <CardContent className="space-y-3">
               {definitionErrors.length > 0 && <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">{definitionErrors.map((error) => <li key={error}>{error}</li>)}</ul>}
               {saveMutation.isError && <p className="text-sm text-destructive">{errorMessage(saveMutation.error, 'Campaign could not be saved.')}</p>}
               {saveMutation.isSuccess && <p className="text-sm text-emerald-700">Campaign definition saved.</p>}
-              <Button type="button" disabled={!editable || pending || definitionErrors.length > 0} onClick={() => saveMutation.mutate()}>{saveMutation.isPending ? 'Saving…' : isNew ? 'Create draft campaign' : 'Save campaign definition'}</Button>
+              <Button type="button" disabled={!editable || pending} onClick={() => saveMutation.mutate()}>{saveMutation.isPending ? 'Exporting and saving…' : isNew ? 'Create draft campaign' : 'Save campaign definition'}</Button>
             </CardContent>
           </Card>
         </>
@@ -267,17 +292,6 @@ function BriefField({ label, name, definition, update, placeholder, className, t
 function ListField({ label, value, onChange, className }: { label: string; value: string[]; onChange: (value: string[]) => void; className?: string }) {
   const id = `campaign-list-${label.toLowerCase().replace(/[^a-z]+/g, '-')}`;
   return <Field label={`${label} — one per line`} id={id} className={className}><Textarea id={id} value={value.join('\n')} onChange={(event) => onChange(event.target.value.split('\n').map((item) => item.trim()).filter(Boolean))} /></Field>;
-}
-
-function StepEditor({ index, step, total, onChange, onMove, onDelete }: {
-  index: number;
-  step: RelationshipCampaignDefinitionInput['steps'][number];
-  total: number;
-  onChange: (step: RelationshipCampaignDefinitionInput['steps'][number]) => void;
-  onMove: (direction: -1 | 1) => void;
-  onDelete: () => void;
-}) {
-  return <div className="space-y-4 rounded-lg border p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-medium">Step {index + 1}</p><div className="flex gap-2"><Button type="button" size="icon" variant="outline" aria-label={`Move step ${index + 1} up`} disabled={index === 0} onClick={() => onMove(-1)}><ArrowUp className="h-4 w-4" /></Button><Button type="button" size="icon" variant="outline" aria-label={`Move step ${index + 1} down`} disabled={index === total - 1} onClick={() => onMove(1)}><ArrowDown className="h-4 w-4" /></Button><Button type="button" size="icon" variant="outline" aria-label={`Delete step ${index + 1}`} onClick={onDelete}><Trash2 className="h-4 w-4" /></Button></div></div><div className="grid gap-4 md:grid-cols-2"><Field label="Subject template" id={`step-${index}-subject`}><Input id={`step-${index}-subject`} value={step.subjectTemplate} onChange={(event) => onChange({ ...step, subjectTemplate: event.target.value })} /></Field><Field label="Delay after prior step (days)" id={`step-${index}-delay`}><Input id={`step-${index}-delay`} type="number" min="0" max="365" value={step.delayDays} onChange={(event) => onChange({ ...step, delayDays: Number(event.target.value) })} /></Field><Field label="Body template" id={`step-${index}-body`} className="md:col-span-2"><Textarea id={`step-${index}-body`} className="min-h-40" value={step.bodyTemplate} onChange={(event) => onChange({ ...step, bodyTemplate: event.target.value })} /></Field><div className="flex items-center gap-2"><input id={`step-${index}-stop`} type="checkbox" checked={step.stopOnReply} onChange={(event) => onChange({ ...step, stopOnReply: event.target.checked })} /><Label htmlFor={`step-${index}-stop`}>Stop on reply</Label></div><div className="flex items-center gap-2"><input id={`step-${index}-active`} type="checkbox" checked={step.isActive} onChange={(event) => onChange({ ...step, isActive: event.target.checked })} /><Label htmlFor={`step-${index}-active`}>Active step</Label></div></div></div>;
 }
 
 function moveItem<T>(items: T[], from: number, to: number) {
