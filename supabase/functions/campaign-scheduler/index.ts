@@ -1,13 +1,20 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkSuppression } from "../_shared/suppression.ts";
+import {
+  appendSignature,
+  buildCampaignResendContent,
+  prepareCampaignEmail,
+  type ClientCampaignVariableValues,
+  type PreparedCampaignEmail,
+} from "./email-content.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 const RESEND_API = "https://api.resend.com";
-const USER_AGENT = "ValorWell-CRM-Campaign-Scheduler/1.0";
+const USER_AGENT = "ValorWell-CRM-Campaign-Scheduler/1.1";
 
 type Db = ReturnType<typeof createClient>;
 interface ClaimedStep {
@@ -29,6 +36,14 @@ interface CampaignStep {
   channel: "email" | "sms";
   email_subject: string | null;
   email_body_html: string | null;
+  email_body_text: string | null;
+  email_preheader: string | null;
+  email_content_mode: string | null;
+  email_editor_document: unknown;
+  email_theme_key: string | null;
+  email_editor_schema_version: number | null;
+  email_render_hash: string | null;
+  email_template_version_id: string | null;
   sms_body_text: string | null;
   is_active: boolean;
   signature_id: string | null;
@@ -79,16 +94,20 @@ function normalizePhone(phone: string | null): string | null {
   return digits.length === 10 ? `+1${digits}` : null;
 }
 
-function personalize(content: string, client: ClientData): string {
+function therapistName(client: ClientData): string {
+  if (!client.primary_staff) return "ValorWell Care Team";
+  return client.primary_staff.prov_name_for_clients
+    || [client.primary_staff.prov_name_f, client.primary_staff.prov_name_l].filter(Boolean).join(" ")
+    || "ValorWell Care Team";
+}
+
+function legacyPersonalize(content: string, client: ClientData): string {
   const firstName = client.pat_name_preferred || client.pat_name_f || "there";
-  let therapist = "your therapist";
-  if (client.primary_staff) {
-    therapist = client.primary_staff.prov_name_for_clients ||
-      [client.primary_staff.prov_name_f, client.primary_staff.prov_name_l].filter(Boolean).join(" ") || therapist;
-  }
   return content
     .replace(/\{\{first_name\}\}/gi, firstName)
-    .replace(/\{\{therapist_name\}\}/gi, therapist);
+    .replace(/\{\{preferred_name\}\}/gi, firstName)
+    .replace(/\{\{last_name\}\}/gi, client.pat_name_l || "")
+    .replace(/\{\{therapist_name\}\}/gi, therapistName(client));
 }
 
 function parseTime(value: string): number | null {
@@ -173,17 +192,30 @@ function taggedReplyTo(settings: ResendSettings, messageId: string): string | un
   return local && domain ? `${local.split("+")[0]}+crm-${messageId}@${domain}` : email || undefined;
 }
 
+async function validateTemplateVersion(db: Db, tenantId: string, versionId: string | null) {
+  if (!versionId) return;
+  const { data, error } = await db.from("crm_email_template_versions")
+    .select("id, content_scope, content_mode")
+    .eq("tenant_id", tenantId)
+    .eq("id", versionId)
+    .maybeSingle();
+  if (error || !data) throw new Error("EMAIL_TEMPLATE_VERSION_NOT_FOUND");
+  if (data.content_scope !== "client" || data.content_mode !== "campaign") {
+    throw new Error("EMAIL_TEMPLATE_VERSION_SCOPE_INVALID");
+  }
+}
+
 async function sendEmail(
   db: Db,
   tenantId: string,
   client: ClientData,
   campaignId: string,
   stepId: string,
-  subject: string,
-  body: string,
+  settings: ResendSettings,
+  prepared: PreparedCampaignEmail,
 ): Promise<string> {
   if (!client.email) throw new Error("Missing client email");
-  const settings = await resendSettings(db, tenantId);
+  await validateTemplateVersion(db, tenantId, prepared.templateVersionId);
   const now = new Date().toISOString();
   const { data: message, error: insertError } = await db.from("crm_email_messages").insert({
     tenant_id: tenantId,
@@ -194,16 +226,26 @@ async function sendEmail(
     sender_email: normalizeEmail(settings.from_email ?? ""),
     recipient_email: normalizeEmail(client.email),
     reply_to_email: settings.reply_to_email ? normalizeEmail(settings.reply_to_email) : null,
-    subject,
-    body_html: body,
+    subject: prepared.subject,
+    body_html: prepared.html,
+    body_text: prepared.text || null,
+    preheader: prepared.preheader,
+    render_hash: prepared.renderHash,
+    template_version_id: prepared.templateVersionId,
     provider: "resend",
     message_class: "ordinary_campaign_follow_up",
     source: "campaign_scheduler",
     created_by_profile_id: null,
     occurred_at: now,
-    metadata: { campaign_step_id: stepId },
+    metadata: {
+      campaign_step_id: stepId,
+      email_content_mode: prepared.canonical ? "campaign" : null,
+      editor_schema_version: prepared.schemaVersion,
+      theme_key: prepared.themeKey,
+    },
   }).select("id").single();
   if (insertError) throw new Error(insertError.message);
+
   const apiKey = Deno.env.get("RESEND_API_KEY") ?? "";
   if (!apiKey) throw new Error("RESEND_API_KEY not configured");
   const response = await fetch(`${RESEND_API}/emails`, {
@@ -218,8 +260,7 @@ async function sendEmail(
       from: displayFrom(settings),
       to: [normalizeEmail(client.email)],
       reply_to: taggedReplyTo(settings, message.id),
-      subject,
-      html: body,
+      ...buildCampaignResendContent(prepared),
       headers: { "X-CRM-Email-Message-ID": message.id },
     }),
   });
@@ -401,20 +442,42 @@ async function processCampaignMessages() {
           result.skipped++;
           continue;
         }
-        const subject = personalize(typedStep.email_subject || "Message from your care team", typedClient);
-        let body = personalize(typedStep.email_body_html || "", typedClient);
+        const settings = await resendSettings(db, step.tenant_id);
+        const values: ClientCampaignVariableValues = {
+          first_name: typedClient.pat_name_f || "Client",
+          preferred_name: typedClient.pat_name_preferred || typedClient.pat_name_f || "Client",
+          last_name: typedClient.pat_name_l || "Client",
+          therapist_name: therapistName(typedClient),
+          sender_name: settings.from_name || "ValorWell Care Team",
+        };
+        let prepared = await prepareCampaignEmail({
+          step: {
+            subjectTemplate: typedStep.email_subject || "Message from your care team",
+            renderedHtml: typedStep.email_body_html || "",
+            renderedText: typedStep.email_body_text,
+            preheader: typedStep.email_preheader,
+            contentMode: typedStep.email_content_mode,
+            editorDocument: typedStep.email_editor_document,
+            themeKey: typedStep.email_theme_key,
+            schemaVersion: typedStep.email_editor_schema_version,
+            renderHash: typedStep.email_render_hash,
+            templateVersionId: typedStep.email_template_version_id,
+          },
+          values,
+        });
         if (typedStep.signature_id) {
           const { data: signature } = await db.from("crm_email_signatures")
-            .select("signature_type, body_html, image_url")
+            .select("signature_type, body_html, body_text, image_url")
+            .eq("tenant_id", step.tenant_id)
             .eq("id", typedStep.signature_id)
             .maybeSingle();
           if (signature?.signature_type === "image" && signature.image_url) {
-            body += `<br><br><img src="${signature.image_url}" alt="Signature">`;
-          } else if (signature?.body_html) {
-            body += `<br><br>${signature.body_html}`;
+            prepared = appendSignature(prepared, { imageUrl: signature.image_url, bodyText: signature.body_text });
+          } else if (signature?.body_html || signature?.body_text) {
+            prepared = appendSignature(prepared, { bodyHtml: signature.body_html, bodyText: signature.body_text });
           }
         }
-        const resendId = await sendEmail(db, step.tenant_id, typedClient, campaign.id, typedStep.id, subject, body);
+        const resendId = await sendEmail(db, step.tenant_id, typedClient, campaign.id, typedStep.id, settings, prepared);
         if (!(await markSent(db, step, { resend_email_id: resendId }))) continue;
         await db.from("crm_activity_events").insert({
           tenant_id: step.tenant_id,
@@ -431,7 +494,7 @@ async function processCampaignMessages() {
           continue;
         }
         rcToken ||= await getRingCentralToken();
-        await sendSms(rcToken, phone, personalize(typedStep.sms_body_text || "", typedClient));
+        await sendSms(rcToken, phone, legacyPersonalize(typedStep.sms_body_text || "", typedClient));
         if (!(await markSent(db, step))) continue;
         await db.from("crm_activity_events").insert({
           tenant_id: step.tenant_id,
