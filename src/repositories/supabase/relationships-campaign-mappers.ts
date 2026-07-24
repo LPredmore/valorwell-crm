@@ -1,4 +1,5 @@
 import type { Json } from '@/integrations/supabase/types';
+import type { EmailContentDocument, EmailEditorDocument } from '@/features/email-studio/contracts';
 import type {
   RelationshipCampaign,
   RelationshipCampaignBrief,
@@ -110,17 +111,46 @@ function mapBrief(value: unknown): RelationshipCampaignBrief {
 
 function mapStep(value: unknown): RelationshipCampaignStep {
   const record = objectValue(value, 'step');
+  const emailContent = mapEmailContent(record);
   return {
     id: stringValue(record.id, 'step id'),
     position: numberValue(record.position, 'step position'),
     subjectTemplate: stringValue(record.subjectTemplate, 'step subject'),
     bodyTemplate: stringValue(record.bodyTemplate, 'step body'),
+    emailContent,
+    templateId: optionalString(record.templateId),
+    templateVersionId: optionalString(record.templateVersionId),
     delayDays: numberValue(record.delayDays, 'step delay'),
     stopOnReply: record.stopOnReply !== false,
     isActive: record.isActive !== false,
     createdAt: optionalString(record.createdAt),
     updatedAt: optionalString(record.updatedAt),
   };
+}
+
+function mapEmailContent(record: Record<string, unknown>): EmailContentDocument | undefined {
+  if (!isEditorDocument(record.editorDocument)) return undefined;
+  const renderedHtml = optionalString(record.renderedHtml);
+  const renderedText = optionalString(record.renderedText);
+  const renderHash = optionalString(record.renderHash);
+  const themeKey = optionalString(record.themeKey);
+  const schemaVersion = record.editorSchemaVersion;
+  if (!renderedHtml || !renderedText || !renderHash || !themeKey || typeof schemaVersion !== 'number') return undefined;
+  return {
+    mode: 'campaign',
+    editorDocument: record.editorDocument,
+    renderedHtml,
+    renderedText,
+    preheader: typeof record.preheader === 'string' ? record.preheader : null,
+    themeKey,
+    schemaVersion,
+    renderHash,
+  };
+}
+
+function isEditorDocument(value: unknown): value is EmailEditorDocument {
+  if (!isObject(value)) return false;
+  return value.type === 'doc' && Array.isArray(value.content);
 }
 
 export function mapRelationshipCampaignResponse(value: Json | undefined): RelationshipCampaign {
@@ -209,7 +239,17 @@ export function relationshipCampaignPayload(input: RelationshipCampaignDefinitio
 export function relationshipCampaignStepsPayload(input: RelationshipCampaignDefinitionInput): Json {
   return input.steps.map((step) => ({
     subjectTemplate: step.subjectTemplate.trim(),
-    bodyTemplate: step.bodyTemplate.trim(),
+    bodyTemplate: step.emailContent?.renderedText.trim() || step.bodyTemplate.trim(),
+    contentMode: step.emailContent?.mode ?? null,
+    editorDocument: step.emailContent?.editorDocument ?? null,
+    renderedHtml: step.emailContent?.renderedHtml ?? null,
+    renderedText: step.emailContent?.renderedText ?? null,
+    preheader: step.emailContent?.preheader ?? null,
+    themeKey: step.emailContent?.themeKey ?? null,
+    editorSchemaVersion: step.emailContent?.schemaVersion ?? null,
+    renderHash: step.emailContent?.renderHash ?? null,
+    templateId: step.templateId ?? null,
+    templateVersionId: step.templateVersionId ?? null,
     delayDays: step.delayDays,
     stopOnReply: step.stopOnReply,
     isActive: step.isActive,
