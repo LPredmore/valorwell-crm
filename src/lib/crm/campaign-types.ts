@@ -1,4 +1,4 @@
-// Campaign System TypeScript interfaces
+import type { EmailContentDocument, EmailEditorDocument } from '@/features/email-studio/contracts';
 
 export interface CrmCampaign {
   id: string;
@@ -7,7 +7,7 @@ export interface CrmCampaign {
   description: string | null;
   is_active: boolean;
   weekdays_only: boolean;
-  send_window_start: string; // time format HH:MM:SS
+  send_window_start: string;
   send_window_end: string;
   default_timezone: string;
   on_complete_action: 'do_nothing' | 'change_status';
@@ -15,7 +15,6 @@ export interface CrmCampaign {
   created_by_profile_id: string | null;
   created_at: string;
   updated_at: string;
-  // Computed fields from joins
   steps_count?: number;
   active_enrollments_count?: number;
 }
@@ -30,6 +29,14 @@ export interface CrmCampaignStep {
   channel: 'email' | 'sms';
   email_subject: string | null;
   email_body_html: string | null;
+  email_body_text: string | null;
+  email_preheader: string | null;
+  email_content_mode: string | null;
+  email_editor_document: EmailEditorDocument | null;
+  email_theme_key: string | null;
+  email_editor_schema_version: number | null;
+  email_render_hash: string | null;
+  email_template_version_id: string | null;
   sms_body_text: string | null;
   is_active: boolean;
   signature_id: string | null;
@@ -53,7 +60,6 @@ export interface CrmCampaignEnrollment {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
-  // Joined fields
   client?: {
     id: string;
     pat_name_f: string | null;
@@ -86,7 +92,6 @@ export interface CrmCampaignStepLog {
   created_at: string;
 }
 
-// Campaign trigger type
 export interface CrmCampaignTrigger {
   id: string;
   campaign_id: string;
@@ -96,7 +101,6 @@ export interface CrmCampaignTrigger {
   created_at: string;
 }
 
-// Form types for creating/editing
 export interface CampaignFormData {
   name: string;
   description: string;
@@ -109,7 +113,6 @@ export interface CampaignFormData {
   on_complete_status: string | null;
 }
 
-// Statuses that are set automatically by the system (appointment triggers, cron jobs)
 export const SYSTEM_MANAGED_STATUSES = [
   'Scheduled',
   'Early Sessions',
@@ -118,19 +121,24 @@ export const SYSTEM_MANAGED_STATUSES = [
 ] as const;
 
 export interface CampaignStepFormData {
-  id?: string; // For existing steps
+  client_key: string;
+  id?: string;
   step_order: number;
   delay_days: number;
   delay_hours: number;
   channel: 'email' | 'sms';
   email_subject: string;
   email_body_html: string;
+  email_body_text: string;
+  email_preheader: string;
+  email_content: EmailContentDocument | null;
+  email_template_id: string | null;
+  email_template_version_id: string | null;
   sms_body_text: string;
   is_active: boolean;
   signature_id: string | null;
 }
 
-// Common US timezones for the dropdown
 export const TIMEZONE_OPTIONS = [
   { value: 'America/New_York', label: 'Eastern Time (ET)' },
   { value: 'America/Chicago', label: 'Central Time (CT)' },
@@ -141,14 +149,15 @@ export const TIMEZONE_OPTIONS = [
   { value: 'Pacific/Honolulu', label: 'Hawaii Time (HST)' },
 ] as const;
 
-// Completion action options
 export const COMPLETION_ACTION_OPTIONS = [
   { value: 'do_nothing', label: 'Do Nothing' },
   { value: 'change_status', label: 'Change Client Status' },
 ] as const;
 
-// Personalization variables available in templates
 export const PERSONALIZATION_VARIABLES = [
   { key: '{{first_name}}', label: 'Client First Name', example: 'John' },
+  { key: '{{preferred_name}}', label: 'Client Preferred Name', example: 'John' },
+  { key: '{{last_name}}', label: 'Client Last Name', example: 'Taylor' },
   { key: '{{therapist_name}}', label: 'Therapist Name', example: 'Dr. Smith' },
+  { key: '{{sender_name}}', label: 'Sender Name', example: 'ValorWell Care Team' },
 ] as const;

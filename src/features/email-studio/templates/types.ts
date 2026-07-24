@@ -69,16 +69,8 @@ export type PublishedDirectEmailTemplate = {
   publishedAt: string;
 };
 
-export type PublishedRelationshipCampaignTemplate = {
-  templateId: string;
-  versionId: string;
-  name: string;
-  description: string | null;
-  subject: string;
-  versionNumber: number;
-  content: EmailContentDocument;
-  publishedAt: string;
-};
+export type PublishedClientCampaignTemplate = PublishedDirectEmailTemplate;
+export type PublishedRelationshipCampaignTemplate = PublishedDirectEmailTemplate;
 
 export type EmailTemplateMetadata = {
   name: string;
