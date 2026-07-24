@@ -137,6 +137,7 @@ begin
     raise exception 'Unsubscribe token is not stable for the recipient';
   end if;
 
+  perform set_config('request.jwt.claim.role', 'service_role', true);
   v_result := public.crm_process_client_unsubscribe(v_token);
   if v_result->>'outcome' <> 'unsubscribed' then
     raise exception 'Expected unsubscribe outcome, got %', v_result;
@@ -150,6 +151,7 @@ begin
     raise exception 'Unsubscribe replay was not idempotent';
   end if;
 
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
   v_rejected := false;
   begin
     perform public.crm_create_bulk_newsletter(
