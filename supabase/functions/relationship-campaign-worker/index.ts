@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildRelationshipResendContent } from "./email-content.ts";
 
 type ClaimedWork = {
   workItemId: string;
@@ -14,6 +15,8 @@ type PreparedCommunication = {
   recipientEmail: string;
   subject?: string;
   renderedBody?: string;
+  renderedHtml?: string;
+  renderedText?: string;
   replyTo?: string;
   providerIdempotencyKey: string;
 };
@@ -78,8 +81,7 @@ Deno.serve(async (request: Request) => {
           from: communication.senderEmail,
           to: [communication.recipientEmail],
           reply_to: communication.replyTo,
-          subject: communication.subject ?? "ValorWell relationship outreach",
-          text: communication.renderedBody ?? "",
+          ...buildRelationshipResendContent(communication),
           headers: { "X-Relationship-Communication-ID": communication.id },
         }),
       });
