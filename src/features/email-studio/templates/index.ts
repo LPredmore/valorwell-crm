@@ -4,5 +4,6 @@ export * from './published-client-campaign';
 export * from './published-client-newsletter';
 export * from './published-direct';
 export * from './published-relationship-campaign';
+export * from './published-staff-newsletter';
 export * from './types';
 export * from './validation';
