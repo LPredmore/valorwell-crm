@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Loader2, Mail } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -12,12 +13,14 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { StaffMember } from '@/domain/operations';
 import type { EmailContentDocument } from '@/features/email-studio/contracts';
 import {
   StaffBroadcastEmailStudioComposer,
   type StaffBroadcastEmailStudioHandle,
 } from '@/features/email-studio/staff';
+import { listPublishedStaffNewsletterTemplates } from '@/features/email-studio/templates';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { useResendSettings } from '@/hooks/crm/useResendSettings';
 import { useToast } from '@/hooks/use-toast';
@@ -52,8 +55,45 @@ export function StaffBroadcastDialog({
   const { toast } = useToast();
   const studioRef = useRef<StaffBroadcastEmailStudioHandle>(null);
   const [subject, setSubject] = useState('');
+  const [initialContent, setInitialContent] = useState<EmailContentDocument | null>(null);
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  const [templateVersionId, setTemplateVersionId] = useState<string | null>(null);
+  const [composerKey, setComposerKey] = useState(0);
   const [isSending, setIsSending] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
+
+  const templates = useQuery({
+    queryKey: ['email-studio', 'published-staff-newsletter-templates'],
+    queryFn: listPublishedStaffNewsletterTemplates,
+    staleTime: 30_000,
+    enabled: open,
+  });
+
+  const clearTemplateAttribution = () => {
+    setTemplateId(null);
+    setTemplateVersionId(null);
+  };
+
+  const resetComposer = () => {
+    setSubject('');
+    setInitialContent(null);
+    clearTemplateAttribution();
+    setComposerKey((value) => value + 1);
+  };
+
+  const applyTemplate = (versionId: string) => {
+    if (versionId === 'blank') {
+      resetComposer();
+      return;
+    }
+    const template = templates.data?.find((entry) => entry.versionId === versionId);
+    if (!template) return;
+    setSubject(template.subject);
+    setInitialContent(template.content);
+    setTemplateId(template.templateId);
+    setTemplateVersionId(template.versionId);
+    setComposerKey((value) => value + 1);
+  };
 
   const createAndSend = async () => {
     if (!tenantId) return;
@@ -81,6 +121,8 @@ export function StaffBroadcastDialog({
           p_staff_ids: staff.map((member) => member.id),
           p_subject: subject.trim(),
           p_content: content,
+          p_template_id: templateId,
+          p_template_version_id: templateVersionId,
         },
       );
       if (error) throw new Error(error.message);
@@ -103,7 +145,7 @@ export function StaffBroadcastDialog({
         variant: result.sent === 0 && result.failed > 0 ? 'destructive' : 'default',
       });
       onComplete();
-      setSubject('');
+      resetComposer();
       onOpenChange(false);
     } catch (error) {
       toast({
@@ -134,19 +176,44 @@ export function StaffBroadcastDialog({
           </Alert>
         ) : null}
 
-        <div className="space-y-2">
-          <Label htmlFor="staff-broadcast-subject">Subject</Label>
-          <Input
-            id="staff-broadcast-subject"
-            value={subject}
-            maxLength={250}
-            disabled={isSending}
-            onChange={(event) => setSubject(event.target.value)}
-            placeholder="Staff broadcast subject"
-          />
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-2">
+            <Label htmlFor="staff-broadcast-subject">Subject</Label>
+            <Input
+              id="staff-broadcast-subject"
+              value={subject}
+              maxLength={250}
+              disabled={isSending}
+              onChange={(event) => {
+                setSubject(event.target.value);
+                clearTemplateAttribution();
+              }}
+              placeholder="Staff broadcast subject"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Published staff template</Label>
+            <Select onValueChange={applyTemplate} disabled={isSending || templates.isLoading}>
+              <SelectTrigger><SelectValue placeholder={templates.isLoading ? 'Loading…' : 'Start blank or choose a template'} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="blank">Blank staff broadcast</SelectItem>
+                {templates.data?.map((template) => (
+                  <SelectItem key={template.versionId} value={template.versionId}>
+                    {template.name} · v{template.versionNumber}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <StaffBroadcastEmailStudioComposer ref={studioRef} readOnly={isSending} />
+        <StaffBroadcastEmailStudioComposer
+          key={composerKey}
+          ref={studioRef}
+          initialContent={initialContent}
+          readOnly={isSending}
+          onDirty={clearTemplateAttribution}
+        />
         {progress ? <p className="text-sm text-muted-foreground">{progress}</p> : null}
 
         <DialogFooter>
