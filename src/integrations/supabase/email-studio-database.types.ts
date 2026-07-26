@@ -4,7 +4,7 @@
 
 import type { Json } from './types';
 
-export type EmailStudioContentScope = 'client' | 'relationship';
+export type EmailStudioContentScope = 'client' | 'relationship' | 'staff';
 export type EmailStudioContentMode = 'direct' | 'campaign' | 'newsletter';
 export type EmailStudioTemplateStatus = 'draft' | 'published' | 'archived';
 
