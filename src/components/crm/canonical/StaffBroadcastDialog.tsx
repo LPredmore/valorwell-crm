@@ -193,7 +193,11 @@ export function StaffBroadcastDialog({
           </div>
           <div className="space-y-2">
             <Label>Published staff template</Label>
-            <Select onValueChange={applyTemplate} disabled={isSending || templates.isLoading}>
+            <Select
+              value={templateVersionId ?? 'blank'}
+              onValueChange={applyTemplate}
+              disabled={isSending || templates.isLoading}
+            >
               <SelectTrigger><SelectValue placeholder={templates.isLoading ? 'Loading…' : 'Start blank or choose a template'} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="blank">Blank staff broadcast</SelectItem>
