@@ -49,7 +49,7 @@ export default function EmailStudioPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Email Studio</h1>
-          <p className="mt-2 max-w-3xl text-muted-foreground">Create reusable canonical templates, publish immutable versions, and manage tenant-scoped images without changing any live delivery path.</p>
+          <p className="mt-2 max-w-3xl text-muted-foreground">Create reusable canonical templates, publish immutable versions, and manage tenant-scoped images for approved CRM email workflows.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline"><Link to="/crm/email-studio/playground"><TestTube2 className="mr-2 h-4 w-4" />Playground</Link></Button>
@@ -65,7 +65,7 @@ export default function EmailStudioPage() {
             <div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input id="email-template-search" className="pl-9" value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Name, subject, or description" /></div>
           </div>
           <div className="space-y-2"><Label>Status</Label><Select value={filters.status} onValueChange={(value) => setFilters((current) => ({ ...current, status: value as EmailTemplateFilters['status'] }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="draft">Draft</SelectItem><SelectItem value="published">Published</SelectItem><SelectItem value="archived">Archived</SelectItem></SelectContent></Select></div>
-          <div className="space-y-2"><Label>Content scope</Label><Select value={filters.scope} onValueChange={(value) => setFilters((current) => ({ ...current, scope: value as EmailTemplateFilters['scope'] }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All scopes</SelectItem><SelectItem value="client">Client</SelectItem><SelectItem value="relationship">Relationship</SelectItem></SelectContent></Select></div>
+          <div className="space-y-2"><Label>Content scope</Label><Select value={filters.scope} onValueChange={(value) => setFilters((current) => ({ ...current, scope: value as EmailTemplateFilters['scope'] }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All scopes</SelectItem><SelectItem value="client">Client</SelectItem><SelectItem value="relationship">Relationship</SelectItem><SelectItem value="staff">Staff</SelectItem></SelectContent></Select></div>
         </CardContent>
       </Card>
 
