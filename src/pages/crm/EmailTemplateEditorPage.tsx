@@ -109,7 +109,14 @@ export default function EmailTemplateEditorPage() {
   const [error, setError] = useState<string | null>(null);
 
   const readOnly = !context?.canManage || template?.status === 'published' || template?.status === 'archived';
-  const availableBlocks = useMemo(() => getEmailStudioBlocksForMode(mode), [mode]);
+  const allowedModes = useMemo<EmailContentMode[]>(
+    () => metadata.scope === 'staff' ? ['newsletter'] : ['direct', 'campaign', 'newsletter'],
+    [metadata.scope],
+  );
+  const availableBlocks = useMemo(
+    () => getEmailStudioBlocksForMode(mode).filter((block) => metadata.scope !== 'staff' || block.kind !== 'compliance-footer'),
+    [metadata.scope, mode],
+  );
   const variables = useMemo(() => getEmailVariablesForScope(metadata.scope), [metadata.scope]);
 
   const initializeTemplate = useCallback((record: EmailTemplateRecord | null) => {
@@ -428,12 +435,14 @@ export default function EmailTemplateEditorPage() {
               <Label>Content scope</Label>
               <Select value={metadata.scope} disabled={readOnly || versions.length > 0} onValueChange={(value) => {
                 const nextScope = value as EmailContentScope;
+                const nextMode: EmailContentMode = nextScope === 'staff' ? 'newsletter' : mode;
                 setMetadata((current) => ({ ...current, scope: nextScope }));
-                replaceDocument(createEmailStudioDocument({ mode, scope: nextScope, themeKey }), mode, themeKey, nextScope);
+                replaceDocument(createEmailStudioDocument({ mode: nextMode, scope: nextScope, themeKey }), nextMode, themeKey, nextScope);
               }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="client">Client communication</SelectItem><SelectItem value="relationship">Relationship outreach</SelectItem></SelectContent>
+                <SelectContent><SelectItem value="client">Client communication</SelectItem><SelectItem value="relationship">Relationship outreach</SelectItem><SelectItem value="staff">Internal staff communication</SelectItem></SelectContent>
               </Select>
+              {metadata.scope === 'staff' ? <p className="text-xs text-muted-foreground">Staff templates use Newsletter mode and internal staff variables only.</p> : null}
               {versions.length > 0 ? <p className="text-xs text-muted-foreground">Versioned templates cannot change audience scope.</p> : null}
             </div>
             <div className="space-y-2">
@@ -453,7 +462,7 @@ export default function EmailTemplateEditorPage() {
 
       <EmailStudioToolbar
         mode={mode}
-        allowedModes={['direct', 'campaign', 'newsletter']}
+        allowedModes={allowedModes}
         themeKey={themeKey}
         status={status}
         readOnly={readOnly}
