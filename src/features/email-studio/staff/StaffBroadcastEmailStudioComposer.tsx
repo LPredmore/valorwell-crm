@@ -57,12 +57,13 @@ export type StaffBroadcastEmailStudioHandle = {
 export type StaffBroadcastEmailStudioComposerProps = {
   initialContent?: EmailContentDocument | null;
   readOnly?: boolean;
+  onDirty?: () => void;
 };
 
 export const StaffBroadcastEmailStudioComposer = forwardRef<
   StaffBroadcastEmailStudioHandle,
   StaffBroadcastEmailStudioComposerProps
->(function StaffBroadcastEmailStudioComposer({ initialContent, readOnly = false }, ref) {
+>(function StaffBroadcastEmailStudioComposer({ initialContent, readOnly = false, onDirty }, ref) {
   const editorRef = useRef<EmailEditorRef>(null);
   const initialThemeKey = normalizeThemeKey(initialContent?.themeKey);
   const initialDocument = initialContent?.mode === 'newsletter' && initialContent.editorDocument
@@ -90,6 +91,7 @@ export const StaffBroadcastEmailStudioComposer = forwardRef<
   const markDirty = () => {
     setSnapshot(null);
     setStatus('dirty');
+    onDirty?.();
   };
 
   const replaceDocument = (nextDocument: EmailEditorDocument, nextThemeKey = themeKey) => {
@@ -100,6 +102,7 @@ export const StaffBroadcastEmailStudioComposer = forwardRef<
     setError(null);
     setStatus('loading');
     setEditorKey((value) => value + 1);
+    onDirty?.();
   };
 
   const exportContent = async (openPreview = false): Promise<EmailContentDocument | null> => {
