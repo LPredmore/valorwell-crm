@@ -8,7 +8,23 @@ import type {
 type CampaignRow = Tables<'crm_campaigns'>;
 type CampaignInsert = TablesInsert<'crm_campaigns'>;
 type CampaignUpdate = TablesUpdate<'crm_campaigns'>;
-type CampaignStepRow = Tables<'crm_campaign_steps'>;
+type CampaignStepRow = Pick<
+  Tables<'crm_campaign_steps'>,
+  | 'id'
+  | 'campaign_id'
+  | 'step_order'
+  | 'channel'
+  | 'delay_days'
+  | 'delay_hours'
+  | 'email_subject'
+  | 'email_body_html'
+  | 'sms_body_text'
+  | 'signature_id'
+  | 'is_active'
+  | 'tenant_id'
+  | 'created_at'
+  | 'updated_at'
+>;
 type EnrollmentRow = Pick<
   Tables<'crm_campaign_enrollments'>,
   | 'id'
