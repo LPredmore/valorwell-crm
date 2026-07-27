@@ -7727,6 +7727,7 @@ export type Database = {
           is_pinned: boolean
           note_content: string
           note_type: string
+          relationship_contact_id: string | null
           tenant_id: string
           updated_at: string
         }
@@ -7739,6 +7740,7 @@ export type Database = {
           is_pinned?: boolean
           note_content: string
           note_type?: string
+          relationship_contact_id?: string | null
           tenant_id: string
           updated_at?: string
         }
@@ -7751,6 +7753,7 @@ export type Database = {
           is_pinned?: boolean
           note_content?: string
           note_type?: string
+          relationship_contact_id?: string | null
           tenant_id?: string
           updated_at?: string
         }
@@ -7782,6 +7785,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_notes_relationship_contact_id_fkey"
+            columns: ["tenant_id", "relationship_contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contact_directory_v"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_notes_relationship_contact_id_fkey"
+            columns: ["tenant_id", "relationship_contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["tenant_id", "id"]
           },
           {
             foreignKeyName: "crm_notes_tenant_id_fkey"
@@ -13543,6 +13560,7 @@ export type Database = {
           preferred_name: string | null
           profile_id: string | null
           relationship_stage: string
+          review_state: string | null
           search_document: unknown
           source: string
           source_record_key: string | null
@@ -13570,6 +13588,7 @@ export type Database = {
           preferred_name?: string | null
           profile_id?: string | null
           relationship_stage?: string
+          review_state?: string | null
           search_document?: unknown
           source?: string
           source_record_key?: string | null
@@ -13597,6 +13616,7 @@ export type Database = {
           preferred_name?: string | null
           profile_id?: string | null
           relationship_stage?: string
+          review_state?: string | null
           search_document?: unknown
           source?: string
           source_record_key?: string | null
@@ -18745,6 +18765,47 @@ export type Database = {
           },
         ]
       }
+      relationship_interest_submission_conflicts: {
+        Row: {
+          id: string | null
+          payload: Json | null
+          source_page: string | null
+          source_record_key: string | null
+          status: string | null
+          submitted_at: string | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string | null
+          payload?: Json | null
+          source_page?: string | null
+          source_record_key?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string | null
+          payload?: Json | null
+          source_page?: string | null
+          source_record_key?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_submissions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       relationship_opportunity_pipeline_v: {
         Row: {
           cause_area: string | null
@@ -21373,11 +21434,19 @@ export type Database = {
         Args: { p_payload: Json }
         Returns: Json
       }
+      submit_website_bty_nomination: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
       submit_website_bty_submission: {
         Args: { p_payload: Json }
         Returns: Json
       }
       submit_website_clinician_application: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
+      submit_website_creator_interest: {
         Args: { p_payload: Json }
         Returns: Json
       }
@@ -21560,6 +21629,15 @@ export type Database = {
           p_note: string
           p_prior_version: number
           p_review_due_at: string
+        }
+        Returns: Json
+      }
+      update_creator_interest_record: {
+        Args: {
+          p_contact_changes: Json
+          p_contact_id: string
+          p_profile_changes: Json
+          p_tenant_id: string
         }
         Returns: Json
       }
