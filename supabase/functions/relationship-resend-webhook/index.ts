@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@6.18.0";
 
+const TENANT_ID = "00000000-0000-0000-0000-000000000001";
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
   headers: { "content-type": "application/json" },
@@ -33,20 +34,30 @@ const headerValue = (headers: unknown, name: string): string | undefined => {
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  const webhookSecret = Deno.env.get("RESEND_RELATIONSHIP_WEBHOOK_SECRET") ?? "";
   const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  if (!webhookSecret || !resendApiKey || !supabaseUrl || !serviceRoleKey) {
+  if (!resendApiKey || !supabaseUrl || !serviceRoleKey) {
     return json({ error: "Relationship webhook runtime is not configured." }, 503);
   }
+
+  const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+  let webhookSecret = Deno.env.get("RESEND_RELATIONSHIP_WEBHOOK_SECRET") ?? "";
+  if (!webhookSecret) {
+    const { data, error } = await admin.rpc("get_relationship_webhook_runtime", { p_tenant_id: TENANT_ID });
+    if (!error && data && typeof data === "object") {
+      webhookSecret = String((data as Record<string, unknown>).webhookSecret ?? "");
+    }
+  }
+  if (!webhookSecret) return json({ error: "Relationship webhook signing secret is not configured." }, 503);
 
   const rawBody = await request.text();
   const svixId = request.headers.get("svix-id") ?? "";
   const svixTimestamp = request.headers.get("svix-timestamp") ?? "";
   const svixSignature = request.headers.get("svix-signature") ?? "";
-  const resend = new Resend(resendApiKey);
+  if (!svixId || !svixTimestamp || !svixSignature) return json({ error: "Resend webhook headers are missing." }, 400);
 
+  const resend = new Resend(resendApiKey);
   let event: Record<string, unknown>;
   try {
     event = resend.webhooks.verify({
@@ -58,10 +69,10 @@ Deno.serve(async (request: Request) => {
     return json({ error: "Invalid webhook signature." }, 401);
   }
 
-  const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
   const eventType = String(event.type ?? "");
   const data = (typeof event.data === "object" && event.data !== null ? event.data : {}) as Record<string, unknown>;
   const occurredAt = String(event.created_at ?? new Date().toISOString());
+  console.log(JSON.stringify({ component: "relationship-resend-webhook", event: "signature_verified", eventType, providerEventId: svixId }));
 
   if (eventType === "email.received") {
     const emailId = String(data.email_id ?? data.id ?? "");
