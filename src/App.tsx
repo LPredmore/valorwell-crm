@@ -30,6 +30,7 @@ import RelationshipReplyQueuePage from "./pages/crm/business-development/Relatio
 import RelationshipReportsPage from "./pages/crm/business-development/RelationshipReportsPage";
 import RelationshipSearchPage from "./pages/crm/business-development/RelationshipSearchPage";
 import RelationshipSuppressionPage from "./pages/crm/business-development/RelationshipSuppressionPage";
+import RelationshipBulkEnrollmentPage from "./pages/crm/business-development/campaigns/RelationshipBulkEnrollmentPage";
 import RelationshipCampaignDeliveryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDeliveryPage";
 import RelationshipCampaignDirectoryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDirectoryPage";
 import RelationshipCampaignEditorPage from "./pages/crm/business-development/campaigns/RelationshipCampaignEditorPage";
@@ -86,6 +87,7 @@ const App = () => (
             <Route path="business-development/opportunities" element={<OpportunityDirectoryPage />} />
             <Route path="business-development/opportunities/:id" element={<OpportunityDetailPage />} />
             <Route path="business-development/imports" element={<RelationshipImportPage />} />
+            <Route path="business-development/bulk-enrollment" element={<RelationshipBulkEnrollmentPage />} />
             <Route path="business-development/campaigns" element={<RelationshipCampaignDirectoryPage />} />
             <Route path="business-development/campaigns/new" element={<RelationshipCampaignEditorPage />} />
             <Route path="business-development/campaigns/preview" element={<RelationshipCampaignPreviewPage />} />

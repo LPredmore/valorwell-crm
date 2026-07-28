@@ -27,6 +27,10 @@ import type {
   RelationshipCampaignTransitionInput,
 } from '@/domain/relationships/campaign-contracts';
 import type {
+  RelationshipCampaignCandidateFilters,
+  RelationshipCampaignCandidatePage,
+} from '@/domain/relationships/bulk-enrollment-contracts';
+import type {
   RelationshipCampaignExecutionResult,
   RelationshipCommunication,
   RelationshipCommunicationEvent,
@@ -134,6 +138,7 @@ export interface RelationshipsRepository {
   getDeliveryReadiness(campaignId: string): Promise<RelationshipDeliveryReadiness>;
   setCampaignExecution(campaignId: string, input: SetRelationshipCampaignExecutionInput): Promise<RelationshipCampaignExecutionResult>;
 
+  listCampaignCandidates(filters: RelationshipCampaignCandidateFilters): Promise<RelationshipCampaignCandidatePage>;
   evaluateEnrollmentEligibility(campaignId: string, targets: RelationshipEnrollmentTarget[]): Promise<RelationshipEnrollmentEligibility[]>;
   listEnrollments(campaignId: string, filters?: RelationshipEnrollmentFilters): Promise<RelationshipEnrollmentPage>;
   getEnrollment(id: string): Promise<RelationshipCampaignEnrollment | null>;

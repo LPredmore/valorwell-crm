@@ -48,6 +48,7 @@ export const unavailableRelationshipsRepository: RelationshipsRepository = {
   async transitionCampaignStatus() { return unavailable('campaigns'); },
   async getDeliveryReadiness() { return unavailable('campaigns'); },
   async setCampaignExecution() { return unavailable('campaigns'); },
+  async listCampaignCandidates() { return unavailable('enrollment'); },
   async evaluateEnrollmentEligibility() { return unavailable('enrollment'); },
   async listEnrollments() { return unavailable('enrollment'); },
   async getEnrollment() { return unavailable('enrollment'); },

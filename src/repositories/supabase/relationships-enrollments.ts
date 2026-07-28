@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { capabilityState } from '@/domain/relationships/capabilities';
-import type { CapabilityAvailability, CapabilityStatus } from '@/domain/relationships/contracts';
+import type { CapabilityAvailability, CapabilityStatus, SourceLanguageMode } from '@/domain/relationships/contracts';
+import type {
+  RelationshipBulkAudienceKind,
+  RelationshipCampaignCandidate,
+} from '@/domain/relationships/bulk-enrollment-contracts';
 import type {
   RelationshipEnrollmentEventRow,
   RelationshipEnrollmentRow,
@@ -39,6 +43,10 @@ type RelationshipEnrollmentDatabase = {
     };
     Views: Record<string, never>;
     Functions: {
+      list_relationship_campaign_candidates: {
+        Args: { p_filters?: Json };
+        Returns: Json;
+      };
       evaluate_relationship_campaign_eligibility: {
         Args: { p_campaign_id: string; p_targets: Json };
         Returns: Json;
@@ -74,6 +82,47 @@ type JsonObject = { [key: string]: Json | undefined };
 
 function isJsonObject(value: Json | undefined): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function stringValue(value: Json | undefined) {
+  return typeof value === 'string' && value ? value : undefined;
+}
+
+function requiredString(value: Json | undefined, label: string) {
+  const result = stringValue(value);
+  if (!result) throw new Error(`Invalid relationship ${label}.`);
+  return result;
+}
+
+function booleanValue(value: Json | undefined) {
+  return value === true;
+}
+
+function numberValue(value: Json | undefined, fallback = 0) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function stringArray<T extends string = string>(value: Json | undefined) {
+  return Array.isArray(value) ? value.filter((item): item is T => typeof item === 'string') : [];
+}
+
+function mapCampaignCandidate(value: Json): RelationshipCampaignCandidate {
+  if (!isJsonObject(value)) throw new Error('Invalid relationship campaign candidate response.');
+  return {
+    contactId: requiredString(value.contactId, 'candidate contact id'),
+    contactName: requiredString(value.contactName, 'candidate contact name'),
+    email: requiredString(value.email, 'candidate email'),
+    organizationId: stringValue(value.organizationId),
+    organizationName: stringValue(value.organizationName),
+    audienceKinds: stringArray<RelationshipBulkAudienceKind>(value.audienceKinds),
+    roleCodes: stringArray(value.roleCodes),
+    sourceLanguageMode: (stringValue(value.sourceLanguageMode) ?? 'none') as SourceLanguageMode,
+    verifiedReferralId: stringValue(value.verifiedReferralId),
+    referralCategory: stringValue(value.referralCategory),
+    referralDisclosure: stringValue(value.referralDisclosure),
+    doNotContact: booleanValue(value.doNotContact),
+    organizationDoNotContact: booleanValue(value.organizationDoNotContact),
+  };
 }
 
 function errorMessage(error: unknown) {
@@ -154,6 +203,25 @@ async function enrollmentCapabilities(): Promise<CapabilityAvailability[]> {
       capabilityState('enrollment', capabilityStatusFromError(error), errorMessage(error)),
     );
   }
+}
+
+async function listCampaignCandidates(
+  filters: Parameters<RelationshipsRepository['listCampaignCandidates']>[0],
+) {
+  await operatingContext();
+  const { data, error } = await enrollmentSupabase.rpc('list_relationship_campaign_candidates', {
+    p_filters: filters as unknown as Json,
+  });
+  if (error) throw new Error(error.message);
+  if (!isJsonObject(data) || !Array.isArray(data.items)) {
+    throw new Error('Invalid relationship campaign candidate list response.');
+  }
+  return {
+    items: data.items.map(mapCampaignCandidate),
+    total: numberValue(data.total),
+    page: numberValue(data.page, 1),
+    pageSize: numberValue(data.pageSize, filters.pageSize ?? 100),
+  };
 }
 
 async function evaluateEnrollmentEligibility(
@@ -256,6 +324,7 @@ async function listEnrollmentEvents(id: string) {
 export const supabaseRelationshipsRepository: RelationshipsRepository = {
   ...campaignRelationshipsRepository,
   capabilities: enrollmentCapabilities,
+  listCampaignCandidates,
   evaluateEnrollmentEligibility,
   listEnrollments,
   getEnrollment,
