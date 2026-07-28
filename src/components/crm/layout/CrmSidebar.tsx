@@ -18,6 +18,7 @@ import {
   Building2,
   CircleHelp,
   Mail,
+  UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,7 @@ const businessDevelopmentItems: NavItem[] = [
   { label: 'BTY Opportunities', href: '/crm/business-development/opportunities', icon: HeartHandshake },
   { label: 'Imports', href: '/crm/business-development/imports', icon: Inbox },
   { label: 'Relationship Campaigns', href: '/crm/business-development/campaigns', icon: Megaphone },
+  { label: 'Bulk Campaign Enrollment', href: '/crm/business-development/bulk-enrollment', icon: UserPlus },
   { label: 'Relationship Replies', href: '/crm/business-development/replies', icon: Inbox },
   { label: 'Relationship Suppressions', href: '/crm/business-development/suppressions', icon: AlertTriangle },
   { label: 'Reports', href: '/crm/business-development/reports', icon: BarChart3 },
