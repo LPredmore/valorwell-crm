@@ -21,6 +21,7 @@ type PreparedCommunication = {
   providerIdempotencyKey: string;
 };
 
+const TENANT_ID = "00000000-0000-0000-0000-000000000001";
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
   headers: { "content-type": "application/json" },
@@ -30,17 +31,26 @@ Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const authorization = request.headers.get("authorization") ?? "";
-  if (!serviceRoleKey || authorization !== `Bearer ${serviceRoleKey}`) {
-    return json({ error: "Service-role authorization is required." }, 403);
-  }
-
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
-  const unsubscribeBaseUrl = Deno.env.get("RELATIONSHIP_UNSUBSCRIBE_URL") ?? "https://crm.valorwell.org/unsubscribe";
-  if (!supabaseUrl || !resendApiKey) return json({ error: "Delivery runtime is not configured." }, 503);
+  if (!serviceRoleKey || !supabaseUrl) return json({ error: "Worker runtime is not configured." }, 503);
 
   const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+  const authorization = request.headers.get("authorization") ?? "";
+  const workerToken = request.headers.get("x-relationship-worker-token") ?? "";
+  let authorized = authorization === `Bearer ${serviceRoleKey}`;
+  if (!authorized && workerToken) {
+    const { data, error } = await admin.rpc("relationship_worker_token_valid", {
+      p_tenant_id: TENANT_ID,
+      p_token: workerToken,
+    });
+    authorized = !error && data === true;
+  }
+  if (!authorized) return json({ error: "Relationship worker authorization is required." }, 403);
+
+  const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
+  const unsubscribeBaseUrl = Deno.env.get("RELATIONSHIP_UNSUBSCRIBE_URL") ?? "https://crm.valorwell.org/unsubscribe";
+  if (!resendApiKey) return json({ error: "Delivery runtime is not configured." }, 503);
+
   const input = await request.json().catch(() => ({})) as { limit?: number; workerId?: string };
   const limit = Math.min(Math.max(Number(input.limit ?? 10), 1), 50);
   const workerId = String(input.workerId ?? `relationship-worker-${crypto.randomUUID()}`);
@@ -142,5 +152,6 @@ Deno.serve(async (request: Request) => {
     }
   }
 
+  console.log(JSON.stringify({ component: "relationship-campaign-worker", event: "run_complete", workerId, claimed: (claimed ?? []).length }));
   return json({ workerId, claimed: (claimed ?? []).length, results });
 });
