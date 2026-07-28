@@ -166,5 +166,6 @@ export class RelationshipCapabilityUnavailableError extends Error {
   constructor(capability: Capability) {
     super(`Relationship capability pending: ${capability}`);
     this.name = 'RelationshipCapabilityUnavailableError';
+    this.capability = capability;
   }
 }
