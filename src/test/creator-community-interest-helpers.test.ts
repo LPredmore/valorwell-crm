@@ -50,11 +50,11 @@ describe('creator/community interest queue helpers', () => {
   it('uses latest submission history for live-source filtering and newest sorting', () => {
     const historicalThenLive = record({
       id: 'historical-live',
-      source: 'therapist_crm_interest_migration',
+      source: 'legacy_relationship_import',
       createdAt: '2026-01-01T00:00:00Z',
     });
     historicalThenLive.submissions = [
-      { id: 'historical-raw', submissionType: 'interest_submission', normalizedLane: 'partnership_support', originalLane: 'legacy', sourceSystem: 'therapist_crm_interest_migration', sourcePage: null, status: 'migrated', payload: null, submittedAt: '2026-01-01T00:00:00Z' },
+      { id: 'historical-raw', submissionType: 'interest_submission', normalizedLane: 'partnership_support', originalLane: 'legacy', sourceSystem: 'legacy_relationship_import', sourcePage: null, status: 'migrated', payload: null, submittedAt: '2026-01-01T00:00:00Z' },
       { id: 'live-raw', submissionType: 'interest_submission', normalizedLane: 'partnership_support', originalLane: 'creator_promoter_community_interest', sourceSystem: 'valorwell_website_interest', sourcePage: '/beyondtheyellow', status: 'new', payload: null, submittedAt: '2026-07-18T12:00:00Z' },
     ];
     const newerContactButOlderSubmission = record({ id: 'newer-contact', createdAt: '2026-07-17T00:00:00Z' });

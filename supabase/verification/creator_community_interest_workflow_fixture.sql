@@ -365,13 +365,13 @@ insert into public.relationship_contacts (
     '00000000-0000-0000-0000-000000000001',
     'historical-interest-fixture@example.invalid',
     'unknown',
-    'therapist_crm_interest_migration',
+    'legacy_relationship_import',
     'historical-interest-fixture'
   ),
   (
     '00000000-0000-0000-0000-000000000001',
     'clinician-fixture@example.invalid',
     'unknown',
-    'therapist_crm_clinician_application',
+    'legacy_system_import',
     'clinician-fixture'
   );

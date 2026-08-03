@@ -20766,10 +20766,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      import_therapist_crm_bundle: {
-        Args: { p_bundle: Json; p_token: string }
-        Returns: Json
-      }
       ingest_relationship_inbound_reply: {
         Args: {
           p_body: string
