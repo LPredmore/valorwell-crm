@@ -1,0 +1,66 @@
+name: Normalize retired project artifacts
+
+on:
+  push:
+    branches:
+      - agent/harden-retired-project-audit
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/harden-retired-project-audit
+          fetch-depth: 0
+      - name: Normalize committed operating artifacts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+
+          tracked = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          replacements = {
+              'therapist_crm_interest_migration': 'legacy_relationship_import',
+              'therapist_crm_clinician_application': 'legacy_system_import',
+          }
+
+          for name in tracked:
+              if not name or name.startswith('supabase/migrations/'):
+                  continue
+              path = Path(name)
+              try:
+                  text = path.read_text()
+              except (UnicodeDecodeError, IsADirectoryError):
+                  continue
+              updated = text
+              for old, new in replacements.items():
+                  updated = updated.replace(old, new)
+              if updated != text:
+                  path.write_text(updated)
+
+          types = Path('src/integrations/supabase/types.ts')
+          text = types.read_text()
+          text = text.replace('therapist_crm_archive', 'legacy_relationship_system_archive')
+          text, count = re.subn(
+              r'\n      import_therapist_crm_[A-Za-z0-9_]+: \{\n(?:.*\n)*?      \}\n',
+              '\n',
+              text,
+          )
+          if count == 0:
+              raise SystemExit('Expected at least one stale retired-project RPC declaration in generated types')
+          types.write_text(text)
+          PY
+      - name: Commit normalized files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git reset .github/workflows/normalize-retired-project-artifacts.yml
+          git diff --cached --quiet && exit 0
+          git commit -m 'chore: normalize legacy relationship provenance'
+          git push origin HEAD:agent/harden-retired-project-audit
