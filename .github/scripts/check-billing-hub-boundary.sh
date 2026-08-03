@@ -8,17 +8,17 @@ guard_path='.github/scripts/check-billing-hub-boundary.sh'
 # reference as it appears inside legacy anon JWTs.
 retired_identifier_pattern='asjhkidpuhqodryczuth|YXNqaGtpZHB1aHFvZHJ5Y3p1dGg|LEGACY_SUPABASE_URL|LEGACY_SUPABASE_ANON_KEY|LEGACY_SUPABASE_PUBLISHABLE_KEY|valorwell-backend|therapist-crm-retirement-(import|check)'
 
-if git grep -n -I -E "$retired_identifier_pattern" -- . \
+if git grep -n -I -i -E "$retired_identifier_pattern" -- . \
   ":(exclude)$guard_path"; then
   echo "Retired Supabase project or repository identifier detected." >&2
   exit 1
 fi
 
-# Current tracked files must not refer to the former project by its display
-# name. Historical references remain available in Git history instead.
-if git grep -n -I -E 'Therapist[[:space:]-]+CRM' -- . \
+# Catch human-readable, slug, and database-source variants such as spaces,
+# hyphens, or underscores. Historical references remain available in Git history.
+if git grep -n -I -i -E 'therapist[[:space:]_-]*crm' -- . \
   ":(exclude)$guard_path"; then
-  echo "Retired project display name detected in the current CRM tree." >&2
+  echo "Retired project name detected in the current CRM tree." >&2
   exit 1
 fi
 
