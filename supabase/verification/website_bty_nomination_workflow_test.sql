@@ -620,7 +620,7 @@ select pg_temp.assert_true(
       and first_name = 'Established'
       and last_name = 'Identity'
       and phone = '555-0001'
-      and source = 'therapist_crm_clinician_application'
+      and source = 'legacy_system_import'
       and source_record_key = 'established-identity'
       and metadata = '{"protected":true}'::jsonb
     from public.relationship_contacts
@@ -645,7 +645,7 @@ select pg_temp.assert_true(
       and first_name = 'Filled'
       and last_name = 'Blanks'
       and phone = '555-0200'
-      and source = 'therapist_crm_interest_migration'
+      and source = 'legacy_relationship_import'
       and source_record_key = 'historical-merge'
     from public.relationship_contacts
     where id = '00000000-0000-0000-0000-000000000202'
@@ -667,7 +667,7 @@ values
   (
     '00000000-0000-0000-0000-000000000001',
     'conflict@example.invalid',
-    'therapist_crm_interest_migration',
+    'legacy_relationship_import',
     'conflict-email-contact'
   );
 

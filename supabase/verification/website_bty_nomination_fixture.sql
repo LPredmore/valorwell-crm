@@ -356,7 +356,7 @@ values (
   'Identity',
   'established@example.invalid',
   '555-0001',
-  'therapist_crm_clinician_application',
+  'legacy_system_import',
   'established-identity',
   '{"protected":true}'::jsonb
 );
@@ -373,7 +373,7 @@ values (
   '00000000-0000-0000-0000-000000000202',
   '00000000-0000-0000-0000-000000000001',
   'merge@example.invalid',
-  'therapist_crm_interest_migration',
+  'legacy_relationship_import',
   'historical-merge',
   '{"historical":true}'::jsonb
 );
