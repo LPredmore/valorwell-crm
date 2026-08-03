@@ -1,199 +1,100 @@
-# ValorWell CRM — Supabase Integration Contract
+# ValorWell CRM — Billing Hub Integration Contract
 
-**Status:** Handoff specification. The application currently runs entirely on
-the mock provider (`src/repositories/mock`). This document describes what the
-future Supabase-backed provider must satisfy. Nothing here was validated
-against the live Supabase project.
+**Status:** Active production contract.
 
-**Contract owner:** CRM application. The database must adapt to this contract;
-this document must not be adjusted to match an existing schema.
+Billing Hub is the canonical Supabase backend for the ValorWell CRM. The production application uses the Supabase repositories under `src/repositories/supabase`; the mock provider is limited to tests and isolated development fixtures.
 
----
+## 1. Connection contract
 
-## 1. Data provider surface
+The frontend must create its Supabase client from:
 
-The Supabase adapter must implement every method of `CrmDataProvider`
-(`src/repositories/types.ts`) with identical signatures and semantics.
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 
-Any deviation is a breaking change and must be versioned.
+Both values must identify Billing Hub. Hard-coded fallback URLs, a second Supabase client for a retired project, and compatibility routing are prohibited.
 
-## 2. Canonical domain entities
+`supabase/config.toml` must identify Billing Hub. Edge Functions must use their project-provided `SUPABASE_URL` and service credentials rather than embedding another project URL.
 
-Source of truth: `src/domain/canonical.ts` and `src/domain/operations.ts`.
+## 2. Production repository behavior
 
-### 2.1 CanonicalClient
-Every field listed on the `CanonicalClient` interface must be resolvable for
-every client row. The following state dimensions are strictly independent —
-none may be collapsed into a single generic status column:
+`src/services/dataProvider.ts` selects the Supabase provider for production. Missing tables, functions, permissions, or network access must produce an explicit error. Production code must not replace unavailable Billing Hub data with mock records.
 
-- `lifecycle` (`LifecycleStage`)
-- `engagement` (`EngagementState`)
-- `eligibility` (`EligibilityState`)
-- `contactPolicy` (`ContactPolicy`)
-- `servicePolicy` (`ServicePolicy`)
-- `careCadence` (`CareCadence`)
-- `risk` (`RiskState`)
-- `closure` (`ClosureInfo`, present only when lifecycle is `Closed`)
+Every `CrmDataProvider` surface must retain its typed contract for clients, tasks, exceptions, campaigns, communications, staff, audit, reporting, and relationship operations.
 
-### 2.2 Tasks, Exceptions, Campaigns, Communications, Staff, Audit
-See interface definitions. The database must expose enums or lookups for every
-enumerated string in the domain types.
+## 3. Canonical client state
 
-## 3. Required query operations
+The following dimensions remain independent and must not be collapsed into a single generic status:
 
-Each list operation must accept filtering, sorting, and pagination as
-declared in the repository interface. The clients list must additionally
-support server-side full-text search across name, preferred name, email,
-phone, and identifier.
+- lifecycle
+- engagement
+- eligibility
+- contact policy
+- service policy
+- care cadence
+- risk
+- closure
+- clinician assignment
 
-## 4. Required mutation operations
+Deprecated aggregate status fields may be read only where a controlled compatibility adapter explicitly requires them. They must not become the write authority.
 
-All mutating client operations must:
+## 4. Mutations and authorization
 
-1. Be idempotent using a request-supplied idempotency key.
-2. Emit an event to the audit log with previous value, new value, actor,
-   source, correlation id, and reason (when applicable).
-3. Refuse illegal transitions and return a structured error (see §9).
+Protected mutations must:
 
-Communication sends must additionally run the send-time suppression guard
-described in §7 before writing an outbound row.
+1. Resolve the acting authenticated profile and tenant server-side.
+2. Verify the required capability or role server-side.
+3. Validate legal state transitions.
+4. Accept an idempotency key.
+5. emit an audit event containing actor, source, reason, correlation information, previous value, and resulting value where applicable.
+6. Return a structured, staff-safe error on failure.
 
-## 5. Required event history
+Client-side role checks may improve user experience but are never the sole authorization control.
 
-The audit log must persist every entry emitted by mutations, plus:
+## 5. Communications
 
-- Lifecycle transitions
-- Engagement transitions
-- Eligibility state changes
-- Contact policy changes
-- Service policy changes
-- Cadence changes
-- Risk marks and clears
-- Closure and reopen events
-- Assignment changes
-- Communication sends, deliveries, failures, suppressions
-- Inbound communications and opt-out keyword detections
-- Campaign enrollment lifecycle events
-- Task lifecycle events
-- Exception lifecycle events
+- Resend is the canonical CRM email provider.
+- RingCentral is the canonical CRM SMS provider.
+- Every outbound send must evaluate the current communication policy and suppression state immediately before sending.
+- Message persistence, provider delivery identifiers, failures, replies, opt-outs, and campaign transitions must remain auditable.
+- New Help Scout sending paths are prohibited.
 
-Records must include automated-vs-manual, actor label, source system, and a
-correlation id linking related events across services.
+## 6. Clinical and relationship separation
 
-## 6. Required reporting datasets
+Business Development organizations, contacts, referrals, opportunities, campaigns, replies, and suppressions must use their dedicated relationship contracts. They must not be stored in clinical client records or clinical campaign tables.
 
-The reporting repository requires these canonical read models:
+Inbound website-interest queues remain distinct from outbound relationship-development records. Conversion between lanes must be explicit and auditable.
 
-- Journey funnel by lifecycle stage (counts + median days in stage)
-- At-risk metrics (totals, aging, by-reason, by-stage, overdue interventions)
-- Engagement counts, transitions, reengagement rate
-- Closure by reason
-- Campaign performance (enrollments, sent, delivered, responded, completed,
-  suppressed, failed, opted-out) per campaign
-- Task performance (open, overdue, avg completion time, per-owner workload)
-- Exception metrics (by-type, by-severity, open vs resolved, avg resolution)
+## 7. Website intake
 
-## 7. Communication policy evaluation
+Public ValorWell website submissions enter Billing Hub through constrained RPCs or website-specific Edge Functions. Anonymous callers must not receive direct broad table access. Server-side validation, consent handling, deduplication, rate limiting or honeypot controls, and generic public errors must be retained.
 
-The Supabase adapter must expose an evaluator with the same shape as
-`CommunicationsRepository.evaluatePolicy`. It must consider:
+The website repository does not own Billing Hub schema migrations.
 
-- `contactPolicy = Do Not Contact` (blocks anything except
-  `critical_operational`)
-- `servicePolicy = Service Blocked` (blocks `ordinary_campaign_follow_up`)
-- Lifecycle `Closed` (blocks `ordinary_campaign_follow_up`)
-- Channel restrictions (missing phone / email)
-- Quiet hours per client timezone
-- Duplicate-send suppression window
+## 8. RLS and exposed APIs
 
-Every outbound message must be evaluated at send-time. Failed evaluations
-must persist a `suppressed` row with the reason so the UI can display it.
+Every table in an exposed schema must have RLS enabled and appropriate grants. Policies must enforce tenant or ownership predicates rather than relying only on `TO authenticated`.
 
-## 8. Campaign operations
+Privileged `SECURITY DEFINER` functions must revoke default `PUBLIC` execution, grant only intended roles, set a controlled `search_path`, and perform explicit authorization checks.
 
-- Suppressable message classes must respect the guard defined in §7.
-- Enrollment mutations (enroll, pause, resume, cancel, restart) must be
-  atomic and idempotent.
-- Inbound opt-out keywords (`STOP`, `REMOVE`, `UNSUBSCRIBE`, `QUIT`, `END`,
-  `CANCEL`, case-insensitive, whitespace-tolerant, exact-match line) must:
-  1. Set contact policy to `Do Not Contact`.
-  2. Cancel all active enrollments for that client with a canonical
-     `exit_reason`.
-  3. Emit audit events.
-  4. Return the resulting canonical client state.
+## 9. Migration and Edge Function delivery
 
-## 9. Error shape
+Database changes belong in reviewed CRM/backend migrations and must be verified against live Billing Hub after deployment. Edge Function source must have one canonical repository owner; duplicate function names across repositories are prohibited unless a documented release process requires them.
 
-All repository methods must reject with an `Error` whose `.message` is safe
-to log and whose optional `.cause` carries a structured error object:
+Before production completion:
 
-```ts
-type CrmError = {
-  code:
-    | 'not_found'
-    | 'forbidden'
-    | 'illegal_transition'
-    | 'validation_failed'
-    | 'conflict'
-    | 'suppressed'
-    | 'rate_limited'
-    | 'upstream_unavailable';
-  message: string;
-  field?: string;
-  correlationId?: string;
-};
-```
+- run the Billing Hub repository-boundary guard;
+- run lint, both TypeScript checks, tests, and build;
+- verify changed RPCs/functions against live Billing Hub;
+- run Supabase security and performance advisors for schema changes;
+- record any remaining deployment drift.
 
-## 10. Pagination
+## 10. Prohibited behavior
 
-List operations must accept `page` and `pageSize`, defaulting to page 1 and
-50. Responses must include `total`, `page`, and `pageSize` so the UI can
-render pagination controls without a second query.
-
-## 11. Authorization
-
-Row Level Security must scope every read and write by `tenant_id`. Every
-canonical write must additionally check the acting profile has the CRM role
-`admin` or `staff` for that tenant. Reporting reads may be restricted to
-`admin` at the discretion of the tenant configuration.
-
-## 12. Idempotency
-
-All mutating operations must accept a client-supplied `Idempotency-Key`
-header (or equivalent JSON field). Repeated requests within a 24-hour window
-must return the original result without re-applying side effects.
-
-## 13. Audit requirements
-
-Every mutation must be traceable to:
-
-- Acting profile id
-- Client id (when applicable)
-- Actor label (human-friendly)
-- Source system
-- Correlation id
-- Reason (required for lifecycle transitions, closures, contact policy
-  changes, service policy changes, and manual overrides)
-
-## 14. What the adapter must NOT do
-
-- No `pat_status` reads. The legacy status column must be treated as
-  deprecated and never surfaced through the canonical adapter.
-- No inference of eligibility from lifecycle, or of risk from engagement.
-- No silent fallback to legacy columns when a canonical view is missing —
-  return a structured `upstream_unavailable` error instead.
-- No client-side role gating. Roles must be evaluated server-side.
-
----
-
-## Handoff checklist
-
-The Supabase phase is complete when:
-
-1. Every `CrmDataProvider` method has a Supabase implementation.
-2. `src/services/dataProvider.ts` can flip to the Supabase provider via env
-   flag with no other code changes.
-3. All frontend tests continue to pass against the mock provider.
-4. All frontend workflows pass an integration test against the Supabase
-   provider.
-5. Idempotency, RLS, and audit requirements are verified by backend tests.
+- Any Supabase project other than Billing Hub.
+- Hard-coded retired project URLs or keys.
+- Production fallback to mock data.
+- Website-owned CRM database migrations.
+- Direct writes that bypass canonical mutation contracts.
+- Clinical/relationship data substitution.
+- New Help Scout dependencies.
+- Anonymous access to protected CRM or clinical records.
