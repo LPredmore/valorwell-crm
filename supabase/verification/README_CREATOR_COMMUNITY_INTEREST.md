@@ -49,4 +49,4 @@ First roll the Website back so it no longer calls the RPC. Then run
 `creator_community_interest_workflow_rollback.sql`. That rollback removes only
 the anonymous function. It intentionally retains canonical data, additive
 columns, integrity constraints, indexes, and the tenant-aware RLS improvements.
-No historical Therapist CRM rows are deleted or rewritten.
+No historical relationship or intake rows are deleted or rewritten.
