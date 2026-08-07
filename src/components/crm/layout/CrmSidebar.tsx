@@ -15,6 +15,7 @@ import {
   Search,
   Megaphone as MegaphoneIcon,
   HeartHandshake,
+  Handshake,
   Building2,
   CircleHelp,
   Mail,
@@ -65,6 +66,7 @@ const clinicalNavItems: NavItem[] = [
   { label: 'Canonical Clients', href: '/crm/canonical/clients', icon: Users },
   { label: 'Tasks', href: '/crm/canonical/tasks', icon: ListTodo },
   { label: 'Exceptions', href: '/crm/canonical/exceptions', icon: AlertTriangle },
+  { label: 'Therapist Reconciliation', href: '/crm/canonical/therapist-matches', icon: Handshake },
   { label: 'Canonical Campaigns', href: '/crm/canonical/campaigns', icon: MegaphoneIcon },
   { label: 'Search', href: '/crm/canonical/search', icon: Search },
 ];

@@ -49,6 +49,7 @@ import CanonicalCampaignDetail from "./pages/crm/canonical/CanonicalCampaignDeta
 import CanonicalSearch from "./pages/crm/canonical/CanonicalSearch";
 import CreatorCommunityInterestQueue from "./pages/crm/canonical/CreatorCommunityInterestQueue";
 import CreatorCommunityInterestDetail from "./pages/crm/canonical/CreatorCommunityInterestDetail";
+import TherapistMatchReconciliationPage from "./pages/crm/canonical/TherapistMatchReconciliationPage";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ const App = () => (
             <Route path="campaigns/:id/enrollments" element={<CrmCampaignEnrollments />} />
             <Route path="tasks" element={<CanonicalTasks />} />
             <Route path="exceptions" element={<CanonicalExceptions />} />
+            <Route path="therapist-matches" element={<TherapistMatchReconciliationPage />} />
             <Route path="inbox" element={<CanonicalInbox />} />
             <Route path="reports" element={<CanonicalReports />} />
             <Route path="business-development" element={<BusinessDevelopmentDashboard />} />
@@ -110,6 +112,7 @@ const App = () => (
             <Route path="canonical/clients/:id" element={<CanonicalClientDetail />} />
             <Route path="canonical/tasks" element={<CanonicalTasks />} />
             <Route path="canonical/exceptions" element={<CanonicalExceptions />} />
+            <Route path="canonical/therapist-matches" element={<TherapistMatchReconciliationPage />} />
             <Route path="canonical/campaigns" element={<CanonicalCampaigns />} />
             <Route path="canonical/campaigns/:id" element={<CanonicalCampaignDetail />} />
             <Route path="canonical/inbox" element={<CanonicalInbox />} />
