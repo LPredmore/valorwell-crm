@@ -56,6 +56,7 @@ interface PendingDecision {
 }
 
 const newActionId = (prefix: string) => `${prefix}:${crypto.randomUUID()}`;
+const humanize = (value: string) => value.split('_').join(' ');
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -233,7 +234,7 @@ export default function TherapistMatchReconciliationPage() {
                         {row.clientDisplayName || 'Client record'}
                       </Link>
                       <div className="text-xs text-muted-foreground">
-                        {row.clientEmail || 'No email'} · {row.lifecycleStage.replaceAll('_', ' ')}
+                        {row.clientEmail || 'No email'} · {humanize(row.lifecycleStage)}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -244,7 +245,7 @@ export default function TherapistMatchReconciliationPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={row.state === 'legacy_review' ? 'secondary' : 'outline'} className="capitalize">
-                        {row.state.replaceAll('_', ' ')}
+                        {humanize(row.state)}
                       </Badge>
                       <div className="mt-1 text-xs text-muted-foreground">Opened {formatDate(row.openedAt)}</div>
                     </TableCell>
@@ -258,7 +259,7 @@ export default function TherapistMatchReconciliationPage() {
                       ) : <span className="text-sm text-muted-foreground">New match workflow</span>}
                     </TableCell>
                     <TableCell className="max-w-[260px] text-sm capitalize">
-                      {row.recommendedAction.replaceAll('_', ' ')}
+                      {humanize(row.recommendedAction)}
                     </TableCell>
                     <TableCell className="text-right">
                       {row.state === 'legacy_review' && row.relationshipId && isAdmin ? (
