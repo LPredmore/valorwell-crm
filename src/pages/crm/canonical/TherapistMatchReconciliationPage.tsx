@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertCircle,
@@ -80,9 +80,8 @@ export default function TherapistMatchReconciliationPage() {
   const confirm = useConfirmLegacyRelationship();
   const reject = useRejectLegacyRelationship();
 
-  const rows = query.data?.rows ?? [];
+  const rows = useMemo(() => query.data?.rows ?? [], [query.data?.rows]);
   const isAdmin = query.data?.isAdmin ?? false;
-
   const metrics = useMemo(() => ({
     legacyReview: rows.filter((row) => row.state === 'legacy_review').length,
     pendingAcceptance: rows.filter((row) => row.state === 'pending_clinician_acceptance').length,
@@ -95,9 +94,15 @@ export default function TherapistMatchReconciliationPage() {
     ).length,
   }), [rows]);
 
-  const submitDecision = async () => {
-    if (!decision || !decision.row.relationshipId || reason.trim().length < 10) return;
+  const isSubmitting = confirm.isPending || reject.isPending;
 
+  const openDecision = (action: ReviewAction, row: TherapistMatchWorkRow) => {
+    setDecision({ action, row });
+    setReason('');
+  };
+
+  const submitDecision = async () => {
+    if (!decision?.row.relationshipId || reason.trim().length < 10) return;
     const variables = {
       relationshipId: decision.row.relationshipId,
       priorVersion: decision.row.version,
@@ -114,7 +119,7 @@ export default function TherapistMatchReconciliationPage() {
       } else {
         await reject.mutateAsync(variables);
         toast.success('Legacy therapist relationship rejected', {
-          description: 'The relationship was ended and a human follow-up task was created.',
+          description: 'The relationship ended and a human follow-up task was created.',
         });
       }
       setDecision(null);
@@ -125,8 +130,6 @@ export default function TherapistMatchReconciliationPage() {
       });
     }
   };
-
-  const isSubmitting = confirm.isPending || reject.isPending;
 
   return (
     <div className="space-y-6 p-6">
@@ -195,9 +198,7 @@ export default function TherapistMatchReconciliationPage() {
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle>Reconciliation queue</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Reconciliation queue</CardTitle></CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
@@ -228,10 +229,7 @@ export default function TherapistMatchReconciliationPage() {
                 ) : rows.map((row) => (
                   <TableRow key={`${row.workType}-${row.id}`}>
                     <TableCell>
-                      <Link
-                        to={`/crm/clients/${row.clientId}`}
-                        className="font-medium text-primary hover:underline"
-                      >
+                      <Link to={`/crm/clients/${row.clientId}`} className="font-medium text-primary hover:underline">
                         {row.clientDisplayName || 'Client record'}
                       </Link>
                       <div className="text-xs text-muted-foreground">
@@ -245,15 +243,10 @@ export default function TherapistMatchReconciliationPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={row.state === 'legacy_review' ? 'secondary' : 'outline'}
-                        className="capitalize"
-                      >
+                      <Badge variant={row.state === 'legacy_review' ? 'secondary' : 'outline'} className="capitalize">
                         {row.state.replaceAll('_', ' ')}
                       </Badge>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        Opened {formatDate(row.openedAt)}
-                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">Opened {formatDate(row.openedAt)}</div>
                     </TableCell>
                     <TableCell>
                       {row.workType === 'legacy_relationship' ? (
@@ -262,9 +255,7 @@ export default function TherapistMatchReconciliationPage() {
                           <div>{row.signedNoteCount} signed notes · {row.activeTreatmentPlan ? 'active plan' : 'no active plan'}</div>
                           <div className="text-muted-foreground">Latest: {formatDate(row.latestCareAt)}</div>
                         </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">New match workflow</span>
-                      )}
+                      ) : <span className="text-sm text-muted-foreground">New match workflow</span>}
                     </TableCell>
                     <TableCell className="max-w-[260px] text-sm capitalize">
                       {row.recommendedAction.replaceAll('_', ' ')}
@@ -272,28 +263,11 @@ export default function TherapistMatchReconciliationPage() {
                     <TableCell className="text-right">
                       {row.state === 'legacy_review' && row.relationshipId && isAdmin ? (
                         <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setDecision({ action: 'confirm', row });
-                              setReason('');
-                            }}
-                            disabled={isSubmitting}
-                          >
-                            <CheckCircle2 className="mr-1 h-4 w-4" />
-                            Confirm
+                          <Button size="sm" onClick={() => openDecision('confirm', row)} disabled={isSubmitting}>
+                            <CheckCircle2 className="mr-1 h-4 w-4" />Confirm
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => {
-                              setDecision({ action: 'reject', row });
-                              setReason('');
-                            }}
-                            disabled={isSubmitting}
-                          >
-                            <XCircle className="mr-1 h-4 w-4" />
-                            Reject
+                          <Button size="sm" variant="destructive" onClick={() => openDecision('reject', row)} disabled={isSubmitting}>
+                            <XCircle className="mr-1 h-4 w-4" />Reject
                           </Button>
                         </div>
                       ) : (
@@ -335,14 +309,10 @@ export default function TherapistMatchReconciliationPage() {
               onChange={(event) => setReason(event.target.value)}
               placeholder="Describe the evidence and decision rationale."
             />
-            <p className="text-xs text-muted-foreground">
-              At least 10 characters. This is written to the reconciliation audit record.
-            </p>
+            <p className="text-xs text-muted-foreground">At least 10 characters. This is written to the reconciliation audit record.</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDecision(null)} disabled={isSubmitting}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setDecision(null)} disabled={isSubmitting}>Cancel</Button>
             <Button
               variant={decision?.action === 'reject' ? 'destructive' : 'default'}
               onClick={submitDecision}
@@ -358,15 +328,7 @@ export default function TherapistMatchReconciliationPage() {
   );
 }
 
-function Metric({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: number;
-  icon: ReactNode;
-}) {
+function Metric({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
     <Card>
       <CardContent className="flex items-center justify-between p-6">
