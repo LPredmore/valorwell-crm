@@ -21967,6 +21967,7 @@ export type Database = {
         Args: { p_subject?: Json }
         Returns: Json
       }
+      list_relationship_feature_flags: { Args: never; Returns: Json }
       list_relationship_orchestration_integrity: { Args: never; Returns: Json }
       list_relationship_replies: { Args: { p_filters?: Json }; Returns: Json }
       manual_match_champva_row: {
@@ -22540,6 +22541,10 @@ export type Database = {
       }
       set_relationship_delivery_provider_config: {
         Args: { p_payload: Json; p_tenant_id: string }
+        Returns: Json
+      }
+      set_relationship_feature_flag: {
+        Args: { p_enabled: boolean; p_flag_name: string; p_reason: string }
         Returns: Json
       }
       set_staff_care_pathway_readiness: {
