@@ -30,6 +30,7 @@ import RelationshipReplyQueuePage from "./pages/crm/business-development/Relatio
 import RelationshipReportsPage from "./pages/crm/business-development/RelationshipReportsPage";
 import RelationshipSearchPage from "./pages/crm/business-development/RelationshipSearchPage";
 import RelationshipSuppressionPage from "./pages/crm/business-development/RelationshipSuppressionPage";
+import RelationshipOrchestrationPage from "./pages/crm/business-development/RelationshipOrchestrationPage";
 import RelationshipBulkEnrollmentPage from "./pages/crm/business-development/campaigns/RelationshipBulkEnrollmentPage";
 import RelationshipCampaignDeliveryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDeliveryPage";
 import RelationshipCampaignDirectoryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDirectoryPage";
@@ -79,6 +80,7 @@ const App = () => (
             <Route path="reports" element={<CanonicalReports />} />
             <Route path="business-development" element={<BusinessDevelopmentDashboard />} />
             <Route path="business-development/status" element={<BusinessDevelopmentArchitecture />} />
+            <Route path="business-development/orchestration" element={<RelationshipOrchestrationPage />} />
             <Route path="business-development/search" element={<RelationshipSearchPage />} />
             <Route path="business-development/organizations" element={<OrganizationDirectoryPage />} />
             <Route path="business-development/organizations/new" element={<OrganizationFormPage />} />
