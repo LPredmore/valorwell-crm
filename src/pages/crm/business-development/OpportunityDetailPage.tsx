@@ -19,6 +19,8 @@ import { useRelationshipCapability } from '@/hooks/relationships/useRelationship
 import { dataProvider } from '@/services/dataProvider';
 import type { OperatorActivityType } from '@/domain/relationships/orchestration-contracts';
 import { getOpportunityOrchestration, recordOperatorActivity, retryAutoEnrollment } from '@/lib/crm/relationship-orchestration';
+import { canRunOperatorAction } from '@/domain/relationships/activation-gating';
+
 
 const noteTypes: InteractionType[] = ['manual_note', 'phone_call', 'meeting', 'outbound_email', 'inbound_reply'];
 
@@ -186,7 +188,7 @@ export default function OpportunityDetailPage() {
               <Button variant="outline" disabled={operatorActivity.isPending} onClick={() => operatorActivity.mutate('scheduling_started')}>Begin scheduling</Button>
               <Button variant="outline" disabled={operatorActivity.isPending} onClick={() => operatorActivity.mutate('declined')}>Mark declined</Button>
               <Button variant="outline" disabled={operatorActivity.isPending} onClick={() => operatorActivity.mutate('nurture_set')}>Move to nurture</Button>
-              <Button disabled={operatorActivity.isPending || opportunity.data.status !== 'booked'} onClick={() => operatorActivity.mutate('recording_completed')}>Recording completed</Button>
+              <Button disabled={operatorActivity.isPending || !canRunOperatorAction('recording_completed', opportunity.data.status)} onClick={() => operatorActivity.mutate('recording_completed')}>Recording completed</Button>
               <Button variant="secondary" disabled={retryEnrollment.isPending || opportunity.data.status !== 'ready_for_campaign'} onClick={() => retryEnrollment.mutate()}>Retry campaign enrollment</Button>
             </div>
             {(operatorActivity.isError || retryEnrollment.isError) && <p className="text-sm text-destructive">{(operatorActivity.error ?? retryEnrollment.error) instanceof Error ? (operatorActivity.error ?? retryEnrollment.error as Error).message : 'The lifecycle action failed.'}</p>}
