@@ -51,6 +51,7 @@ const businessDevelopmentItems: NavItem[] = [
   { label: 'Relationship Suppressions', href: '/crm/business-development/suppressions', icon: AlertTriangle },
   { label: 'Reports', href: '/crm/business-development/reports', icon: BarChart3 },
   { label: 'System Status', href: '/crm/business-development/status', icon: CircleHelp },
+  { label: 'BTY Orchestration', href: '/crm/business-development/orchestration', icon: Settings },
 ];
 
 const clinicalNavItems: NavItem[] = [

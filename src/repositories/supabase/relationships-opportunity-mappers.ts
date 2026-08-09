@@ -51,6 +51,7 @@ export type RelationshipOpportunityUpdate = {
   cause_area?: string | null;
   veteran_priority?: boolean;
   qualification?: Json;
+  review_status?: string;
   next_action?: string | null;
   next_action_due_at?: string | null;
   updated_by_profile_id: string;
@@ -89,6 +90,8 @@ export function mapOpportunityRow(row: RelationshipOpportunityRow): Relationship
     causeArea: row.cause_area ?? undefined,
     veteranPriority: row.veteran_priority,
     qualification: qualificationFromJson(row.qualification),
+    reviewStatus: row.review_status,
+    riskFlags: row.risk_flags,
     nextAction: row.next_action ?? undefined,
     nextActionDueAt: row.next_action_due_at ?? undefined,
     createdAt: row.created_at,
@@ -132,6 +135,7 @@ export function buildOpportunityUpdate(
   if ('causeArea' in input) update.cause_area = input.causeArea?.trim() || null;
   if ('veteranPriority' in input) update.veteran_priority = input.veteranPriority ?? false;
   if ('qualification' in input && input.qualification) update.qualification = qualificationToJson(input.qualification);
+  if ('reviewStatus' in input) update.review_status = input.reviewStatus?.trim() || 'pending';
   if ('nextAction' in input) update.next_action = input.nextAction?.trim() || null;
   if ('nextActionDueAt' in input) update.next_action_due_at = input.nextActionDueAt || null;
   return update;
