@@ -1,5 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { OperatorActivityType, RelationshipIntegrity, RelationshipOrchestration } from '@/domain/relationships/orchestration-contracts';
+import type { ActivationFlag, ReconciliationProposal } from '@/domain/relationships/activation-gating';
+
 
 async function rpc<T>(name: string, args: Record<string, unknown> = {}) {
   const { data, error } = await (supabase.rpc as unknown as (name: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)(name, args);
