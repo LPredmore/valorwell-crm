@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.93.1";
 import { Resend } from "npm:resend@6.18.0";
 
 const TENANT_ID = "00000000-0000-0000-0000-000000000001";
@@ -102,7 +102,11 @@ Deno.serve(async (request: Request) => {
       p_subject: String(content.subject ?? data.subject ?? "") || null,
       p_body: String(content.text ?? content.html ?? ""),
       p_occurred_at: occurredAt,
-      p_payload: event,
+      p_payload: {
+        ...event,
+        received_headers: headers,
+        rfc_message_id: headerValue(headers, "message-id") ?? null,
+      },
     });
     if (error) return json({ error: error.message }, 500);
     return json(result);
