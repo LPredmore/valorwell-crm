@@ -17,6 +17,8 @@ import {
 } from '@/domain/relationships/opportunity-workflow';
 import { useRelationshipCapability } from '@/hooks/relationships/useRelationshipCapabilities';
 import { dataProvider } from '@/services/dataProvider';
+import type { OperatorActivityType } from '@/domain/relationships/orchestration-contracts';
+import { getOpportunityOrchestration, recordOperatorActivity, retryAutoEnrollment } from '@/lib/crm/relationship-orchestration';
 
 const noteTypes: InteractionType[] = ['manual_note', 'phone_call', 'meeting', 'outbound_email', 'inbound_reply'];
 
@@ -56,6 +58,13 @@ export default function OpportunityDetailPage() {
     retry: false,
   });
 
+  const orchestration = useQuery({
+    queryKey: ['relationship-opportunity-orchestration', id],
+    queryFn: () => getOpportunityOrchestration(id!),
+    enabled: available && Boolean(id),
+    retry: false,
+  });
+
   const [primaryContactId, setPrimaryContactId] = useState('');
   const [ownerId, setOwnerId] = useState('');
   const [causeArea, setCauseArea] = useState('');
@@ -87,6 +96,7 @@ export default function OpportunityDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-interactions', id] }),
       queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-directory'] }),
       queryClient.invalidateQueries({ queryKey: ['relationship-opportunities'] }),
+      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-orchestration', id] }),
     ]);
   };
 
@@ -139,6 +149,16 @@ export default function OpportunityDetailPage() {
     },
   });
 
+  const operatorActivity = useMutation({
+    mutationFn: (activityType: OperatorActivityType) => recordOperatorActivity(id!, activityType),
+    onSuccess: refresh,
+  });
+
+  const retryEnrollment = useMutation({
+    mutationFn: () => retryAutoEnrollment(id!),
+    onSuccess: refresh,
+  });
+
   const transitionOptions = opportunity.data ? allowedOpportunityTransitions(opportunity.data.status) : [];
 
   return (
@@ -156,6 +176,44 @@ export default function OpportunityDetailPage() {
       {opportunity.isLoading && <Card><CardHeader><CardTitle>Loading opportunity…</CardTitle></CardHeader></Card>}
       {opportunity.isError && <Card><CardHeader><CardTitle>Opportunity could not be loaded</CardTitle><CardDescription>{opportunity.error instanceof Error ? opportunity.error.message : 'Unknown query error.'}</CardDescription></CardHeader></Card>}
       {opportunity.data === null && <Card><CardHeader><CardTitle>Opportunity not found</CardTitle><CardDescription>No opportunity with this ID exists in the selected tenant.</CardDescription></CardHeader></Card>}
+
+      {opportunity.data && (
+        <Card>
+          <CardHeader><CardTitle>Lifecycle controls</CardTitle><CardDescription>Explicit business decisions and recording completion. Calendar time alone never completes a recording.</CardDescription></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" disabled={operatorActivity.isPending} onClick={() => operatorActivity.mutate('interest_confirmed')}>Mark interested</Button>
+              <Button variant="outline" disabled={operatorActivity.isPending} onClick={() => operatorActivity.mutate('scheduling_started')}>Begin scheduling</Button>
+              <Button variant="outline" disabled={operatorActivity.isPending} onClick={() => operatorActivity.mutate('declined')}>Mark declined</Button>
+              <Button variant="outline" disabled={operatorActivity.isPending} onClick={() => operatorActivity.mutate('nurture_set')}>Move to nurture</Button>
+              <Button disabled={operatorActivity.isPending || opportunity.data.status !== 'booked'} onClick={() => operatorActivity.mutate('recording_completed')}>Recording completed</Button>
+              <Button variant="secondary" disabled={retryEnrollment.isPending || opportunity.data.status !== 'ready_for_campaign'} onClick={() => retryEnrollment.mutate()}>Retry campaign enrollment</Button>
+            </div>
+            {(operatorActivity.isError || retryEnrollment.isError) && <p className="text-sm text-destructive">{(operatorActivity.error ?? retryEnrollment.error) instanceof Error ? (operatorActivity.error ?? retryEnrollment.error as Error).message : 'The lifecycle action failed.'}</p>}
+          </CardContent>
+        </Card>
+      )}
+
+      {opportunity.data && (
+        <Card>
+          <CardHeader><CardTitle>Orchestration state</CardTitle><CardDescription>Pipeline, automation, communication, reply workflow, and recording evidence remain separate.</CardDescription></CardHeader>
+          <CardContent className="space-y-5">
+            {orchestration.isLoading && <p className="text-sm text-muted-foreground">Loading orchestration evidence…</p>}
+            {orchestration.isError && <p className="text-sm text-destructive">{orchestration.error instanceof Error ? orchestration.error.message : 'Orchestration evidence could not be loaded.'}</p>}
+            {orchestration.data && <>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Summary label="Pipeline" value={opportunityStatusLabel(opportunity.data.status)} />
+                <Summary label="Automation" value={orchestration.data.enrollments[0] ? `${orchestration.data.enrollments[0].status}${orchestration.data.enrollments[0].stoppedReason ? ` — ${orchestration.data.enrollments[0].stoppedReason}` : ''}` : 'Not enrolled'} />
+                <Summary label="Last communication" value={orchestration.data.communications[0] ? `${orchestration.data.communications[0].direction} ${orchestration.data.communications[0].provider ?? ''} — ${formatDate(orchestration.data.communications[0].occurredAt)}` : 'None'} />
+                <Summary label="Reply workflow" value={orchestration.data.replyWorkflow[0]?.status ?? 'None'} />
+                <Summary label="Recording" value={orchestration.data.meetings[0]?.startsAt ? `${formatDate(orchestration.data.meetings[0].startsAt)} — ${orchestration.data.meetings[0].eventStatus}` : 'Not linked'} />
+                <Summary label="Open issues" value={String(orchestration.data.issues.filter((issue) => issue.status === 'open').length)} />
+              </div>
+              {orchestration.data.issues.filter((issue) => issue.status === 'open').map((issue) => <div key={issue.id} className="rounded-md border border-destructive/40 p-3"><p className="font-medium">{issue.summary}</p><p className="text-xs text-muted-foreground">{issue.issueType} · {issue.severity} · {formatDate(issue.createdAt)}</p></div>)}
+            </>}
+          </CardContent>
+        </Card>
+      )}
 
       {opportunity.data && (
         <Card>
