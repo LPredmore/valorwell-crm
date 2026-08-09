@@ -15,6 +15,30 @@ export function getRelationshipIntegrity() {
   return rpc<RelationshipIntegrity>('list_relationship_orchestration_integrity');
 }
 
+export function listFeatureFlags() {
+  return rpc<ActivationFlag[]>('list_relationship_feature_flags');
+}
+
+export function setFeatureFlag(flagName: string, enabled: boolean, reason: string) {
+  return rpc('set_relationship_feature_flag', {
+    p_flag_name: flagName,
+    p_enabled: enabled,
+    p_reason: reason,
+  });
+}
+
+export function previewBtyReconciliation() {
+  return rpc<ReconciliationProposal[]>('preview_relationship_bty_reconciliation');
+}
+
+export function applyBtyReconciliation(items: ReconciliationProposal[]) {
+  return rpc('apply_relationship_bty_reconciliation', {
+    p_batch_id: crypto.randomUUID(),
+    p_items: items,
+  });
+}
+
+
 export function recordOperatorActivity(opportunityId: string, activityType: OperatorActivityType, metadata: Record<string, unknown> = {}) {
   return rpc('record_relationship_operator_activity', {
     p_opportunity_id: opportunityId,
