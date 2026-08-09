@@ -331,6 +331,7 @@ export type Database = {
           duration_minutes: number
           id: string
           is_active: boolean
+          is_telehealth: boolean
           max_occurrences: number | null
           notes: string | null
           rrule: string
@@ -350,6 +351,7 @@ export type Database = {
           duration_minutes: number
           id?: string
           is_active?: boolean
+          is_telehealth?: boolean
           max_occurrences?: number | null
           notes?: string | null
           rrule: string
@@ -369,6 +371,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           is_active?: boolean
+          is_telehealth?: boolean
           max_occurrences?: number | null
           notes?: string | null
           rrule?: string
@@ -3722,6 +3725,7 @@ export type Database = {
           id: string
           paid_at: string | null
           status: string
+          stripe_account_id: string | null
           stripe_checkout_session_id: string | null
           stripe_customer_id: string | null
           stripe_payment_link_id: string
@@ -3741,6 +3745,7 @@ export type Database = {
           id?: string
           paid_at?: string | null
           status?: string
+          stripe_account_id?: string | null
           stripe_checkout_session_id?: string | null
           stripe_customer_id?: string | null
           stripe_payment_link_id: string
@@ -3760,6 +3765,7 @@ export type Database = {
           id?: string
           paid_at?: string | null
           status?: string
+          stripe_account_id?: string | null
           stripe_checkout_session_id?: string | null
           stripe_customer_id?: string | null
           stripe_payment_link_id?: string
@@ -3802,6 +3808,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_default: boolean | null
+          stripe_account_id: string | null
           stripe_customer_id: string
           stripe_payment_method_id: string
           tenant_id: string
@@ -3817,6 +3824,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
+          stripe_account_id?: string | null
           stripe_customer_id: string
           stripe_payment_method_id: string
           tenant_id: string
@@ -3832,6 +3840,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
+          stripe_account_id?: string | null
           stripe_customer_id?: string
           stripe_payment_method_id?: string
           tenant_id?: string
@@ -3871,6 +3880,7 @@ export type Database = {
           id: string
           payment_date: string
           payment_method: string
+          stripe_account_id: string | null
           tenant_id: string
           updated_at: string
         }
@@ -3883,6 +3893,7 @@ export type Database = {
           id?: string
           payment_date?: string
           payment_method?: string
+          stripe_account_id?: string | null
           tenant_id: string
           updated_at?: string
         }
@@ -3895,6 +3906,7 @@ export type Database = {
           id?: string
           payment_date?: string
           payment_method?: string
+          stripe_account_id?: string | null
           tenant_id?: string
           updated_at?: string
         }
@@ -4702,12 +4714,18 @@ export type Database = {
       }
       client_staff_relationships: {
         Row: {
+          activated_by_profile_id: string | null
+          activation_evidence: Json
+          activation_source: string | null
           client_id: string
+          confirmation_state: Database["public"]["Enums"]["relationship_confirmation_state_enum"]
+          confirmed_at: string | null
           created_at: string
           end_reason: string | null
           ended_at: string | null
           first_scheduled_appointment_id: string | null
           id: string
+          match_id: string | null
           relationship_type: string
           scheduling_branch: string | null
           scheduling_expected_by: string | null
@@ -4717,14 +4735,21 @@ export type Database = {
           started_at: string
           tenant_id: string
           updated_at: string
+          version: number
         }
         Insert: {
+          activated_by_profile_id?: string | null
+          activation_evidence?: Json
+          activation_source?: string | null
           client_id: string
+          confirmation_state?: Database["public"]["Enums"]["relationship_confirmation_state_enum"]
+          confirmed_at?: string | null
           created_at?: string
           end_reason?: string | null
           ended_at?: string | null
           first_scheduled_appointment_id?: string | null
           id?: string
+          match_id?: string | null
           relationship_type?: string
           scheduling_branch?: string | null
           scheduling_expected_by?: string | null
@@ -4734,14 +4759,21 @@ export type Database = {
           started_at?: string
           tenant_id: string
           updated_at?: string
+          version?: number
         }
         Update: {
+          activated_by_profile_id?: string | null
+          activation_evidence?: Json
+          activation_source?: string | null
           client_id?: string
+          confirmation_state?: Database["public"]["Enums"]["relationship_confirmation_state_enum"]
+          confirmed_at?: string | null
           created_at?: string
           end_reason?: string | null
           ended_at?: string | null
           first_scheduled_appointment_id?: string | null
           id?: string
+          match_id?: string | null
           relationship_type?: string
           scheduling_branch?: string | null
           scheduling_expected_by?: string | null
@@ -4751,6 +4783,7 @@ export type Database = {
           started_at?: string
           tenant_id?: string
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -4773,6 +4806,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_client_canonical_state"
             referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_staff_relationships_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "client_therapist_matches"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "client_staff_relationships_staff_id_fkey"
@@ -4924,6 +4964,89 @@ export type Database = {
           },
         ]
       }
+      client_support_requests: {
+        Row: {
+          authority_snapshot: Json
+          category: string
+          client_id: string
+          created_at: string
+          created_by_profile_id: string
+          crm_task_id: string | null
+          id: string
+          idempotency_key: string
+          message: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by_profile_id: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          authority_snapshot?: Json
+          category: string
+          client_id: string
+          created_at?: string
+          created_by_profile_id: string
+          crm_task_id?: string | null
+          id?: string
+          idempotency_key: string
+          message: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_profile_id?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          authority_snapshot?: Json
+          category?: string
+          client_id?: string
+          created_at?: string
+          created_by_profile_id?: string
+          crm_task_id?: string | null
+          id?: string
+          idempotency_key?: string
+          message?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_profile_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_support_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_support_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_support_requests_crm_task_id_fkey"
+            columns: ["crm_task_id"]
+            isOneToOne: false
+            referencedRelation: "crm_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_support_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_telehealth_consents: {
         Row: {
           client_id: string
@@ -5007,6 +5130,215 @@ export type Database = {
           },
           {
             foreignKeyName: "client_telehealth_consents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_therapist_match_events: {
+        Row: {
+          actor_profile_id: string | null
+          client_id: string
+          correlation_id: string | null
+          created_at: string
+          event_type: string
+          evidence: Json
+          id: string
+          idempotency_key: string
+          match_id: string
+          new_state:
+            | Database["public"]["Enums"]["therapist_match_state_enum"]
+            | null
+          occurred_at: string
+          previous_state:
+            | Database["public"]["Enums"]["therapist_match_state_enum"]
+            | null
+          reason: string | null
+          source: string
+          staff_id: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          client_id: string
+          correlation_id?: string | null
+          created_at?: string
+          event_type: string
+          evidence?: Json
+          id?: string
+          idempotency_key: string
+          match_id: string
+          new_state?:
+            | Database["public"]["Enums"]["therapist_match_state_enum"]
+            | null
+          occurred_at?: string
+          previous_state?:
+            | Database["public"]["Enums"]["therapist_match_state_enum"]
+            | null
+          reason?: string | null
+          source: string
+          staff_id: string
+          tenant_id: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          client_id?: string
+          correlation_id?: string | null
+          created_at?: string
+          event_type?: string
+          evidence?: Json
+          id?: string
+          idempotency_key?: string
+          match_id?: string
+          new_state?:
+            | Database["public"]["Enums"]["therapist_match_state_enum"]
+            | null
+          occurred_at?: string
+          previous_state?:
+            | Database["public"]["Enums"]["therapist_match_state_enum"]
+            | null
+          reason?: string | null
+          source?: string
+          staff_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_therapist_match_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_therapist_match_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_therapist_match_events_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "client_therapist_matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_therapist_match_events_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_therapist_match_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_therapist_matches: {
+        Row: {
+          activated_at: string | null
+          capacity_reserved: boolean
+          client_id: string
+          clinician_accepted_at: string | null
+          clinician_accepted_by_profile_id: string | null
+          created_at: string
+          eligibility_snapshot: Json
+          expires_at: string | null
+          id: string
+          idempotency_key: string
+          initiated_by_profile_id: string | null
+          initiation_source: string
+          policy_version: string
+          resolution_reason: string | null
+          resolved_at: string | null
+          scheduling_branch: string
+          selected_at: string
+          staff_id: string
+          state: Database["public"]["Enums"]["therapist_match_state_enum"]
+          tenant_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          activated_at?: string | null
+          capacity_reserved?: boolean
+          client_id: string
+          clinician_accepted_at?: string | null
+          clinician_accepted_by_profile_id?: string | null
+          created_at?: string
+          eligibility_snapshot?: Json
+          expires_at?: string | null
+          id?: string
+          idempotency_key: string
+          initiated_by_profile_id?: string | null
+          initiation_source: string
+          policy_version?: string
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          scheduling_branch: string
+          selected_at?: string
+          staff_id: string
+          state: Database["public"]["Enums"]["therapist_match_state_enum"]
+          tenant_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          activated_at?: string | null
+          capacity_reserved?: boolean
+          client_id?: string
+          clinician_accepted_at?: string | null
+          clinician_accepted_by_profile_id?: string | null
+          created_at?: string
+          eligibility_snapshot?: Json
+          expires_at?: string | null
+          id?: string
+          idempotency_key?: string
+          initiated_by_profile_id?: string | null
+          initiation_source?: string
+          policy_version?: string
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          scheduling_branch?: string
+          selected_at?: string
+          staff_id?: string
+          state?: Database["public"]["Enums"]["therapist_match_state_enum"]
+          tenant_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_therapist_matches_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_therapist_matches_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_therapist_matches_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_therapist_matches_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -8059,10 +8391,22 @@ export type Database = {
       }
       donation_attribution: {
         Row: {
+          checkout_cta_campaign: string | null
+          checkout_cta_content: string | null
+          checkout_cta_medium: string | null
+          checkout_cta_source: string | null
+          client_captured_at: string | null
           created_at: string
+          entry_cta_campaign: string | null
+          entry_cta_content: string | null
+          entry_cta_medium: string | null
+          entry_cta_source: string | null
           gbraid: string | null
           gclid: string | null
+          landing_path: string | null
+          referrer: string | null
           token: string
+          updated_at: string
           utm_campaign: string | null
           utm_content: string | null
           utm_medium: string | null
@@ -8071,10 +8415,22 @@ export type Database = {
           wbraid: string | null
         }
         Insert: {
+          checkout_cta_campaign?: string | null
+          checkout_cta_content?: string | null
+          checkout_cta_medium?: string | null
+          checkout_cta_source?: string | null
+          client_captured_at?: string | null
           created_at?: string
+          entry_cta_campaign?: string | null
+          entry_cta_content?: string | null
+          entry_cta_medium?: string | null
+          entry_cta_source?: string | null
           gbraid?: string | null
           gclid?: string | null
+          landing_path?: string | null
+          referrer?: string | null
           token: string
+          updated_at?: string
           utm_campaign?: string | null
           utm_content?: string | null
           utm_medium?: string | null
@@ -8083,10 +8439,22 @@ export type Database = {
           wbraid?: string | null
         }
         Update: {
+          checkout_cta_campaign?: string | null
+          checkout_cta_content?: string | null
+          checkout_cta_medium?: string | null
+          checkout_cta_source?: string | null
+          client_captured_at?: string | null
           created_at?: string
+          entry_cta_campaign?: string | null
+          entry_cta_content?: string | null
+          entry_cta_medium?: string | null
+          entry_cta_source?: string | null
           gbraid?: string | null
           gclid?: string | null
+          landing_path?: string | null
+          referrer?: string | null
           token?: string
+          updated_at?: string
           utm_campaign?: string | null
           utm_content?: string | null
           utm_medium?: string | null
@@ -9099,6 +9467,14 @@ export type Database = {
       }
       givebutter_donations: {
         Row: {
+          ads_attempt_count: number
+          ads_diagnostics_checked_at: string | null
+          ads_exported_at: string | null
+          ads_identifier_type: string | null
+          ads_last_attempt_at: string | null
+          ads_next_attempt_at: string | null
+          ads_request_id: string | null
+          ads_upload_details: Json
           ads_upload_error: string | null
           ads_upload_status: string
           ads_uploaded_at: string | null
@@ -9110,6 +9486,14 @@ export type Database = {
           transaction_id: string
         }
         Insert: {
+          ads_attempt_count?: number
+          ads_diagnostics_checked_at?: string | null
+          ads_exported_at?: string | null
+          ads_identifier_type?: string | null
+          ads_last_attempt_at?: string | null
+          ads_next_attempt_at?: string | null
+          ads_request_id?: string | null
+          ads_upload_details?: Json
           ads_upload_error?: string | null
           ads_upload_status?: string
           ads_uploaded_at?: string | null
@@ -9121,6 +9505,14 @@ export type Database = {
           transaction_id: string
         }
         Update: {
+          ads_attempt_count?: number
+          ads_diagnostics_checked_at?: string | null
+          ads_exported_at?: string | null
+          ads_identifier_type?: string | null
+          ads_last_attempt_at?: string | null
+          ads_next_attempt_at?: string | null
+          ads_request_id?: string | null
+          ads_upload_details?: Json
           ads_upload_error?: string | null
           ads_upload_status?: string
           ads_uploaded_at?: string | null
@@ -9376,6 +9768,27 @@ export type Database = {
           metadata?: Json
           severity?: string
           task_id?: string | null
+        }
+        Relationships: []
+      }
+      legacy_relationship_system_archive: {
+        Row: {
+          archived_at: string
+          payload: Json
+          source_key: string
+          source_table: string
+        }
+        Insert: {
+          archived_at?: string
+          payload: Json
+          source_key: string
+          source_table: string
+        }
+        Update: {
+          archived_at?: string
+          payload?: Json
+          source_key?: string
+          source_table?: string
         }
         Relationships: []
       }
@@ -12652,6 +13065,153 @@ export type Database = {
           },
         ]
       }
+      relationship_activity_events: {
+        Row: {
+          activity_type: string
+          applied_at: string | null
+          campaign_id: string | null
+          communication_id: string | null
+          contact_id: string | null
+          created_at: string
+          enrollment_id: string | null
+          error_code: string | null
+          error_reason: string | null
+          external_event_id: string | null
+          id: string
+          idempotency_key: string
+          metadata: Json
+          occurred_at: string
+          opportunity_id: string | null
+          organization_id: string | null
+          processing_status: string
+          received_at: string
+          source: string
+          tenant_id: string
+        }
+        Insert: {
+          activity_type: string
+          applied_at?: string | null
+          campaign_id?: string | null
+          communication_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          enrollment_id?: string | null
+          error_code?: string | null
+          error_reason?: string | null
+          external_event_id?: string | null
+          id?: string
+          idempotency_key: string
+          metadata?: Json
+          occurred_at: string
+          opportunity_id?: string | null
+          organization_id?: string | null
+          processing_status?: string
+          received_at?: string
+          source: string
+          tenant_id: string
+        }
+        Update: {
+          activity_type?: string
+          applied_at?: string | null
+          campaign_id?: string | null
+          communication_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          enrollment_id?: string | null
+          error_code?: string | null
+          error_reason?: string | null
+          external_event_id?: string | null
+          id?: string
+          idempotency_key?: string
+          metadata?: Json
+          occurred_at?: string
+          opportunity_id?: string | null
+          organization_id?: string | null
+          processing_status?: string
+          received_at?: string
+          source?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_activity_events_tenant_campaign_fkey"
+            columns: ["tenant_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_campaign_summary_v"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_activity_events_tenant_campaign_fkey"
+            columns: ["tenant_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_campaigns"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_activity_events_tenant_communication_fkey"
+            columns: ["tenant_id", "communication_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_communications"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_activity_events_tenant_contact_fkey"
+            columns: ["tenant_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contact_directory_v"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_activity_events_tenant_contact_fkey"
+            columns: ["tenant_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_activity_events_tenant_enrollment_fkey"
+            columns: ["tenant_id", "enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_campaign_enrollments"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_activity_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_activity_events_tenant_opportunity_fkey"
+            columns: ["tenant_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_opportunities"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_activity_events_tenant_opportunity_fkey"
+            columns: ["tenant_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_opportunity_pipeline_v"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_activity_events_tenant_organization_fkey"
+            columns: ["tenant_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organization_directory_v"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_activity_events_tenant_organization_fkey"
+            columns: ["tenant_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       relationship_campaign_enrollments: {
         Row: {
           campaign_id: string
@@ -13001,6 +13561,7 @@ export type Database = {
           execution_enabled: boolean
           id: string
           initiative: string | null
+          lifecycle_policy: string
           marketing_lifecycle_stage: string
           metadata: Json
           name: string
@@ -13031,6 +13592,7 @@ export type Database = {
           execution_enabled?: boolean
           id?: string
           initiative?: string | null
+          lifecycle_policy?: string
           marketing_lifecycle_stage?: string
           metadata?: Json
           name: string
@@ -13061,6 +13623,7 @@ export type Database = {
           execution_enabled?: boolean
           id?: string
           initiative?: string | null
+          lifecycle_policy?: string
           marketing_lifecycle_stage?: string
           metadata?: Json
           name?: string
@@ -14236,6 +14799,173 @@ export type Database = {
           },
         ]
       }
+      relationship_meetings: {
+        Row: {
+          calendar_id: string
+          connection_id: string
+          contact_id: string
+          created_at: string
+          ends_at: string | null
+          event_status: string
+          external_event_id: string
+          ical_uid: string | null
+          id: string
+          last_synced_at: string
+          metadata: Json
+          opportunity_id: string
+          organization_id: string
+          purpose: string
+          starts_at: string | null
+          streamyard_url: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          calendar_id: string
+          connection_id: string
+          contact_id: string
+          created_at?: string
+          ends_at?: string | null
+          event_status: string
+          external_event_id: string
+          ical_uid?: string | null
+          id?: string
+          last_synced_at?: string
+          metadata?: Json
+          opportunity_id: string
+          organization_id: string
+          purpose?: string
+          starts_at?: string | null
+          streamyard_url: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          calendar_id?: string
+          connection_id?: string
+          contact_id?: string
+          created_at?: string
+          ends_at?: string | null
+          event_status?: string
+          external_event_id?: string
+          ical_uid?: string | null
+          id?: string
+          last_synced_at?: string
+          metadata?: Json
+          opportunity_id?: string
+          organization_id?: string
+          purpose?: string
+          starts_at?: string | null
+          streamyard_url?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_meetings_tenant_contact_fkey"
+            columns: ["tenant_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contact_directory_v"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_meetings_tenant_contact_fkey"
+            columns: ["tenant_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_meetings_tenant_opportunity_fkey"
+            columns: ["tenant_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_opportunities"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_meetings_tenant_opportunity_fkey"
+            columns: ["tenant_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_opportunity_pipeline_v"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_meetings_tenant_organization_fkey"
+            columns: ["tenant_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organization_directory_v"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_meetings_tenant_organization_fkey"
+            columns: ["tenant_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      relationship_message_observations: {
+        Row: {
+          communication_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          observed_at: string
+          provider_message_id: string
+          provider_thread_id: string | null
+          rfc_message_id: string | null
+          source: string
+          tenant_id: string
+        }
+        Insert: {
+          communication_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          observed_at?: string
+          provider_message_id: string
+          provider_thread_id?: string | null
+          rfc_message_id?: string | null
+          source: string
+          tenant_id: string
+        }
+        Update: {
+          communication_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          observed_at?: string
+          provider_message_id?: string
+          provider_thread_id?: string | null
+          rfc_message_id?: string | null
+          source?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_message_observations_tenant_communication_fkey"
+            columns: ["tenant_id", "communication_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_communications"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_message_observations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       relationship_opportunities: {
         Row: {
           cause_area: string | null
@@ -14665,6 +15395,106 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationship_reconciliation_issues: {
+        Row: {
+          activity_event_id: string | null
+          created_at: string
+          details: Json
+          external_event_id: string | null
+          id: string
+          issue_type: string
+          opportunity_id: string | null
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by_profile_id: string | null
+          severity: string
+          source: string
+          status: string
+          summary: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          activity_event_id?: string | null
+          created_at?: string
+          details?: Json
+          external_event_id?: string | null
+          id?: string
+          issue_type: string
+          opportunity_id?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by_profile_id?: string | null
+          severity?: string
+          source: string
+          status?: string
+          summary: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          activity_event_id?: string | null
+          created_at?: string
+          details?: Json
+          external_event_id?: string | null
+          id?: string
+          issue_type?: string
+          opportunity_id?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by_profile_id?: string | null
+          severity?: string
+          source?: string
+          status?: string
+          summary?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_reconciliation_issues_resolved_by_profile_id_fkey"
+            columns: ["resolved_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "relationship_reconciliation_issues_resolved_by_profile_id_fkey"
+            columns: ["resolved_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_reconciliation_issues_tenant_activity_fkey"
+            columns: ["tenant_id", "activity_event_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_activity_events"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_reconciliation_issues_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_reconciliation_issues_tenant_opportunity_fkey"
+            columns: ["tenant_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_opportunities"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "relationship_reconciliation_issues_tenant_opportunity_fkey"
+            columns: ["tenant_id", "opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_opportunity_pipeline_v"
+            referencedColumns: ["tenant_id", "id"]
           },
         ]
       }
@@ -15395,6 +16225,77 @@ export type Database = {
             columns: ["updated_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationship_target_cities: {
+        Row: {
+          city_name: string
+          city_rank: number
+          created_at: string
+          id: string
+          is_active: boolean
+          last_researched_at: string | null
+          population_estimate: number
+          population_year: number
+          research_notes: string | null
+          research_status: string
+          search_label: string | null
+          source_city_label: string
+          source_name: string
+          source_url: string
+          state_code: string
+          state_name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          city_name: string
+          city_rank: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_researched_at?: string | null
+          population_estimate: number
+          population_year?: number
+          research_notes?: string | null
+          research_status?: string
+          search_label?: string | null
+          source_city_label: string
+          source_name?: string
+          source_url?: string
+          state_code: string
+          state_name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          city_name?: string
+          city_rank?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_researched_at?: string | null
+          population_estimate?: number
+          population_year?: number
+          research_notes?: string | null
+          research_status?: string
+          search_label?: string | null
+          source_city_label?: string
+          source_name?: string
+          source_url?: string
+          state_code?: string
+          state_name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_target_cities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -17052,6 +17953,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stripe_webhook_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          last_error: string | null
+          livemode: boolean
+          processed_at: string | null
+          processing_status: string
+          received_at: string
+          stripe_account_id: string
+          stripe_event_id: string
+          stripe_object_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          last_error?: string | null
+          livemode: boolean
+          processed_at?: string | null
+          processing_status?: string
+          received_at?: string
+          stripe_account_id: string
+          stripe_event_id: string
+          stripe_object_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          livemode?: boolean
+          processed_at?: string | null
+          processing_status?: string
+          received_at?: string
+          stripe_account_id?: string
+          stripe_event_id?: string
+          stripe_object_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       tenant_cpt_codes: {
         Row: {
@@ -19332,12 +20278,28 @@ export type Database = {
         }[]
       }
       _require_current_client_id: { Args: never; Returns: string }
+      accept_therapist_match: {
+        Args: {
+          p_expected_version: number
+          p_idempotency_key: string
+          p_match_id: string
+        }
+        Returns: Json
+      }
       acknowledge_client_insurance_deferment:
         | {
             Args: { p_client_id: string; p_eligibility_check_id: string }
             Returns: Json
           }
         | { Args: { p_eligibility_check_id: string }; Returns: Json }
+      admin_apply_legacy_relationship_containment: {
+        Args: { p_client_action_id: string }
+        Returns: Json
+      }
+      admin_normalize_legacy_review_lifecycle: {
+        Args: { p_client_action_id: string }
+        Returns: Json
+      }
       admin_override_client_state: {
         Args: {
           p_actor_profile_id?: string
@@ -19346,6 +20308,10 @@ export type Database = {
           p_reason: string
           p_state_dimension: Database["public"]["Enums"]["client_state_dimension_enum"]
         }
+        Returns: Json
+      }
+      admin_preview_legacy_relationship_containment: {
+        Args: never
         Returns: Json
       }
       admin_set_client_care_cadence: {
@@ -19370,9 +20336,35 @@ export type Database = {
       advance_client_intake_if_ready:
         | { Args: never; Returns: Json }
         | { Args: { p_client_id: string }; Returns: Json }
+      apply_relationship_activity: {
+        Args: {
+          p_activity_type: string
+          p_campaign_id?: string
+          p_communication_id?: string
+          p_contact_id?: string
+          p_enrollment_id?: string
+          p_external_event_id?: string
+          p_idempotency_key: string
+          p_metadata?: Json
+          p_occurred_at?: string
+          p_opportunity_id?: string
+          p_organization_id?: string
+          p_source: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      apply_relationship_bty_reconciliation: {
+        Args: { p_batch_id: string; p_items: Json }
+        Returns: Json
+      }
       apply_relationship_suppression: {
         Args: { p_idempotency_key: string; p_payload: Json }
         Returns: Json
+      }
+      appointment_provisioning_worker_token_valid: {
+        Args: { p_token: string }
+        Returns: boolean
       }
       approve_payroll_line_item: {
         Args: {
@@ -19417,6 +20409,14 @@ export type Database = {
         Args: { p_slot_end_utc?: string; p_slot_start_utc: string }
         Returns: Json
       }
+      book_pending_therapist_match_appointment: {
+        Args: {
+          p_idempotency_key?: string
+          p_slot_end_utc?: string
+          p_slot_start_utc: string
+        }
+        Returns: Json
+      }
       cancel_appointment: {
         Args: {
           p_appointment_id: string
@@ -19434,6 +20434,10 @@ export type Database = {
           p_expected_version: number
           p_reason?: string
         }
+        Returns: Json
+      }
+      cancel_current_therapist_match: {
+        Args: { p_idempotency_key: string; p_reason?: string }
         Returns: Json
       }
       cancel_recurring_appointment_series: {
@@ -19472,6 +20476,38 @@ export type Database = {
         Args: { p_end: string; p_staff_id: string; p_start: string }
         Returns: boolean
       }
+      claim_appointment_provisioning_work: {
+        Args: {
+          p_appointment_id?: string
+          p_lease_seconds?: number
+          p_limit?: number
+          p_worker_id: string
+        }
+        Returns: {
+          action: string
+          appointment_id: string
+          appointment_snapshot: Json
+          attempt_count: number
+          claim_token: string
+          job_id: string
+          max_attempts: number
+          tenant_id: string
+        }[]
+      }
+      claim_google_ads_donations: {
+        Args: { p_limit?: number }
+        Returns: {
+          amount: number
+          attempt_count: number
+          currency: string
+          donated_at: string
+          gbraid: string
+          gclid: string
+          token: string
+          transaction_id: string
+          wbraid: string
+        }[]
+      }
       claim_pending_campaign_steps: {
         Args: { p_limit?: number }
         Returns: {
@@ -19492,6 +20528,22 @@ export type Database = {
           p_worker_id: string
         }
         Returns: Json
+      }
+      claim_therapist_match_outbox: {
+        Args: {
+          p_lease_seconds?: number
+          p_limit?: number
+          p_worker_id: string
+        }
+        Returns: {
+          aggregate_id: string
+          attempt_count: number
+          claim_token: string
+          event_type: string
+          outbox_id: string
+          payload: Json
+          tenant_id: string
+        }[]
       }
       client_closure:
         | {
@@ -19667,6 +20719,19 @@ export type Database = {
         Args: { p_client_action_id: string }
         Returns: Json
       }
+      confirm_legacy_therapist_relationship: {
+        Args: {
+          p_client_action_id: string
+          p_prior_version: number
+          p_reason: string
+          p_relationship_id: string
+        }
+        Returns: Json
+      }
+      consume_relationship_google_oauth_state: {
+        Args: { p_state_hash: string }
+        Returns: Json
+      }
       convert_local_to_utc: {
         Args: { p_date: string; p_time: string; p_timezone?: string }
         Returns: string
@@ -19787,6 +20852,18 @@ export type Database = {
           p_staff_id: string
           p_start_at: string
           p_time_zone: string
+        }
+        Returns: Json
+      }
+      create_relationship_google_oauth_state: {
+        Args: {
+          p_actor_profile_id: string
+          p_code_verifier: string
+          p_connection_type: string
+          p_expires_at: string
+          p_redirect_uri: string
+          p_state_hash: string
+          p_tenant_id: string
         }
         Returns: Json
       }
@@ -20127,6 +21204,15 @@ export type Database = {
         Returns: Json
       }
       current_client_id: { Args: never; Returns: string }
+      decline_therapist_match: {
+        Args: {
+          p_expected_version: number
+          p_idempotency_key: string
+          p_match_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       dismiss_champva_row: {
         Args: { p_reason: string; p_row_id: string }
         Returns: undefined
@@ -20138,6 +21224,10 @@ export type Database = {
           p_prior_version: number
         }
         Returns: Json
+      }
+      enqueue_appointment_provisioning: {
+        Args: { p_action?: string; p_appointment_id: string }
+        Returns: string
       }
       enroll_relationship_targets: {
         Args: {
@@ -20449,6 +21539,7 @@ export type Database = {
       }
       get_crm_operating_context: { Args: never; Returns: Json }
       get_current_client_statement_link: { Args: never; Returns: Json }
+      get_current_client_therapist_authority: { Args: never; Returns: Json }
       get_documented_session_status: {
         Args: { p_appointment_id: string }
         Returns: Json
@@ -20517,6 +21608,10 @@ export type Database = {
         Returns: Json
       }
       get_public_client_statement: { Args: { p_token: string }; Returns: Json }
+      get_relationship_calendar_channel: {
+        Args: { p_connection_id: string }
+        Returns: Json
+      }
       get_relationship_campaign: {
         Args: { p_campaign_id: string }
         Returns: Json
@@ -20525,12 +21620,36 @@ export type Database = {
         Args: { p_campaign_id: string }
         Returns: Json
       }
+      get_relationship_google_connection_runtime: {
+        Args: {
+          p_connection_id?: string
+          p_connection_type: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      get_relationship_google_sync_state: {
+        Args: { p_connection_id: string }
+        Returns: Json
+      }
       get_relationship_import_preview: {
         Args: { p_import_id: string }
         Returns: Json
       }
+      get_relationship_observation_flags: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
+      get_relationship_opportunity_orchestration: {
+        Args: { p_opportunity_id: string }
+        Returns: Json
+      }
       get_relationship_report_metrics: {
         Args: { p_period?: Json }
+        Returns: Json
+      }
+      get_relationship_webhook_runtime: {
+        Args: { p_tenant_id: string }
         Returns: Json
       }
       get_revenue_report:
@@ -20766,6 +21885,39 @@ export type Database = {
         }
         Returns: boolean
       }
+      ingest_relationship_calendar_event: {
+        Args: {
+          p_attendee_emails: string[]
+          p_calendar_id: string
+          p_connection_id: string
+          p_ends_at: string
+          p_event_status: string
+          p_external_event_id: string
+          p_ical_uid: string
+          p_metadata?: Json
+          p_starts_at: string
+          p_streamyard_url: string
+          p_summary: string
+          p_tenant_id: string
+          p_updated_at: string
+        }
+        Returns: Json
+      }
+      ingest_relationship_gmail_message: {
+        Args: {
+          p_body: string
+          p_from_email: string
+          p_gmail_message_id: string
+          p_gmail_thread_id: string
+          p_headers: Json
+          p_label_ids?: string[]
+          p_occurred_at: string
+          p_subject: string
+          p_tenant_id: string
+          p_to_emails: string[]
+        }
+        Returns: Json
+      }
       ingest_relationship_inbound_reply: {
         Args: {
           p_body: string
@@ -20803,6 +21955,10 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      list_relationship_campaign_candidates: {
+        Args: { p_filters?: Json }
+        Returns: Json
+      }
       list_relationship_communication_events: {
         Args: { p_communication_id: string }
         Returns: Json
@@ -20811,6 +21967,7 @@ export type Database = {
         Args: { p_subject?: Json }
         Returns: Json
       }
+      list_relationship_orchestration_integrity: { Args: never; Returns: Json }
       list_relationship_replies: { Args: { p_filters?: Json }; Returns: Json }
       manual_match_champva_row: {
         Args: { p_claim_line_id: string; p_row_id: string }
@@ -20827,6 +21984,18 @@ export type Database = {
       mark_at_risk_clients: { Args: { p_tenant_id: string }; Returns: number }
       match_champva_payment_rows: {
         Args: { p_document_id: string }
+        Returns: Json
+      }
+      match_relationship_gmail_message: {
+        Args: {
+          p_from_email: string
+          p_gmail_message_id: string
+          p_gmail_thread_id: string
+          p_headers: Json
+          p_subject: string
+          p_tenant_id: string
+          p_to_emails: string[]
+        }
         Returns: Json
       }
       payroll_admin_approve_line: {
@@ -20894,8 +22063,19 @@ export type Database = {
         }
         Returns: Json
       }
+      preview_relationship_bty_reconciliation: { Args: never; Returns: Json }
       process_relationship_unsubscribe: {
         Args: { p_token: string }
+        Returns: Json
+      }
+      process_stripe_checkout_payment: {
+        Args: {
+          p_amount_cents: number
+          p_claim_line_ids?: string[]
+          p_client_charge_ids?: string[]
+          p_payment_intent_id: string
+          p_session_id: string
+        }
         Returns: Json
       }
       provision_website_clinician_interest: {
@@ -20915,6 +22095,17 @@ export type Database = {
         Returns: Json
       }
       reconcile_stalled_bulk_jobs: { Args: never; Returns: undefined }
+      record_appointment_provisioning_result: {
+        Args: {
+          p_claim_token: string
+          p_error?: string
+          p_job_id: string
+          p_result?: Json
+          p_retry_after_seconds?: number
+          p_success: boolean
+        }
+        Returns: Json
+      }
       record_client_eligibility_result: {
         Args: {
           p_claimmd_eligibility_id?: string
@@ -20966,6 +22157,26 @@ export type Database = {
         }
         Returns: Json
       }
+      record_relationship_operator_activity: {
+        Args: {
+          p_activity_type: string
+          p_idempotency_key: string
+          p_metadata?: Json
+          p_opportunity_id: string
+        }
+        Returns: Json
+      }
+      record_therapist_match_outbox_result: {
+        Args: {
+          p_claim_token: string
+          p_error_code?: string
+          p_error_detail?: string
+          p_outbox_id: string
+          p_outcome: string
+          p_retry_at?: string
+        }
+        Returns: Json
+      }
       reevaluate_client_provider_demand: {
         Args: {
           p_client_action_id: string
@@ -20976,8 +22187,21 @@ export type Database = {
         Returns: Json
       }
       refresh_client_ages: { Args: never; Returns: number }
+      reject_legacy_therapist_relationship: {
+        Args: {
+          p_client_action_id: string
+          p_prior_version: number
+          p_reason: string
+          p_relationship_id: string
+        }
+        Returns: Json
+      }
       relationship_stage_transition_allowed: {
         Args: { p_from_stage: string; p_to_stage: string }
+        Returns: boolean
+      }
+      relationship_worker_token_valid: {
+        Args: { p_tenant_id: string; p_token: string }
         Returns: boolean
       }
       release_campaign_step_claim: {
@@ -21010,6 +22234,18 @@ export type Database = {
       }
       request_client_reactivation: {
         Args: { p_idempotency_key: string; p_reason: string }
+        Returns: Json
+      }
+      request_client_support: {
+        Args: {
+          p_category: string
+          p_idempotency_key: string
+          p_message: string
+        }
+        Returns: Json
+      }
+      request_therapist_match: {
+        Args: { p_idempotency_key: string; p_staff_id: string }
         Returns: Json
       }
       reschedule_appointment: {
@@ -21078,6 +22314,14 @@ export type Database = {
           p_import_id: string
           p_resolutions: Json
         }
+        Returns: Json
+      }
+      resolve_relationship_reconciliation_issue: {
+        Args: { p_issue_id: string; p_resolution: string; p_status: string }
+        Returns: Json
+      }
+      retry_relationship_bty_auto_enrollment: {
+        Args: { p_idempotency_key: string; p_opportunity_id: string }
         Returns: Json
       }
       revalidate_relationship_enrollment_safety: {
@@ -21383,6 +22627,15 @@ export type Database = {
         }
         Returns: Json
       }
+      staff_list_therapist_match_work: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_scope?: string
+          p_search?: string
+        }
+        Returns: Json
+      }
       stage_claimmd_era_replacement: {
         Args: { p_new_source_record_hash: string; p_source_era_id: string }
         Returns: Json
@@ -21393,6 +22646,29 @@ export type Database = {
           p_exception_id: string
           p_note: string
           p_prior_version: number
+        }
+        Returns: Json
+      }
+      store_relationship_calendar_channel: {
+        Args: {
+          p_channel_id: string
+          p_channel_token: string
+          p_connection_id: string
+          p_expiration: string
+          p_resource_id: string
+        }
+        Returns: Json
+      }
+      store_relationship_google_connection: {
+        Args: {
+          p_actor_profile_id: string
+          p_calendar_id: string
+          p_connection_type: string
+          p_google_account_email: string
+          p_google_account_id: string
+          p_refresh_token: string
+          p_scopes: string[]
+          p_tenant_id: string
         }
         Returns: Json
       }
@@ -21427,6 +22703,14 @@ export type Database = {
         Returns: Json
       }
       submit_overflow_referral_source: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
+      submit_website_bty_contact_nomination: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
+      submit_website_bty_guest_application: {
         Args: { p_payload: Json }
         Returns: Json
       }
@@ -21671,6 +22955,20 @@ export type Database = {
         }
         Returns: Json
       }
+      update_relationship_google_sync_state: {
+        Args: {
+          p_calendar_sync_token?: string
+          p_connection_id: string
+          p_error_code?: string
+          p_error_reason?: string
+          p_full_reconciliation?: boolean
+          p_gmail_history_id?: string
+          p_gmail_watch_expiration?: string
+          p_notification?: boolean
+          p_success?: boolean
+        }
+        Returns: Json
+      }
       update_relationship_reply: {
         Args: {
           p_expected_version: number
@@ -21703,6 +23001,14 @@ export type Database = {
             }
             Returns: Json
           }
+      validate_relationship_calendar_channel: {
+        Args: {
+          p_channel_id: string
+          p_channel_token: string
+          p_resource_id: string
+        }
+        Returns: Json
+      }
       verify_relationship_referral: {
         Args: {
           p_disclosure: string
@@ -22056,6 +23362,10 @@ export type Database = {
         | "warm"
         | "recruiting"
         | "hold"
+      relationship_confirmation_state_enum:
+        | "confirmed"
+        | "legacy_review"
+        | "rejected"
       risk_level_enum: "none" | "low" | "moderate" | "high" | "imminent"
       sex_enum: "M" | "F"
       specialty_enum:
@@ -22117,6 +23427,16 @@ export type Database = {
         | "PR"
         | "VI"
         | "GU"
+      therapist_match_state_enum:
+        | "legacy_review"
+        | "pending_clinician_acceptance"
+        | "pending_first_appointment"
+        | "activated"
+        | "declined"
+        | "expired"
+        | "cancelled"
+        | "superseded"
+        | "invalidated"
       time_zones:
         | "America/New_York"
         | "America/Chicago"
@@ -22565,6 +23885,11 @@ export const Constants = {
         "recruiting",
         "hold",
       ],
+      relationship_confirmation_state_enum: [
+        "confirmed",
+        "legacy_review",
+        "rejected",
+      ],
       risk_level_enum: ["none", "low", "moderate", "high", "imminent"],
       sex_enum: ["M", "F"],
       specialty_enum: [
@@ -22627,6 +23952,17 @@ export const Constants = {
         "PR",
         "VI",
         "GU",
+      ],
+      therapist_match_state_enum: [
+        "legacy_review",
+        "pending_clinician_acceptance",
+        "pending_first_appointment",
+        "activated",
+        "declined",
+        "expired",
+        "cancelled",
+        "superseded",
+        "invalidated",
       ],
       time_zones: [
         "America/New_York",
