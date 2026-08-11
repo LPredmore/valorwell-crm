@@ -16,12 +16,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function CanonicalClientDetail() {
   const { id = '' } = useParams();
-  const { data: client, isLoading } = useCanonicalClient(id);
+  const { data: client, isLoading, isError, error } = useCanonicalClient(id);
   const m = useClientMutations(id);
   const audit = useClientAudit(id);
   const comms = useClientCommunications(id);
@@ -29,6 +29,24 @@ export default function CanonicalClientDetail() {
   const [editingTask, setEditingTask] = useState<CrmTask | null>(null);
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Loading…</div>;
+  if (isError) {
+    return (
+      <div className="p-6">
+        <Card className="border-destructive/40 p-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-destructive" />
+            <div className="space-y-1">
+              <div className="font-medium">Client record could not be loaded</div>
+              <div className="text-sm text-muted-foreground">
+                The canonical CRM read failed. This is not being treated as a missing client.
+              </div>
+              {error instanceof Error ? <div className="text-xs text-muted-foreground">{error.message}</div> : null}
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
   if (!client) return <div className="p-6">Client not found.</div>;
 
   return (
@@ -182,7 +200,6 @@ export default function CanonicalClientDetail() {
             />
           )}
         </TabsContent>
-
 
         <TabsContent value="campaigns">
           <Card><CardContent className="p-4 text-sm">

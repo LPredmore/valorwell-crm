@@ -1,19 +1,33 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Constants, type Database, type Json } from '@/integrations/supabase/types';
+import { Constants, type Database } from '@/integrations/supabase/types';
 import type {
   ClientsRepository, ListClientsQuery, Paged,
 } from '../types';
 import {
   type CanonicalClient,
-  mapDbLifecycleToDomain, mapDomainLifecycleToDb,
-  mapDbEngagementToDomain, mapDomainEngagementToDb,
-  mapDbEligibilityToDomain, mapDomainEligibilityToDb,
-  mapDbContactPolicyToDomain, mapDomainContactPolicyToDb,
-  mapDbServicePolicyToDomain, mapDomainServicePolicyToDb,
-  mapDbCareCadenceToDomain, mapDomainCareCadenceToDb,
-  mapDbClosureReasonToDomain, mapDomainClosureReasonToDb,
+  type CareCadence,
+  type ContactPolicy,
+  type EligibilityState,
+  type EngagementState,
+  type LifecycleStage,
+  type ServicePolicy,
+  mapDomainLifecycleToDb,
+  mapDomainEngagementToDb,
+  mapDomainEligibilityToDb,
+  mapDomainContactPolicyToDb,
+  mapDomainServicePolicyToDb,
+  mapDomainCareCadenceToDb,
+  mapDomainClosureReasonToDb,
 } from '@/domain/canonical';
-import { CONTRACT_VERSION } from '@/lib/crm/contracts';
+import {
+  CANONICAL_READ_VIEW,
+  CONTRACT_VERSION,
+  type CanonicalClientState,
+} from '@/lib/crm/contracts';
+import {
+  toCanonicalClientState,
+  type CanonicalStateRow,
+} from '@/lib/crm/canonicalClientStateAdapter';
 import {
   buildCanonicalRpcArgs,
   callCanonicalRpcWithRetry,
@@ -32,7 +46,6 @@ const CLIENT_SELECT = `
 `;
 
 
-
 type ClientRow = {
   id: string; tenant_id: string; pat_name_f: string | null; pat_name_m: string | null;
   pat_name_l: string | null; pat_name_preferred: string | null; email: string | null;
@@ -41,9 +54,10 @@ type ClientRow = {
   created_at: string; updated_at: string;
 };
 
-type CanonicalStateRow = Database['public']['Views']['v_client_canonical_state']['Row'];
 type ClientStateCode = Database['public']['Enums']['state_code_enum'];
 type LastContactChannel = NonNullable<CanonicalClient['lastContactChannel']>;
+
+type CanonicalClientLifecycle = Exclude<CanonicalClientState['lifecycle'], 'Lead'>;
 
 const CLIENT_STATE_CODES: ReadonlySet<string> = new Set(Constants.public.Enums.state_code_enum);
 const LAST_CONTACT_CHANNELS: ReadonlySet<string> = new Set(['email', 'sms', 'phone', 'note']);
@@ -65,35 +79,95 @@ function isLastContactChannel(value: string): value is LastContactChannel {
   return LAST_CONTACT_CHANNELS.has(value);
 }
 
-function requireCanonicalValue<T>(value: T | null | undefined, field: string): T {
-  if (value === null || value === undefined || value === '') {
-    throw new Error(`Canonical state unavailable: ${field}`);
+function canonicalLifecycleToDomain(value: CanonicalClientState['lifecycle']): LifecycleStage {
+  if (value === 'Lead') {
+    throw new Error('Canonical client state is incompatible with the client directory: Lead is not a client lifecycle stage');
   }
   return value;
 }
 
-function parseAtRisk(value: Json | null): { atRisk: boolean; atRiskSince?: string; reasons: string[] } {
-  if (typeof value === 'boolean') return { atRisk: value, reasons: [] };
-  if (typeof value === 'object' && value && !Array.isArray(value)) {
-    const record = value as Record<string, Json>;
-    return {
-      atRisk: record.at_risk === true || record.value === true,
-      atRiskSince: typeof record.since === 'string' ? record.since : undefined,
-      reasons: Array.isArray(record.reasons) ? record.reasons.filter((r): r is string => typeof r === 'string') : [],
-    };
+function canonicalEngagementToDomain(value: CanonicalClientState['engagement']): EngagementState {
+  switch (value) {
+    case 'Normal': return 'Engaged';
+    case 'Unresponsive Warm': return 'Warm';
+    case 'Unresponsive Cold': return 'Cold';
+    case 'Went Dark': return 'Went Dark';
   }
-  return { atRisk: false, reasons: [] };
 }
 
-function rowToCanonical(row: ClientRow, state: CanonicalStateRow): CanonicalClient {
+function canonicalEligibilityToDomain(value: CanonicalClientState['eligibility']): EligibilityState {
+  return value;
+}
+
+function canonicalContactPolicyToDomain(value: CanonicalClientState['contact_policy']): ContactPolicy {
+  switch (value) {
+    case 'Normal': return 'Contact Allowed';
+    case 'Do Not Contact': return 'Do Not Contact';
+  }
+}
+
+function canonicalServicePolicyToDomain(value: CanonicalClientState['service_policy']): ServicePolicy {
+  switch (value) {
+    case 'Normal': return 'Service Allowed';
+    case 'Service Blocked': return 'Service Blocked';
+  }
+}
+
+function canonicalCareCadenceToDomain(value: CanonicalClientState['care_cadence']): CareCadence {
+  switch (value) {
+    case 'regular': return 'Regular';
+    case 'as_needed': return 'As Needed';
+  }
+}
+
+export function mapDomainLifecycleToCanonicalRead(value: LifecycleStage): CanonicalClientLifecycle {
+  return value;
+}
+
+export function mapDomainEngagementToCanonicalRead(value: EngagementState): CanonicalClientState['engagement'] {
+  switch (value) {
+    case 'Engaged': return 'Normal';
+    case 'Warm': return 'Unresponsive Warm';
+    case 'Cold': return 'Unresponsive Cold';
+    case 'Went Dark': return 'Went Dark';
+  }
+}
+
+export function mapDomainEligibilityToCanonicalRead(value: EligibilityState): CanonicalClientState['eligibility'] {
+  return value;
+}
+
+export function mapDomainContactPolicyToCanonicalRead(value: ContactPolicy): CanonicalClientState['contact_policy'] {
+  switch (value) {
+    case 'Contact Allowed': return 'Normal';
+    case 'Do Not Contact': return 'Do Not Contact';
+  }
+}
+
+export function mapDomainServicePolicyToCanonicalRead(value: ServicePolicy): CanonicalClientState['service_policy'] {
+  switch (value) {
+    case 'Service Allowed': return 'Normal';
+    case 'Service Blocked': return 'Service Blocked';
+  }
+}
+
+function rowToCanonical(row: ClientRow, state: CanonicalClientState): CanonicalClient {
   if (state.client_id !== row.id) throw new Error('Canonical state unavailable: client_id mismatch');
+  if (state.tenant_id !== row.tenant_id) throw new Error('Canonical state unavailable: tenant_id mismatch');
+
   const tagsArr: string[] = Array.isArray(row.tags)
     ? row.tags.filter((tag): tag is string => typeof tag === 'string')
     : typeof row.tags === 'string' && row.tags
       ? row.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
       : [];
-  const risk = parseAtRisk(state.at_risk);
-  const dispositionReason = state.disposition_reason;
+
+  const risk: CanonicalClient['risk'] = {
+    atRisk: state.at_risk.at_risk,
+    reasons: [],
+    lastEvaluatedAt: state.at_risk.evaluated_at,
+    requiredNextAction: state.at_risk.recommended_next_action ?? undefined,
+  };
+
   return {
     id: row.id,
     tenantId: row.tenant_id,
@@ -107,21 +181,27 @@ function rowToCanonical(row: ClientRow, state: CanonicalStateRow): CanonicalClie
     state: row.pat_state ?? undefined,
     assignedClinicianId: state.assigned_therapist_id ?? undefined,
     assignedOperationsOwnerId: undefined,
-    lifecycle: mapDbLifecycleToDomain(requireCanonicalValue(state.lifecycle, 'lifecycle')),
-    engagement: mapDbEngagementToDomain(requireCanonicalValue(state.engagement, 'engagement')),
-    eligibility: mapDbEligibilityToDomain(requireCanonicalValue(state.eligibility, 'eligibility')),
-    contactPolicy: mapDbContactPolicyToDomain(requireCanonicalValue(state.contact_policy, 'contact_policy')),
-    servicePolicy: mapDbServicePolicyToDomain(requireCanonicalValue(state.service_policy, 'service_policy')),
-    careCadence: mapDbCareCadenceToDomain(requireCanonicalValue(state.care_cadence, 'care_cadence')),
+    lifecycle: canonicalLifecycleToDomain(state.lifecycle),
+    engagement: canonicalEngagementToDomain(state.engagement),
+    eligibility: canonicalEligibilityToDomain(state.eligibility),
+    contactPolicy: canonicalContactPolicyToDomain(state.contact_policy),
+    servicePolicy: canonicalServicePolicyToDomain(state.service_policy),
+    careCadence: canonicalCareCadenceToDomain(state.care_cadence),
     risk,
-    closure: dispositionReason
-      ? { closureReason: mapDbClosureReasonToDomain(dispositionReason), closedAt: state.disposition_at ?? undefined }
+    closure: state.disposition_reason
+      ? { closureReason: state.disposition_reason, closedAt: state.disposition_at ?? undefined }
       : undefined,
     lastContactAt: row.last_contact_at ?? undefined,
     lastContactChannel: row.last_contact_channel && isLastContactChannel(row.last_contact_channel)
       ? row.last_contact_channel
       : undefined,
-    lastContactDirection: row.last_contact_direction === 'sent' ? 'outbound' : row.last_contact_direction === 'received' ? 'inbound' : undefined,
+    lastContactDirection: row.last_contact_direction === 'sent'
+      ? 'outbound'
+      : row.last_contact_direction === 'received'
+        ? 'inbound'
+        : undefined,
+    nextAppointmentAt: state.next_appointment_at ?? undefined,
+    nextRequiredAction: state.at_risk.recommended_next_action ?? undefined,
     openTaskCount: 0,
     tags: tagsArr,
     createdAt: row.created_at,
@@ -163,11 +243,12 @@ export function composeFilterSortAndPageClients(
 ): Paged<CanonicalClient> {
   const page = q.page ?? 1;
   const pageSize = q.pageSize ?? 50;
-  const canonicalById = new Map<string, CanonicalStateRow>();
+  const canonicalById = new Map<string, CanonicalClientState>();
   for (const row of canonicalRows) {
-    const id = requireCanonicalValue(row.client_id, 'client_id');
-    canonicalById.set(id, row);
+    const canonical = toCanonicalClientState(row);
+    canonicalById.set(canonical.client_id, canonical);
   }
+
   const search = q.search?.trim().toLowerCase();
   const rows = clientRows
     .filter((row) => canonicalById.has(row.id))
@@ -220,15 +301,19 @@ async function fetchAllRows<T>(
   return all;
 }
 
-async function fetchCanonicalState(clientId: string): Promise<CanonicalStateRow> {
-  const { data, error } = await supabase.from('v_client_canonical_state').select('*').eq('client_id', clientId).maybeSingle();
+async function fetchCanonicalState(clientId: string): Promise<CanonicalClientState> {
+  const { data, error } = await supabase
+    .from(CANONICAL_READ_VIEW)
+    .select('*')
+    .eq('client_id', clientId)
+    .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error('Canonical state unavailable');
-  return data;
+  return toCanonicalClientState(data);
 }
 
 async function fetchConcurrencyToken(clientId: string): Promise<string> {
-  return requireCanonicalValue((await fetchCanonicalState(clientId)).concurrency_token, 'concurrency_token');
+  return (await fetchCanonicalState(clientId)).concurrency_token;
 }
 
 async function callRpc<Name extends CanonicalRpcName>(
@@ -277,14 +362,14 @@ export const supabaseClientsRepository: ClientsRepository = {
   async list(q: ListClientsQuery): Promise<Paged<CanonicalClient>> {
     const stateCodes = q.states?.length ? requireClientStateCodes(q.states) : undefined;
     let canonicalQuery = supabase
-      .from('v_client_canonical_state')
+      .from(CANONICAL_READ_VIEW)
       .select('*');
 
-    if (q.lifecycle?.length) canonicalQuery = canonicalQuery.in('lifecycle', q.lifecycle.map(mapDomainLifecycleToDb));
-    if (q.engagement?.length) canonicalQuery = canonicalQuery.in('engagement', q.engagement.map(mapDomainEngagementToDb));
-    if (q.eligibility?.length) canonicalQuery = canonicalQuery.in('eligibility', q.eligibility.map(mapDomainEligibilityToDb));
-    if (q.contactPolicy?.length) canonicalQuery = canonicalQuery.in('contact_policy', q.contactPolicy.map(mapDomainContactPolicyToDb));
-    if (q.servicePolicy?.length) canonicalQuery = canonicalQuery.in('service_policy', q.servicePolicy.map(mapDomainServicePolicyToDb));
+    if (q.lifecycle?.length) canonicalQuery = canonicalQuery.in('lifecycle', q.lifecycle.map(mapDomainLifecycleToCanonicalRead));
+    if (q.engagement?.length) canonicalQuery = canonicalQuery.in('engagement', q.engagement.map(mapDomainEngagementToCanonicalRead));
+    if (q.eligibility?.length) canonicalQuery = canonicalQuery.in('eligibility', q.eligibility.map(mapDomainEligibilityToCanonicalRead));
+    if (q.contactPolicy?.length) canonicalQuery = canonicalQuery.in('contact_policy', q.contactPolicy.map(mapDomainContactPolicyToCanonicalRead));
+    if (q.servicePolicy?.length) canonicalQuery = canonicalQuery.in('service_policy', q.servicePolicy.map(mapDomainServicePolicyToCanonicalRead));
     if (q.atRisk !== undefined) canonicalQuery = canonicalQuery.eq('at_risk->>at_risk', String(q.atRisk));
     if (q.assignedClinicianIds?.length) canonicalQuery = canonicalQuery.in('assigned_therapist_id', q.assignedClinicianIds);
 
@@ -464,4 +549,3 @@ export const supabaseClientsRepository: ClientsRepository = {
     throw new Error('assignOperationsOwner: no operations-owner column exists on clients yet');
   },
 };
-

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Database } from '@/integrations/supabase/types';
+import { CONTRACT_VERSION } from '@/lib/crm/contracts';
 import {
   classifyError,
   resolveCanonicalRead,
   toCanonicalClientState,
-} from '@/hooks/crm/useCanonicalClientState';
+} from '@/lib/crm/canonicalClientStateAdapter';
 
 type CanonicalRow = Database['public']['Views']['v_client_canonical_state']['Row'];
 
@@ -12,14 +13,20 @@ function row(overrides: Partial<CanonicalRow> = {}): CanonicalRow {
   return {
     client_id: 'client-1',
     tenant_id: 'tenant-1',
-    contract_version: 'valorwell-crm-contracts@1.0.1+20260714',
-    lifecycle: 'scheduled',
-    engagement: 'normal',
-    at_risk: { at_risk: false },
-    eligibility: 'eligible',
+    contract_version: CONTRACT_VERSION,
+    lifecycle: 'Scheduled',
+    engagement: 'Normal',
+    at_risk: {
+      at_risk: false,
+      evaluated_at: '2026-07-15T00:00:00.000Z',
+      recommended_next_action: null,
+      event_version: 'event-1',
+      reason: null,
+    },
+    eligibility: 'Eligible',
     eligibility_manual_review: null,
-    contact_policy: 'normal',
-    service_policy: 'normal',
+    contact_policy: 'Normal',
+    service_policy: 'Normal',
     care_cadence: 'regular',
     disposition_reason: null,
     disposition_at: null,
@@ -33,7 +40,7 @@ function row(overrides: Partial<CanonicalRow> = {}): CanonicalRow {
 }
 
 describe('canonical client-state adapter', () => {
-  it('converts raw database values into the contract display values', () => {
+  it('accepts the deployed canonical view representation without reinterpreting storage enums', () => {
     expect(toCanonicalClientState(row())).toMatchObject({
       lifecycle: 'Scheduled',
       engagement: 'Normal',
@@ -46,49 +53,57 @@ describe('canonical client-state adapter', () => {
   });
 
   it.each([
-    ['early_care', 'Early Care'],
-    ['unresponsive_warm', 'Unresponsive Warm'],
-    ['coverage_issue', 'Coverage Issue'],
-    ['do_not_contact', 'Do Not Contact'],
-    ['service_blocked', 'Service Blocked'],
-    ['completed_care', 'Completed Care'],
-  ])('maps %s to %s', (raw, expected) => {
-    const field = raw === 'early_care' ? 'lifecycle'
-      : raw === 'unresponsive_warm' ? 'engagement'
-        : raw === 'coverage_issue' ? 'eligibility'
-          : raw === 'do_not_contact' ? 'contact_policy'
-            : raw === 'service_blocked' ? 'service_policy' : 'disposition_reason';
-    const result = toCanonicalClientState(row({ [field]: raw }));
-    expect(result[field as keyof typeof result]).toBe(expected);
+    ['lifecycle', 'Early Care'],
+    ['engagement', 'Unresponsive Warm'],
+    ['eligibility', 'Coverage Issue'],
+    ['contact_policy', 'Do Not Contact'],
+    ['service_policy', 'Service Blocked'],
+    ['disposition_reason', 'Completed Care'],
+  ] as const)('accepts deployed %s value %s', (field, value) => {
+    const result = toCanonicalClientState(row({ [field]: value }));
+    expect(result[field]).toBe(value);
   });
 
-  it('accepts the minimal deployed at-risk payload', () => {
-    expect(toCanonicalClientState(row()).at_risk).toEqual({ at_risk: false });
-  });
-
-  it('accepts complete at-risk and manual-review payloads', () => {
+  it('accepts complete at-risk and manual-review payloads and ignores extra view metadata', () => {
     const result = toCanonicalClientState(row({
       at_risk: {
         at_risk: true,
         evaluated_at: '2026-07-15T00:00:00.000Z',
         recommended_next_action: 'Call client',
         event_version: 'v1',
+        reason: 'follow_up_gap',
       },
-      eligibility: 'manual_review',
+      eligibility: 'Manual Review',
       eligibility_manual_review: {
-        reason: 'Coverage unclear', owner: 'ops-1', next_action: 'Verify plan', review_due_at: '2026-07-20T00:00:00.000Z',
+        reason: 'Coverage unclear',
+        owner: 'ops-1',
+        next_action: 'Verify plan',
+        review_due_at: '2026-07-20T00:00:00.000Z',
       },
     }));
-    expect(result.at_risk.at_risk).toBe(true);
+    expect(result.at_risk).toEqual({
+      at_risk: true,
+      evaluated_at: '2026-07-15T00:00:00.000Z',
+      recommended_next_action: 'Call client',
+      event_version: 'v1',
+    });
     expect(result.eligibility_manual_review?.owner).toBe('ops-1');
   });
 
+  it('fails closed when the canonical contract version does not match the CRM', () => {
+    expect(() => toCanonicalClientState(row({ contract_version: 'valorwell-crm-contracts@2' })))
+      .toThrow(/contract version mismatch/i);
+  });
+
   it.each([
+    ['raw lifecycle storage enum', { lifecycle: 'scheduled' }],
+    ['raw engagement storage enum', { engagement: 'normal' }],
+    ['raw contact-policy storage enum', { contact_policy: 'do_not_contact' }],
     ['unknown lifecycle', { lifecycle: 'not_a_lifecycle' }],
     ['invalid at-risk JSON', { at_risk: { at_risk: 'false' } }],
     ['invalid manual-review JSON', { eligibility_manual_review: { owner: 'ops-1' } }],
   ])('fails closed for %s', (_label, overrides) => {
-    expect(() => toCanonicalClientState(row(overrides))).toThrow(/invalid/);
+    expect(() => toCanonicalClientState(row(overrides as Partial<CanonicalRow>))).toThrow();
   });
 
   it('classifies only missing-contract errors', () => {

@@ -18,7 +18,7 @@ import {
 import { LifecycleBadge, EngagementBadge, EligibilityBadge, ContactPolicyBadge, AtRiskBadge } from '@/components/crm/canonical/StateBadges';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Filter, LayoutGrid, List, Mail, Search } from 'lucide-react';
+import { AlertTriangle, Filter, LayoutGrid, List, Mail, Search } from 'lucide-react';
 import { useCanMutate } from '@/hooks/crm/useCanMutate';
 import { BulkNewsletterDialog } from '@/components/crm/canonical/BulkNewsletterDialog';
 
@@ -43,7 +43,7 @@ export default function CanonicalClients() {
     pageSize: 200,
   };
 
-  const { data, isLoading } = useCanonicalClients(query);
+  const { data, isLoading, isError, error } = useCanonicalClients(query);
   const eligibleRows = useMemo(
     () => (data?.rows ?? []).filter(isNewsletterEligible),
     [data?.rows],
@@ -85,11 +85,17 @@ export default function CanonicalClients() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Clients</h1>
-          <p className="text-sm text-muted-foreground">{data?.total ?? 0} canonical records</p>
+          <p className="text-sm text-muted-foreground">
+            {isLoading
+              ? 'Loading canonical records…'
+              : isError
+                ? 'Canonical client data unavailable'
+                : `${data?.total ?? 0} canonical records`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {canCommunicate ? (
-            <Button onClick={() => setNewsletterOpen(true)} disabled={selectedClients.length === 0}>
+            <Button onClick={() => setNewsletterOpen(true)} disabled={selectedClients.length === 0 || isError}>
               <Mail className="mr-2 h-4 w-4" />
               Compose newsletter{selectedClients.length ? ` · ${selectedClients.length}` : ''}
             </Button>
@@ -117,7 +123,24 @@ export default function CanonicalClients() {
         </Button>
       </div>
 
-      {view === 'table' ? (
+      {isLoading ? (
+        <Card className="p-8 text-center text-sm text-muted-foreground">Loading canonical client data…</Card>
+      ) : isError ? (
+        <Card className="border-destructive/40 p-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-destructive" />
+            <div className="space-y-1">
+              <div className="font-medium">Client directory could not be loaded</div>
+              <div className="text-sm text-muted-foreground">
+                The canonical CRM read failed. This is not being treated as an empty client directory.
+              </div>
+              {error instanceof Error ? (
+                <div className="text-xs text-muted-foreground">{error.message}</div>
+              ) : null}
+            </div>
+          </div>
+        </Card>
+      ) : view === 'table' ? (
         <Card>
           <Table>
             <TableHeader>
@@ -142,7 +165,13 @@ export default function CanonicalClients() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={canCommunicate ? 8 : 7} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>}
+              {data?.rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={canCommunicate ? 8 : 7} className="py-8 text-center text-muted-foreground">
+                    No clients match the current filters.
+                  </TableCell>
+                </TableRow>
+              ) : null}
               {data?.rows.map(c => {
                 const eligible = isNewsletterEligible(c);
                 return (
