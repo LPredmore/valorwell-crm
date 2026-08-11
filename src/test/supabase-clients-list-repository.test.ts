@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Database } from '@/integrations/supabase/types';
+import { CONTRACT_VERSION } from '@/lib/crm/contracts';
 import { supabaseClientsRepository } from '@/repositories/supabase/clients';
 
 type CanonicalRow = Database['public']['Views']['v_client_canonical_state']['Row'];
@@ -128,25 +129,31 @@ vi.mock('@/integrations/supabase/client', () => {
   };
 });
 
-function canonical(id: string, lifecycle = 'scheduled'): CanonicalRow {
+function canonical(id: string, lifecycle = 'Scheduled'): CanonicalRow {
   return {
     client_id: id,
     tenant_id: 't1',
     lifecycle,
-    engagement: 'normal',
-    eligibility: 'eligible',
-    contact_policy: 'normal',
-    service_policy: 'normal',
+    engagement: 'Normal',
+    eligibility: 'Eligible',
+    contact_policy: 'Normal',
+    service_policy: 'Normal',
     care_cadence: 'regular',
     assigned_therapist_id: null,
-    at_risk: { at_risk: false },
+    at_risk: {
+      at_risk: false,
+      evaluated_at: '2026-01-01T00:00:00Z',
+      recommended_next_action: null,
+      event_version: `evt-${id}`,
+      reason: null,
+    },
     concurrency_token: `tok-${id}`,
-    contract_version: 'valorwell-crm-contracts@1.0.1+20260714',
+    contract_version: CONTRACT_VERSION,
     disposition_at: null,
     disposition_reason: null,
     eligibility_manual_review: null,
     next_appointment_at: null,
-    provider_demand_state: null,
+    provider_demand_state: 'none',
     updated_at: `2026-01-${id.padStart(2, '0')}T00:00:00Z`,
   };
 }
@@ -182,7 +189,7 @@ describe('supabaseClientsRepository.list query composition', () => {
     boundary.canonicalRows = [
       canonical('1'),
       canonical('2'),
-      canonical('3', 'closed'),
+      canonical('3', 'Closed'),
       canonical('4'),
     ];
     boundary.clientRows = [
@@ -204,7 +211,7 @@ describe('supabaseClientsRepository.list query composition', () => {
       pageSize: 1,
     });
 
-    expect(boundary.calls.canonical).toContainEqual({ column: 'lifecycle', values: ['scheduled'] });
+    expect(boundary.calls.canonical).toContainEqual({ column: 'lifecycle', values: ['Scheduled'] });
     expect(boundary.calls.clients).toContainEqual({ column: 'pat_state', values: ['WA'] });
     expect(boundary.calls.clients.some((call) => call.column === 'or')).toBe(true);
     expect(result.total).toBe(2);
