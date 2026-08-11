@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { composeFilterSortAndPageClients } from '@/repositories/supabase/clients';
+import {
+  composeFilterSortAndPageClients,
+  mapDomainContactPolicyToCanonicalRead,
+  mapDomainEligibilityToCanonicalRead,
+  mapDomainEngagementToCanonicalRead,
+  mapDomainLifecycleToCanonicalRead,
+  mapDomainServicePolicyToCanonicalRead,
+} from '@/repositories/supabase/clients';
 import type { Database } from '@/integrations/supabase/types';
+import { CONTRACT_VERSION } from '@/lib/crm/contracts';
 
 type CanonicalRow = Database['public']['Views']['v_client_canonical_state']['Row'];
 
@@ -8,21 +16,27 @@ function canonical(id: string, overrides: Partial<CanonicalRow> = {}): Canonical
   return {
     client_id: id,
     tenant_id: 't1',
-    lifecycle: 'scheduled',
-    engagement: 'normal',
-    eligibility: 'eligible',
-    contact_policy: 'normal',
-    service_policy: 'normal',
+    lifecycle: 'Scheduled',
+    engagement: 'Normal',
+    eligibility: 'Eligible',
+    contact_policy: 'Normal',
+    service_policy: 'Normal',
     care_cadence: 'regular',
     assigned_therapist_id: null,
-    at_risk: { at_risk: false },
+    at_risk: {
+      at_risk: false,
+      evaluated_at: '2026-01-01T00:00:00Z',
+      recommended_next_action: null,
+      event_version: `evt-${id}`,
+      reason: null,
+    },
     concurrency_token: `tok-${id}`,
-    contract_version: 'valorwell-crm-contracts@1.0.1+20260714',
+    contract_version: CONTRACT_VERSION,
     disposition_at: null,
     disposition_reason: null,
     eligibility_manual_review: null,
     next_appointment_at: null,
-    provider_demand_state: null,
+    provider_demand_state: 'none',
     updated_at: `2026-01-${id.padStart(2, '0')}T00:00:00Z`,
     ...overrides,
   };
@@ -70,7 +84,7 @@ describe('canonical client list composition', () => {
   });
 
   it('reports the final total after canonical and identity filters intersect', () => {
-    const canonicalRows = [canonical('1', { lifecycle: 'scheduled' }), canonical('2', { lifecycle: 'scheduled' })];
+    const canonicalRows = [canonical('1'), canonical('2')];
     const clientRows = [client('1', { pat_state: 'WA' }), client('2', { pat_state: 'CA' }), client('3', { pat_state: 'WA' })];
     const result = composeFilterSortAndPageClients(canonicalRows, clientRows, { states: ['WA'] });
     expect(result.total).toBe(1);
@@ -99,13 +113,70 @@ describe('canonical client list composition', () => {
     expect(result.total).toBe(4);
   });
 
-  it('canonical state overrides conflicting raw clients state', () => {
+  it('maps deployed canonical state into CRM domain values', () => {
     const result = composeFilterSortAndPageClients(
-      [canonical('1', { lifecycle: 'scheduled', engagement: 'normal' })],
+      [canonical('1', {
+        lifecycle: 'Early Care',
+        engagement: 'Unresponsive Warm',
+        eligibility: 'Coverage Issue',
+        contact_policy: 'Normal',
+        service_policy: 'Normal',
+        care_cadence: 'regular',
+        next_appointment_at: '2026-08-20T15:00:00Z',
+        at_risk: {
+          at_risk: true,
+          evaluated_at: '2026-08-10T15:00:00Z',
+          recommended_next_action: 'Call client',
+          event_version: 'evt-1',
+          reason: 'follow_up_gap',
+        },
+      })],
       [client('1', { lifecycle_stage: 'closed', engagement_state: 'cold' })],
       {},
     );
-    expect(result.rows[0].lifecycle).toBe('Scheduled');
-    expect(result.rows[0].engagement).toBe('Engaged');
+
+    expect(result.rows[0]).toMatchObject({
+      lifecycle: 'Early Care',
+      engagement: 'Warm',
+      eligibility: 'Coverage Issue',
+      contactPolicy: 'Contact Allowed',
+      servicePolicy: 'Service Allowed',
+      careCadence: 'Regular',
+      nextAppointmentAt: '2026-08-20T15:00:00Z',
+      nextRequiredAction: 'Call client',
+      risk: {
+        atRisk: true,
+        reasons: [],
+        lastEvaluatedAt: '2026-08-10T15:00:00Z',
+        requiredNextAction: 'Call client',
+      },
+    });
+  });
+
+  it('fails closed when client identity and canonical tenant do not match', () => {
+    expect(() => composeFilterSortAndPageClients(
+      [canonical('1', { tenant_id: 'different-tenant' })],
+      [client('1')],
+      {},
+    )).toThrow(/tenant_id mismatch/);
+  });
+
+  it('fails closed if a Lead row reaches the formal client directory', () => {
+    expect(() => composeFilterSortAndPageClients(
+      [canonical('1', { lifecycle: 'Lead' })],
+      [client('1')],
+      {},
+    )).toThrow(/Lead is not a client lifecycle stage/);
+  });
+});
+
+describe('canonical client read filters', () => {
+  it('serializes CRM domain filters to the canonical view contract, not storage enums', () => {
+    expect(mapDomainLifecycleToCanonicalRead('Registration')).toBe('Registration');
+    expect(mapDomainEngagementToCanonicalRead('Engaged')).toBe('Normal');
+    expect(mapDomainEngagementToCanonicalRead('Warm')).toBe('Unresponsive Warm');
+    expect(mapDomainEligibilityToCanonicalRead('Coverage Issue')).toBe('Coverage Issue');
+    expect(mapDomainContactPolicyToCanonicalRead('Contact Allowed')).toBe('Normal');
+    expect(mapDomainServicePolicyToCanonicalRead('Service Allowed')).toBe('Normal');
   });
 });
