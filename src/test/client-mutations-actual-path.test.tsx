@@ -80,21 +80,27 @@ function canonical(id: string): CanonicalRow {
   return {
     client_id: id,
     tenant_id: 't1',
-    lifecycle: 'scheduled',
-    engagement: 'normal',
-    eligibility: 'eligible',
-    contact_policy: 'normal',
-    service_policy: 'normal',
+    lifecycle: 'Scheduled',
+    engagement: 'Normal',
+    eligibility: 'Eligible',
+    contact_policy: 'Normal',
+    service_policy: 'Normal',
     care_cadence: 'regular',
     assigned_therapist_id: null,
-    at_risk: { at_risk: false },
+    at_risk: {
+      at_risk: false,
+      evaluated_at: '2026-07-15T00:00:00Z',
+      recommended_next_action: null,
+      event_version: `evt-${id}`,
+      reason: null,
+    },
     concurrency_token: `tok-${id}`,
     contract_version: CONTRACT_VERSION,
     disposition_at: null,
     disposition_reason: null,
     eligibility_manual_review: null,
     next_appointment_at: null,
-    provider_demand_state: null,
+    provider_demand_state: 'none',
     updated_at: '2026-07-15T00:00:00Z',
   };
 }
@@ -144,20 +150,23 @@ describe('supabaseClientsRepository canonical mutation path', () => {
     } satisfies { id: string; next: EngagementState };
 
     await expect(supabaseClientsRepository.updateEngagement(action.id, action.next))
-      .resolves.toMatchObject({ id: 'c1' });
+      .resolves.toMatchObject({ id: 'c1', engagement: 'Engaged' });
     expect(boundary.rpc).toHaveBeenCalledTimes(2);
     expect(payloads[0].p_idempotency_key).toBe(payloads[1].p_idempotency_key);
     expect(payloads[0].p_concurrency_token).toBe('tok-c1');
     expect(payloads[1].p_concurrency_token).toBe('tok-c1');
     expect(payloads[0].p_contract_version).toBe(CONTRACT_VERSION);
     expect(payloads[1].p_contract_version).toBe(CONTRACT_VERSION);
+    expect(payloads[0].p_to_state).toBe('normal');
+    expect(payloads[1].p_to_state).toBe('normal');
 
     await expect(supabaseClientsRepository.updateEngagement(action.id, action.next))
-      .resolves.toMatchObject({ id: 'c1' });
+      .resolves.toMatchObject({ id: 'c1', engagement: 'Engaged' });
     expect(boundary.rpc).toHaveBeenCalledTimes(3);
     expect(payloads).toHaveLength(3);
     expect(payloads[2].p_idempotency_key).not.toBe(payloads[0].p_idempotency_key);
     expect(payloads[2].p_contract_version).toBe(CONTRACT_VERSION);
+    expect(payloads[2].p_to_state).toBe('normal');
   });
 
   it('throws a final transient transport failure after exactly two attempts', async () => {
@@ -172,6 +181,8 @@ describe('supabaseClientsRepository canonical mutation path', () => {
     expect(boundary.rpc).toHaveBeenCalledTimes(2);
     expect(payloads[0].p_idempotency_key).toBe(payloads[1].p_idempotency_key);
     expect(payloads[0].p_concurrency_token).toBe(payloads[1].p_concurrency_token);
+    expect(payloads[0].p_to_state).toBe('normal');
+    expect(payloads[1].p_to_state).toBe('normal');
   });
 
   it('retries one returned transient Supabase error', async () => {
@@ -190,10 +201,12 @@ describe('supabaseClientsRepository canonical mutation path', () => {
     });
 
     await expect(supabaseClientsRepository.updateEngagement('c1', 'Engaged'))
-      .resolves.toMatchObject({ id: 'c1' });
+      .resolves.toMatchObject({ id: 'c1', engagement: 'Engaged' });
     expect(boundary.rpc).toHaveBeenCalledTimes(2);
     expect(payloads[0].p_idempotency_key).toBe(payloads[1].p_idempotency_key);
     expect(payloads[0].p_concurrency_token).toBe(payloads[1].p_concurrency_token);
+    expect(payloads[0].p_to_state).toBe('normal');
+    expect(payloads[1].p_to_state).toBe('normal');
   });
 
   it('does not retry a backend ok:false business result', async () => {
