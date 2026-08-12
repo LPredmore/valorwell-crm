@@ -66,6 +66,7 @@ type DeliveryInput = {
 type OutboundReplyContext = {
   id: string;
   client_id: string | null;
+  provider_applicant_id: string | null;
   campaign_id: string | null;
   provider_message_id: string | null;
   provider_thread_id: string | null;
@@ -847,13 +848,13 @@ async function handleInbound(
   let outbound: OutboundReplyContext | null = null;
   if (hintedId) {
     const { data: row } = await db.from("crm_email_messages")
-      .select("id, client_id, campaign_id, provider_message_id, provider_thread_id")
+      .select("id, client_id, provider_applicant_id, campaign_id, provider_message_id, provider_thread_id")
       .eq("tenant_id", settings.tenant_id).eq("id", hintedId).maybeSingle();
     outbound = row as OutboundReplyContext | null;
   }
   if (!outbound && inReplyTo) {
     const { data: row } = await db.from("crm_email_messages")
-      .select("id, client_id, campaign_id, provider_message_id, provider_thread_id")
+      .select("id, client_id, provider_applicant_id, campaign_id, provider_message_id, provider_thread_id")
       .eq("tenant_id", settings.tenant_id)
       .or(`provider_message_id.eq.${inReplyTo},provider_thread_id.eq.${inReplyTo}`)
       .limit(1).maybeSingle();
@@ -861,17 +862,24 @@ async function handleInbound(
   }
 
   let clientId = outbound?.client_id ?? null;
+  let providerApplicantId = outbound?.provider_applicant_id ?? null;
   if (!clientId) {
     const { data: client } = await db.from("clients").select("id")
       .eq("tenant_id", settings.tenant_id).ilike("email", fromEmail).limit(1).maybeSingle();
     clientId = client?.id ?? null;
   }
+  if (!clientId && !providerApplicantId) {
+    const { data: applicant } = await db.from("provider_applicants").select("id")
+      .eq("tenant_id", settings.tenant_id).ilike("email", fromEmail).limit(1).maybeSingle();
+    providerApplicantId = applicant?.id ?? null;
+  }
   const subject = String(content.subject ?? data.subject ?? "") || null;
   const text = String(content.text ?? "");
   const html = String(content.html ?? "");
-  const { data: inbound, error } = await db.from("crm_email_messages").insert({
+  const { data: insertedInbound, error } = await db.from("crm_email_messages").insert({
     tenant_id: settings.tenant_id,
     client_id: clientId,
+    provider_applicant_id: providerApplicantId,
     campaign_id: outbound?.campaign_id ?? null,
     direction: "inbound",
     status: "received",
@@ -888,8 +896,30 @@ async function handleInbound(
     received_at: occurredAt,
     occurred_at: occurredAt,
   }).select("*").single();
-  if (error?.code === "23505") return json({ received: true, duplicate: true, requestId }, 200, requestId);
-  if (error) return json({ error: error.message, requestId }, 500, requestId);
+  let inbound = insertedInbound;
+  let duplicate = false;
+  if (error?.code === "23505") {
+    duplicate = true;
+    const { data: existing, error: existingError } = await db.from("crm_email_messages")
+      .select("id, client_id, provider_applicant_id")
+      .eq("tenant_id", settings.tenant_id)
+      .eq("provider", "resend")
+      .eq("provider_message_id", receivedId)
+      .maybeSingle();
+    if (existingError || !existing) {
+      return json({ error: existingError?.message ?? "Duplicate inbound email could not be loaded", requestId }, 500, requestId);
+    }
+    inbound = existing;
+    clientId = existing.client_id ?? null;
+    providerApplicantId = existing.provider_applicant_id ?? null;
+    if (!providerApplicantId) {
+      return json({ received: true, duplicate: true, requestId }, 200, requestId);
+    }
+  } else if (error) {
+    return json({ error: error.message, requestId }, 500, requestId);
+  }
+
+  if (!inbound) return json({ error: "Inbound email was not persisted", requestId }, 500, requestId);
 
   const { error: eventError } = await db.from("crm_email_events").insert({
     tenant_id: settings.tenant_id,
@@ -921,8 +951,23 @@ async function handleInbound(
         status: "responded", paused_at: occurredAt, pause_reason: "email_response", updated_at: occurredAt,
       }).in("id", activeIds);
     }
+  } else if (providerApplicantId) {
+    const { error: workflowError } = await db.rpc("staff_record_provider_applicant_response", {
+      p_applicant_id: providerApplicantId,
+      p_channel: "email",
+      p_provider_message_id: receivedId,
+      p_received_at: occurredAt,
+    });
+    if (workflowError) {
+      safeLog("error", "provider_applicant_response_sync_failed", {
+        requestId,
+        providerApplicantId,
+        message: workflowError.message,
+      });
+      return json({ error: "Provider applicant response state could not be synchronized", requestId }, 500, requestId);
+    }
   }
-  return json({ received: true, emailMessageId: inbound.id, clientId, requestId }, 200, requestId);
+  return json({ received: true, duplicate, emailMessageId: inbound.id, clientId, providerApplicantId, requestId }, 200, requestId);
 }
 
 async function handleWebhook(request: Request, requestId: string) {
@@ -953,12 +998,12 @@ async function handleWebhook(request: Request, requestId: string) {
     return json({ error: "Invalid webhook signature", requestId }, 401, requestId);
   }
 
-  const db = createClient(url, service, { auth: { persistSession: false } });
-  if (await eventAlreadyExists(db, eventId)) return json({ received: true, duplicate: true, requestId }, 200, requestId);
   const type = String(event.type ?? "");
   const data = (event.data && typeof event.data === "object" ? event.data : {}) as Record<string, unknown>;
   const occurredAt = String(event.created_at ?? new Date().toISOString());
+  const db = createClient(url, service, { auth: { persistSession: false } });
   if (type === "email.received") return handleInbound(db, event, data, eventId, occurredAt, apiKey, requestId);
+  if (await eventAlreadyExists(db, eventId)) return json({ received: true, duplicate: true, requestId }, 200, requestId);
 
   const providerId = String(data.email_id ?? data.id ?? "");
   if (!providerId) return json({ received: true, ignored: true, reason: "provider_message_id_missing", requestId }, 200, requestId);

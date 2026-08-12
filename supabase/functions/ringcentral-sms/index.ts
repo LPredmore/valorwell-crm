@@ -28,6 +28,12 @@ interface Recipient {
   name: string;
 }
 
+interface PhoneCandidate {
+  id: string;
+  tenant_id: string;
+  phone: string | null;
+}
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -364,14 +370,31 @@ async function handleInbound(req: Request): Promise<Response> {
 
   if (error) return json({ error: "Database error" }, 500);
 
-  const matches = (candidates || []).filter((client: any) =>
+  const matches = ((candidates || []) as PhoneCandidate[]).filter((client) =>
     (client.phone || "").replace(/\D/g, "").slice(-10) === last10
   );
   const matched = matches[0] ?? null;
 
+  let matchedApplicant: { id: string; tenant_id: string; phone: string | null } | null = null;
+  if (!matched) {
+    const { data: applicantCandidates, error: applicantError } = await db
+      .from("provider_applicants")
+      .select("id, tenant_id, phone")
+      .not("phone", "is", null)
+      .or(
+        `phone.ilike.%${last10.slice(0, 3)}%${last10.slice(3, 6)}%${last10.slice(6)}%,phone.ilike.%${last10}%`,
+      )
+      .limit(25);
+    if (applicantError) return json({ error: "Database error" }, 500);
+    matchedApplicant = ((applicantCandidates || []) as PhoneCandidate[]).find((applicant) =>
+      (applicant.phone || "").replace(/\D/g, "").slice(-10) === last10
+    ) ?? null;
+  }
+
   await db.from("crm_inbound_sms_logs").insert({
-    tenant_id: matched?.tenant_id ?? null,
+    tenant_id: matched?.tenant_id ?? matchedApplicant?.tenant_id ?? null,
     client_id: matched?.id ?? null,
+    provider_applicant_id: matchedApplicant?.id ?? null,
     from_phone: normalized.normalized,
     to_phone: toNumber,
     message_body: messageBody,
@@ -380,7 +403,28 @@ async function handleInbound(req: Request): Promise<Response> {
     is_read: false,
   });
 
-  if (!matched) return json({ received: true, clientFound: false });
+  if (!matched && !matchedApplicant) {
+    return json({ received: true, clientFound: false, providerApplicantFound: false });
+  }
+
+  if (matchedApplicant) {
+    const { error: workflowError } = await db.rpc("staff_record_provider_applicant_response", {
+      p_applicant_id: matchedApplicant.id,
+      p_channel: "sms",
+      p_provider_message_id: messageId,
+      p_received_at: new Date().toISOString(),
+    });
+    if (workflowError) {
+      console.error("Provider applicant SMS response synchronization failed:", workflowError.message);
+      return json({ error: "Provider applicant response synchronization failed" }, 500);
+    }
+    return json({
+      received: true,
+      clientFound: false,
+      providerApplicantFound: true,
+      providerApplicantId: matchedApplicant.id,
+    });
+  }
 
   await db.from("crm_activity_events").insert({
     tenant_id: matched.tenant_id,
