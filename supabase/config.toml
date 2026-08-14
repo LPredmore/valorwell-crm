@@ -33,3 +33,6 @@ verify_jwt = false
 
 [functions.campaign-trigger-worker]
 verify_jwt = false
+
+[functions.newsletter-send-worker]
+verify_jwt = false
