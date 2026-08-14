@@ -9,10 +9,14 @@ import { Switch } from '@/components/ui/switch';
 import { useCanMutate } from '@/hooks/crm/useCanMutate';
 import {
   CONTROL_PLANE_FLAG_LABELS,
+  buildNewsletterRecipients,
   canEnableControlPlaneFlag,
   getCampaignParticipation,
   getCampaignTriggerShadowReport,
+  listAudienceCampaigns,
   listCampaignTriggerRules,
+  listNewsletters,
+  suppressNewsletterMailbox,
 
   getPersonIdentityOverview,
   listCampaignRegistry,
@@ -27,6 +31,7 @@ export default function CommunicationsControlPlanePage() {
   const queryClient = useQueryClient();
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<PersonReconcileResult | null>(null);
+  const [suppressEmail, setSuppressEmail] = useState('');
 
   const flags = useQuery({ queryKey: ['control-plane-flags'], queryFn: listControlPlaneFlags, retry: false });
   const identity = useQuery({ queryKey: ['control-plane-identity'], queryFn: getPersonIdentityOverview, retry: false });
@@ -41,6 +46,25 @@ export default function CommunicationsControlPlanePage() {
     queryKey: ['control-plane-trigger-shadow'],
     queryFn: () => getCampaignTriggerShadowReport(50),
     retry: false,
+  });
+
+  const audiences = useQuery({ queryKey: ['control-plane-audience-campaigns'], queryFn: listAudienceCampaigns, retry: false });
+  const newsletters = useQuery({ queryKey: ['control-plane-newsletters'], queryFn: listNewsletters, retry: false });
+
+  const suppress = useMutation({
+    mutationFn: ({ email, reason }: { email: string; reason: string }) => suppressNewsletterMailbox({ email, reason }),
+    onSuccess: () => {
+      setSuppressEmail('');
+      void queryClient.invalidateQueries({ queryKey: ['control-plane-newsletters'] });
+    },
+  });
+
+  const buildRecipients = useMutation({
+    mutationFn: (newsletterId: string) =>
+      buildNewsletterRecipients({ newsletterId, reason: reasons[`newsletter:${newsletterId}`] ?? '' }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['control-plane-newsletters'] });
+    },
   });
 
 
@@ -204,6 +228,91 @@ export default function CommunicationsControlPlanePage() {
         </div>)}
       </CardContent>
     </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle>Staff and donor campaigns</CardTitle>
+        <CardDescription>Audience campaigns can only be activated once the matching staff or donor switch is on.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {audiences.isError && <p className="text-sm text-destructive">{audiences.error instanceof Error ? audiences.error.message : 'Audience campaigns unavailable.'}</p>}
+        {(audiences.data ?? []).length === 0 && !audiences.isLoading && !audiences.isError && <p className="text-sm text-muted-foreground">No staff or donor campaigns yet.</p>}
+        {(audiences.data ?? []).map((campaign) => <div className="flex flex-wrap items-center gap-2 border-b py-2 text-sm last:border-0" key={campaign.id}>
+          <Badge variant="outline">{campaign.audienceDomain}</Badge>
+          <span className="font-medium">{campaign.name}</span>
+          <span className="text-muted-foreground">{campaign.status}</span>
+          <span className="text-muted-foreground">{campaign.stepCount} steps</span>
+          <span className="text-muted-foreground">{campaign.activeEnrollments} enrolled</span>
+        </div>)}
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle>Newsletters</CardTitle>
+        <CardDescription>
+          {newsletters.data?.suppressedMailboxes ?? 0} mailboxes have unsubscribed. An unsubscribe covers the whole mailbox, so family+child addresses share one decision.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {newsletters.isError && <p className="text-sm text-destructive">{newsletters.error instanceof Error ? newsletters.error.message : 'Newsletters unavailable.'}</p>}
+        {(newsletters.data?.newsletters ?? []).length === 0 && !newsletters.isLoading && !newsletters.isError && <p className="text-sm text-muted-foreground">No newsletters yet.</p>}
+        {(newsletters.data?.newsletters ?? []).map((letter) => <div className="space-y-2 border-b py-2 last:border-0" key={letter.id}>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-medium">{letter.name}</span>
+            <span className="text-muted-foreground">{letter.status}</span>
+            <Badge variant="outline">{letter.queued} queued</Badge>
+            <Badge variant="outline">{letter.sent} sent</Badge>
+            <Badge variant="secondary">{letter.suppressed} unsubscribed</Badge>
+          </div>
+          {canMutate && (letter.status === 'draft' || letter.status === 'scheduled') && <div className="flex flex-wrap items-center gap-2">
+            <Input
+              className="max-w-sm"
+              onChange={(event) => setReasons((current) => ({ ...current, [`newsletter:${letter.id}`]: event.target.value }))}
+              placeholder="Reason for rebuilding the recipient list"
+              value={reasons[`newsletter:${letter.id}`] ?? ''}
+            />
+            <Button
+              disabled={!((reasons[`newsletter:${letter.id}`] ?? '').trim()) || buildRecipients.isPending}
+              onClick={() => buildRecipients.mutate(letter.id)}
+              size="sm"
+              variant="outline"
+            >
+              Rebuild recipients
+            </Button>
+          </div>}
+        </div>)}
+        {buildRecipients.isError && <p className="text-sm text-destructive">{buildRecipients.error instanceof Error ? buildRecipients.error.message : 'Could not rebuild the recipient list.'}</p>}
+
+        {canMutate && <div className="space-y-2 rounded-md border p-3">
+          <Label htmlFor="suppress-email">Add a mailbox to the unsubscribe list</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              className="max-w-xs"
+              id="suppress-email"
+              onChange={(event) => setSuppressEmail(event.target.value)}
+              placeholder="person@example.com"
+              value={suppressEmail}
+            />
+            <Input
+              className="max-w-sm"
+              onChange={(event) => setReasons((current) => ({ ...current, suppression: event.target.value }))}
+              placeholder="Reason"
+              value={reasons.suppression ?? ''}
+            />
+            <Button
+              disabled={!suppressEmail.trim() || !((reasons.suppression ?? '').trim()) || suppress.isPending}
+              onClick={() => suppress.mutate({ email: suppressEmail.trim(), reason: reasons.suppression ?? '' })}
+              size="sm"
+            >
+              Unsubscribe mailbox
+            </Button>
+          </div>
+          {suppress.isError && <p className="text-sm text-destructive">{suppress.error instanceof Error ? suppress.error.message : 'Could not update the unsubscribe list.'}</p>}
+        </div>}
+      </CardContent>
+    </Card>
+
 
     <Card>
       <CardHeader>

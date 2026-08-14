@@ -6357,6 +6357,255 @@ export type Database = {
           },
         ]
       }
+      crm_audience_campaign_steps: {
+        Row: {
+          active: boolean
+          body_html: string | null
+          body_text: string | null
+          campaign_id: string
+          channel: string
+          created_at: string
+          delay_hours: number
+          id: string
+          step_order: number
+          stop_on_reply: boolean
+          subject: string | null
+          template_version_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          body_html?: string | null
+          body_text?: string | null
+          campaign_id: string
+          channel?: string
+          created_at?: string
+          delay_hours?: number
+          id?: string
+          step_order: number
+          stop_on_reply?: boolean
+          subject?: string | null
+          template_version_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          body_html?: string | null
+          body_text?: string | null
+          campaign_id?: string
+          channel?: string
+          created_at?: string
+          delay_hours?: number
+          id?: string
+          step_order?: number
+          stop_on_reply?: boolean
+          subject?: string | null
+          template_version_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_audience_campaign_steps_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "crm_audience_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_audience_campaign_steps_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "crm_email_template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_audience_campaigns: {
+        Row: {
+          audience_domain: string
+          concurrency_group: string | null
+          created_at: string
+          created_by_profile_id: string | null
+          description: string | null
+          id: string
+          metadata: Json
+          name: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          audience_domain: string
+          concurrency_group?: string | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json
+          name: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          audience_domain?: string
+          concurrency_group?: string | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      crm_audience_enrollments: {
+        Row: {
+          campaign_id: string
+          completed_at: string | null
+          created_at: string
+          current_step: number
+          enrolled_at: string
+          id: string
+          last_reason: string | null
+          metadata: Json
+          next_send_at: string | null
+          person_id: string | null
+          recipient_email: string | null
+          recipient_phone: string | null
+          status: string
+          subject_domain: string
+          subject_record_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          enrolled_at?: string
+          id?: string
+          last_reason?: string | null
+          metadata?: Json
+          next_send_at?: string | null
+          person_id?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          status?: string
+          subject_domain: string
+          subject_record_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          enrolled_at?: string
+          id?: string
+          last_reason?: string | null
+          metadata?: Json
+          next_send_at?: string | null
+          person_id?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          status?: string
+          subject_domain?: string
+          subject_record_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_audience_enrollments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "crm_audience_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_audience_enrollments_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "crm_people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_audience_step_logs: {
+        Row: {
+          attempt_count: number
+          claim_token: string | null
+          claimed_at: string | null
+          created_at: string
+          enrollment_id: string
+          error_message: string | null
+          id: string
+          provider_message_id: string | null
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          step_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          claim_token?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          enrollment_id: string
+          error_message?: string | null
+          id?: string
+          provider_message_id?: string | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          step_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          claim_token?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          enrollment_id?: string
+          error_message?: string | null
+          id?: string
+          provider_message_id?: string | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          step_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_audience_step_logs_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "crm_audience_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_audience_step_logs_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "crm_audience_campaign_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_automation_events: {
         Row: {
           created_at: string
@@ -8767,6 +9016,179 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: true
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_newsletter_recipients: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          mailbox_key: string
+          newsletter_id: string
+          person_id: string | null
+          provider_message_id: string | null
+          recipient_email: string
+          sent_at: string | null
+          source_domain: string
+          source_record_id: string | null
+          status: string
+          suppression_reason: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          mailbox_key: string
+          newsletter_id: string
+          person_id?: string | null
+          provider_message_id?: string | null
+          recipient_email: string
+          sent_at?: string | null
+          source_domain: string
+          source_record_id?: string | null
+          status?: string
+          suppression_reason?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          mailbox_key?: string
+          newsletter_id?: string
+          person_id?: string | null
+          provider_message_id?: string | null
+          recipient_email?: string
+          sent_at?: string | null
+          source_domain?: string
+          source_record_id?: string | null
+          status?: string
+          suppression_reason?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_newsletter_recipients_newsletter_id_fkey"
+            columns: ["newsletter_id"]
+            isOneToOne: false
+            referencedRelation: "crm_newsletters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_newsletter_recipients_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "crm_people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_newsletter_suppressions: {
+        Row: {
+          created_at: string
+          created_by_profile_id: string | null
+          example_email: string | null
+          id: string
+          mailbox_key: string
+          reason: string
+          source: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_profile_id?: string | null
+          example_email?: string | null
+          id?: string
+          mailbox_key: string
+          reason: string
+          source?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_profile_id?: string | null
+          example_email?: string | null
+          id?: string
+          mailbox_key?: string
+          reason?: string
+          source?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      crm_newsletters: {
+        Row: {
+          audience_domains: string[]
+          body_html: string | null
+          body_text: string | null
+          completed_at: string | null
+          created_at: string
+          created_by_profile_id: string | null
+          id: string
+          metadata: Json
+          name: string
+          preheader: string | null
+          scheduled_at: string | null
+          started_at: string | null
+          status: string
+          subject: string | null
+          template_version_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          audience_domains?: string[]
+          body_html?: string | null
+          body_text?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          id?: string
+          metadata?: Json
+          name: string
+          preheader?: string | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          subject?: string | null
+          template_version_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          audience_domains?: string[]
+          body_html?: string | null
+          body_text?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          preheader?: string | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          subject?: string | null
+          template_version_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_newsletters_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "crm_email_template_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -22058,6 +22480,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      crm_build_newsletter_recipients: {
+        Args: { p_newsletter_id: string; p_reason: string }
+        Returns: Json
+      }
       crm_bulk_update_client_status: {
         Args: {
           p_actor_profile_id: string
@@ -22250,6 +22676,14 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_enroll_people_in_audience_campaign: {
+        Args: {
+          p_campaign_id: string
+          p_person_ids: string[]
+          p_reason: string
+        }
+        Returns: Json
+      }
       crm_evaluate_campaign_concurrency: {
         Args: {
           p_campaign_registry_id: string
@@ -22286,7 +22720,9 @@ export type Database = {
         }
         Returns: string
       }
+      crm_list_audience_campaigns: { Args: never; Returns: Json }
       crm_list_campaign_trigger_rules: { Args: never; Returns: Json }
+      crm_list_newsletters: { Args: never; Returns: Json }
       crm_mark_enrollment_responded: {
         Args: {
           p_enrollment_id: string
@@ -22461,6 +22897,10 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_suppress_newsletter_mailbox: {
+        Args: { p_email: string; p_reason: string; p_source?: string }
+        Returns: Json
+      }
       crm_transition_lifecycle: {
         Args: {
           p_client_id: string
@@ -22470,6 +22910,17 @@ export type Database = {
           p_idempotency_key?: string
           p_reason: string
           p_to_stage: string
+        }
+        Returns: Json
+      }
+      crm_upsert_audience_campaign: {
+        Args: {
+          p_audience_domain: string
+          p_campaign_id: string
+          p_description: string
+          p_name: string
+          p_reason: string
+          p_status: string
         }
         Returns: Json
       }
@@ -23322,6 +23773,7 @@ export type Database = {
         }
         Returns: Json
       }
+      newsletter_mailbox_key: { Args: { p_email: string }; Returns: string }
       payroll_admin_approve_line: {
         Args: {
           p_client_action_id?: string

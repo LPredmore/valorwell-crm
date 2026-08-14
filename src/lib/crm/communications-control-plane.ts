@@ -213,3 +213,85 @@ export async function listCampaignRegistry() {
   return (data ?? []) as CampaignRegistryEntry[];
 }
 
+
+export type AudienceCampaign = {
+  id: string;
+  audienceDomain: 'staff' | 'donor';
+  name: string;
+  description: string | null;
+  status: string;
+  stepCount: number;
+  activeEnrollments: number;
+  updatedAt: string | null;
+};
+
+export type NewsletterSummary = {
+  id: string;
+  name: string;
+  subject: string | null;
+  status: string;
+  audienceDomains: string[];
+  scheduledAt: string | null;
+  queued: number;
+  sent: number;
+  suppressed: number;
+  updatedAt: string | null;
+};
+
+export type NewsletterOverview = {
+  newsletters: NewsletterSummary[];
+  suppressedMailboxes: number;
+};
+
+export function listAudienceCampaigns() {
+  return rpc<AudienceCampaign[]>('crm_list_audience_campaigns');
+}
+
+export function listNewsletters() {
+  return rpc<NewsletterOverview>('crm_list_newsletters');
+}
+
+export function upsertAudienceCampaign(input: {
+  campaignId?: string | null;
+  audienceDomain: 'staff' | 'donor';
+  name: string;
+  description?: string | null;
+  status?: 'draft' | 'active' | 'paused' | 'archived';
+  reason: string;
+}) {
+  return rpc<Record<string, unknown>>('crm_upsert_audience_campaign', {
+    p_campaign_id: input.campaignId ?? null,
+    p_audience_domain: input.audienceDomain,
+    p_name: input.name,
+    p_description: input.description ?? null,
+    p_status: input.status ?? 'draft',
+    p_reason: input.reason,
+  });
+}
+
+export function enrollPeopleInAudienceCampaign(input: {
+  campaignId: string;
+  personIds: string[];
+  reason: string;
+}) {
+  return rpc<Record<string, unknown>>('crm_enroll_people_in_audience_campaign', {
+    p_campaign_id: input.campaignId,
+    p_person_ids: input.personIds,
+    p_reason: input.reason,
+  });
+}
+
+export function suppressNewsletterMailbox(input: { email: string; reason: string; source?: string }) {
+  return rpc<Record<string, unknown>>('crm_suppress_newsletter_mailbox', {
+    p_email: input.email,
+    p_reason: input.reason,
+    p_source: input.source ?? 'operator',
+  });
+}
+
+export function buildNewsletterRecipients(input: { newsletterId: string; reason: string }) {
+  return rpc<Record<string, unknown>>('crm_build_newsletter_recipients', {
+    p_newsletter_id: input.newsletterId,
+    p_reason: input.reason,
+  });
+}
