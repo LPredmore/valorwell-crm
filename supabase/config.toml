@@ -27,3 +27,6 @@ verify_jwt = false
 
 [functions.bty-contact-enrichment]
 verify_jwt = false
+
+[functions.provider-applicant-communication-worker]
+verify_jwt = false
