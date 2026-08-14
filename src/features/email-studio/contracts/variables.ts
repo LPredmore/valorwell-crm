@@ -45,6 +45,13 @@ export const STAFF_EMAIL_VARIABLES = [
   variable('sender_name', 'Sender name', 'staff', 'text', 'ValorWell Operations', 'Approved internal sender name.'),
 ] as const satisfies readonly EmailVariableDefinitionBase[];
 
+// Newsletters reach one mailbox that may cover several people and domains, so the
+// only person-specific value allowed is a safe greeting name.
+export const MARKETING_NEWSLETTER_EMAIL_VARIABLES = [
+  variable('newsletter_greeting_name', 'Newsletter greeting name', 'marketing_newsletter', 'text', 'Friend', 'Safe greeting name for the mailbox, or a neutral fallback.'),
+  variable('sender_name', 'Sender name', 'marketing_newsletter', 'text', 'ValorWell', 'Approved newsletter sender name.'),
+] as const satisfies readonly EmailVariableDefinitionBase[];
+
 export const SYSTEM_EMAIL_VARIABLES = [
   variable('unsubscribe_url', 'Unsubscribe URL', 'system', 'url', 'https://crm.valorwell.org/unsubscribe/example', 'Recipient-specific unsubscribe URL.'),
   variable('postal_address', 'Postal address', 'system', 'text', 'ValorWell, Lee’s Summit, Missouri', 'Approved physical mailing address.'),
