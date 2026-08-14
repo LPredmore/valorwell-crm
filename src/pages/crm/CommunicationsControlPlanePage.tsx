@@ -51,6 +51,12 @@ export default function CommunicationsControlPlanePage() {
 
   const audiences = useQuery({ queryKey: ['control-plane-audience-campaigns'], queryFn: listAudienceCampaigns, retry: false });
   const newsletters = useQuery({ queryKey: ['control-plane-newsletters'], queryFn: listNewsletters, retry: false });
+  const trace = useQuery({
+    queryKey: ['control-plane-newsletter-trace', traceNewsletterId],
+    queryFn: () => getNewsletterDeliveryTrace(traceNewsletterId as string),
+    enabled: Boolean(traceNewsletterId),
+    retry: false,
+  });
 
   const suppress = useMutation({
     mutationFn: ({ email, reason }: { email: string; reason: string }) => suppressNewsletterMailbox({ email, reason }),
