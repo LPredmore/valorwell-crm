@@ -13,7 +13,6 @@ import {
   AlertTriangle,
   Sparkles,
   Search,
-  Megaphone as MegaphoneIcon,
   HeartHandshake,
   Handshake,
   Building2,
@@ -59,7 +58,8 @@ const businessDevelopmentItems: NavItem[] = [
 const clinicalNavItems: NavItem[] = [
   { label: 'Clients', href: '/crm/clients', icon: Users },
   { label: 'Communications', href: '/crm/inbox', icon: Inbox },
-  { label: 'Campaigns', href: '/crm/campaigns', icon: Megaphone },
+  { label: 'Campaign Management', href: '/crm/communications/campaigns', icon: Megaphone },
+  { label: 'Newsletters', href: '/crm/communications/newsletters', icon: Mail },
   { label: 'Email Studio', href: '/crm/email-studio', icon: Mail },
   { label: 'Staff', href: '/crm/staff', icon: UserCog },
   { label: 'Reports', href: '/crm/reports', icon: BarChart3 },
@@ -70,7 +70,6 @@ const clinicalNavItems: NavItem[] = [
   { label: 'Tasks', href: '/crm/canonical/tasks', icon: ListTodo },
   { label: 'Exceptions', href: '/crm/canonical/exceptions', icon: AlertTriangle },
   { label: 'Therapist Reconciliation', href: '/crm/canonical/therapist-matches', icon: Handshake },
-  { label: 'Canonical Campaigns', href: '/crm/canonical/campaigns', icon: MegaphoneIcon },
   { label: 'Search', href: '/crm/canonical/search', icon: Search },
 ];
 
