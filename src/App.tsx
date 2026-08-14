@@ -77,10 +77,12 @@ const App = () => (
             <Route path="clients" element={<CanonicalClients />} />
             <Route path="clients/:id" element={<CanonicalClientDetail />} />
             <Route path="staff" element={<CanonicalStaff />} />
-            <Route path="campaigns" element={<CanonicalCampaigns />} />
+            <Route path="campaigns" element={<Navigate replace to="/crm/communications/campaigns" />} />
             <Route path="campaigns/:id" element={<CanonicalCampaignDetail />} />
             <Route path="campaigns/:id/edit" element={<CrmCampaignEditor />} />
             <Route path="campaigns/:id/enrollments" element={<CrmCampaignEnrollments />} />
+            <Route path="communications/campaigns" element={<CampaignManagementPage />} />
+            <Route path="communications/newsletters" element={<NewsletterManagementPage />} />
             <Route path="tasks" element={<CanonicalTasks />} />
             <Route path="exceptions" element={<CanonicalExceptions />} />
             <Route path="therapist-matches" element={<TherapistMatchReconciliationPage />} />
