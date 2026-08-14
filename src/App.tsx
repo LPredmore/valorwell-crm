@@ -33,6 +33,7 @@ import RelationshipSuppressionPage from "./pages/crm/business-development/Relati
 import RelationshipOrchestrationPage from "./pages/crm/business-development/RelationshipOrchestrationPage";
 import RelationshipReconciliationPage from "./pages/crm/business-development/RelationshipReconciliationPage";
 import BtyAutomationPage from "./pages/crm/business-development/BtyAutomationPage";
+import CommunicationsControlPlanePage from "./pages/crm/CommunicationsControlPlanePage";
 
 import RelationshipBulkEnrollmentPage from "./pages/crm/business-development/campaigns/RelationshipBulkEnrollmentPage";
 import RelationshipCampaignDeliveryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDeliveryPage";
@@ -86,6 +87,7 @@ const App = () => (
             <Route path="business-development/orchestration" element={<RelationshipOrchestrationPage />} />
             <Route path="business-development/orchestration/reconciliation" element={<RelationshipReconciliationPage />} />
             <Route path="business-development/automation" element={<BtyAutomationPage />} />
+            <Route path="communications-control-plane" element={<CommunicationsControlPlanePage />} />
 
             <Route path="business-development/search" element={<RelationshipSearchPage />} />
             <Route path="business-development/organizations" element={<OrganizationDirectoryPage />} />
