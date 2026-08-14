@@ -263,6 +263,7 @@ export default function CommunicationsControlPlanePage() {
             <span className="text-muted-foreground">{letter.status}</span>
             <Badge variant="outline">{letter.queued} queued</Badge>
             <Badge variant="outline">{letter.sent} sent</Badge>
+            {letter.failed > 0 && <Badge variant="destructive">{letter.failed} failed</Badge>}
             <Badge variant="secondary">{letter.suppressed} unsubscribed</Badge>
           </div>
           {canMutate && (letter.status === 'draft' || letter.status === 'scheduled') && <div className="flex flex-wrap items-center gap-2">
