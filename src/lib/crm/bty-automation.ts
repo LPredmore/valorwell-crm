@@ -38,13 +38,34 @@ export type BtyAutomationOverview = {
   runs: BtyAutomationRun[];
 };
 
+export type BtyDuplicateMember = {
+  organizationId: string;
+  name: string;
+  website: string | null;
+  headquartersState: string | null;
+  roles: string[];
+  createdAt: string;
+};
+
 export type BtyDuplicateGroup = {
-  matchType: string;
-  matchValue: string;
-  keepOrganizationId: string;
-  keepName: string;
-  mergeOrganizationIds: string[];
-  mergeNames: string[];
+  matchType: 'website_domain' | 'youtube_channel' | 'name_and_state' | 'exact_name' | string;
+  matchKey: string;
+  memberCount: number;
+  survivorId: string;
+  duplicateIds: string[] | null;
+  members: BtyDuplicateMember[];
+};
+
+export type BtyAmbiguousDuplicate = {
+  organizationId: string;
+  name: string;
+  similarTo: { organizationId: string; name: string };
+  note: string;
+};
+
+export type BtyDuplicatePreview = {
+  deterministic: BtyDuplicateGroup[];
+  ambiguous: BtyAmbiguousDuplicate[];
 };
 
 async function rpc<T>(name: string, args: Record<string, unknown> = {}) {
@@ -61,13 +82,13 @@ export function getBtyAutomationOverview(limit = 14) {
 }
 
 export function previewBtyDuplicates() {
-  return rpc<BtyDuplicateGroup[]>('bty_preview_organization_duplicates');
+  return rpc<BtyDuplicatePreview>('bty_preview_organization_duplicates');
 }
 
 export function mergeBtyDuplicates(group: BtyDuplicateGroup, reason: string) {
   return rpc<Record<string, unknown>>('bty_merge_organization_duplicates', {
-    p_keep_organization_id: group.keepOrganizationId,
-    p_merge_organization_ids: group.mergeOrganizationIds,
+    p_survivor_id: group.survivorId,
+    p_duplicate_ids: group.duplicateIds ?? [],
     p_reason: reason,
   });
 }
