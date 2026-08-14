@@ -265,7 +265,34 @@ export default function CommunicationsControlPlanePage() {
             <Badge variant="outline">{letter.sent} sent</Badge>
             {letter.failed > 0 && <Badge variant="destructive">{letter.failed} failed</Badge>}
             <Badge variant="secondary">{letter.suppressed} unsubscribed</Badge>
+            <Button
+              onClick={() => setTraceNewsletterId((current) => (current === letter.id ? null : letter.id))}
+              size="sm"
+              variant="ghost"
+            >
+              {traceNewsletterId === letter.id ? 'Hide delivery trace' : 'Delivery trace'}
+            </Button>
           </div>
+          {traceNewsletterId === letter.id && <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+            {trace.isLoading && <p className="text-sm text-muted-foreground">Loading delivery trace…</p>}
+            {trace.isError && <p className="text-sm text-destructive">{trace.error instanceof Error ? trace.error.message : 'Delivery trace unavailable.'}</p>}
+            {(trace.data?.summary ?? []).length > 0 && <div className="flex flex-wrap gap-2">
+              {(trace.data?.summary ?? []).map((row) => <Badge key={row.status} variant="outline">{row.status}: {row.count}</Badge>)}
+            </div>}
+            {(trace.data?.recipients ?? []).length === 0 && !trace.isLoading && !trace.isError && <p className="text-sm text-muted-foreground">No recipients have been built for this newsletter yet.</p>}
+            {(trace.data?.recipients ?? []).map((row) => <div className="flex flex-wrap items-center gap-2 border-b py-1 text-xs last:border-0" key={row.recipientId}>
+              <span className="font-medium">{row.deliveryEmail}</span>
+              <Badge variant="outline">{row.recipientStatus}</Badge>
+              {row.ledgerStatus && <Badge variant="secondary">ledger: {row.ledgerStatus}</Badge>}
+              <span className="text-muted-foreground">{row.qualifyingAudiences.join(', ')}</span>
+              {row.attemptCount > 1 && <span className="text-muted-foreground">attempt {row.attemptCount}</span>}
+              {row.deliveredAt && <span className="text-muted-foreground">delivered {new Date(row.deliveredAt).toLocaleString()}</span>}
+              {!row.deliveredAt && row.sentAt && <span className="text-muted-foreground">sent {new Date(row.sentAt).toLocaleString()}</span>}
+              {row.errorCode && <span className="text-destructive">{row.errorCode}</span>}
+              {row.suppressionReason && <span className="text-muted-foreground">{row.suppressionReason}</span>}
+              {!row.emailMessageId && <Badge variant="outline">no ledger record yet</Badge>}
+            </div>)}
+          </div>}
           {canMutate && (letter.status === 'draft' || letter.status === 'scheduled') && <div className="flex flex-wrap items-center gap-2">
             <Input
               className="max-w-sm"
