@@ -350,3 +350,81 @@ export function getNewsletterDeliveryTrace(newsletterId: string, limit = 200) {
     p_limit: limit,
   });
 }
+
+export const NEWSLETTER_AUDIENCE_DOMAINS = [
+  'client',
+  'staff',
+  'donor',
+  'relationship',
+  'bty',
+  'provider_applicant',
+] as const;
+
+export type NewsletterAudienceDomain = (typeof NEWSLETTER_AUDIENCE_DOMAINS)[number];
+
+export const NEWSLETTER_AUDIENCE_LABELS: Record<string, string> = {
+  client: 'Clients',
+  staff: 'Staff',
+  donor: 'Donors',
+  relationship: 'Relationship contacts',
+  bty: 'Beyond The Yellow contacts',
+  provider_applicant: 'Provider applicants',
+};
+
+export type NewsletterDetail = {
+  id: string;
+  name: string;
+  subject: string | null;
+  preheader: string | null;
+  bodyHtml: string | null;
+  bodyText: string | null;
+  audienceDomains: string[];
+  status: string;
+  scheduledAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  updatedAt: string | null;
+  recipientCounts: Record<string, number>;
+};
+
+export type NewsletterAudiencePreview = {
+  uniqueMailboxes: number;
+  suppressedMailboxes: number;
+  deliverableMailboxes: number;
+  overlapMailboxes: number;
+  byDomain: Record<string, number>;
+  sample: Array<{ email: string; audiences: string[]; suppressed: boolean }>;
+};
+
+export function getNewsletter(newsletterId: string) {
+  return rpc<NewsletterDetail>('crm_get_newsletter', { p_newsletter_id: newsletterId });
+}
+
+export function previewNewsletterAudience(audienceDomains: string[], sampleLimit = 10) {
+  return rpc<NewsletterAudiencePreview>('crm_newsletter_audience_preview', {
+    p_audience_domains: audienceDomains,
+    p_sample_limit: sampleLimit,
+  });
+}
+
+export function upsertNewsletter(input: {
+  newsletterId?: string | null;
+  name: string;
+  subject?: string | null;
+  preheader?: string | null;
+  bodyHtml?: string | null;
+  bodyText?: string | null;
+  audienceDomains: string[];
+  reason: string;
+}) {
+  return rpc<{ newsletterId: string; created: boolean }>('crm_upsert_newsletter', {
+    p_newsletter_id: input.newsletterId ?? null,
+    p_name: input.name,
+    p_subject: input.subject ?? null,
+    p_preheader: input.preheader ?? null,
+    p_body_html: input.bodyHtml ?? null,
+    p_body_text: input.bodyText ?? null,
+    p_audience_domains: input.audienceDomains,
+    p_reason: input.reason,
+  });
+}
