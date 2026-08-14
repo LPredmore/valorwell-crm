@@ -301,21 +301,36 @@ export default function CommunicationsControlPlanePage() {
               {!row.emailMessageId && <Badge variant="outline">no ledger record yet</Badge>}
             </div>)}
           </div>}
-          {canMutate && (letter.status === 'draft' || letter.status === 'scheduled') && <div className="flex flex-wrap items-center gap-2">
+          {canMutate && (letter.status === 'draft' || letter.status === 'scheduled' || letter.status === 'sending') && <div className="flex flex-wrap items-center gap-2">
             <Input
               className="max-w-sm"
               onChange={(event) => setReasons((current) => ({ ...current, [`newsletter:${letter.id}`]: event.target.value }))}
-              placeholder="Reason for rebuilding the recipient list"
+              placeholder="Reason for this action"
               value={reasons[`newsletter:${letter.id}`] ?? ''}
             />
-            <Button
+            {(letter.status === 'draft' || letter.status === 'scheduled') && <Button
               disabled={!((reasons[`newsletter:${letter.id}`] ?? '').trim()) || buildRecipients.isPending}
               onClick={() => buildRecipients.mutate(letter.id)}
               size="sm"
               variant="outline"
             >
               Rebuild recipients
-            </Button>
+            </Button>}
+            {(letter.status === 'draft' || letter.status === 'scheduled') && <Button
+              disabled={!((reasons[`newsletter:${letter.id}`] ?? '').trim()) || schedule.isPending}
+              onClick={() => schedule.mutate(letter.id)}
+              size="sm"
+            >
+              {letter.status === 'scheduled' ? 'Send now' : 'Schedule send'}
+            </Button>}
+            {(letter.status === 'scheduled' || letter.status === 'sending') && <Button
+              disabled={!((reasons[`newsletter:${letter.id}`] ?? '').trim()) || cancelSend.isPending}
+              onClick={() => cancelSend.mutate(letter.id)}
+              size="sm"
+              variant="destructive"
+            >
+              Cancel send
+            </Button>}
           </div>}
         </div>)}
         {buildRecipients.isError && <p className="text-sm text-destructive">{buildRecipients.error instanceof Error ? buildRecipients.error.message : 'Could not rebuild the recipient list.'}</p>}
