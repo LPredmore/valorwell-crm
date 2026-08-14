@@ -297,3 +297,36 @@ export function buildNewsletterRecipients(input: { newsletterId: string; reason:
     p_reason: input.reason,
   });
 }
+
+export type NewsletterTraceRecipient = {
+  recipientId: string;
+  deliveryEmail: string;
+  mailboxKey: string;
+  personId: string | null;
+  qualifyingAudiences: string[];
+  sourceMemberships: Array<{ domain: string; recordId: string | null; personId: string | null; email: string }>;
+  recipientStatus: string;
+  suppressionReason: string | null;
+  attemptCount: number;
+  errorCode: string | null;
+  emailMessageId: string | null;
+  ledgerStatus: string | null;
+  providerMessageId: string | null;
+  sentAt: string | null;
+  deliveredAt: string | null;
+  failedAt: string | null;
+  errorMessage: string | null;
+};
+
+export type NewsletterDeliveryTrace = {
+  newsletterId: string;
+  summary: Array<{ status: string; count: number }>;
+  recipients: NewsletterTraceRecipient[];
+};
+
+export function getNewsletterDeliveryTrace(newsletterId: string, limit = 200) {
+  return rpc<NewsletterDeliveryTrace>('crm_newsletter_delivery_trace', {
+    p_newsletter_id: newsletterId,
+    p_limit: limit,
+  });
+}
