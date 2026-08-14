@@ -6357,6 +6357,62 @@ export type Database = {
           },
         ]
       }
+      crm_automation_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          idempotency_key: string
+          occurred_at: string
+          payload: Json
+          person_id: string | null
+          processed_at: string | null
+          source: string
+          source_event_id: string | null
+          subject_id: string
+          subject_type: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          idempotency_key: string
+          occurred_at?: string
+          payload?: Json
+          person_id?: string | null
+          processed_at?: string | null
+          source?: string
+          source_event_id?: string | null
+          subject_id: string
+          subject_type: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          idempotency_key?: string
+          occurred_at?: string
+          payload?: Json
+          person_id?: string | null
+          processed_at?: string | null
+          source?: string
+          source_event_id?: string | null
+          subject_id?: string
+          subject_type?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_automation_events_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "crm_people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_bulk_send_logs: {
         Row: {
           body_html: string
@@ -6798,6 +6854,36 @@ export type Database = {
           },
         ]
       }
+      crm_campaign_concurrency_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          group_key: string
+          id: string
+          is_exclusive: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          group_key: string
+          id?: string
+          is_exclusive?: boolean
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          group_key?: string
+          id?: string
+          is_exclusive?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       crm_campaign_enrollments: {
         Row: {
           campaign_id: string
@@ -6892,6 +6978,7 @@ export type Database = {
       crm_campaign_registry: {
         Row: {
           campaign_domain: string
+          concurrency_group: string
           created_at: string
           engine: string
           id: string
@@ -6905,6 +6992,7 @@ export type Database = {
         }
         Insert: {
           campaign_domain: string
+          concurrency_group?: string
           created_at?: string
           engine: string
           id?: string
@@ -6918,6 +7006,7 @@ export type Database = {
         }
         Update: {
           campaign_domain?: string
+          concurrency_group?: string
           created_at?: string
           engine?: string
           id?: string
@@ -7130,6 +7219,157 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_campaign_trigger_jobs: {
+        Row: {
+          attempt_count: number
+          claim_token: string | null
+          claimed_at: string | null
+          created_at: string
+          due_at: string
+          engine_enrollment_id: string | null
+          evaluation_result: Json
+          event_id: string
+          id: string
+          max_attempts: number
+          person_id: string | null
+          skip_reason: string | null
+          status: string
+          subject_id: string
+          subject_type: string
+          tenant_id: string
+          trigger_rule_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          claim_token?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          due_at?: string
+          engine_enrollment_id?: string | null
+          evaluation_result?: Json
+          event_id: string
+          id?: string
+          max_attempts?: number
+          person_id?: string | null
+          skip_reason?: string | null
+          status?: string
+          subject_id: string
+          subject_type: string
+          tenant_id: string
+          trigger_rule_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          claim_token?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          due_at?: string
+          engine_enrollment_id?: string | null
+          evaluation_result?: Json
+          event_id?: string
+          id?: string
+          max_attempts?: number
+          person_id?: string | null
+          skip_reason?: string | null
+          status?: string
+          subject_id?: string
+          subject_type?: string
+          tenant_id?: string
+          trigger_rule_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_campaign_trigger_jobs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "crm_automation_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campaign_trigger_jobs_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "crm_people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campaign_trigger_jobs_trigger_rule_id_fkey"
+            columns: ["trigger_rule_id"]
+            isOneToOne: false
+            referencedRelation: "crm_campaign_trigger_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_campaign_trigger_rules: {
+        Row: {
+          active: boolean
+          campaign_registry_id: string
+          created_at: string
+          created_by_profile_id: string | null
+          delay_amount: number
+          delay_unit: string
+          event_type: string
+          filter_definition: Json
+          id: string
+          required_source_campaign_registry_id: string | null
+          required_source_outcome: string | null
+          tenant_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          campaign_registry_id: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          delay_amount?: number
+          delay_unit?: string
+          event_type: string
+          filter_definition?: Json
+          id?: string
+          required_source_campaign_registry_id?: string | null
+          required_source_outcome?: string | null
+          tenant_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          campaign_registry_id?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          delay_amount?: number
+          delay_unit?: string
+          event_type?: string
+          filter_definition?: Json
+          id?: string
+          required_source_campaign_registry_id?: string | null
+          required_source_outcome?: string | null
+          tenant_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_campaign_trigger_rules_campaign_registry_id_fkey"
+            columns: ["campaign_registry_id"]
+            isOneToOne: false
+            referencedRelation: "crm_campaign_registry"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campaign_trigger_rules_required_source_campaign_regist_fkey"
+            columns: ["required_source_campaign_registry_id"]
+            isOneToOne: false
+            referencedRelation: "crm_campaign_registry"
             referencedColumns: ["id"]
           },
         ]
@@ -7775,6 +8015,7 @@ export type Database = {
           created_by_profile_id: string | null
           delivered_at: string | null
           direction: string
+          enrollment_id: string | null
           error_code: string | null
           error_message: string | null
           failed_at: string | null
@@ -7796,6 +8037,7 @@ export type Database = {
           sent_at: string | null
           source: string
           status: string
+          step_log_id: string | null
           subject: string | null
           template_version_id: string | null
           tenant_id: string
@@ -7811,6 +8053,7 @@ export type Database = {
           created_by_profile_id?: string | null
           delivered_at?: string | null
           direction: string
+          enrollment_id?: string | null
           error_code?: string | null
           error_message?: string | null
           failed_at?: string | null
@@ -7832,6 +8075,7 @@ export type Database = {
           sent_at?: string | null
           source?: string
           status?: string
+          step_log_id?: string | null
           subject?: string | null
           template_version_id?: string | null
           tenant_id: string
@@ -7847,6 +8091,7 @@ export type Database = {
           created_by_profile_id?: string | null
           delivered_at?: string | null
           direction?: string
+          enrollment_id?: string | null
           error_code?: string | null
           error_message?: string | null
           failed_at?: string | null
@@ -7868,6 +8113,7 @@ export type Database = {
           sent_at?: string | null
           source?: string
           status?: string
+          step_log_id?: string | null
           subject?: string | null
           template_version_id?: string | null
           tenant_id?: string
@@ -21835,6 +22081,10 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_campaign_trigger_shadow_report: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
       crm_cancel_enrollment: {
         Args: {
           p_enrollment_id: string
@@ -21860,6 +22110,14 @@ export type Database = {
           id: string
           staff_id: string
         }[]
+      }
+      crm_claim_campaign_trigger_jobs: {
+        Args: {
+          p_lease_seconds?: number
+          p_limit?: number
+          p_worker_id: string
+        }
+        Returns: Json
       }
       crm_claim_provider_applicant_communication_jobs: {
         Args: { p_limit?: number }
@@ -21901,6 +22159,10 @@ export type Database = {
           p_retry_at?: string
           p_status: string
         }
+        Returns: Json
+      }
+      crm_correlate_client_email_reply: {
+        Args: { p_inbound_email_message_id: string }
         Returns: Json
       }
       crm_create_bulk_newsletter: {
@@ -21960,6 +22222,24 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_emit_automation_event: {
+        Args: {
+          p_event_type: string
+          p_idempotency_key: string
+          p_occurred_at?: string
+          p_payload?: Json
+          p_source?: string
+          p_source_event_id?: string
+          p_subject_id: string
+          p_subject_type: string
+          p_tenant_id: string
+        }
+        Returns: string
+      }
+      crm_enqueue_campaign_trigger_jobs: {
+        Args: { p_event_id: string }
+        Returns: number
+      }
       crm_enroll_clients_in_campaign: {
         Args: {
           p_campaign_id: string
@@ -21970,12 +22250,25 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_evaluate_campaign_concurrency: {
+        Args: {
+          p_campaign_registry_id: string
+          p_subject_id: string
+          p_subject_type: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       crm_evaluate_communication_policy: {
         Args: {
           p_channel: string
           p_client_id: string
           p_message_class: string
         }
+        Returns: Json
+      }
+      crm_execute_campaign_trigger_job: {
+        Args: { p_claim_token: string; p_job_id: string }
         Returns: Json
       }
       crm_has_role:
@@ -21993,6 +22286,7 @@ export type Database = {
         }
         Returns: string
       }
+      crm_list_campaign_trigger_rules: { Args: never; Returns: Json }
       crm_mark_enrollment_responded: {
         Args: {
           p_enrollment_id: string
@@ -22176,6 +22470,21 @@ export type Database = {
           p_idempotency_key?: string
           p_reason: string
           p_to_stage: string
+        }
+        Returns: Json
+      }
+      crm_upsert_campaign_trigger_rule: {
+        Args: {
+          p_active: boolean
+          p_campaign_registry_id: string
+          p_delay_amount: number
+          p_delay_unit: string
+          p_event_type: string
+          p_filter_definition: Json
+          p_reason: string
+          p_required_source_campaign_registry_id: string
+          p_required_source_outcome: string
+          p_rule_id: string
         }
         Returns: Json
       }

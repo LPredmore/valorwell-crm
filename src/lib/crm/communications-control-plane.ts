@@ -130,6 +130,75 @@ export function getCampaignParticipation(filters: {
   });
 }
 
+export type CampaignTriggerRule = {
+  id: string;
+  campaignRegistryId: string;
+  campaignName: string | null;
+  campaignDomain: string;
+  concurrencyGroup: string | null;
+  eventType: string;
+  filterDefinition: Record<string, unknown> | null;
+  delayAmount: number;
+  delayUnit: string;
+  requiredSourceCampaignRegistryId: string | null;
+  requiredSourceOutcome: string | null;
+  active: boolean;
+  version: number;
+  updatedAt: string | null;
+};
+
+export type CampaignTriggerShadowReport = {
+  summary: Array<{ status: string; skipReason: string | null; count: number }>;
+  recent: Array<{
+    jobId: string;
+    eventType: string | null;
+    subjectType: string | null;
+    subjectId: string | null;
+    campaignName: string | null;
+    status: string;
+    skipReason: string | null;
+    dueAt: string | null;
+    wouldEnroll: boolean;
+    enrollmentId: string | null;
+    createdAt: string | null;
+  }>;
+};
+
+export function listCampaignTriggerRules() {
+  return rpc<CampaignTriggerRule[]>('crm_list_campaign_trigger_rules');
+}
+
+export function getCampaignTriggerShadowReport(limit = 50) {
+  return rpc<CampaignTriggerShadowReport>('crm_campaign_trigger_shadow_report', { p_limit: limit });
+}
+
+
+export function upsertCampaignTriggerRule(input: {
+  ruleId?: string | null;
+  campaignRegistryId: string;
+  eventType: string;
+  filterDefinition?: Record<string, unknown> | null;
+  delayAmount?: number;
+  delayUnit?: string;
+  requiredSourceCampaignRegistryId?: string | null;
+  requiredSourceOutcome?: string | null;
+  active?: boolean;
+  reason: string;
+}) {
+  return rpc<Record<string, unknown>>('crm_upsert_campaign_trigger_rule', {
+    p_rule_id: input.ruleId ?? null,
+    p_campaign_registry_id: input.campaignRegistryId,
+    p_event_type: input.eventType,
+    p_filter_definition: input.filterDefinition ?? {},
+    p_delay_amount: input.delayAmount ?? 0,
+    p_delay_unit: input.delayUnit ?? 'minutes',
+    p_required_source_campaign_registry_id: input.requiredSourceCampaignRegistryId ?? null,
+    p_required_source_outcome: input.requiredSourceOutcome ?? null,
+    p_active: input.active ?? true,
+    p_reason: input.reason,
+  });
+}
+
 export async function listCampaignRegistry() {
   const { data, error } = await (supabase.from as unknown as (
     table: string,
@@ -143,3 +212,4 @@ export async function listCampaignRegistry() {
   if (error) throw new Error(error.message);
   return (data ?? []) as CampaignRegistryEntry[];
 }
+

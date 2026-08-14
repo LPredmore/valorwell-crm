@@ -221,6 +221,7 @@ async function sendEmail(
   stepId: string,
   settings: ResendSettings,
   prepared: PreparedCampaignEmail,
+  correlation: { enrollmentId: string; stepLogId: string },
 ): Promise<string> {
   if (!client.email) throw new Error("Missing client email");
   await validateTemplateVersion(db, tenantId, prepared.templateVersionId);
@@ -229,6 +230,8 @@ async function sendEmail(
     tenant_id: tenantId,
     client_id: client.id,
     campaign_id: campaignId,
+    enrollment_id: correlation.enrollmentId,
+    step_log_id: correlation.stepLogId,
     direction: "outbound",
     status: "queued",
     sender_email: normalizeEmail(settings.from_email ?? ""),
@@ -247,11 +250,14 @@ async function sendEmail(
     occurred_at: now,
     metadata: {
       campaign_step_id: stepId,
+      enrollment_id: correlation.enrollmentId,
+      step_log_id: correlation.stepLogId,
       email_content_mode: prepared.canonical ? "campaign" : null,
       editor_schema_version: prepared.schemaVersion,
       theme_key: prepared.themeKey,
     },
   }).select("id").single();
+
   if (insertError) throw new Error(insertError.message);
 
   const apiKey = Deno.env.get("RESEND_API_KEY") ?? "";
@@ -486,7 +492,11 @@ async function processCampaignMessages() {
             prepared = appendSignature(prepared, { bodyHtml: signature.body_html, bodyText: signature.body_text });
           }
         }
-        const resendId = await sendEmail(db, step.tenant_id, typedClient, campaign.id, typedStep.id, settings, prepared);
+        const resendId = await sendEmail(db, step.tenant_id, typedClient, campaign.id, typedStep.id, settings, prepared, {
+          enrollmentId: step.enrollment_id,
+          stepLogId: step.id,
+        });
+
         if (!(await markSent(db, step, { resend_email_id: resendId }))) continue;
         await db.from("crm_activity_events").insert({
           tenant_id: step.tenant_id,
