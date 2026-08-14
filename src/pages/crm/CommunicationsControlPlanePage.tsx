@@ -75,6 +75,24 @@ export default function CommunicationsControlPlanePage() {
     },
   });
 
+  const schedule = useMutation({
+    mutationFn: (newsletterId: string) =>
+      scheduleNewsletter({ newsletterId, reason: reasons[`newsletter:${newsletterId}`] ?? '' }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['control-plane-newsletters'] });
+    },
+  });
+
+  const cancelSend = useMutation({
+    mutationFn: (newsletterId: string) =>
+      cancelNewsletterSend({ newsletterId, reason: reasons[`newsletter:${newsletterId}`] ?? '' }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['control-plane-newsletters'] });
+    },
+  });
+
+
+
 
   const toggle = useMutation({
     mutationFn: ({ flagName, enabled, reason }: { flagName: string; enabled: boolean; reason: string }) =>
