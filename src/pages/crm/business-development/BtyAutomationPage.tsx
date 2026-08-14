@@ -66,7 +66,7 @@ export default function BtyAutomationPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">BTY prospect automation</h1>
         <p className="mt-2 max-w-3xl text-muted-foreground">
-          Daily 6:00 AM Central discovery of ten qualifying veteran-serving organizations per state, followed by 6:30 AM contact enrichment.
+          Daily 6:00 AM Central discovery of qualifying veteran-serving organizations for one state at a time, followed by 6:30 AM contact enrichment.
         </p>
       </div>
       <Button asChild variant="outline"><Link to="/crm/business-development/organizations">Organizations</Link></Button>
