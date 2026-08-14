@@ -4,7 +4,7 @@ import {
   type EmailValidationResult,
 } from './document';
 
-export type EmailContentScope = 'client' | 'relationship' | 'staff';
+export type EmailContentScope = 'client' | 'relationship' | 'staff' | 'marketing_newsletter';
 export type EmailVariableScope = EmailContentScope | 'system';
 export type EmailVariableValueType = 'text' | 'url';
 
@@ -45,6 +45,13 @@ export const STAFF_EMAIL_VARIABLES = [
   variable('sender_name', 'Sender name', 'staff', 'text', 'ValorWell Operations', 'Approved internal sender name.'),
 ] as const satisfies readonly EmailVariableDefinitionBase[];
 
+// Newsletters reach one mailbox that may cover several people and domains, so the
+// only person-specific value allowed is a safe greeting name.
+export const MARKETING_NEWSLETTER_EMAIL_VARIABLES = [
+  variable('newsletter_greeting_name', 'Newsletter greeting name', 'marketing_newsletter', 'text', 'Friend', 'Safe greeting name for the mailbox, or a neutral fallback.'),
+  variable('sender_name', 'Sender name', 'marketing_newsletter', 'text', 'ValorWell', 'Approved newsletter sender name.'),
+] as const satisfies readonly EmailVariableDefinitionBase[];
+
 export const SYSTEM_EMAIL_VARIABLES = [
   variable('unsubscribe_url', 'Unsubscribe URL', 'system', 'url', 'https://crm.valorwell.org/unsubscribe/example', 'Recipient-specific unsubscribe URL.'),
   variable('postal_address', 'Postal address', 'system', 'text', 'ValorWell, Lee’s Summit, Missouri', 'Approved physical mailing address.'),
@@ -54,6 +61,7 @@ export const EMAIL_VARIABLES = [
   ...CLIENT_EMAIL_VARIABLES,
   ...RELATIONSHIP_EMAIL_VARIABLES,
   ...STAFF_EMAIL_VARIABLES,
+  ...MARKETING_NEWSLETTER_EMAIL_VARIABLES,
   ...SYSTEM_EMAIL_VARIABLES,
 ] as const;
 
@@ -69,6 +77,13 @@ export const LEGACY_EMAIL_VARIABLE_ALIASES = {
     valorwell_postal_address: 'postal_address',
   },
   staff: {},
+  marketing_newsletter: {
+    recipient_name: 'newsletter_greeting_name',
+    first_name: 'newsletter_greeting_name',
+    preferred_name: 'newsletter_greeting_name',
+    unsubscribe_link: 'unsubscribe_url',
+    valorwell_postal_address: 'postal_address',
+  },
 } as const satisfies Record<EmailContentScope, Record<string, EmailVariableKey>>;
 
 export type EmailVariableResolution = {
@@ -88,6 +103,7 @@ const TOKEN_PATTERN = /{{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*}}/g;
 
 export function getEmailVariablesForScope(scope: EmailContentScope): readonly EmailVariableDefinition[] {
   if (scope === 'staff') return [...STAFF_EMAIL_VARIABLES];
+  if (scope === 'marketing_newsletter') return [...MARKETING_NEWSLETTER_EMAIL_VARIABLES, ...SYSTEM_EMAIL_VARIABLES];
   const scoped = scope === 'client' ? CLIENT_EMAIL_VARIABLES : RELATIONSHIP_EMAIL_VARIABLES;
   return [...scoped, ...SYSTEM_EMAIL_VARIABLES];
 }

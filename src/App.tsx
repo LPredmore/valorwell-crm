@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import RelationshipUnsubscribePage from "./pages/RelationshipUnsubscribePage";
+import NewsletterUnsubscribePage from "./pages/NewsletterUnsubscribePage";
 import { CrmLayout } from "./components/crm/layout/CrmLayout";
 import CrmIndex from "./pages/crm/Index";
 import CrmSettings from "./pages/crm/Settings";
@@ -68,6 +69,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/unsubscribe" element={<RelationshipUnsubscribePage />} />
+          <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribePage />} />
           <Route path="/crm" element={<CrmLayout />}>
             <Route index element={<CrmIndex />} />
             <Route path="clients" element={<CanonicalClients />} />
