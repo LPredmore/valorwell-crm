@@ -61,6 +61,7 @@ export const EMAIL_VARIABLES = [
   ...CLIENT_EMAIL_VARIABLES,
   ...RELATIONSHIP_EMAIL_VARIABLES,
   ...STAFF_EMAIL_VARIABLES,
+  ...MARKETING_NEWSLETTER_EMAIL_VARIABLES,
   ...SYSTEM_EMAIL_VARIABLES,
 ] as const;
 
@@ -76,6 +77,13 @@ export const LEGACY_EMAIL_VARIABLE_ALIASES = {
     valorwell_postal_address: 'postal_address',
   },
   staff: {},
+  marketing_newsletter: {
+    recipient_name: 'newsletter_greeting_name',
+    first_name: 'newsletter_greeting_name',
+    preferred_name: 'newsletter_greeting_name',
+    unsubscribe_link: 'unsubscribe_url',
+    valorwell_postal_address: 'postal_address',
+  },
 } as const satisfies Record<EmailContentScope, Record<string, EmailVariableKey>>;
 
 export type EmailVariableResolution = {
@@ -95,6 +103,7 @@ const TOKEN_PATTERN = /{{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*}}/g;
 
 export function getEmailVariablesForScope(scope: EmailContentScope): readonly EmailVariableDefinition[] {
   if (scope === 'staff') return [...STAFF_EMAIL_VARIABLES];
+  if (scope === 'marketing_newsletter') return [...MARKETING_NEWSLETTER_EMAIL_VARIABLES, ...SYSTEM_EMAIL_VARIABLES];
   const scoped = scope === 'client' ? CLIENT_EMAIL_VARIABLES : RELATIONSHIP_EMAIL_VARIABLES;
   return [...scoped, ...SYSTEM_EMAIL_VARIABLES];
 }
