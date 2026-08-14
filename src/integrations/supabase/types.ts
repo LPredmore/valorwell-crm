@@ -8511,6 +8511,8 @@ export type Database = {
           in_reply_to_message_id: string | null
           message_class: string | null
           metadata: Json
+          newsletter_id: string | null
+          newsletter_recipient_id: string | null
           occurred_at: string
           preheader: string | null
           provider: string
@@ -8549,6 +8551,8 @@ export type Database = {
           in_reply_to_message_id?: string | null
           message_class?: string | null
           metadata?: Json
+          newsletter_id?: string | null
+          newsletter_recipient_id?: string | null
           occurred_at?: string
           preheader?: string | null
           provider?: string
@@ -8587,6 +8591,8 @@ export type Database = {
           in_reply_to_message_id?: string | null
           message_class?: string | null
           metadata?: Json
+          newsletter_id?: string | null
+          newsletter_recipient_id?: string | null
           occurred_at?: string
           preheader?: string | null
           provider?: string
@@ -8648,6 +8654,20 @@ export type Database = {
             columns: ["created_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_email_messages_newsletter_id_fkey"
+            columns: ["newsletter_id"]
+            isOneToOne: false
+            referencedRelation: "crm_newsletters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_email_messages_newsletter_recipient_id_fkey"
+            columns: ["newsletter_recipient_id"]
+            isOneToOne: false
+            referencedRelation: "crm_newsletter_recipients"
             referencedColumns: ["id"]
           },
           {
@@ -22870,6 +22890,10 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_claim_newsletter_recipients: {
+        Args: { p_limit?: number; p_newsletter_id: string }
+        Returns: Json
+      }
       crm_claim_provider_applicant_communication_jobs: {
         Args: { p_limit?: number }
         Returns: {
@@ -23069,6 +23093,10 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_newsletter_delivery_trace: {
+        Args: { p_limit?: number; p_newsletter_id: string }
+        Returns: Json
+      }
       crm_normalize_email: { Args: { p_value: string }; Returns: string }
       crm_normalize_phone: { Args: { p_value: string }; Returns: string }
       crm_pause_enrollment: {
@@ -23102,6 +23130,26 @@ export type Database = {
       }
       crm_reconcile_person_identities: {
         Args: { p_dry_run?: boolean }
+        Returns: Json
+      }
+      crm_record_newsletter_delivery_event: {
+        Args: {
+          p_error_code?: string
+          p_error_message?: string
+          p_event: string
+          p_occurred_at?: string
+          p_provider_message_id: string
+        }
+        Returns: Json
+      }
+      crm_record_newsletter_send_result: {
+        Args: {
+          p_error_code?: string
+          p_error_message?: string
+          p_provider_message_id?: string
+          p_recipient_id: string
+          p_status: string
+        }
         Returns: Json
       }
       crm_record_provider_applicant_transport_acceptance: {
