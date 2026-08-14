@@ -233,7 +233,9 @@ export type NewsletterSummary = {
   audienceDomains: string[];
   scheduledAt: string | null;
   queued: number;
+  processing: number;
   sent: number;
+  failed: number;
   suppressed: number;
   updatedAt: string | null;
 };
