@@ -22928,6 +22928,10 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_communications_observability: {
+        Args: { p_window_days?: number }
+        Returns: Json
+      }
       crm_complete_provider_applicant_communication_job: {
         Args: {
           p_claim_token: string
