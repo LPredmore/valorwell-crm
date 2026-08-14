@@ -23068,6 +23068,7 @@ export type Database = {
         Args: { p_newsletter_id: string }
         Returns: Json
       }
+      crm_get_newsletter: { Args: { p_newsletter_id: string }; Returns: Json }
       crm_has_role:
         | {
             Args: { _roles: string[]; _tenant_id: string; _user_id: string }
@@ -23100,6 +23101,10 @@ export type Database = {
           p_idempotency_key?: string
           p_reason: string
         }
+        Returns: Json
+      }
+      crm_newsletter_audience_preview: {
+        Args: { p_audience_domains: string[]; p_sample_limit?: number }
         Returns: Json
       }
       crm_newsletter_delivery_trace: {
@@ -23360,6 +23365,19 @@ export type Database = {
           p_required_source_campaign_registry_id: string
           p_required_source_outcome: string
           p_rule_id: string
+        }
+        Returns: Json
+      }
+      crm_upsert_newsletter: {
+        Args: {
+          p_audience_domains: string[]
+          p_body_html: string
+          p_body_text: string
+          p_name: string
+          p_newsletter_id: string
+          p_preheader: string
+          p_reason: string
+          p_subject: string
         }
         Returns: Json
       }
