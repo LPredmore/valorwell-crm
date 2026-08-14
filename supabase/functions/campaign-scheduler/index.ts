@@ -492,7 +492,11 @@ async function processCampaignMessages() {
             prepared = appendSignature(prepared, { bodyHtml: signature.body_html, bodyText: signature.body_text });
           }
         }
-        const resendId = await sendEmail(db, step.tenant_id, typedClient, campaign.id, typedStep.id, settings, prepared);
+        const resendId = await sendEmail(db, step.tenant_id, typedClient, campaign.id, typedStep.id, settings, prepared, {
+          enrollmentId: step.enrollment_id,
+          stepLogId: step.id,
+        });
+
         if (!(await markSent(db, step, { resend_email_id: resendId }))) continue;
         await db.from("crm_activity_events").insert({
           tenant_id: step.tenant_id,
