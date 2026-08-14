@@ -9261,57 +9261,91 @@ export type Database = {
       }
       crm_newsletter_recipients: {
         Row: {
+          attempt_count: number
+          claim_token: string | null
+          claimed_at: string | null
           created_at: string
+          email_message_id: string | null
+          error_code: string | null
           error_message: string | null
+          greeting_name: string | null
           id: string
           mailbox_key: string
           newsletter_id: string
           person_id: string | null
           provider_message_id: string | null
+          qualifying_audiences: string[]
           recipient_email: string
           sent_at: string | null
           source_domain: string
+          source_memberships: Json
           source_record_id: string | null
           status: string
           suppression_reason: string | null
+          suppression_snapshot: Json
           tenant_id: string
           updated_at: string
         }
         Insert: {
+          attempt_count?: number
+          claim_token?: string | null
+          claimed_at?: string | null
           created_at?: string
+          email_message_id?: string | null
+          error_code?: string | null
           error_message?: string | null
+          greeting_name?: string | null
           id?: string
           mailbox_key: string
           newsletter_id: string
           person_id?: string | null
           provider_message_id?: string | null
+          qualifying_audiences?: string[]
           recipient_email: string
           sent_at?: string | null
           source_domain: string
+          source_memberships?: Json
           source_record_id?: string | null
           status?: string
           suppression_reason?: string | null
+          suppression_snapshot?: Json
           tenant_id: string
           updated_at?: string
         }
         Update: {
+          attempt_count?: number
+          claim_token?: string | null
+          claimed_at?: string | null
           created_at?: string
+          email_message_id?: string | null
+          error_code?: string | null
           error_message?: string | null
+          greeting_name?: string | null
           id?: string
           mailbox_key?: string
           newsletter_id?: string
           person_id?: string | null
           provider_message_id?: string | null
+          qualifying_audiences?: string[]
           recipient_email?: string
           sent_at?: string | null
           source_domain?: string
+          source_memberships?: Json
           source_record_id?: string | null
           status?: string
           suppression_reason?: string | null
+          suppression_snapshot?: Json
           tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_newsletter_recipients_email_message_id_fkey"
+            columns: ["email_message_id"]
+            isOneToOne: false
+            referencedRelation: "crm_email_messages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_newsletter_recipients_newsletter_id_fkey"
             columns: ["newsletter_id"]
@@ -9336,6 +9370,7 @@ export type Database = {
           id: string
           mailbox_key: string
           reason: string
+          reason_code: string
           source: string
           tenant_id: string
           updated_at: string
@@ -9347,6 +9382,7 @@ export type Database = {
           id?: string
           mailbox_key: string
           reason: string
+          reason_code?: string
           source?: string
           tenant_id: string
           updated_at?: string
@@ -9358,6 +9394,7 @@ export type Database = {
           id?: string
           mailbox_key?: string
           reason?: string
+          reason_code?: string
           source?: string
           tenant_id?: string
           updated_at?: string
@@ -9367,6 +9404,7 @@ export type Database = {
       crm_newsletters: {
         Row: {
           audience_domains: string[]
+          audience_filters: Json
           body_html: string | null
           body_text: string | null
           completed_at: string | null
@@ -9386,6 +9424,7 @@ export type Database = {
         }
         Insert: {
           audience_domains?: string[]
+          audience_filters?: Json
           body_html?: string | null
           body_text?: string | null
           completed_at?: string | null
@@ -9405,6 +9444,7 @@ export type Database = {
         }
         Update: {
           audience_domains?: string[]
+          audience_filters?: Json
           body_html?: string | null
           body_text?: string | null
           completed_at?: string | null
@@ -23010,6 +23050,10 @@ export type Database = {
         }
         Returns: string
       }
+      crm_issue_newsletter_unsubscribe_token: {
+        Args: { p_recipient_id: string }
+        Returns: string
+      }
       crm_list_audience_campaigns: { Args: never; Returns: Json }
       crm_list_bty_outreach_states: {
         Args: { p_limit?: number }
@@ -23042,6 +23086,10 @@ export type Database = {
       }
       crm_process_donor_queue: {
         Args: { p_limit?: number; p_reason: string }
+        Returns: Json
+      }
+      crm_process_newsletter_unsubscribe: {
+        Args: { p_token: string }
         Returns: Json
       }
       crm_queue_provider_applicant_initial_contact: {
