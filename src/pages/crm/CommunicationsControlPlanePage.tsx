@@ -33,6 +33,13 @@ export default function CommunicationsControlPlanePage() {
     queryFn: () => getCampaignParticipation({ limit: 25 }),
     retry: false,
   });
+  const rules = useQuery({ queryKey: ['control-plane-trigger-rules'], queryFn: listCampaignTriggerRules, retry: false });
+  const shadow = useQuery({
+    queryKey: ['control-plane-trigger-shadow'],
+    queryFn: () => getCampaignTriggerShadowReport(50),
+    retry: false,
+  });
+
 
   const toggle = useMutation({
     mutationFn: ({ flagName, enabled, reason }: { flagName: string; enabled: boolean; reason: string }) =>
