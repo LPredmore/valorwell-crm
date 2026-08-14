@@ -43,6 +43,25 @@ export default function CommunicationsControlPlanePage() {
     retry: false,
   });
 
+  const audiences = useQuery({ queryKey: ['control-plane-audience-campaigns'], queryFn: listAudienceCampaigns, retry: false });
+  const newsletters = useQuery({ queryKey: ['control-plane-newsletters'], queryFn: listNewsletters, retry: false });
+
+  const suppress = useMutation({
+    mutationFn: ({ email, reason }: { email: string; reason: string }) => suppressNewsletterMailbox({ email, reason }),
+    onSuccess: () => {
+      setSuppressEmail('');
+      void queryClient.invalidateQueries({ queryKey: ['control-plane-newsletters'] });
+    },
+  });
+
+  const buildRecipients = useMutation({
+    mutationFn: (newsletterId: string) =>
+      buildNewsletterRecipients({ newsletterId, reason: reasons[`newsletter:${newsletterId}`] ?? '' }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['control-plane-newsletters'] });
+    },
+  });
+
 
   const toggle = useMutation({
     mutationFn: ({ flagName, enabled, reason }: { flagName: string; enabled: boolean; reason: string }) =>
