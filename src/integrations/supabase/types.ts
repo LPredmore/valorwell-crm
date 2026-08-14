@@ -21055,6 +21055,16 @@ export type Database = {
         }
         Returns: Json
       }
+      bty_apply_contact_enrichment: {
+        Args: {
+          p_contact: Json
+          p_model: string
+          p_organization_id: string
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       bty_automation_overview: { Args: { p_limit?: number }; Returns: Json }
       bty_claim_discovery_run: {
         Args: {
@@ -21073,6 +21083,10 @@ export type Database = {
         Args: { p_candidates: Json; p_run_id: string }
         Returns: Json
       }
+      bty_contact_enrichment_targets: {
+        Args: { p_business_date: string; p_tenant_id: string }
+        Returns: Json
+      }
       bty_discovery_exclusions: {
         Args: { p_run_id: string; p_tenant_id: string }
         Returns: Json
@@ -21085,18 +21099,41 @@ export type Database = {
         Args: { p_attempt: number; p_error: Json; p_run_id: string }
         Returns: Json
       }
+      bty_merge_organization_duplicates: {
+        Args: {
+          p_duplicate_ids: string[]
+          p_reason: string
+          p_survivor_id: string
+        }
+        Returns: Json
+      }
       bty_next_rotation_state: { Args: { p_state: string }; Returns: string }
       bty_normalize_domain: { Args: { p_value: string }; Returns: string }
       bty_normalize_org_name: { Args: { p_value: string }; Returns: string }
       bty_normalize_youtube_url: { Args: { p_value: string }; Returns: string }
+      bty_preview_organization_duplicates: { Args: never; Returns: Json }
       bty_record_candidate_verdicts: {
         Args: { p_run_id: string; p_verdicts: Json }
         Returns: number
+      }
+      bty_record_contact_enrichment: {
+        Args: {
+          p_error: Json
+          p_model: string
+          p_organization_id: string
+          p_run_id: string
+          p_status: string
+        }
+        Returns: undefined
       }
       bty_rotation_states: { Args: never; Returns: string[] }
       bty_screen_organization_candidates: {
         Args: { p_candidates: Json; p_run_id: string; p_tenant_id: string }
         Returns: Json
+      }
+      bty_worker_token_valid: {
+        Args: { p_tenant_id: string; p_token: string }
+        Returns: boolean
       }
       cancel_appointment: {
         Args: {
