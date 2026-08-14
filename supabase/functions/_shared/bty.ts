@@ -284,8 +284,14 @@ export type GeminiRequest = {
   timeoutMs?: number;
 };
 
+/** Environment lookup that also type-checks outside the Deno runtime (unit tests). */
+function envValue(name: string): string | undefined {
+  const runtime = (globalThis as { Deno?: { env: { get(key: string): string | undefined } } }).Deno;
+  return runtime?.env.get(name);
+}
+
 export async function callGemini<T>({ prompt, schema, model = BTY_GEMINI_MODEL, timeoutMs = 120_000 }: GeminiRequest): Promise<T> {
-  const key = Deno.env.get("GEMINI_API_KEY");
+  const key = envValue("GEMINI_API_KEY");
   if (!key) throw new GeminiError("api_error", "GEMINI_API_KEY is not configured.");
 
   const controller = new AbortController();
