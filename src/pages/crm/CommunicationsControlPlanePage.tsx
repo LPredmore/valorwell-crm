@@ -154,6 +154,49 @@ export default function CommunicationsControlPlanePage() {
 
     <Card>
       <CardHeader>
+        <CardTitle>Trigger rules</CardTitle>
+        <CardDescription>Which business event starts which campaign. Rules run in shadow mode until the client trigger cutover switch is on.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {rules.isError && <p className="text-sm text-destructive">{rules.error instanceof Error ? rules.error.message : 'Trigger rules unavailable.'}</p>}
+        {(rules.data ?? []).length === 0 && !rules.isLoading && !rules.isError && <p className="text-sm text-muted-foreground">No trigger rules configured yet.</p>}
+        {(rules.data ?? []).map((rule) => <div className="flex flex-wrap items-center gap-2 border-b py-2 text-sm last:border-0" key={rule.id}>
+          <Badge variant="outline">{rule.eventType}</Badge>
+          <span className="font-medium">{rule.campaignName ?? 'Unnamed campaign'}</span>
+          <span className="text-muted-foreground">
+            {rule.delayAmount > 0 ? `after ${rule.delayAmount} ${rule.delayUnit}` : 'immediately'}
+          </span>
+          {rule.requiredSourceOutcome && <span className="text-muted-foreground">requires previous outcome: {rule.requiredSourceOutcome}</span>}
+          {rule.active ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline">Paused</Badge>}
+        </div>)}
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle>Shadow decisions</CardTitle>
+        <CardDescription>What the trigger engine would have done. Nothing is enrolled while the cutover switch is off.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {shadow.isError && <p className="text-sm text-destructive">{shadow.error instanceof Error ? shadow.error.message : 'Shadow report unavailable.'}</p>}
+        {(shadow.data?.summary ?? []).length > 0 && <div className="flex flex-wrap gap-2 text-sm">
+          {(shadow.data?.summary ?? []).map((row) => <Badge key={`${row.status}-${row.skipReason ?? 'none'}`} variant="outline">
+            {row.status}{row.skipReason ? ` · ${row.skipReason}` : ''}: {row.count}
+          </Badge>)}
+        </div>}
+        {(shadow.data?.recent ?? []).length === 0 && !shadow.isLoading && !shadow.isError && <p className="text-sm text-muted-foreground">No trigger activity recorded yet.</p>}
+        {(shadow.data?.recent ?? []).map((row) => <div className="flex flex-wrap items-center gap-2 border-b py-2 text-sm last:border-0" key={row.jobId}>
+          <Badge variant="outline">{row.eventType ?? 'event'}</Badge>
+          <span className="font-medium">{row.campaignName ?? 'Unnamed campaign'}</span>
+          <span className="text-muted-foreground">{row.status}</span>
+          {row.wouldEnroll ? <Badge variant="secondary">Would enrol</Badge> : <Badge variant="outline">{row.skipReason ?? 'no action'}</Badge>}
+          <span className="text-muted-foreground">{row.createdAt ? new Date(row.createdAt).toLocaleString() : '—'}</span>
+        </div>)}
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardHeader>
         <CardTitle>Recent participation</CardTitle>
         <CardDescription>Latest 25 enrolments from every campaign domain in one list.</CardDescription>
       </CardHeader>
@@ -170,3 +213,4 @@ export default function CommunicationsControlPlanePage() {
     </Card>
   </div>;
 }
+
