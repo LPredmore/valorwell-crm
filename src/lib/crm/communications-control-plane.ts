@@ -131,27 +131,37 @@ export function getCampaignParticipation(filters: {
 }
 
 export type CampaignTriggerRule = {
-  ruleId: string;
+  id: string;
   campaignRegistryId: string;
   campaignName: string | null;
+  campaignDomain: string;
+  concurrencyGroup: string | null;
   eventType: string;
+  filterDefinition: Record<string, unknown> | null;
   delayAmount: number;
   delayUnit: string;
   requiredSourceCampaignRegistryId: string | null;
   requiredSourceOutcome: string | null;
   active: boolean;
+  version: number;
+  updatedAt: string | null;
 };
 
-export type CampaignTriggerShadowRow = {
-  jobId: string;
-  ruleId: string | null;
-  eventType: string | null;
-  campaignName: string | null;
-  status: string;
-  decision: string | null;
-  skipReason: string | null;
-  dueAt: string | null;
-  createdAt: string | null;
+export type CampaignTriggerShadowReport = {
+  summary: Array<{ status: string; skipReason: string | null; count: number }>;
+  recent: Array<{
+    jobId: string;
+    eventType: string | null;
+    subjectType: string | null;
+    subjectId: string | null;
+    campaignName: string | null;
+    status: string;
+    skipReason: string | null;
+    dueAt: string | null;
+    wouldEnroll: boolean;
+    enrollmentId: string | null;
+    createdAt: string | null;
+  }>;
 };
 
 export function listCampaignTriggerRules() {
@@ -159,8 +169,9 @@ export function listCampaignTriggerRules() {
 }
 
 export function getCampaignTriggerShadowReport(limit = 50) {
-  return rpc<CampaignTriggerShadowRow[]>('crm_campaign_trigger_shadow_report', { p_limit: limit });
+  return rpc<CampaignTriggerShadowReport>('crm_campaign_trigger_shadow_report', { p_limit: limit });
 }
+
 
 export function upsertCampaignTriggerRule(input: {
   ruleId?: string | null;
