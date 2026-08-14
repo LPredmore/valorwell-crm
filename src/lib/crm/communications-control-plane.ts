@@ -130,6 +130,64 @@ export function getCampaignParticipation(filters: {
   });
 }
 
+export type CampaignTriggerRule = {
+  ruleId: string;
+  campaignRegistryId: string;
+  campaignName: string | null;
+  eventType: string;
+  delayAmount: number;
+  delayUnit: string;
+  requiredSourceCampaignRegistryId: string | null;
+  requiredSourceOutcome: string | null;
+  active: boolean;
+};
+
+export type CampaignTriggerShadowRow = {
+  jobId: string;
+  ruleId: string | null;
+  eventType: string | null;
+  campaignName: string | null;
+  status: string;
+  decision: string | null;
+  skipReason: string | null;
+  dueAt: string | null;
+  createdAt: string | null;
+};
+
+export function listCampaignTriggerRules() {
+  return rpc<CampaignTriggerRule[]>('crm_list_campaign_trigger_rules');
+}
+
+export function getCampaignTriggerShadowReport(limit = 50) {
+  return rpc<CampaignTriggerShadowRow[]>('crm_campaign_trigger_shadow_report', { p_limit: limit });
+}
+
+export function upsertCampaignTriggerRule(input: {
+  ruleId?: string | null;
+  campaignRegistryId: string;
+  eventType: string;
+  filterDefinition?: Record<string, unknown> | null;
+  delayAmount?: number;
+  delayUnit?: string;
+  requiredSourceCampaignRegistryId?: string | null;
+  requiredSourceOutcome?: string | null;
+  active?: boolean;
+  reason: string;
+}) {
+  return rpc<Record<string, unknown>>('crm_upsert_campaign_trigger_rule', {
+    p_rule_id: input.ruleId ?? null,
+    p_campaign_registry_id: input.campaignRegistryId,
+    p_event_type: input.eventType,
+    p_filter_definition: input.filterDefinition ?? {},
+    p_delay_amount: input.delayAmount ?? 0,
+    p_delay_unit: input.delayUnit ?? 'minutes',
+    p_required_source_campaign_registry_id: input.requiredSourceCampaignRegistryId ?? null,
+    p_required_source_outcome: input.requiredSourceOutcome ?? null,
+    p_active: input.active ?? true,
+    p_reason: input.reason,
+  });
+}
+
 export async function listCampaignRegistry() {
   const { data, error } = await (supabase.from as unknown as (
     table: string,
@@ -143,3 +201,4 @@ export async function listCampaignRegistry() {
   if (error) throw new Error(error.message);
   return (data ?? []) as CampaignRegistryEntry[];
 }
+
