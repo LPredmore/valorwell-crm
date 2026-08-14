@@ -21043,6 +21043,10 @@ export type Database = {
         Args: { p_tenant_id?: string }
         Returns: number
       }
+      billing_cron_vault_secret_matches: {
+        Args: { p_secret: string }
+        Returns: boolean
+      }
       book_client_appointment: {
         Args: { p_slot_end_utc?: string; p_slot_start_utc: string }
         Returns: Json
