@@ -1,6 +1,6 @@
 import { Activity,
   NavLink, useLocation } from 'react-router-dom';
-import {
+import { Activity,
   Users,
   Inbox,
   UserCog,
