@@ -69,6 +69,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/unsubscribe" element={<RelationshipUnsubscribePage />} />
+          <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribePage />} />
           <Route path="/crm" element={<CrmLayout />}>
             <Route index element={<CrmIndex />} />
             <Route path="clients" element={<CanonicalClients />} />
