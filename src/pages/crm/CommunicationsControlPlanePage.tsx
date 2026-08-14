@@ -13,6 +13,7 @@ import {
   canEnableControlPlaneFlag,
   getCampaignParticipation,
   getCampaignTriggerShadowReport,
+  getNewsletterDeliveryTrace,
   listAudienceCampaigns,
   listCampaignTriggerRules,
   listNewsletters,
