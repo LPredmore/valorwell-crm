@@ -6662,6 +6662,121 @@ export type Database = {
           },
         ]
       }
+      crm_bty_outreach_state_history: {
+        Row: {
+          changed_by_profile_id: string | null
+          created_at: string
+          from_state: string | null
+          id: string
+          outreach_state_id: string
+          reason: string
+          tenant_id: string
+          to_state: string
+        }
+        Insert: {
+          changed_by_profile_id?: string | null
+          created_at?: string
+          from_state?: string | null
+          id?: string
+          outreach_state_id: string
+          reason: string
+          tenant_id: string
+          to_state: string
+        }
+        Update: {
+          changed_by_profile_id?: string | null
+          created_at?: string
+          from_state?: string | null
+          id?: string
+          outreach_state_id?: string
+          reason?: string
+          tenant_id?: string
+          to_state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_bty_outreach_state_history_outreach_state_id_fkey"
+            columns: ["outreach_state_id"]
+            isOneToOne: false
+            referencedRelation: "crm_bty_outreach_states"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_bty_outreach_states: {
+        Row: {
+          changed_at: string
+          changed_by_profile_id: string | null
+          contact_id: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          opportunity_id: string | null
+          outreach_state: string
+          previous_state: string | null
+          reason: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by_profile_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          opportunity_id?: string | null
+          outreach_state?: string
+          previous_state?: string | null
+          reason?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by_profile_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          opportunity_id?: string | null
+          outreach_state?: string
+          previous_state?: string | null
+          reason?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_bty_outreach_states_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contact_directory_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bty_outreach_states_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bty_outreach_states_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_bty_outreach_states_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_opportunity_pipeline_v"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_bulk_send_logs: {
         Row: {
           body_html: string
@@ -8140,6 +8255,130 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      crm_donor_ingest_queue: {
+        Row: {
+          attempts: number
+          created_at: string
+          historical: boolean
+          id: string
+          last_error: string | null
+          processed_at: string | null
+          status: string
+          tenant_id: string
+          transaction_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          historical?: boolean
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          status?: string
+          tenant_id: string
+          transaction_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          historical?: boolean
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          status?: string
+          tenant_id?: string
+          transaction_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      crm_donors: {
+        Row: {
+          communication_opt_in: boolean
+          created_at: string
+          display_name: string | null
+          donation_count: number
+          first_donation_at: string | null
+          first_one_time_donation_at: string | null
+          first_recurring_donation_at: string | null
+          givebutter_contact_id: string | null
+          id: string
+          last_donation_at: string | null
+          lifetime_amount: number
+          metadata: Json
+          person_id: string | null
+          primary_email: string | null
+          recurring_status: string
+          relationship_contact_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          communication_opt_in?: boolean
+          created_at?: string
+          display_name?: string | null
+          donation_count?: number
+          first_donation_at?: string | null
+          first_one_time_donation_at?: string | null
+          first_recurring_donation_at?: string | null
+          givebutter_contact_id?: string | null
+          id?: string
+          last_donation_at?: string | null
+          lifetime_amount?: number
+          metadata?: Json
+          person_id?: string | null
+          primary_email?: string | null
+          recurring_status?: string
+          relationship_contact_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          communication_opt_in?: boolean
+          created_at?: string
+          display_name?: string | null
+          donation_count?: number
+          first_donation_at?: string | null
+          first_one_time_donation_at?: string | null
+          first_recurring_donation_at?: string | null
+          givebutter_contact_id?: string | null
+          id?: string
+          last_donation_at?: string | null
+          lifetime_amount?: number
+          metadata?: Json
+          person_id?: string | null
+          primary_email?: string | null
+          recurring_status?: string
+          relationship_contact_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_donors_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "crm_people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_donors_relationship_contact_id_fkey"
+            columns: ["relationship_contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contact_directory_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_donors_relationship_contact_id_fkey"
+            columns: ["relationship_contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crm_eligibility_manual_reviews: {
         Row: {
@@ -14668,12 +14907,14 @@ export type Database = {
       }
       relationship_campaign_enrollments: {
         Row: {
+          audience_domain: string
           campaign_id: string
           contact_id: string
           created_at: string
           created_by_profile_id: string | null
           current_step_position: number | null
           delivery_enabled: boolean
+          donor_id: string | null
           eligibility_snapshot: Json
           enrolled_by_profile_id: string | null
           id: string
@@ -14699,12 +14940,14 @@ export type Database = {
           version: number
         }
         Insert: {
+          audience_domain?: string
           campaign_id: string
           contact_id: string
           created_at?: string
           created_by_profile_id?: string | null
           current_step_position?: number | null
           delivery_enabled?: boolean
+          donor_id?: string | null
           eligibility_snapshot?: Json
           enrolled_by_profile_id?: string | null
           id?: string
@@ -14730,12 +14973,14 @@ export type Database = {
           version?: number
         }
         Update: {
+          audience_domain?: string
           campaign_id?: string
           contact_id?: string
           created_at?: string
           created_by_profile_id?: string | null
           current_step_position?: number | null
           delivery_enabled?: boolean
+          donor_id?: string | null
           eligibility_snapshot?: Json
           enrolled_by_profile_id?: string | null
           id?: string
@@ -14773,6 +15018,20 @@ export type Database = {
             columns: ["created_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_campaign_enrollments_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "crm_donor_transactions_v"
+            referencedColumns: ["donor_id"]
+          },
+          {
+            foreignKeyName: "relationship_campaign_enrollments_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "crm_donors"
             referencedColumns: ["id"]
           },
           {
@@ -15007,6 +15266,7 @@ export type Database = {
         Row: {
           activated_at: string | null
           archived_at: string | null
+          audience_domain: string
           brief: Json
           completed_at: string | null
           created_at: string
@@ -15038,6 +15298,7 @@ export type Database = {
         Insert: {
           activated_at?: string | null
           archived_at?: string | null
+          audience_domain?: string
           brief?: Json
           completed_at?: string | null
           created_at?: string
@@ -15069,6 +15330,7 @@ export type Database = {
         Update: {
           activated_at?: string | null
           archived_at?: string | null
+          audience_domain?: string
           brief?: Json
           completed_at?: string | null
           created_at?: string
@@ -20943,6 +21205,29 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_donor_transactions_v: {
+        Row: {
+          amount: number | null
+          currency: string | null
+          donated_at: string | null
+          donor_id: string | null
+          givebutter_contact_id: string | null
+          is_recurring: boolean | null
+          person_id: string | null
+          plan_id: string | null
+          tenant_id: string | null
+          transaction_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_donors_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "crm_people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_person_source_records: {
         Row: {
           display_name: string | null
@@ -22613,6 +22898,7 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_donor_overview: { Args: never; Returns: Json }
       crm_email_studio_context: { Args: never; Returns: Json }
       crm_email_template_archive: {
         Args: { p_template_id: string }
@@ -22665,6 +22951,10 @@ export type Database = {
       crm_enqueue_campaign_trigger_jobs: {
         Args: { p_event_id: string }
         Returns: number
+      }
+      crm_enqueue_donor_transactions: {
+        Args: { p_historical?: boolean; p_limit?: number; p_reason: string }
+        Returns: Json
       }
       crm_enroll_clients_in_campaign: {
         Args: {
@@ -22721,6 +23011,10 @@ export type Database = {
         Returns: string
       }
       crm_list_audience_campaigns: { Args: never; Returns: Json }
+      crm_list_bty_outreach_states: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
       crm_list_campaign_trigger_rules: { Args: never; Returns: Json }
       crm_list_newsletters: { Args: never; Returns: Json }
       crm_mark_enrollment_responded: {
@@ -22744,6 +23038,10 @@ export type Database = {
       crm_person_identity_overview: { Args: never; Returns: Json }
       crm_process_client_unsubscribe: {
         Args: { p_token: string }
+        Returns: Json
+      }
+      crm_process_donor_queue: {
+        Args: { p_limit?: number; p_reason: string }
         Returns: Json
       }
       crm_queue_provider_applicant_initial_contact: {
@@ -22838,6 +23136,15 @@ export type Database = {
           p_contract_version?: string
           p_idempotency_key?: string
           p_reason: string
+        }
+        Returns: Json
+      }
+      crm_set_bty_outreach_state: {
+        Args: {
+          p_contact_id: string
+          p_opportunity_id: string
+          p_reason: string
+          p_state: string
         }
         Returns: Json
       }
