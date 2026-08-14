@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import RelationshipUnsubscribePage from "./pages/RelationshipUnsubscribePage";
+import NewsletterUnsubscribePage from "./pages/NewsletterUnsubscribePage";
 import { CrmLayout } from "./components/crm/layout/CrmLayout";
 import CrmIndex from "./pages/crm/Index";
 import CrmSettings from "./pages/crm/Settings";
