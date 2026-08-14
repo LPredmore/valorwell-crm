@@ -9,10 +9,14 @@ import { Switch } from '@/components/ui/switch';
 import { useCanMutate } from '@/hooks/crm/useCanMutate';
 import {
   CONTROL_PLANE_FLAG_LABELS,
+  buildNewsletterRecipients,
   canEnableControlPlaneFlag,
   getCampaignParticipation,
   getCampaignTriggerShadowReport,
+  listAudienceCampaigns,
   listCampaignTriggerRules,
+  listNewsletters,
+  suppressNewsletterMailbox,
 
   getPersonIdentityOverview,
   listCampaignRegistry,
