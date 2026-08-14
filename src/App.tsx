@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -50,7 +50,6 @@ import CanonicalClientDetail from "./pages/crm/canonical/CanonicalClientDetail";
 import CanonicalTasks from "./pages/crm/canonical/CanonicalTasks";
 import CanonicalExceptions from "./pages/crm/canonical/CanonicalExceptions";
 import CanonicalReports from "./pages/crm/canonical/CanonicalReports";
-import CanonicalCampaigns from "./pages/crm/canonical/CanonicalCampaigns";
 import CanonicalInbox from "./pages/crm/canonical/CanonicalInbox";
 import CanonicalStaff from "./pages/crm/canonical/CanonicalStaff";
 import CanonicalCampaignDetail from "./pages/crm/canonical/CanonicalCampaignDetail";
@@ -129,7 +128,7 @@ const App = () => (
             <Route path="canonical/tasks" element={<CanonicalTasks />} />
             <Route path="canonical/exceptions" element={<CanonicalExceptions />} />
             <Route path="canonical/therapist-matches" element={<TherapistMatchReconciliationPage />} />
-            <Route path="canonical/campaigns" element={<CanonicalCampaigns />} />
+            <Route path="canonical/campaigns" element={<Navigate replace to="/crm/communications/campaigns" />} />
             <Route path="canonical/campaigns/:id" element={<CanonicalCampaignDetail />} />
             <Route path="canonical/inbox" element={<CanonicalInbox />} />
             <Route path="canonical/search" element={<CanonicalSearch />} />
