@@ -298,6 +298,26 @@ export function buildNewsletterRecipients(input: { newsletterId: string; reason:
   });
 }
 
+export function scheduleNewsletter(input: { newsletterId: string; scheduledAt?: string | null; reason: string }) {
+  return rpc<{ newsletterId: string; status: string; scheduledAt: string; pendingRecipients: number }>(
+    'crm_schedule_newsletter',
+    {
+      p_newsletter_id: input.newsletterId,
+      p_scheduled_at: input.scheduledAt ?? null,
+      p_reason: input.reason,
+    },
+  );
+}
+
+export function cancelNewsletterSend(input: { newsletterId: string; reason: string }) {
+  return rpc<{ newsletterId: string; status: string; stoodDownRecipients: number }>(
+    'crm_cancel_newsletter_send',
+    { p_newsletter_id: input.newsletterId, p_reason: input.reason },
+  );
+}
+
+
+
 export type NewsletterTraceRecipient = {
   recipientId: string;
   deliveryEmail: string;
