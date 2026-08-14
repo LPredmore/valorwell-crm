@@ -13,7 +13,6 @@ import {
   AlertTriangle,
   Sparkles,
   Search,
-  Megaphone as MegaphoneIcon,
   HeartHandshake,
   Handshake,
   Building2,
