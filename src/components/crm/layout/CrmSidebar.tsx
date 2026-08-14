@@ -53,6 +53,7 @@ const businessDevelopmentItems: NavItem[] = [
   { label: 'System Status', href: '/crm/business-development/status', icon: CircleHelp },
   { label: 'BTY Orchestration', href: '/crm/business-development/orchestration', icon: Settings },
   { label: 'BTY Automation', href: '/crm/business-development/automation', icon: Settings },
+  { label: 'Communications Control Plane', href: '/crm/communications-control-plane', icon: Settings },
 ];
 
 const clinicalNavItems: NavItem[] = [

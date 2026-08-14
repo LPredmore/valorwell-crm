@@ -6889,6 +6889,48 @@ export type Database = {
           },
         ]
       }
+      crm_campaign_registry: {
+        Row: {
+          campaign_domain: string
+          created_at: string
+          engine: string
+          id: string
+          is_active: boolean
+          metadata: Json
+          name: string
+          source_campaign_id: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_domain: string
+          created_at?: string
+          engine: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name: string
+          source_campaign_id: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_domain?: string
+          created_at?: string
+          engine?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name?: string
+          source_campaign_id?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       crm_campaign_step_logs: {
         Row: {
           channel: string
@@ -8571,6 +8613,115 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_people: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          primary_email: string | null
+          primary_phone: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          primary_email?: string | null
+          primary_phone?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          primary_email?: string | null
+          primary_phone?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      crm_person_identities: {
+        Row: {
+          created_at: string
+          id: string
+          identity_kind: string
+          identity_value: string
+          person_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          identity_kind: string
+          identity_value: string
+          person_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          identity_kind?: string
+          identity_value?: string
+          person_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_person_identities_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "crm_people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_person_records: {
+        Row: {
+          created_at: string
+          id: string
+          match_basis: string
+          person_id: string
+          record_domain: string
+          record_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_basis: string
+          person_id: string
+          record_domain: string
+          record_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_basis?: string
+          person_id?: string
+          record_domain?: string
+          record_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_person_records_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "crm_people"
             referencedColumns: ["id"]
           },
         ]
@@ -20105,6 +20256,36 @@ export type Database = {
           },
         ]
       }
+      crm_campaign_participation_v: {
+        Row: {
+          campaign_domain: string | null
+          campaign_name: string | null
+          completed_at: string | null
+          engine: string | null
+          enrolled_at: string | null
+          enrollment_id: string | null
+          person_id: string | null
+          source_campaign_id: string | null
+          status: string | null
+          step_position: number | null
+          subject_domain: string | null
+          subject_record_id: string | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
+      crm_person_source_records: {
+        Row: {
+          display_name: string | null
+          email_normalized: string | null
+          phone_normalized: string | null
+          record_domain: string | null
+          record_id: string | null
+          tenant_id: string | null
+        }
+        Relationships: []
+      }
       gad7_assessment_reporting_v: {
         Row: {
           administered_at: string | null
@@ -21644,6 +21825,16 @@ export type Database = {
           old_status: Database["public"]["Enums"]["pat_status_enum"]
         }[]
       }
+      crm_campaign_participation: {
+        Args: {
+          p_campaign_domain?: string
+          p_limit?: number
+          p_person_id?: string
+          p_source_campaign_id?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
       crm_cancel_enrollment: {
         Args: {
           p_enrollment_id: string
@@ -21810,6 +22001,8 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_normalize_email: { Args: { p_value: string }; Returns: string }
+      crm_normalize_phone: { Args: { p_value: string }; Returns: string }
       crm_pause_enrollment: {
         Args: {
           p_enrollment_id: string
@@ -21818,6 +22011,7 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_person_identity_overview: { Args: never; Returns: Json }
       crm_process_client_unsubscribe: {
         Args: { p_token: string }
         Returns: Json
@@ -21828,6 +22022,10 @@ export type Database = {
           p_client_action_id: string
           p_prior_version: number
         }
+        Returns: Json
+      }
+      crm_reconcile_person_identities: {
+        Args: { p_dry_run?: boolean }
         Returns: Json
       }
       crm_record_provider_applicant_transport_acceptance: {
@@ -22770,6 +22968,7 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      list_crm_control_plane_flags: { Args: never; Returns: Json }
       list_relationship_campaign_candidates: {
         Args: { p_filters?: Json }
         Returns: Json
@@ -23363,6 +23562,10 @@ export type Database = {
             }
             Returns: Json
           }
+      set_crm_control_plane_flag: {
+        Args: { p_enabled: boolean; p_flag_name: string; p_reason: string }
+        Returns: Json
+      }
       set_relationship_campaign_execution: {
         Args: {
           p_campaign_id: string
