@@ -31,6 +31,7 @@ export default function CommunicationsControlPlanePage() {
   const queryClient = useQueryClient();
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<PersonReconcileResult | null>(null);
+  const [suppressEmail, setSuppressEmail] = useState('');
 
   const flags = useQuery({ queryKey: ['control-plane-flags'], queryFn: listControlPlaneFlags, retry: false });
   const identity = useQuery({ queryKey: ['control-plane-identity'], queryFn: getPersonIdentityOverview, retry: false });
