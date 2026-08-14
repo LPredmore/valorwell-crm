@@ -35,6 +35,8 @@ import RelationshipOrchestrationPage from "./pages/crm/business-development/Rela
 import RelationshipReconciliationPage from "./pages/crm/business-development/RelationshipReconciliationPage";
 import BtyAutomationPage from "./pages/crm/business-development/BtyAutomationPage";
 import CommunicationsControlPlanePage from "./pages/crm/CommunicationsControlPlanePage";
+import NewsletterManagementPage from "./pages/crm/NewsletterManagementPage";
+import CampaignManagementPage from "./pages/crm/CampaignManagementPage";
 
 import RelationshipBulkEnrollmentPage from "./pages/crm/business-development/campaigns/RelationshipBulkEnrollmentPage";
 import RelationshipCampaignDeliveryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDeliveryPage";
