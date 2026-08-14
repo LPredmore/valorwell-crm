@@ -1,5 +1,4 @@
-import { Activity,
-  NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Activity,
   Users,
   Inbox,
