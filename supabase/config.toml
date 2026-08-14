@@ -17,3 +17,13 @@ verify_jwt = false
 
 [functions.relationship-resend-webhook]
 verify_jwt = false
+
+[functions.bty-automation-dispatcher]
+# Scheduled automation entrypoint; authorizes the service-role bearer or private worker token in code.
+verify_jwt = false
+
+[functions.bty-discovery]
+verify_jwt = false
+
+[functions.bty-contact-enrichment]
+verify_jwt = false
