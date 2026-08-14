@@ -428,3 +428,35 @@ export function upsertNewsletter(input: {
     p_reason: input.reason,
   });
 }
+
+export type CommunicationsObservability = {
+  windowDays: number;
+  generatedAt: string;
+  queueDepth: {
+    triggerJobsPending: number;
+    triggerJobsOverdue: number;
+    automationEventsUnprocessed: number;
+    audienceEnrollmentsDue: number;
+    newsletterRecipientsPending: number;
+    newsletterRecipientsClaimed: number;
+    newslettersSending: number;
+    newslettersScheduled: number;
+  };
+  failureRates: {
+    triggerJobs: { total: number; failed: number; rate: number };
+    audienceSteps: { total: number; failed: number; rate: number };
+    newsletterRecipients: { total: number; failed: number; bounced: number; sent: number; rate: number };
+  };
+  suppressionGrowth: {
+    total: number;
+    addedInWindow: number;
+    daily: Array<{ day: string; added: number }>;
+    byReason: Record<string, number>;
+  };
+};
+
+export function getCommunicationsObservability(windowDays = 7) {
+  return rpc<CommunicationsObservability>('crm_communications_observability', {
+    p_window_days: windowDays,
+  });
+}
