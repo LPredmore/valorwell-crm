@@ -15916,6 +15916,7 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           do_not_contact: boolean
+          headquarters_state: string | null
           id: string
           last_contact_at: string | null
           metadata: Json
@@ -15939,6 +15940,7 @@ export type Database = {
           created_at?: string
           created_by_profile_id?: string | null
           do_not_contact?: boolean
+          headquarters_state?: string | null
           id?: string
           last_contact_at?: string | null
           metadata?: Json
@@ -15962,6 +15964,7 @@ export type Database = {
           created_at?: string
           created_by_profile_id?: string | null
           do_not_contact?: boolean
+          headquarters_state?: string | null
           id?: string
           last_contact_at?: string | null
           metadata?: Json
@@ -21050,6 +21053,49 @@ export type Database = {
           p_slot_end_utc?: string
           p_slot_start_utc: string
         }
+        Returns: Json
+      }
+      bty_automation_overview: { Args: { p_limit?: number }; Returns: Json }
+      bty_claim_discovery_run: {
+        Args: {
+          p_attempt: number
+          p_business_date: string
+          p_model: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      bty_claim_failure_notification: {
+        Args: { p_run_id: string }
+        Returns: boolean
+      }
+      bty_commit_discovery_batch: {
+        Args: { p_candidates: Json; p_run_id: string }
+        Returns: Json
+      }
+      bty_discovery_exclusions: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      bty_discovery_run_snapshot: {
+        Args: { p_business_date: string; p_tenant_id: string }
+        Returns: Json
+      }
+      bty_mark_run_failed: {
+        Args: { p_attempt: number; p_error: Json; p_run_id: string }
+        Returns: Json
+      }
+      bty_next_rotation_state: { Args: { p_state: string }; Returns: string }
+      bty_normalize_domain: { Args: { p_value: string }; Returns: string }
+      bty_normalize_org_name: { Args: { p_value: string }; Returns: string }
+      bty_normalize_youtube_url: { Args: { p_value: string }; Returns: string }
+      bty_record_candidate_verdicts: {
+        Args: { p_run_id: string; p_verdicts: Json }
+        Returns: number
+      }
+      bty_rotation_states: { Args: never; Returns: string[] }
+      bty_screen_organization_candidates: {
+        Args: { p_candidates: Json; p_run_id: string; p_tenant_id: string }
         Returns: Json
       }
       cancel_appointment: {
