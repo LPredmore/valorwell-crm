@@ -22864,6 +22864,10 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_cancel_newsletter_send: {
+        Args: { p_newsletter_id: string; p_reason: string }
+        Returns: Json
+      }
       crm_claim_bulk_client_recipients: {
         Args: { p_bulk_send_id: string; p_limit?: number; p_tenant_id: string }
         Returns: {
@@ -22890,6 +22894,7 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_claim_due_newsletters: { Args: { p_limit?: number }; Returns: Json }
       crm_claim_newsletter_recipients: {
         Args: { p_limit?: number; p_newsletter_id: string }
         Returns: Json
@@ -23059,6 +23064,10 @@ export type Database = {
         Args: { p_claim_token: string; p_job_id: string }
         Returns: Json
       }
+      crm_finalize_newsletter: {
+        Args: { p_newsletter_id: string }
+        Returns: Json
+      }
       crm_has_role:
         | {
             Args: { _roles: string[]; _tenant_id: string; _user_id: string }
@@ -23161,6 +23170,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      crm_release_stale_newsletter_claims: {
+        Args: { p_older_than_minutes?: number }
+        Returns: Json
+      }
       crm_reopen_client: {
         Args: {
           p_client_id: string
@@ -23219,6 +23232,14 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      crm_schedule_newsletter: {
+        Args: {
+          p_newsletter_id: string
+          p_reason: string
+          p_scheduled_at: string
+        }
+        Returns: Json
       }
       crm_select_operating_tenant: {
         Args: { p_tenant_id: string }
