@@ -1041,6 +1041,22 @@ async function handleWebhook(request: Request, requestId: string) {
     updates.error_code = type.replace("email.", "");
   }
   await db.from("crm_email_messages").update(updates).eq("id", message.id);
+
+  // newsletter sends carry their own recipient ledger: mirror the outcome and
+  // apply mailbox suppression for hard bounces and complaints
+  if (message.newsletter_recipient_id) {
+    const { error: traceError } = await db.rpc("crm_record_newsletter_delivery_event", {
+      p_provider_message_id: providerId,
+      p_event: type.replace("email.", ""),
+      p_occurred_at: occurredAt,
+      p_error_code: typeof updates.error_code === "string" ? updates.error_code : null,
+      p_error_message: typeof data.reason === "string" ? data.reason : null,
+    });
+    if (traceError) {
+      safeLog("warn", "newsletter_delivery_event_failed", { requestId, eventId, message: traceError.message });
+    }
+  }
+
   return json({ received: true, emailMessageId: message.id, eventType: type, requestId }, 200, requestId);
 }
 
