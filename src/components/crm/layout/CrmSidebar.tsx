@@ -1,4 +1,5 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { Activity,
+  NavLink, useLocation } from 'react-router-dom';
 import {
   Users,
   Inbox,
@@ -60,6 +61,7 @@ const clinicalNavItems: NavItem[] = [
   { label: 'Communications', href: '/crm/inbox', icon: Inbox },
   { label: 'Campaign Management', href: '/crm/communications/campaigns', icon: Megaphone },
   { label: 'Newsletters', href: '/crm/communications/newsletters', icon: Mail },
+  { label: 'Comms Observability', href: '/crm/communications/observability', icon: Activity },
   { label: 'Email Studio', href: '/crm/email-studio', icon: Mail },
   { label: 'Staff', href: '/crm/staff', icon: UserCog },
   { label: 'Reports', href: '/crm/reports', icon: BarChart3 },

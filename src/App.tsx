@@ -37,6 +37,7 @@ import BtyAutomationPage from "./pages/crm/business-development/BtyAutomationPag
 import CommunicationsControlPlanePage from "./pages/crm/CommunicationsControlPlanePage";
 import NewsletterManagementPage from "./pages/crm/NewsletterManagementPage";
 import CampaignManagementPage from "./pages/crm/CampaignManagementPage";
+import CommunicationsObservabilityPage from "./pages/crm/CommunicationsObservabilityPage";
 
 import RelationshipBulkEnrollmentPage from "./pages/crm/business-development/campaigns/RelationshipBulkEnrollmentPage";
 import RelationshipCampaignDeliveryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDeliveryPage";
@@ -82,6 +83,7 @@ const App = () => (
             <Route path="campaigns/:id/enrollments" element={<CrmCampaignEnrollments />} />
             <Route path="communications/campaigns" element={<CampaignManagementPage />} />
             <Route path="communications/newsletters" element={<NewsletterManagementPage />} />
+            <Route path="communications/observability" element={<CommunicationsObservabilityPage />} />
             <Route path="tasks" element={<CanonicalTasks />} />
             <Route path="exceptions" element={<CanonicalExceptions />} />
             <Route path="therapist-matches" element={<TherapistMatchReconciliationPage />} />
