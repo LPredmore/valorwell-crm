@@ -4,7 +4,7 @@ import {
   type EmailValidationResult,
 } from './document';
 
-export type EmailContentScope = 'client' | 'relationship' | 'staff';
+export type EmailContentScope = 'client' | 'relationship' | 'staff' | 'marketing_newsletter';
 export type EmailVariableScope = EmailContentScope | 'system';
 export type EmailVariableValueType = 'text' | 'url';
 
