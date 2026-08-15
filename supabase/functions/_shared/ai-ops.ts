@@ -98,98 +98,63 @@ export function backoffSeconds(attempt: number): number {
 }
 
 // ------------------------------------------------------------
-// Vertex AI service-account authentication
+// Dispatcher plan (America/Chicago local time, weekdays only)
 // ------------------------------------------------------------
 
-type ServiceAccount = { client_email: string; private_key: string; project_id?: string };
+export type DispatcherAction =
+  | "initialize"
+  | "collect"
+  | "youtube"
+  | "reconcile"
+  | "brief"
+  | "retry"
+  | "finalize";
 
-function base64Url(input: Uint8Array | string): string {
-  const bytes = typeof input === "string" ? new TextEncoder().encode(input) : input;
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function pemToPkcs8(pem: string): Uint8Array {
-  const body = pem
-    .replace(/-----BEGIN PRIVATE KEY-----/, "")
-    .replace(/-----END PRIVATE KEY-----/, "")
-    .replace(/\s+/g, "");
-  const raw = atob(body);
-  const bytes = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
-  return bytes;
-}
-
-export function readServiceAccount(): ServiceAccount {
-  const raw = Deno.env.get("VERTEX_SERVICE_ACCOUNT_JSON") ?? "";
-  if (!raw) throw new Error("VERTEX_SERVICE_ACCOUNT_JSON is not configured.");
-  const parsed = JSON.parse(raw) as ServiceAccount;
-  if (!parsed.client_email || !parsed.private_key) {
-    throw new Error("VERTEX_SERVICE_ACCOUNT_JSON is missing client_email or private_key.");
+/** The dispatcher runs every five minutes and derives the due action from local time. */
+export function dispatcherActionFor(localTime: string): DispatcherAction | null {
+  switch (localTime) {
+    case "03:15": return "initialize";
+    case "03:20": return "collect";
+    case "04:10": return "youtube";
+    case "04:30": return "reconcile";
+    case "04:35": return "brief";
+    case "04:45": return "retry";
+    case "04:50": return "finalize";
+    default: return null;
   }
-  return { ...parsed, private_key: parsed.private_key.replace(/\\n/g, "\n") };
 }
 
-export async function vertexAccessToken(): Promise<string> {
-  const account = readServiceAccount();
-  const now = Math.floor(Date.now() / 1000);
-  const header = base64Url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const claims = base64Url(JSON.stringify({
-    iss: account.client_email,
-    scope: "https://www.googleapis.com/auth/cloud-platform",
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  }));
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    pemToPkcs8(account.private_key),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    new TextEncoder().encode(`${header}.${claims}`),
-  );
-  const assertion = `${header}.${claims}.${base64Url(new Uint8Array(signature))}`;
+// ------------------------------------------------------------
+// Gemini Developer API (server-side only)
+// ------------------------------------------------------------
 
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion,
-    }),
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok || !payload.access_token) {
-    throw new Error(`Vertex token exchange failed (${response.status}).`);
-  }
-  return payload.access_token as string;
+export const AI_OPS_PROVIDER = "gemini_developer_api";
+
+/** Reads the single required model secret. Never logged, never returned to a client. */
+export function geminiApiKey(): string {
+  const key = Deno.env.get("GEMINI_API_KEY") ?? "";
+  if (!key) throw new Error("GEMINI_API_KEY is not configured for AI Operations.");
+  return key;
 }
 
-export type VertexCallResult = {
+export type ModelCallResult = {
   text: string;
   tokenUsage: Record<string, unknown>;
   status: number;
 };
 
-export async function callVertexModel(options: {
-  accessToken: string;
-  projectId: string;
-  location: string;
+export async function callGeminiModel(options: {
+  apiKey: string;
   model?: string;
   systemInstruction: string;
   userPrompt: string;
   responseSchema: Record<string, unknown>;
   temperature?: number;
   timeoutMs?: number;
-}): Promise<VertexCallResult> {
+}): Promise<ModelCallResult> {
   const model = options.model ?? AI_OPS_MODEL;
-  const url = `https://${options.location}-aiplatform.googleapis.com/v1/projects/${options.projectId}/locations/${options.location}/publishers/google/models/${model}:generateContent`;
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 120_000);
   try {
@@ -197,7 +162,7 @@ export async function callVertexModel(options: {
       method: "POST",
       signal: controller.signal,
       headers: {
-        authorization: `Bearer ${options.accessToken}`,
+        "x-goog-api-key": options.apiKey,
         "content-type": "application/json",
       },
       body: JSON.stringify({
@@ -212,7 +177,7 @@ export async function callVertexModel(options: {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const message = payload?.error?.message ?? `Vertex request failed (${response.status}).`;
+      const message = payload?.error?.message ?? `Gemini request failed (${response.status}).`;
       const error = new Error(message) as Error & { status?: number };
       error.status = response.status;
       throw error;
@@ -225,6 +190,7 @@ export async function callVertexModel(options: {
     clearTimeout(timer);
   }
 }
+
 
 // ------------------------------------------------------------
 // Strict structured-output handling
