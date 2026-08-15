@@ -342,14 +342,13 @@ export type Database = {
           created_at: string
           max_model_concurrency: number
           model: string
+          provider: string
           reanalysis_max_age_hours: number
           snapshot_retention_days: number
           tenant_id: string
           timezone: string
           updated_at: string
           updated_by_profile_id: string | null
-          vertex_location: string
-          vertex_project_id: string | null
           youtube_channel_id: string | null
         }
         Insert: {
@@ -359,14 +358,13 @@ export type Database = {
           created_at?: string
           max_model_concurrency?: number
           model?: string
+          provider?: string
           reanalysis_max_age_hours?: number
           snapshot_retention_days?: number
           tenant_id: string
           timezone?: string
           updated_at?: string
           updated_by_profile_id?: string | null
-          vertex_location?: string
-          vertex_project_id?: string | null
           youtube_channel_id?: string | null
         }
         Update: {
@@ -376,14 +374,13 @@ export type Database = {
           created_at?: string
           max_model_concurrency?: number
           model?: string
+          provider?: string
           reanalysis_max_age_hours?: number
           snapshot_retention_days?: number
           tenant_id?: string
           timezone?: string
           updated_at?: string
           updated_by_profile_id?: string | null
-          vertex_location?: string
-          vertex_project_id?: string | null
           youtube_channel_id?: string | null
         }
         Relationships: []
@@ -22773,6 +22770,7 @@ export type Database = {
         Args: { p_cutoff_at?: string; p_run_id: string; p_tenant_id: string }
         Returns: Json
       }
+      ai_ops_expire_snoozes: { Args: { p_tenant_id: string }; Returns: number }
       ai_ops_fail_work_item: {
         Args: {
           p_error_code: string
