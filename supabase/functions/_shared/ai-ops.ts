@@ -10,6 +10,10 @@ export const AI_OPS_TIMEZONE = "America/Chicago";
  */
 export const AI_OPS_MODEL = "gemini-flash-latest";
 
+/**
+ * Deprecated as a global: prompt versions are per work type. Use
+ * `promptVersionForModule` from ./ai-ops-prompts.ts for module provenance.
+ */
 export const AI_OPS_PROMPT_VERSION = "1";
 export const AI_OPS_SCHEMA_VERSION = "1";
 
@@ -110,6 +114,7 @@ export function backoffSeconds(attempt: number): number {
 
 export type DispatcherAction =
   | "initialize"
+  | "rebuild"
   | "collect"
   | "youtube"
   | "reconcile"
@@ -148,6 +153,8 @@ export type ModelCallResult = {
   text: string;
   tokenUsage: Record<string, unknown>;
   status: number;
+  /** Concrete model version Gemini reports for the moving `-latest` alias, when supplied. */
+  modelVersion: string | null;
 };
 
 /** Task-specific reasoning effort. Deterministic facts are computed in SQL, so only interpretation needs thinking. */
@@ -213,7 +220,15 @@ export async function callGeminiModel(options: {
     const text = (payload?.candidates?.[0]?.content?.parts ?? [])
       .map((part: { text?: string }) => part.text ?? "")
       .join("");
-    return { text, tokenUsage: payload?.usageMetadata ?? {}, status: response.status };
+    const modelVersion = typeof payload?.modelVersion === "string" && payload.modelVersion
+      ? payload.modelVersion
+      : null;
+    return {
+      text,
+      tokenUsage: payload?.usageMetadata ?? {},
+      status: response.status,
+      modelVersion,
+    };
   } finally {
     clearTimeout(timer);
   }

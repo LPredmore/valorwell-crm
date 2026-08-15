@@ -78,11 +78,15 @@ async function processItem(
       const coverage = validateEntityCoverage(keys, (parsed.results ?? []) as Array<{ entityKey?: string }>);
       if (!coverage.ok) throw new Error(`schema: ${coverage.error}`);
     }
-    return { parsed, tokenUsage: result.tokenUsage };
+    return { parsed, tokenUsage: result.tokenUsage, modelVersion: result.modelVersion };
   };
 
   try {
-    let outcome: { parsed: Record<string, unknown>; tokenUsage: Record<string, unknown> };
+    let outcome: {
+      parsed: Record<string, unknown>;
+      tokenUsage: Record<string, unknown>;
+      modelVersion: string | null;
+    };
     try {
       outcome = await attempt(false);
     } catch (firstError) {
@@ -100,6 +104,9 @@ async function processItem(
         ...outcome.tokenUsage,
         provider: AI_OPS_PROVIDER,
         model,
+        configuredModel: model,
+        // Concrete revision behind the moving alias, for auditing only. Null when Gemini omits it.
+        modelVersion: outcome.modelVersion,
         promptVersion: spec.promptVersion,
         schemaVersion: spec.schemaVersion,
       },
