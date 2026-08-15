@@ -41,6 +41,8 @@ const severityVariant = (severity: string) =>
 export default function AiOperationsPage() {
   const queryClient = useQueryClient();
   const [moduleFilter, setModuleFilter] = useState<string>('all');
+  const [customSnoozeFindingId, setCustomSnoozeFindingId] = useState<string | null>(null);
+  const [customSnoozeValue, setCustomSnoozeValue] = useState('');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('open');
 
@@ -79,6 +81,31 @@ export default function AiOperationsPage() {
     onSuccess: () => { invalidate(); toast({ title: 'Finding updated' }); },
     onError: (error: Error) => toast({ title: 'Could not update the finding', description: error.message, variant: 'destructive' }),
   });
+
+  const snoozeMutation = useMutation({
+    mutationFn: ({ id, until }: { id: string; until: string }) =>
+      snoozeAiOperationsFinding(id, 'Snoozed from the AI Operations dashboard.', until),
+    onSuccess: () => { invalidate(); toast({ title: 'Finding snoozed' }); },
+    onError: (error: Error) => toast({ title: 'Could not snooze the finding', description: error.message, variant: 'destructive' }),
+  });
+
+  const applyPresetSnooze = (id: string, presetKey: string) => {
+    const until = resolveSnoozeUntil(presetKey);
+    if (!until) return;
+    snoozeMutation.mutate({ id, until: until.toISOString() });
+  };
+
+  const submitCustomSnooze = () => {
+    if (!customSnoozeFindingId || !customSnoozeValue) return;
+    const until = new Date(customSnoozeValue);
+    if (Number.isNaN(until.getTime()) || until.getTime() <= Date.now()) {
+      toast({ title: 'Choose a future date and time', variant: 'destructive' });
+      return;
+    }
+    snoozeMutation.mutate({ id: customSnoozeFindingId, until: until.toISOString() });
+    setCustomSnoozeFindingId(null);
+    setCustomSnoozeValue('');
+  };
 
   const items: AiOperationsFinding[] = findings.data?.items ?? [];
   const counts = overview.data?.findingCounts ?? {};
@@ -218,11 +245,34 @@ export default function AiOperationsPage() {
                         onClick={() => actionMutation.mutate({ id: finding.id, action: 'resolve' })}>
                         Resolve
                       </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="outline">Snooze</Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {AI_OPERATIONS_SNOOZE_PRESETS.map((preset) => (
+                            <DropdownMenuItem
+                              key={preset.key}
+                              onSelect={() => applyPresetSnooze(finding.id, preset.key)}
+                            >
+                              {preset.label}
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuItem onSelect={() => { setCustomSnoozeFindingId(finding.id); setCustomSnoozeValue(''); }}>
+                            Custom date and time…
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <Button size="sm" variant="ghost"
                         onClick={() => actionMutation.mutate({ id: finding.id, action: 'dismiss' })}>
                         Dismiss
                       </Button>
                     </div>
+                  )}
+                  {finding.status === 'snoozed' && finding.snoozedUntil && (
+                    <span className="text-xs text-muted-foreground">
+                      Snoozed until {new Date(finding.snoozedUntil).toLocaleString()}
+                    </span>
                   )}
                 </div>
               ))}
