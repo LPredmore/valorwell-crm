@@ -6,9 +6,9 @@ export const AI_OPS_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 export const AI_OPS_TIMEZONE = "America/Chicago";
 /**
  * Single approved model for AI Operations reasoning work.
- * `gemini-2.5-flash` is the current standard on the Gemini Developer API.
+ * `gemini-flash-latest` is the current standard on the Gemini Developer API.
  */
-export const AI_OPS_MODEL = "gemini-2.5-flash";
+export const AI_OPS_MODEL = "gemini-flash-latest";
 
 export const AI_OPS_PROMPT_VERSION = "1";
 export const AI_OPS_SCHEMA_VERSION = "1";
