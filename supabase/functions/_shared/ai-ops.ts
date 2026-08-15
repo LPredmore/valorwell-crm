@@ -5,11 +5,10 @@ import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.9
 export const AI_OPS_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 export const AI_OPS_TIMEZONE = "America/Chicago";
 /**
- * Single approved reasoning model. Never a Flash or preview variant.
- * `gemini-pro-latest` is the stable Pro alias on the Gemini Developer API;
- * the pinned `gemini-2.5-pro` id is refused for keys created after its retirement.
+ * Single approved model for AI Operations reasoning work.
+ * `gemini-2.5-flash` is the current standard on the Gemini Developer API.
  */
-export const AI_OPS_MODEL = "gemini-pro-latest";
+export const AI_OPS_MODEL = "gemini-2.5-flash";
 
 export const AI_OPS_PROMPT_VERSION = "1";
 export const AI_OPS_SCHEMA_VERSION = "1";
