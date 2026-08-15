@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { WORK_TYPE_SPECS, specFor } from "../../supabase/functions/_shared/ai-ops-prompts";
-import { AI_OPS_MODEL } from "../../supabase/functions/_shared/ai-ops";
+import { readFileSync } from "node:fs";
 
 describe("AI Operations Flash configuration", () => {
   it("uses gemini-flash-latest as the single authoritative model", () => {
-    expect(AI_OPS_MODEL).toBe("gemini-flash-latest");
+    const runtime = readFileSync("supabase/functions/_shared/ai-ops.ts", "utf8");
+    expect(runtime).toContain('AI_OPS_MODEL = "gemini-flash-latest"');
+    expect(runtime).not.toContain("gemini-2.5-pro");
+    expect(runtime).not.toContain("gemini-pro-latest");
   });
 
   it("bumps prompt versions for the prompts revised for Flash", () => {
