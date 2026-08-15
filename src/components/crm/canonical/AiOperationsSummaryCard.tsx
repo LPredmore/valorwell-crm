@@ -12,6 +12,9 @@ import {
 const statusVariant = (status: string) =>
   status === 'success' ? 'secondary' : status === 'failed' ? 'destructive' : 'outline';
 
+/** Never imply data exists when a module has not reported yet. */
+const statusLabel = (status: string) => (status === 'unknown' ? 'Not yet run' : status);
+
 /**
  * Compact AI Operations summary for the Operations Dashboard. Reads the precomputed
  * overview only, and never breaks the rest of the page when AI Operations is off.
