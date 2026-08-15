@@ -49,8 +49,8 @@ function requestedEntityKeys(item: ClaimedItem): string[] {
 
 async function processItem(
   admin: ReturnType<typeof adminClient>,
-  accessToken: string,
-  settings: { projectId: string; location: string; model: string },
+  apiKey: string,
+  settings: { model: string },
   item: ClaimedItem,
 ): Promise<"completed" | "failed" | "retry"> {
   const spec = specFor(item.workType);
@@ -60,15 +60,14 @@ async function processItem(
     const suffix = repair
       ? "\n\nThe previous response did not satisfy the schema. Return only valid JSON matching the schema exactly."
       : "";
-    const result = await callVertexModel({
-      accessToken,
-      projectId: settings.projectId,
-      location: settings.location,
+    const result = await callGeminiModel({
+      apiKey,
       model,
       systemInstruction: spec.systemInstruction + suffix,
       userPrompt: buildUserPrompt(item),
       responseSchema: spec.responseSchema,
     });
+
     const parsed = parseModelJson(result.text) as Record<string, unknown>;
     if (spec.requiresEntityCoverage) {
       const keys = requestedEntityKeys(item);
