@@ -8,8 +8,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
   AI_OPERATIONS_FLAG_LABELS,
   AI_OPERATIONS_MODULE_LABELS,
+  AI_OPERATIONS_SNOOZE_PRESETS,
   type AiOperationsFlagName,
   type AiOperationsFinding,
   dismissAiOperationsFinding,
@@ -19,8 +29,11 @@ import {
   fetchAiOperationsOverview,
   fetchAiOperationsRuns,
   resolveAiOperationsFinding,
+  resolveSnoozeUntil,
   setAiOperationsFlag,
+  snoozeAiOperationsFinding,
 } from '@/lib/crm/ai-operations';
+
 
 const severityVariant = (severity: string) =>
   severity === 'critical' || severity === 'high' ? 'destructive' : 'secondary';
