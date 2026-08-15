@@ -1,6 +1,6 @@
 // Versioned prompt + response-schema registry for AI Operations work items.
 // Prompts never request or accept free-text clinical narrative.
-import type { ThinkingLevel } from "./ai-ops.ts";
+import type { ThinkingLevel } from "./ai-ops-types.ts";
 
 export type WorkTypeSpec = {
   workType: string;
