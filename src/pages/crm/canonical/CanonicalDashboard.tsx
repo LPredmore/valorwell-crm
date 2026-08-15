@@ -6,11 +6,12 @@ import { ListTodo, Users, TrendingDown, Activity } from 'lucide-react';
 import type { ReportBucket } from '@/repositories/types';
 import { getReportPanelStatus } from './reportState';
 import {
-import { AiOperationsSummaryCard } from '@/components/crm/canonical/AiOperationsSummaryCard';
   formatEngagementState,
   formatLifecycleStage,
   formatReportBucketRange,
 } from './reportPresentation';
+import { AiOperationsSummaryCard } from '@/components/crm/canonical/AiOperationsSummaryCard';
+
 
 interface SummaryQueryState {
   data: unknown;
