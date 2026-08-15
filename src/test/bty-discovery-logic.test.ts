@@ -198,13 +198,13 @@ describe('BTY staggered two-step discovery', () => {
       [
         row(),
         row({ org_name: 'Georgia Vets', state: 'GA', website: 'https://gavets.org', youtube_url: 'https://youtube.com/@gavets' }),
-        row({ org_name: 'Known Org', website: 'https://known.org', youtube_url: 'https://youtube.com/@known' }),
+        row({ org_name: 'Known Group', website: 'https://known.org', youtube_url: 'https://youtube.com/@known' }),
         row({ org_name: 'Tiny Channel', website: 'https://tiny.org', youtube_url: 'https://youtube.com/@tiny', estimated_subscribers: 90 }),
       ],
       {
         targetState: 'AL',
         seenNames: new Set<string>(),
-        duplicateVerdicts: new Map([['known org', 'duplicate_organization_name']]),
+        duplicateVerdicts: new Map([['known group', 'duplicate_organization_name']]),
       },
     );
     expect(outcome.accepted).toHaveLength(1);
