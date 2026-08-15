@@ -1,6 +1,6 @@
-// AI Operations model worker: claims queued work items, calls Gemini 2.5 Pro on
-// the Gemini Developer API with a strict response schema, and records validated
-// structured results. Never remediates production data.
+// AI Operations model worker: claims queued work items, calls the requested Gemini
+// model on the Gemini Developer API with a strict response schema, and records
+// validated structured results. Never remediates production data.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   AI_OPS_MODEL,
@@ -54,9 +54,10 @@ async function processItem(
   item: ClaimedItem,
 ): Promise<"completed" | "failed" | "retry"> {
   const spec = specFor(item.workType);
-  // The active AI Operations setting is authoritative. A model recorded on the work item when it was
-  // queued is historical metadata only and must never route execution to a retired model.
-  const model = settings.model || AI_OPS_MODEL;
+  // Routing is resolved when the work item is enqueued. The tenant-level setting is only
+  // a fallback for legacy/unrouted work. This allows judgement-heavy modules to use Pro
+  // while simple work can continue to use Flash without a second worker.
+  const model = item.requestedModel || settings.model || AI_OPS_MODEL;
 
   const attempt = async (repair: boolean) => {
     const suffix = repair
@@ -70,7 +71,6 @@ async function processItem(
       responseSchema: spec.responseSchema,
       thinkingLevel: spec.thinkingLevel,
     });
-
 
     const parsed = parseModelJson(result.text) as Record<string, unknown>;
     if (spec.requiresEntityCoverage) {
@@ -104,8 +104,8 @@ async function processItem(
         ...outcome.tokenUsage,
         provider: AI_OPS_PROVIDER,
         model,
-        configuredModel: model,
-        // Concrete revision behind the moving alias, for auditing only. Null when Gemini omits it.
+        configuredModel: settings.model || AI_OPS_MODEL,
+        requestedModel: item.requestedModel || null,
         modelVersion: outcome.modelVersion,
         promptVersion: spec.promptVersion,
         schemaVersion: spec.schemaVersion,
@@ -116,6 +116,7 @@ async function processItem(
       workItemId: item.id,
       module: item.module,
       workType: item.workType,
+      model,
       attempt: item.attemptCount,
     });
     return "completed";
@@ -133,6 +134,7 @@ async function processItem(
       workItemId: item.id,
       module: item.module,
       workType: item.workType,
+      model,
       errorCode: classified.kind,
       retryable: classified.retryable,
       attempt: item.attemptCount,
@@ -172,7 +174,6 @@ Deno.serve(async (request) => {
       return json({ error: safeError(configError), code: "gemini_api_key_missing" }, 500);
     }
 
-    // Diagnostic: report the model names this API key may actually call. Never returns the key.
     if (body?.action === "list_models") {
       const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
         headers: { "x-goog-api-key": apiKey },
@@ -185,7 +186,6 @@ Deno.serve(async (request) => {
         }));
       return json({ ok: response.ok, status: response.status, models });
     }
-
 
     const { data: settings, error: settingsError } = await admin
       .from("ai_operations_settings")
@@ -212,7 +212,6 @@ Deno.serve(async (request) => {
     const results = await Promise.all(items.map((item) =>
       processItem(admin, apiKey, { model: settings?.model ?? AI_OPS_MODEL }, item)
     ));
-
 
     const summary = {
       claimed: items.length,
