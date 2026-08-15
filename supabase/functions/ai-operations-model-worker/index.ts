@@ -153,16 +153,20 @@ Deno.serve(async (request) => {
       return json({ ok: true, skipped: "ai_operations_disabled" });
     }
 
+    let apiKey: string;
+    try {
+      apiKey = geminiApiKey();
+    } catch (configError) {
+      logEvent(COMPONENT, "configuration_error", { reason: "gemini_api_key_missing" });
+      return json({ error: safeError(configError), code: "gemini_api_key_missing" }, 500);
+    }
+
     const { data: settings, error: settingsError } = await admin
       .from("ai_operations_settings")
-      .select("vertex_project_id, vertex_location, model, max_model_concurrency")
+      .select("model, max_model_concurrency")
       .eq("tenant_id", tenantId)
       .maybeSingle();
     if (settingsError) throw new Error(settingsError.message);
-
-    const projectId = settings?.vertex_project_id ?? Deno.env.get("VERTEX_PROJECT_ID") ?? "";
-    const location = settings?.vertex_location ?? Deno.env.get("VERTEX_LOCATION") ?? "us-central1";
-    if (!projectId) return json({ error: "Vertex project is not configured." }, 400);
 
     const batchSize = Math.min(
       Math.max(Number(body?.limit ?? settings?.max_model_concurrency ?? 4), 1),
@@ -179,14 +183,10 @@ Deno.serve(async (request) => {
       return json({ ok: true, claimed: 0, durationMs: Date.now() - started });
     }
 
-    const accessToken = await vertexAccessToken();
     const results = await Promise.all(items.map((item) =>
-      processItem(admin, accessToken, {
-        projectId,
-        location,
-        model: settings?.model ?? AI_OPS_MODEL,
-      }, item)
+      processItem(admin, apiKey, { model: settings?.model ?? AI_OPS_MODEL }, item)
     ));
+
 
     const summary = {
       claimed: items.length,
