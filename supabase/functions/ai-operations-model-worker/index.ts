@@ -94,11 +94,13 @@ async function processItem(
       p_structured_result: outcome.parsed,
       p_token_usage: {
         ...outcome.tokenUsage,
+        provider: AI_OPS_PROVIDER,
         model,
         promptVersion: spec.promptVersion,
         schemaVersion: spec.schemaVersion,
       },
     });
+
     logEvent(COMPONENT, "work_item_completed", {
       workItemId: item.id,
       module: item.module,
