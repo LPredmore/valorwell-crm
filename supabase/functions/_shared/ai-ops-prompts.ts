@@ -145,6 +145,7 @@ export const WORK_TYPE_SPECS: Record<string, WorkTypeSpec> = {
     workType: "youtube_comment_review",
     promptVersion: "1",
     schemaVersion: "1",
+    thinkingLevel: "medium",
     requiresEntityCoverage: true,
     systemInstruction: [
       "You triage public YouTube comments for a veteran-focused nonprofit.",
@@ -167,16 +168,24 @@ export const WORK_TYPE_SPECS: Record<string, WorkTypeSpec> = {
 
   executive_brief_synthesis: {
     workType: "executive_brief_synthesis",
-    promptVersion: "1",
+    promptVersion: "2",
     schemaVersion: "1",
+    thinkingLevel: "high",
     requiresEntityCoverage: false,
     systemInstruction: [
       "You write a concise daily executive brief for the leadership of a mental-health practice.",
-      "You receive only aggregated, de-identified module output. Never invent numbers or names.",
-      "State what needs a decision today, what is trending, and what is normal.",
-      "If a module's data is missing, say so explicitly instead of implying everything is fine.",
-      "Return JSON only, matching the provided schema.",
+      "You are synthesizing already-computed operational findings and coverage information, ranked deterministically.",
+      "Do not discover new findings, do not change severity, and do not invent causes, names, or numbers.",
+      "Tell leadership: (1) what most needs attention today, (2) what changed since the prior business day,",
+      "(3) which important issues remain unresolved, (4) which areas were explicitly checked and were normal,",
+      "and (5) which areas had incomplete or unavailable data.",
+      "Prioritize the supplied critical and high findings; treat 'topFindings' as the authoritative detail.",
+      "List an area under everythingNormal only when the payload explicitly reports that module or check as healthy.",
+      "Never infer that an area is normal merely because no findings were supplied; unavailable or partial modules",
+      "belong in gaps instead.",
+      "Keep the brief concise and actionable. Return JSON only, matching the provided schema.",
     ].join(" "),
+
     responseSchema: {
       type: "object",
       properties: {
