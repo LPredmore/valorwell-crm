@@ -609,3 +609,68 @@ export function validateStaggeredCandidates(
 
   return { accepted: accepted.slice(0, BTY_PASS_TARGET_COUNT), rejected };
 }
+
+/** Extracts the first JSON array from a grounded (non-structured) Gemini reply. */
+export function extractJsonArray<T = unknown>(text: string): T[] {
+  const raw = (text ?? "").trim();
+  const fenced = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  const start = fenced.indexOf("[");
+  const end = fenced.lastIndexOf("]");
+  if (start < 0 || end <= start) return [];
+  try {
+    const parsed = JSON.parse(fenced.slice(start, end + 1));
+    return Array.isArray(parsed) ? parsed as T[] : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Google Search grounded call. Grounding cannot be combined with a response
+ * schema on the Gemini Developer API, so the JSON array is parsed from text.
+ */
+export async function callGeminiGrounded<T>(
+  prompt: string,
+  options: { model?: string; timeoutMs?: number } = {},
+): Promise<T[]> {
+  const key = envValue("GEMINI_API_KEY");
+  if (!key) throw new GeminiError("api_error", "GEMINI_API_KEY is not configured.");
+  const model = options.model ?? BTY_GEMINI_MODEL;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 300_000);
+
+  let response: Response;
+  try {
+    response = await fetch(`${GEMINI_ENDPOINT}/${model}:generateContent`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "content-type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        tools: [{ googleSearch: {} }],
+        generationConfig: { temperature: 0.2 },
+      }),
+    });
+  } catch (error) {
+    clearTimeout(timer);
+    if ((error as Error).name === "AbortError") throw new GeminiError("timeout", "Gemini request timed out.");
+    throw new GeminiError("api_error", (error as Error).message);
+  }
+  clearTimeout(timer);
+
+  if (response.status === 429) throw new GeminiError("rate_limited", "Gemini rate limit reached.");
+  if (!response.ok) {
+    const body = await response.text();
+    throw new GeminiError("api_error", `Gemini responded ${response.status}: ${body.slice(0, 600)}`);
+  }
+
+  const payload = await response.json().catch(() => null) as Record<string, any> | null;
+  const text: string = (payload?.candidates?.[0]?.content?.parts ?? [])
+    .map((part: Record<string, unknown>) => part.text)
+    .filter((value: unknown): value is string => typeof value === "string")
+    .join("");
+  if (!text) throw new GeminiError("invalid_response", "Gemini returned no content.");
+  const rows = extractJsonArray<T>(text);
+  if (!rows.length) throw new GeminiError("invalid_response", "Gemini returned no parsable JSON array.");
+  return rows;
+}
