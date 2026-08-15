@@ -457,3 +457,220 @@ export function buildContactPrompt(input: {
     `Use Google Search grounding. Never invent contact information. If a direct email address cannot be verified from a real source, return null for email rather than guessing a pattern. Always include evidence URLs and explain why this person was chosen.`,
   ].filter(Boolean).join("\n");
 }
+
+// ---------------------------------------------------------------------------
+// Two-step staggered discovery (6:00 AM + 6:05 AM, up to 4 candidates each)
+// ---------------------------------------------------------------------------
+
+export const BTY_PASS_TARGET_COUNT = 4;
+export const BTY_PASS_MIN_SUBSCRIBERS = 500;
+export const BTY_PASS_RELAXED_MIN_SUBSCRIBERS = 250;
+export const BTY_PASS_RELAXATION_THRESHOLD = 3;
+
+/** Raw shape Gemini returns for the staggered search. */
+export type StaggeredRow = {
+  org_name?: string;
+  website?: string;
+  city?: string;
+  state?: string;
+  youtube_url?: string;
+  estimated_subscribers?: number | string;
+  primary_impact_work?: string;
+  why_boots_on_ground?: string;
+  [key: string]: unknown;
+};
+
+export const STAGGERED_DISCOVERY_SCHEMA = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      org_name: { type: "string" },
+      website: { type: "string" },
+      city: { type: "string" },
+      state: { type: "string" },
+      youtube_url: { type: "string" },
+      estimated_subscribers: { type: "integer" },
+      primary_impact_work: { type: "string" },
+      why_boots_on_ground: { type: "string" },
+    },
+    required: [
+      "org_name", "website", "city", "state", "youtube_url",
+      "estimated_subscribers", "primary_impact_work", "why_boots_on_ground",
+    ],
+  },
+} as const;
+
+/**
+ * Embedded staggered-search prompt. Intentionally carries NO ignore list:
+ * duplicate suppression happens in backend code against the database.
+ */
+export function buildStaggeredDiscoveryPrompt(activeState: string): string {
+  const stateName = BTY_STATE_NAMES[activeState] ?? activeState;
+  return [
+    `Search for up to ${BTY_PASS_TARGET_COUNT} veteran-focused non-profit organizations headquartered or primarily operating in ${stateName}.`,
+    ``,
+    `CRITICAL FILTERS:`,
+    `1. 'Boots on the Ground' Only: They must provide direct local programs (e.g., housing, equine/wilderness therapy, job placement, peer support). Strictly EXCLUDE pass-through grantmakers, funding foundations, or referral directories.`,
+    `2. YouTube Criteria: They must have an active YouTube channel with at least ${BTY_PASS_MIN_SUBSCRIBERS} subscribers. If fewer than ${BTY_PASS_RELAXATION_THRESHOLD} organizations meet this in ${stateName}, include organizations with down to ${BTY_PASS_RELAXED_MIN_SUBSCRIBERS} subscribers.`,
+    ``,
+    `Return the result strictly as a JSON array of objects with keys: \`org_name\`, \`website\`, \`city\`, \`state\`, \`youtube_url\`, \`estimated_subscribers\`, \`primary_impact_work\`, and \`why_boots_on_ground\`.`,
+  ].join("\n");
+}
+
+/** Maps a staggered row onto the canonical candidate shape persisted by the CRM. */
+export function mapStaggeredCandidate(row: StaggeredRow, activeState: string): Candidate {
+  const subscribers = parseSubscriberCount(row.estimated_subscribers);
+  const state = (row.state ?? "").trim().toUpperCase();
+  return {
+    organization_name: (row.org_name ?? "").trim(),
+    website_url: (row.website ?? "").trim(),
+    headquarters_city: (row.city ?? "").trim(),
+    headquarters_state: state.length === 2 ? state : activeState.toUpperCase(),
+    youtube_channel_url: (row.youtube_url ?? "").trim(),
+    youtube_handle: youtubeHandle(row.youtube_url) ?? undefined,
+    youtube_subscriber_count: Number.isFinite(subscribers) ? subscribers : undefined,
+    direct_services_summary: (row.primary_impact_work ?? "").trim(),
+    why_bty_candidate: (row.why_boots_on_ground ?? "").trim(),
+  };
+}
+
+export type StaggeredValidationContext = {
+  targetState: string;
+  /** Normalized names already saved or discarded during this business date. */
+  seenNames: Set<string>;
+  /** Normalized-name -> reason map for organizations already in the CRM. */
+  duplicateVerdicts?: Map<string, string>;
+};
+
+/**
+ * Validates a staggered pass in code: required fields, headquarters state,
+ * boots-on-the-ground evidence, and the 500 -> 250 subscriber relaxation.
+ */
+export function validateStaggeredCandidates(
+  rows: StaggeredRow[],
+  context: StaggeredValidationContext,
+): ValidationOutcome {
+  const target = context.targetState.toUpperCase();
+  const mapped = rows.map((row) => mapStaggeredCandidate(row, target));
+  const accepted: Candidate[] = [];
+  const rejected: { candidate: Candidate; reason: string }[] = [];
+  const batchNames = new Set<string>();
+  const batchDomains = new Set<string>();
+  const batchChannels = new Set<string>();
+  const deferred: { candidate: Candidate; subscribers: number }[] = [];
+
+  for (const candidate of mapped) {
+    const normalizedName = normalizeOrgName(candidate.organization_name);
+    const domain = normalizeDomain(candidate.website_url);
+    const channel = normalizeYoutubeUrl(candidate.youtube_channel_url);
+    const subscribers = parseSubscriberCount(candidate.youtube_subscriber_count);
+    const reject = (reason: string) => rejected.push({ candidate, reason });
+
+    if (!normalizedName) { reject("missing_name"); continue; }
+    if ((candidate.headquarters_state ?? "").toUpperCase() !== target) {
+      reject("headquarters_state_mismatch"); continue;
+    }
+    if (!domain) { reject("missing_website"); continue; }
+    if (!channel) { reject("missing_youtube_channel"); continue; }
+    if (!(candidate.why_bty_candidate ?? "").trim()) { reject("missing_boots_on_ground_rationale"); continue; }
+    if (!describesDirectService(candidate.direct_services_summary)) { reject("no_direct_service_evidence"); continue; }
+    if (!Number.isFinite(subscribers) || subscribers < BTY_PASS_RELAXED_MIN_SUBSCRIBERS) {
+      reject("subscriber_count_below_minimum"); continue;
+    }
+    if (context.seenNames.has(normalizedName)) { reject("already_evaluated_today"); continue; }
+    if (batchNames.has(normalizedName) || batchDomains.has(domain) || batchChannels.has(channel)) {
+      reject("duplicate_within_candidate_set"); continue;
+    }
+    const dbVerdict = context.duplicateVerdicts?.get(normalizedName);
+    if (dbVerdict) { reject(dbVerdict); continue; }
+
+    batchNames.add(normalizedName);
+    batchDomains.add(domain);
+    batchChannels.add(channel);
+    const normalized: Candidate = {
+      ...candidate,
+      youtube_subscriber_count: subscribers,
+      subscriber_range_tier: subscribers >= BTY_PASS_MIN_SUBSCRIBERS ? 1 : 2,
+    };
+    if (subscribers >= BTY_PASS_MIN_SUBSCRIBERS) accepted.push(normalized);
+    else deferred.push({ candidate: normalized, subscribers });
+  }
+
+  // 250-499 subscriber organizations only qualify when the 500+ pool is thin.
+  if (accepted.length < BTY_PASS_RELAXATION_THRESHOLD) {
+    for (const entry of deferred.sort((a, b) => b.subscribers - a.subscribers)) {
+      if (accepted.length >= BTY_PASS_TARGET_COUNT) break;
+      accepted.push(entry.candidate);
+    }
+  } else {
+    for (const entry of deferred) rejected.push({ candidate: entry.candidate, reason: "subscriber_relaxation_not_required" });
+  }
+
+  return { accepted: accepted.slice(0, BTY_PASS_TARGET_COUNT), rejected };
+}
+
+/** Extracts the first JSON array from a grounded (non-structured) Gemini reply. */
+export function extractJsonArray<T = unknown>(text: string): T[] {
+  const raw = (text ?? "").trim();
+  const fenced = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  const start = fenced.indexOf("[");
+  const end = fenced.lastIndexOf("]");
+  if (start < 0 || end <= start) return [];
+  try {
+    const parsed = JSON.parse(fenced.slice(start, end + 1));
+    return Array.isArray(parsed) ? parsed as T[] : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Google Search grounded call. Grounding cannot be combined with a response
+ * schema on the Gemini Developer API, so the JSON array is parsed from text.
+ */
+export async function callGeminiGrounded<T>(
+  prompt: string,
+  options: { model?: string; timeoutMs?: number } = {},
+): Promise<T[]> {
+  const key = envValue("GEMINI_API_KEY");
+  if (!key) throw new GeminiError("api_error", "GEMINI_API_KEY is not configured.");
+  const model = options.model ?? BTY_GEMINI_MODEL;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 300_000);
+
+  let response: Response;
+  try {
+    response = await fetch(`${GEMINI_ENDPOINT}/${model}:generateContent`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "content-type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        tools: [{ googleSearch: {} }],
+        generationConfig: { temperature: 0.2 },
+      }),
+    });
+  } catch (error) {
+    clearTimeout(timer);
+    if ((error as Error).name === "AbortError") throw new GeminiError("timeout", "Gemini request timed out.");
+    throw new GeminiError("api_error", (error as Error).message);
+  }
+  clearTimeout(timer);
+
+  if (response.status === 429) throw new GeminiError("rate_limited", "Gemini rate limit reached.");
+  if (!response.ok) {
+    const body = await response.text();
+    throw new GeminiError("api_error", `Gemini responded ${response.status}: ${body.slice(0, 600)}`);
+  }
+
+  const payload = await response.json().catch(() => null) as Record<string, any> | null;
+  const text: string = (payload?.candidates?.[0]?.content?.parts ?? [])
+    .map((part: Record<string, unknown>) => part.text)
+    .filter((value: unknown): value is string => typeof value === "string")
+    .join("");
+  if (!text) throw new GeminiError("invalid_response", "Gemini returned no content.");
+  const rows = extractJsonArray<T>(text);
+  if (!rows.length) throw new GeminiError("invalid_response", "Gemini returned no parsable JSON array.");
+  return rows;
+}
