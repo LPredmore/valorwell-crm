@@ -7,7 +7,6 @@ import {
   callGeminiGrounded,
   centralBusinessDate,
   GeminiError,
-  normalizeOrgName,
   validateStaggeredCandidates,
   type Candidate,
   type StaggeredRow,
@@ -75,14 +74,8 @@ Deno.serve(async (request: Request) => {
       }
     }
 
-    const seen = await admin
-      .from("bty_discovery_candidates")
-      .select("normalized_name")
-      .eq("run_id", runId);
+    // The screen above also flags anything already evaluated inside this run.
     const seenNames = new Set<string>();
-    for (const row of (seen.data as { normalized_name: string }[] | null) ?? []) {
-      if (row.normalized_name) seenNames.add(row.normalized_name);
-    }
 
     const outcome = validateStaggeredCandidates(rows, { targetState, seenNames, duplicateVerdicts });
     accepted = outcome.accepted;
