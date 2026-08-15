@@ -150,13 +150,16 @@ export type ModelCallResult = {
   status: number;
 };
 
+/** Task-specific reasoning effort. Deterministic facts are computed in SQL, so only interpretation needs thinking. */
+export type ThinkingLevel = "low" | "medium" | "high";
+
 export async function callGeminiModel(options: {
   apiKey: string;
   model?: string;
   systemInstruction: string;
   userPrompt: string;
   responseSchema: Record<string, unknown>;
-  temperature?: number;
+  thinkingLevel?: ThinkingLevel;
   timeoutMs?: number;
 }): Promise<ModelCallResult> {
   const model = options.model ?? AI_OPS_MODEL;
@@ -164,8 +167,16 @@ export async function callGeminiModel(options: {
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 120_000);
-  try {
-    const response = await fetch(url, {
+
+  const send = async (includeThinking: boolean) => {
+    const generationConfig: Record<string, unknown> = {
+      responseMimeType: "application/json",
+      responseSchema: options.responseSchema,
+    };
+    if (includeThinking && options.thinkingLevel) {
+      generationConfig.thinkingConfig = { thinkingLevel: options.thinkingLevel };
+    }
+    return await fetch(url, {
       method: "POST",
       signal: controller.signal,
       headers: {
@@ -175,13 +186,22 @@ export async function callGeminiModel(options: {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: options.systemInstruction }] },
         contents: [{ role: "user", parts: [{ text: options.userPrompt }] }],
-        generationConfig: {
-          temperature: options.temperature ?? 0.2,
-          responseMimeType: "application/json",
-          responseSchema: options.responseSchema,
-        },
+        generationConfig,
       }),
     });
+  };
+
+  try {
+    let response = await send(true);
+    if (response.status === 400 && options.thinkingLevel) {
+      // Older Flash revisions reject thinkingConfig outright; retry once without it rather than failing the item.
+      const detail = await response.clone().json().catch(() => ({}));
+      const message = String(detail?.error?.message ?? "").toLowerCase();
+      if (message.includes("thinking")) {
+        logEvent("ai-ops", "thinking_config_unsupported", { model });
+        response = await send(false);
+      }
+    }
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       const message = payload?.error?.message ?? `Gemini request failed (${response.status}).`;
@@ -197,6 +217,7 @@ export async function callGeminiModel(options: {
     clearTimeout(timer);
   }
 }
+
 
 
 // ------------------------------------------------------------
