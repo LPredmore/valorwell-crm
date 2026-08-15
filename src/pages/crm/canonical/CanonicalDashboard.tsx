@@ -6,6 +6,7 @@ import { ListTodo, Users, TrendingDown, Activity } from 'lucide-react';
 import type { ReportBucket } from '@/repositories/types';
 import { getReportPanelStatus } from './reportState';
 import {
+import { AiOperationsSummaryCard } from '@/components/crm/canonical/AiOperationsSummaryCard';
   formatEngagementState,
   formatLifecycleStage,
   formatReportBucketRange,
@@ -89,6 +90,8 @@ export default function CanonicalDashboard() {
           </Link>
         ))}
       </div>
+
+      <AiOperationsSummaryCard />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
