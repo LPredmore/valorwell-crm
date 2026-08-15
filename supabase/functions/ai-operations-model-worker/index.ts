@@ -1,22 +1,24 @@
 // AI Operations model worker: claims queued work items, calls Gemini 2.5 Pro on
-// Vertex AI with a strict response schema, and records validated structured
-// results. Never remediates production data.
+// the Gemini Developer API with a strict response schema, and records validated
+// structured results. Never remediates production data.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   AI_OPS_MODEL,
+  AI_OPS_PROVIDER,
   AI_OPS_TENANT_ID,
   adminClient,
   authorizeWorker,
   backoffSeconds,
-  callVertexModel,
+  callGeminiModel,
   classifyModelFailure,
+  geminiApiKey,
   json,
   logEvent,
   parseModelJson,
   safeError,
   validateEntityCoverage,
-  vertexAccessToken,
 } from "../_shared/ai-ops.ts";
+
 import { specFor } from "../_shared/ai-ops-prompts.ts";
 
 type ClaimedItem = {
