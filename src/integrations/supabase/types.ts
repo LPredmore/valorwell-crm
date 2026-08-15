@@ -14,6 +14,458 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_operations_briefs: {
+        Row: {
+          business_date: string
+          coverage_manifest: Json
+          created_at: string
+          email_sent_at: string | null
+          email_status: string
+          everything_normal: Json
+          generated_at: string | null
+          id: string
+          is_partial: boolean
+          model: string | null
+          prompt_version: string | null
+          published_at: string | null
+          run_id: string
+          sections: Json
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          business_date: string
+          coverage_manifest?: Json
+          created_at?: string
+          email_sent_at?: string | null
+          email_status?: string
+          everything_normal?: Json
+          generated_at?: string | null
+          id?: string
+          is_partial?: boolean
+          model?: string | null
+          prompt_version?: string | null
+          published_at?: string | null
+          run_id: string
+          sections?: Json
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          business_date?: string
+          coverage_manifest?: Json
+          created_at?: string
+          email_sent_at?: string | null
+          email_status?: string
+          everything_normal?: Json
+          generated_at?: string | null
+          id?: string
+          is_partial?: boolean
+          model?: string | null
+          prompt_version?: string | null
+          published_at?: string | null
+          run_id?: string
+          sections?: Json
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_briefs_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_finding_events: {
+        Row: {
+          actor_kind: string
+          actor_profile_id: string | null
+          created_at: string
+          event_type: string
+          finding_id: string
+          id: string
+          new_value: Json | null
+          previous_value: Json | null
+          reason: string | null
+          tenant_id: string
+        }
+        Insert: {
+          actor_kind?: string
+          actor_profile_id?: string | null
+          created_at?: string
+          event_type: string
+          finding_id: string
+          id?: string
+          new_value?: Json | null
+          previous_value?: Json | null
+          reason?: string | null
+          tenant_id: string
+        }
+        Update: {
+          actor_kind?: string
+          actor_profile_id?: string | null
+          created_at?: string
+          event_type?: string
+          finding_id?: string
+          id?: string
+          new_value?: Json | null
+          previous_value?: Json | null
+          reason?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_finding_events_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_findings: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          dismissed_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          fingerprint: string
+          first_detected_at: string
+          id: string
+          last_run_id: string | null
+          last_seen_at: string
+          module: Database["public"]["Enums"]["ai_ops_module_enum"]
+          recommended_action: string | null
+          related_existing_exception_id: string | null
+          reopen_count: number
+          resolved_at: string | null
+          severity: Database["public"]["Enums"]["ai_ops_severity_enum"]
+          snoozed_until: string | null
+          status: Database["public"]["Enums"]["ai_ops_finding_status_enum"]
+          summary: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          dismissed_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          fingerprint: string
+          first_detected_at?: string
+          id?: string
+          last_run_id?: string | null
+          last_seen_at?: string
+          module: Database["public"]["Enums"]["ai_ops_module_enum"]
+          recommended_action?: string | null
+          related_existing_exception_id?: string | null
+          reopen_count?: number
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["ai_ops_severity_enum"]
+          snoozed_until?: string | null
+          status?: Database["public"]["Enums"]["ai_ops_finding_status_enum"]
+          summary?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          dismissed_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          fingerprint?: string
+          first_detected_at?: string
+          id?: string
+          last_run_id?: string | null
+          last_seen_at?: string
+          module?: Database["public"]["Enums"]["ai_ops_module_enum"]
+          recommended_action?: string | null
+          related_existing_exception_id?: string | null
+          reopen_count?: number
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["ai_ops_severity_enum"]
+          snoozed_until?: string | null
+          status?: Database["public"]["Enums"]["ai_ops_finding_status_enum"]
+          summary?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_findings_last_run_id_fkey"
+            columns: ["last_run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_module_runs: {
+        Row: {
+          completed_at: string | null
+          coverage: Json
+          created_at: string
+          error_code: string | null
+          error_summary: string | null
+          id: string
+          items_analyzed: number
+          items_failed: number
+          items_reused: number
+          model: string | null
+          module: Database["public"]["Enums"]["ai_ops_module_enum"]
+          prompt_version: string | null
+          provider: string | null
+          run_id: string
+          source_cutoff_at: string | null
+          source_items_total: number
+          started_at: string | null
+          status: Database["public"]["Enums"]["ai_ops_run_status_enum"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          coverage?: Json
+          created_at?: string
+          error_code?: string | null
+          error_summary?: string | null
+          id?: string
+          items_analyzed?: number
+          items_failed?: number
+          items_reused?: number
+          model?: string | null
+          module: Database["public"]["Enums"]["ai_ops_module_enum"]
+          prompt_version?: string | null
+          provider?: string | null
+          run_id: string
+          source_cutoff_at?: string | null
+          source_items_total?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["ai_ops_run_status_enum"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          coverage?: Json
+          created_at?: string
+          error_code?: string | null
+          error_summary?: string | null
+          id?: string
+          items_analyzed?: number
+          items_failed?: number
+          items_reused?: number
+          model?: string | null
+          module?: Database["public"]["Enums"]["ai_ops_module_enum"]
+          prompt_version?: string | null
+          provider?: string | null
+          run_id?: string
+          source_cutoff_at?: string | null
+          source_items_total?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["ai_ops_run_status_enum"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_module_runs_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_runs: {
+        Row: {
+          business_date: string
+          completed_at: string | null
+          coverage_summary: Json
+          created_at: string
+          id: string
+          overall_status: Database["public"]["Enums"]["ai_ops_run_status_enum"]
+          publication_status: string
+          source_cutoff_at: string | null
+          started_at: string | null
+          tenant_id: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          business_date: string
+          completed_at?: string | null
+          coverage_summary?: Json
+          created_at?: string
+          id?: string
+          overall_status?: Database["public"]["Enums"]["ai_ops_run_status_enum"]
+          publication_status?: string
+          source_cutoff_at?: string | null
+          started_at?: string | null
+          tenant_id: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          business_date?: string
+          completed_at?: string | null
+          coverage_summary?: Json
+          created_at?: string
+          id?: string
+          overall_status?: Database["public"]["Enums"]["ai_ops_run_status_enum"]
+          publication_status?: string
+          source_cutoff_at?: string | null
+          started_at?: string | null
+          tenant_id?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_operations_settings: {
+        Row: {
+          brief_recipients: string[]
+          bty_playlist_id: string | null
+          client_journey_batch_size: number
+          created_at: string
+          max_model_concurrency: number
+          model: string
+          reanalysis_max_age_hours: number
+          snapshot_retention_days: number
+          tenant_id: string
+          timezone: string
+          updated_at: string
+          updated_by_profile_id: string | null
+          vertex_location: string
+          vertex_project_id: string | null
+          youtube_channel_id: string | null
+        }
+        Insert: {
+          brief_recipients?: string[]
+          bty_playlist_id?: string | null
+          client_journey_batch_size?: number
+          created_at?: string
+          max_model_concurrency?: number
+          model?: string
+          reanalysis_max_age_hours?: number
+          snapshot_retention_days?: number
+          tenant_id: string
+          timezone?: string
+          updated_at?: string
+          updated_by_profile_id?: string | null
+          vertex_location?: string
+          vertex_project_id?: string | null
+          youtube_channel_id?: string | null
+        }
+        Update: {
+          brief_recipients?: string[]
+          bty_playlist_id?: string | null
+          client_journey_batch_size?: number
+          created_at?: string
+          max_model_concurrency?: number
+          model?: string
+          reanalysis_max_age_hours?: number
+          snapshot_retention_days?: number
+          tenant_id?: string
+          timezone?: string
+          updated_at?: string
+          updated_by_profile_id?: string | null
+          vertex_location?: string
+          vertex_project_id?: string | null
+          youtube_channel_id?: string | null
+        }
+        Relationships: []
+      }
+      ai_operations_youtube_comments: {
+        Row: {
+          analyzed_at: string | null
+          analyzed_content_hash: string | null
+          author_display_name: string | null
+          channel_id: string
+          classification: string | null
+          comment_id: string
+          comment_text: string | null
+          comment_updated_at: string | null
+          content_hash: string
+          created_at: string
+          id: string
+          initiative: string | null
+          parent_comment_id: string | null
+          priority: Database["public"]["Enums"]["ai_ops_severity_enum"] | null
+          published_at: string | null
+          review_state: string
+          reviewed_at: string | null
+          reviewed_by_profile_id: string | null
+          suggested_reply: string | null
+          tenant_id: string
+          updated_at: string
+          video_id: string
+          video_title: string | null
+        }
+        Insert: {
+          analyzed_at?: string | null
+          analyzed_content_hash?: string | null
+          author_display_name?: string | null
+          channel_id: string
+          classification?: string | null
+          comment_id: string
+          comment_text?: string | null
+          comment_updated_at?: string | null
+          content_hash: string
+          created_at?: string
+          id?: string
+          initiative?: string | null
+          parent_comment_id?: string | null
+          priority?: Database["public"]["Enums"]["ai_ops_severity_enum"] | null
+          published_at?: string | null
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by_profile_id?: string | null
+          suggested_reply?: string | null
+          tenant_id: string
+          updated_at?: string
+          video_id: string
+          video_title?: string | null
+        }
+        Update: {
+          analyzed_at?: string | null
+          analyzed_content_hash?: string | null
+          author_display_name?: string | null
+          channel_id?: string
+          classification?: string | null
+          comment_id?: string
+          comment_text?: string | null
+          comment_updated_at?: string | null
+          content_hash?: string
+          created_at?: string
+          id?: string
+          initiative?: string | null
+          parent_comment_id?: string | null
+          priority?: Database["public"]["Enums"]["ai_ops_severity_enum"] | null
+          published_at?: string | null
+          review_state?: string
+          reviewed_at?: string | null
+          reviewed_by_profile_id?: string | null
+          suggested_reply?: string | null
+          tenant_id?: string
+          updated_at?: string
+          video_id?: string
+          video_title?: string | null
+        }
+        Relationships: []
+      }
       appointment_clinical_note_revisions: {
         Row: {
           actor_profile_id: string | null
@@ -22168,6 +22620,51 @@ export type Database = {
       advance_client_intake_if_ready:
         | { Args: never; Returns: Json }
         | { Args: { p_client_id: string }; Returns: Json }
+      ai_operations_dismiss_finding: {
+        Args: { p_finding_id: string; p_reason: string }
+        Returns: Json
+      }
+      ai_operations_get_brief: {
+        Args: { p_business_date?: string }
+        Returns: Json
+      }
+      ai_operations_list_findings: {
+        Args: {
+          p_business_date?: string
+          p_limit?: number
+          p_module?: string
+          p_offset?: number
+          p_severity?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
+      ai_operations_list_flags: { Args: never; Returns: Json }
+      ai_operations_list_runs: { Args: { p_limit?: number }; Returns: Json }
+      ai_operations_list_youtube_comments: {
+        Args: { p_limit?: number; p_offset?: number; p_review_state?: string }
+        Returns: Json
+      }
+      ai_operations_overview: {
+        Args: { p_business_date?: string }
+        Returns: Json
+      }
+      ai_operations_reopen_finding: {
+        Args: { p_finding_id: string; p_reason: string }
+        Returns: Json
+      }
+      ai_operations_resolve_finding: {
+        Args: { p_finding_id: string; p_reason: string }
+        Returns: Json
+      }
+      ai_operations_set_flag: {
+        Args: { p_enabled: boolean; p_flag_name: string; p_reason: string }
+        Returns: Json
+      }
+      ai_operations_snooze_finding: {
+        Args: { p_finding_id: string; p_reason: string; p_snooze_until: string }
+        Returns: Json
+      }
       apply_relationship_activity: {
         Args: {
           p_activity_type: string
@@ -25422,6 +25919,26 @@ export type Database = {
     }
     Enums: {
       accept_assign_enum: "Y" | "N"
+      ai_ops_finding_status_enum: "open" | "snoozed" | "resolved" | "dismissed"
+      ai_ops_module_enum:
+        | "system_integrity"
+        | "client_journey"
+        | "communications"
+        | "youtube"
+        | "executive_brief"
+      ai_ops_run_status_enum:
+        | "pending"
+        | "running"
+        | "partial"
+        | "success"
+        | "failed"
+      ai_ops_severity_enum: "critical" | "high" | "medium" | "low"
+      ai_ops_work_status_enum:
+        | "queued"
+        | "processing"
+        | "retry_wait"
+        | "completed"
+        | "failed"
       app_role: "staff" | "admin" | "client"
       appointment_exception_type_enum: "cancelled" | "rescheduled"
       appointment_note_status_enum: "draft" | "signed" | "amended"
@@ -25913,6 +26430,29 @@ export const Constants = {
   public: {
     Enums: {
       accept_assign_enum: ["Y", "N"],
+      ai_ops_finding_status_enum: ["open", "snoozed", "resolved", "dismissed"],
+      ai_ops_module_enum: [
+        "system_integrity",
+        "client_journey",
+        "communications",
+        "youtube",
+        "executive_brief",
+      ],
+      ai_ops_run_status_enum: [
+        "pending",
+        "running",
+        "partial",
+        "success",
+        "failed",
+      ],
+      ai_ops_severity_enum: ["critical", "high", "medium", "low"],
+      ai_ops_work_status_enum: [
+        "queued",
+        "processing",
+        "retry_wait",
+        "completed",
+        "failed",
+      ],
       app_role: ["staff", "admin", "client"],
       appointment_exception_type_enum: ["cancelled", "rescheduled"],
       appointment_note_status_enum: ["draft", "signed", "amended"],
