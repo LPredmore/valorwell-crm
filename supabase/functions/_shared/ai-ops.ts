@@ -29,12 +29,15 @@ export function adminClient(): SupabaseClient {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-/** Internal AI Operations endpoints accept only a service-role bearer. */
+/** Internal AI Operations endpoints accept a service-role bearer or the cron secret. */
 export function authorizeWorker(request: Request): boolean {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const authorization = request.headers.get("authorization") ?? "";
-  return Boolean(serviceKey) && authorization === `Bearer ${serviceKey}`;
+  if (serviceKey && authorization === `Bearer ${serviceKey}`) return true;
+  const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
+  return Boolean(cronSecret) && request.headers.get("x-cron-secret") === cronSecret;
 }
+
 
 /** Structured log line. Never contains PHI — identifiers, counts, and status only. */
 export function logEvent(component: string, event: string, detail: Record<string, unknown> = {}) {
