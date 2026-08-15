@@ -18,6 +18,8 @@ import {
   logEvent,
   safeError,
 } from "../_shared/ai-ops.ts";
+import { syncYoutubeComments } from "../_shared/ai-ops-youtube.ts";
+
 
 const COMPONENT = "ai-operations-dispatcher";
 
