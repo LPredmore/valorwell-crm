@@ -1,9 +1,8 @@
 // AI Operations dispatcher: runs every five minutes and performs whatever step of
 // the daily America/Chicago sequence is due. Weekday-only, business-date
-// idempotent, read-only against production data.
+// idempotent, read-only against production data except for AI Operations artifacts.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
-  AI_OPS_MODEL,
   AI_OPS_PROVIDER,
   AI_OPS_TENANT_ID,
   adminClient,
@@ -20,7 +19,6 @@ import {
 import { syncYoutubeComments } from "../_shared/ai-ops-youtube.ts";
 import { promptVersionForModule } from "../_shared/ai-ops-prompts.ts";
 
-
 const COMPONENT = "ai-operations-dispatcher";
 
 const ACTION_ALIASES: Record<string, DispatcherAction> = {
@@ -35,6 +33,12 @@ const ACTION_ALIASES: Record<string, DispatcherAction> = {
   finalize: "finalize",
 };
 
+function modelForModule(module: string): string {
+  if (module === "system_integrity") return "deterministic";
+  if (module === "youtube") return "gemini-2.5-flash";
+  return "gemini-2.5-pro";
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (!authorizeWorker(request)) return json({ error: "Unauthorized." }, 401);
@@ -45,9 +49,7 @@ Deno.serve(async (request) => {
   try {
     const body = await request.json().catch(() => ({}));
     const tenantId: string = typeof body?.tenantId === "string" ? body.tenantId : AI_OPS_TENANT_ID;
-    const businessDate: string = typeof body?.businessDate === "string"
-      ? body.businessDate
-      : centralBusinessDate();
+    const businessDate: string = typeof body?.businessDate === "string" ? body.businessDate : centralBusinessDate();
     const localTime: string = typeof body?.localTime === "string" ? body.localTime : centralLocalTime();
     const force = body?.force === true;
 
@@ -67,16 +69,13 @@ Deno.serve(async (request) => {
       logEvent(COMPONENT, "disabled", { tenantId, businessDate });
       return json({ ok: true, skipped: "ai_operations_disabled" });
     }
-    if (!action) {
-      return json({ ok: true, skipped: "nothing_due", localTime, businessDate });
-    }
+    if (!action) return json({ ok: true, skipped: "nothing_due", localTime, businessDate });
     if (isWeekend(businessDate) && !force) {
       logEvent(COMPONENT, "non_business_day", { businessDate });
       return json({ ok: true, skipped: "non_business_day", businessDate });
     }
 
     const cutoff = new Date().toISOString();
-    // Idempotent per tenant + business date: repeated calls reuse the same run and cutoff.
     const { data: runId, error: runError } = await admin.rpc("ai_ops_begin_run", {
       p_tenant_id: tenantId,
       p_business_date: businessDate,
@@ -104,15 +103,13 @@ Deno.serve(async (request) => {
       if (error) throw new Error(error.message);
       try {
         const coverage = await work();
-        // Collection phases leave the module RUNNING: queued Gemini work is not success.
         const terminal = options.terminal ?? false;
         await admin.rpc("ai_ops_complete_module", {
           p_module_run_id: moduleRunId,
           p_status: terminal ? "success" : "running",
           p_counts: coverage,
           p_coverage: coverage,
-          p_model: AI_OPS_MODEL,
-          // Each module records the prompt version of the work it actually performs.
+          p_model: modelForModule(module),
           p_prompt_version: promptVersionForModule(module),
         });
         results[module] = { ...coverage, moduleStatus: terminal ? "success" : "running" };
@@ -128,7 +125,6 @@ Deno.serve(async (request) => {
       }
     };
 
-    /** Terminal status is derived from the module's real work-item outcomes. */
     const finalizeModule = async (module: string) => {
       const { data, error } = await admin.rpc("ai_ops_finalize_module_status", {
         p_tenant_id: tenantId,
@@ -139,7 +135,6 @@ Deno.serve(async (request) => {
       return (data ?? {}) as Record<string, unknown>;
     };
 
-
     const rpc = async (name: string, args: Record<string, unknown>) => {
       const { data, error } = await admin.rpc(name, args);
       if (error) throw new Error(`${name}: ${error.message}`);
@@ -147,14 +142,9 @@ Deno.serve(async (request) => {
     };
 
     const collectUpstream = async () => {
-      // System Integrity is deterministic: it may complete immediately.
       await runModule("system_integrity", await flag("system_integrity_enabled"), async () => {
         await rpc("ai_ops_sync_operation_registry", { p_tenant_id: tenantId });
-        return rpc("ai_ops_evaluate_system_integrity", {
-          p_tenant_id: tenantId,
-          p_run_id: runId,
-          p_cutoff_at: cutoff,
-        });
+        return rpc("ai_ops_evaluate_system_integrity", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff });
       }, { terminal: true });
 
       await runModule("client_journey", await flag("client_journey_ai_enabled"), () =>
@@ -162,14 +152,23 @@ Deno.serve(async (request) => {
           p_tenant_id: tenantId,
           p_run_id: runId,
           p_cutoff_at: cutoff,
+          p_batch_size: 8,
         }));
 
       await runModule("communications", await flag("communications_ai_enabled"), () =>
-        rpc("ai_ops_build_communications_batches", {
-          p_tenant_id: tenantId,
-          p_run_id: runId,
-          p_cutoff_at: cutoff,
-        }));
+        rpc("ai_ops_build_communications_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
+
+      await runModule("staff_quality", await flag("staff_quality_ai_enabled"), () =>
+        rpc("ai_ops_build_staff_quality_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
+
+      await runModule("appointment_integrity", await flag("appointment_integrity_ai_enabled"), () =>
+        rpc("ai_ops_build_appointment_integrity_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
+
+      await runModule("billing_claims", await flag("billing_claims_ai_enabled"), () =>
+        rpc("ai_ops_build_billing_claims_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
+
+      await runModule("data_quality", await flag("data_quality_ai_enabled"), () =>
+        rpc("ai_ops_build_data_quality_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
     };
 
     const collectYoutube = async () =>
@@ -179,29 +178,19 @@ Deno.serve(async (request) => {
           .select("youtube_channel_id, bty_playlist_id")
           .eq("tenant_id", tenantId)
           .maybeSingle();
-
         const sync = await syncYoutubeComments({
           admin,
           tenantId,
           channelId: settings?.youtube_channel_id ?? null,
           btyPlaylistId: settings?.bty_playlist_id ?? null,
         });
-
-        if (!sync.available) {
-          // No credentials/configuration: report the source as unavailable, never fabricate comments.
-          return { sourceAvailable: false, unavailableReason: sync.reason, batchesQueued: 0 };
-        }
-
-        const batches = await rpc("ai_ops_build_youtube_batches", {
-          p_tenant_id: tenantId,
-          p_run_id: runId,
-        });
+        if (!sync.available) return { sourceAvailable: false, unavailableReason: sync.reason, batchesQueued: 0 };
+        const batches = await rpc("ai_ops_build_youtube_batches", { p_tenant_id: tenantId, p_run_id: runId });
         return { sourceAvailable: true, ...sync, ...batches };
       });
 
     const reconcileModules = async () => {
       await rpc("ai_ops_expire_snoozes", { p_tenant_id: tenantId });
-
       const reconcile = async (module: string, enabled: boolean, ingest: string) => {
         if (!enabled) {
           results[module] = { skipped: "flag_disabled" };
@@ -219,15 +208,17 @@ Deno.serve(async (request) => {
 
       await reconcile("client_journey", await flag("client_journey_ai_enabled"), "ai_ops_ingest_client_journey_results");
       await reconcile("communications", await flag("communications_ai_enabled"), "ai_ops_ingest_communications_results");
+      await reconcile("staff_quality", await flag("staff_quality_ai_enabled"), "ai_ops_ingest_staff_quality_results");
+      await reconcile("appointment_integrity", await flag("appointment_integrity_ai_enabled"), "ai_ops_ingest_appointment_integrity_results");
+      await reconcile("billing_claims", await flag("billing_claims_ai_enabled"), "ai_ops_ingest_billing_claims_results");
+      await reconcile("data_quality", await flag("data_quality_ai_enabled"), "ai_ops_ingest_data_quality_results");
       await reconcile("youtube", await flag("youtube_ai_enabled"), "ai_ops_ingest_youtube_results");
     };
 
-    /** 04:35 — queue the brief only. The model worker processes it; ingestion happens later. */
     const queueBrief = async () =>
       await runModule("executive_brief", await flag("executive_brief_enabled"), () =>
         rpc("ai_ops_build_executive_brief_input", { p_tenant_id: tenantId, p_run_id: runId }));
 
-    /** Ingest the completed brief work item. forcePartial publishes a partial brief at the hard cutoff. */
     const publishBrief = async (forcePartial: boolean) => {
       if (!(await flag("executive_brief_enabled"))) {
         results.executive_brief = { skipped: "flag_disabled" };
@@ -256,16 +247,10 @@ Deno.serve(async (request) => {
       case "collect":
         await collectUpstream();
         break;
-      case "rebuild": {
-        // Maintenance: discard unprocessed work built by a superseded collector, then rebuild
-        // the same modules from live production data with the current deterministic collectors.
-        results.purged = await rpc("ai_ops_purge_stale_work_items", {
-          p_tenant_id: tenantId,
-          p_run_id: runId,
-        });
+      case "rebuild":
+        results.purged = await rpc("ai_ops_purge_stale_work_items", { p_tenant_id: tenantId, p_run_id: runId });
         await collectUpstream();
         break;
-      }
       case "youtube":
         await collectYoutube();
         break;
@@ -276,20 +261,17 @@ Deno.serve(async (request) => {
         await queueBrief();
         break;
       case "retry":
-        // Requeueing is handled by the work queue's own backoff; reconcile whatever finished.
         await reconcileModules();
         await publishBrief(false);
         break;
       case "finalize": {
         await reconcileModules();
-        // Hard cutoff: publish a complete brief when the model result exists, otherwise an explicit partial.
         await publishBrief(true);
         const summary = await rpc("ai_ops_complete_run", { p_run_id: runId, p_coverage_summary: results });
         results.runSummary = summary;
         break;
       }
     }
-
 
     results.provider = AI_OPS_PROVIDER;
     logEvent(COMPONENT, "action_complete", { runId, businessDate, action, durationMs: Date.now() - started });
