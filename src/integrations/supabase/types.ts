@@ -22691,6 +22691,38 @@ export type Database = {
         }
         Returns: string
       }
+      ai_ops_build_client_journey_batches: {
+        Args: {
+          p_batch_size?: number
+          p_cutoff_at?: string
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      ai_ops_build_communications_batches: {
+        Args: {
+          p_batch_size?: number
+          p_cutoff_at?: string
+          p_lookback_days?: number
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      ai_ops_build_executive_brief_input: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_build_youtube_batches: {
+        Args: {
+          p_batch_size?: number
+          p_max_comments?: number
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       ai_ops_claim_work_items: { Args: { p_limit?: number }; Returns: Json }
       ai_ops_complete_module: {
         Args: {
@@ -22751,6 +22783,22 @@ export type Database = {
         }
         Returns: Json
       }
+      ai_ops_ingest_client_journey_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_communications_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_executive_brief: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_youtube_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
       ai_ops_sync_operation_registry: {
         Args: { p_tenant_id: string }
         Returns: Json
@@ -22770,6 +22818,22 @@ export type Database = {
           p_summary?: string
           p_tenant_id: string
           p_title: string
+        }
+        Returns: Json
+      }
+      ai_ops_upsert_youtube_comment: {
+        Args: {
+          p_author_display_name: string
+          p_channel_id: string
+          p_comment_id: string
+          p_comment_text: string
+          p_comment_updated_at: string
+          p_initiative?: string
+          p_parent_comment_id: string
+          p_published_at: string
+          p_tenant_id: string
+          p_video_id: string
+          p_video_title: string
         }
         Returns: Json
       }
