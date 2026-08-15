@@ -1,6 +1,5 @@
 // AI Operations dispatcher: runs every five minutes and performs whatever step of
-// the daily America/Chicago sequence is due. Weekday-only, business-date
-// idempotent, read-only against production data except for AI Operations artifacts.
+// the daily America/Chicago sequence is due. Weekday-only and business-date idempotent.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   AI_OPS_PROVIDER,
@@ -39,9 +38,9 @@ Deno.serve(async (request) => {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const tenantId: string = typeof body?.tenantId === "string" ? body.tenantId : AI_OPS_TENANT_ID;
-    const businessDate: string = typeof body?.businessDate === "string" ? body.businessDate : centralBusinessDate();
-    const localTime: string = typeof body?.localTime === "string" ? body.localTime : centralLocalTime();
+    const tenantId = typeof body?.tenantId === "string" ? body.tenantId : AI_OPS_TENANT_ID;
+    const businessDate = typeof body?.businessDate === "string" ? body.businessDate : centralBusinessDate();
+    const localTime = typeof body?.localTime === "string" ? body.localTime : centralLocalTime();
     const force = body?.force === true;
     const requested = typeof body?.action === "string" ? ACTION_ALIASES[body.action]
       : typeof body?.phase === "string" ? ACTION_ALIASES[body.phase] : undefined;
@@ -68,7 +67,12 @@ Deno.serve(async (request) => {
       return (data ?? {}) as Record<string, unknown>;
     };
 
-    const runModule = async (module: string, enabled: boolean, work: () => Promise<Record<string, unknown>>, options: { terminal?: boolean } = {}) => {
+    const runModule = async (
+      module: string,
+      enabled: boolean,
+      work: () => Promise<Record<string, unknown>>,
+      options: { terminal?: boolean } = {},
+    ) => {
       if (!enabled) { results[module] = { skipped: "flag_disabled" }; return; }
       const { data: moduleRunId, error } = await admin.rpc("ai_ops_begin_module", {
         p_run_id: runId, p_module: module, p_source_cutoff_at: cutoff,
@@ -96,9 +100,7 @@ Deno.serve(async (request) => {
     };
 
     const finalizeModule = async (module: string) => {
-      const { data, error } = await admin.rpc("ai_ops_finalize_module_status", {
-        p_tenant_id: tenantId, p_run_id: runId, p_module: module,
-      });
+      const { data, error } = await admin.rpc("ai_ops_finalize_module_status", { p_tenant_id: tenantId, p_run_id: runId, p_module: module });
       if (error) throw new Error(`ai_ops_finalize_module_status(${module}): ${error.message}`);
       return (data ?? {}) as Record<string, unknown>;
     };
@@ -117,15 +119,22 @@ Deno.serve(async (request) => {
       await runModule("relationship_followup", await flag("relationship_followup_ai_enabled"), () => rpc("ai_ops_build_relationship_followup_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff, p_batch_size: 8 }));
       await runModule("donor_intelligence", await flag("donor_intelligence_ai_enabled"), () => rpc("ai_ops_build_donor_intelligence_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff, p_batch_size: 8 }));
       await runModule("social_leads", await flag("social_leads_ai_enabled"), () => rpc("ai_ops_build_social_lead_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff, p_batch_size: 8 }));
+      await runModule("content_opportunities", await flag("content_opportunities_ai_enabled"), () => rpc("ai_ops_build_content_opportunity_input", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
+      await runModule("bty_intelligence", await flag("bty_intelligence_ai_enabled"), () => rpc("ai_ops_build_bty_intelligence_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
+      await runModule("sop_compliance", await flag("sop_compliance_ai_enabled"), () => rpc("ai_ops_build_sop_compliance_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff, p_batch_size: 8 }));
+      await runModule("weekly_patterns", await flag("weekly_patterns_ai_enabled"), () => rpc("ai_ops_build_weekly_pattern_input", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
     };
 
-    const collectYoutube = async () => await runModule("youtube", await flag("youtube_ai_enabled"), async () => {
-      const { data: settings } = await admin.from("ai_operations_settings").select("youtube_channel_id, bty_playlist_id").eq("tenant_id", tenantId).maybeSingle();
-      const sync = await syncYoutubeComments({ admin, tenantId, channelId: settings?.youtube_channel_id ?? null, btyPlaylistId: settings?.bty_playlist_id ?? null });
-      if (!sync.available) return { sourceAvailable: false, unavailableReason: sync.reason, batchesQueued: 0 };
-      const batches = await rpc("ai_ops_build_youtube_batches", { p_tenant_id: tenantId, p_run_id: runId });
-      return { sourceAvailable: true, ...sync, ...batches };
-    });
+    const collectYoutube = async () => {
+      await runModule("youtube", await flag("youtube_ai_enabled"), async () => {
+        const { data: settings } = await admin.from("ai_operations_settings").select("youtube_channel_id, bty_playlist_id").eq("tenant_id", tenantId).maybeSingle();
+        const sync = await syncYoutubeComments({ admin, tenantId, channelId: settings?.youtube_channel_id ?? null, btyPlaylistId: settings?.bty_playlist_id ?? null });
+        if (!sync.available) return { sourceAvailable: false, unavailableReason: sync.reason, sourceItemsTotal: 0, itemsQueued: 0, batchesQueued: 0 };
+        const batches = await rpc("ai_ops_build_youtube_batches", { p_tenant_id: tenantId, p_run_id: runId });
+        return { sourceAvailable: true, ...sync, ...batches };
+      });
+      await runModule("content_performance", await flag("content_performance_ai_enabled"), () => rpc("ai_ops_build_content_performance_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff, p_batch_size: 8 }));
+    };
 
     const reconcileModules = async () => {
       await rpc("ai_ops_expire_snoozes", { p_tenant_id: tenantId });
@@ -148,6 +157,11 @@ Deno.serve(async (request) => {
       await reconcile("relationship_followup", await flag("relationship_followup_ai_enabled"), "ai_ops_ingest_relationship_followup_results");
       await reconcile("donor_intelligence", await flag("donor_intelligence_ai_enabled"), "ai_ops_ingest_donor_intelligence_results");
       await reconcile("social_leads", await flag("social_leads_ai_enabled"), "ai_ops_ingest_social_leads_results");
+      await reconcile("content_opportunities", await flag("content_opportunities_ai_enabled"), "ai_ops_ingest_content_opportunities");
+      await reconcile("content_performance", await flag("content_performance_ai_enabled"), "ai_ops_ingest_content_performance_results");
+      await reconcile("bty_intelligence", await flag("bty_intelligence_ai_enabled"), "ai_ops_ingest_bty_intelligence_results");
+      await reconcile("sop_compliance", await flag("sop_compliance_ai_enabled"), "ai_ops_ingest_sop_compliance_results");
+      await reconcile("weekly_patterns", await flag("weekly_patterns_ai_enabled"), "ai_ops_ingest_weekly_patterns");
       await reconcile("youtube", await flag("youtube_ai_enabled"), "ai_ops_ingest_youtube_results");
     };
 
