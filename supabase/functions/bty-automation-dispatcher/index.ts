@@ -114,11 +114,13 @@ Deno.serve(async (request: Request) => {
   const forceFailure = body.forceFailure === true;
 
   let action = typeof body.action === "string" ? body.action : "";
-  let attempt = Number.isFinite(Number(body.attempt)) ? Number(body.attempt) : 0;
+  // Two staggered discovery searches per active state: 06:00 and 06:05 Central.
+  let attempt = Number.isFinite(Number(body.pass ?? body.attempt))
+    ? Number(body.pass ?? body.attempt)
+    : 0;
   if (!action) {
     if (localTime === "06:00") { action = "discovery"; attempt = 1; }
-    else if (localTime === "06:10") { action = "discovery"; attempt = 2; }
-    else if (localTime === "06:15") { action = "discovery"; attempt = 3; }
+    else if (localTime === "06:05") { action = "discovery"; attempt = 2; }
     else if (localTime === "06:30") { action = "contact_enrichment"; }
   }
   if (!action) return json({ dispatched: false, localTime });
@@ -135,15 +137,13 @@ Deno.serve(async (request: Request) => {
     });
     if (snapshotBefore.error) throw new Error(snapshotBefore.error.message);
     const before = (snapshotBefore.data ?? {}) as Record<string, unknown>;
-    if (before.status === "success") {
-      logEvent("bty-automation-dispatcher", "discovery_already_successful", { businessDate, attempt });
-      return json({ dispatched: false, action, attempt, reason: "already_successful" });
-    }
+    // Pass 2 must still run after pass 1 succeeded; bty_claim_discovery_pass
+    // is the single source of truth for which pass remains outstanding.
 
     const discovery = await invokeInternal("bty-discovery", {
       tenantId,
       businessDate,
-      attempt: attempt || 1,
+      pass: attempt || 1,
       forceFailure,
     });
 
@@ -160,7 +160,7 @@ Deno.serve(async (request: Request) => {
     return json({
       dispatched: true,
       action,
-      attempt: attempt || 1,
+      pass: attempt || 1,
       localTime,
       status: after.status,
       discovery: discovery.payload,
