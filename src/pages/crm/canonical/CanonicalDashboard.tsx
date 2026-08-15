@@ -10,6 +10,8 @@ import {
   formatLifecycleStage,
   formatReportBucketRange,
 } from './reportPresentation';
+import { AiOperationsSummaryCard } from '@/components/crm/canonical/AiOperationsSummaryCard';
+
 
 interface SummaryQueryState {
   data: unknown;
@@ -89,6 +91,8 @@ export default function CanonicalDashboard() {
           </Link>
         ))}
       </div>
+
+      <AiOperationsSummaryCard />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

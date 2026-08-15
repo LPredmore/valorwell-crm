@@ -61,6 +61,8 @@ const clinicalNavItems: NavItem[] = [
   { label: 'Campaign Management', href: '/crm/communications/campaigns', icon: Megaphone },
   { label: 'Newsletters', href: '/crm/communications/newsletters', icon: Mail },
   { label: 'Comms Observability', href: '/crm/communications/observability', icon: Activity },
+  { label: 'AI Operations', href: '/crm/ai-operations', icon: Sparkles },
+
   { label: 'Email Studio', href: '/crm/email-studio', icon: Mail },
   { label: 'Staff', href: '/crm/staff', icon: UserCog },
   { label: 'Reports', href: '/crm/reports', icon: BarChart3 },

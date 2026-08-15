@@ -1,22 +1,24 @@
 // AI Operations model worker: claims queued work items, calls Gemini 2.5 Pro on
-// Vertex AI with a strict response schema, and records validated structured
-// results. Never remediates production data.
+// the Gemini Developer API with a strict response schema, and records validated
+// structured results. Never remediates production data.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   AI_OPS_MODEL,
+  AI_OPS_PROVIDER,
   AI_OPS_TENANT_ID,
   adminClient,
   authorizeWorker,
   backoffSeconds,
-  callVertexModel,
+  callGeminiModel,
   classifyModelFailure,
+  geminiApiKey,
   json,
   logEvent,
   parseModelJson,
   safeError,
   validateEntityCoverage,
-  vertexAccessToken,
 } from "../_shared/ai-ops.ts";
+
 import { specFor } from "../_shared/ai-ops-prompts.ts";
 
 type ClaimedItem = {
@@ -47,8 +49,8 @@ function requestedEntityKeys(item: ClaimedItem): string[] {
 
 async function processItem(
   admin: ReturnType<typeof adminClient>,
-  accessToken: string,
-  settings: { projectId: string; location: string; model: string },
+  apiKey: string,
+  settings: { model: string },
   item: ClaimedItem,
 ): Promise<"completed" | "failed" | "retry"> {
   const spec = specFor(item.workType);
@@ -58,15 +60,14 @@ async function processItem(
     const suffix = repair
       ? "\n\nThe previous response did not satisfy the schema. Return only valid JSON matching the schema exactly."
       : "";
-    const result = await callVertexModel({
-      accessToken,
-      projectId: settings.projectId,
-      location: settings.location,
+    const result = await callGeminiModel({
+      apiKey,
       model,
       systemInstruction: spec.systemInstruction + suffix,
       userPrompt: buildUserPrompt(item),
       responseSchema: spec.responseSchema,
     });
+
     const parsed = parseModelJson(result.text) as Record<string, unknown>;
     if (spec.requiresEntityCoverage) {
       const keys = requestedEntityKeys(item);
@@ -93,11 +94,13 @@ async function processItem(
       p_structured_result: outcome.parsed,
       p_token_usage: {
         ...outcome.tokenUsage,
+        provider: AI_OPS_PROVIDER,
         model,
         promptVersion: spec.promptVersion,
         schemaVersion: spec.schemaVersion,
       },
     });
+
     logEvent(COMPONENT, "work_item_completed", {
       workItemId: item.id,
       module: item.module,
@@ -150,16 +153,20 @@ Deno.serve(async (request) => {
       return json({ ok: true, skipped: "ai_operations_disabled" });
     }
 
+    let apiKey: string;
+    try {
+      apiKey = geminiApiKey();
+    } catch (configError) {
+      logEvent(COMPONENT, "configuration_error", { reason: "gemini_api_key_missing" });
+      return json({ error: safeError(configError), code: "gemini_api_key_missing" }, 500);
+    }
+
     const { data: settings, error: settingsError } = await admin
       .from("ai_operations_settings")
-      .select("vertex_project_id, vertex_location, model, max_model_concurrency")
+      .select("model, max_model_concurrency")
       .eq("tenant_id", tenantId)
       .maybeSingle();
     if (settingsError) throw new Error(settingsError.message);
-
-    const projectId = settings?.vertex_project_id ?? Deno.env.get("VERTEX_PROJECT_ID") ?? "";
-    const location = settings?.vertex_location ?? Deno.env.get("VERTEX_LOCATION") ?? "us-central1";
-    if (!projectId) return json({ error: "Vertex project is not configured." }, 400);
 
     const batchSize = Math.min(
       Math.max(Number(body?.limit ?? settings?.max_model_concurrency ?? 4), 1),
@@ -176,14 +183,10 @@ Deno.serve(async (request) => {
       return json({ ok: true, claimed: 0, durationMs: Date.now() - started });
     }
 
-    const accessToken = await vertexAccessToken();
     const results = await Promise.all(items.map((item) =>
-      processItem(admin, accessToken, {
-        projectId,
-        location,
-        model: settings?.model ?? AI_OPS_MODEL,
-      }, item)
+      processItem(admin, apiKey, { model: settings?.model ?? AI_OPS_MODEL }, item)
     ));
+
 
     const summary = {
       claimed: items.length,

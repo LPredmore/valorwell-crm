@@ -234,3 +234,56 @@ export function severityRank(severity: string): number {
     default: return 3;
   }
 }
+
+export type SnoozePreset = { key: string; label: string; resolve: (now?: Date) => Date };
+
+const addHours = (base: Date, hours: number) => new Date(base.getTime() + hours * 3_600_000);
+const addDays = (base: Date, days: number) => new Date(base.getTime() + days * 86_400_000);
+
+/** Snooze options offered in the dashboard. A snoozed finding leaves the active queue until it expires. */
+export const AI_OPERATIONS_SNOOZE_PRESETS: SnoozePreset[] = [
+  { key: 'later_today', label: 'Later today', resolve: (now = new Date()) => addHours(now, 4) },
+  { key: 'tomorrow', label: 'Tomorrow', resolve: (now = new Date()) => addDays(now, 1) },
+  { key: 'three_days', label: 'In 3 days', resolve: (now = new Date()) => addDays(now, 3) },
+  { key: 'one_week', label: 'In 1 week', resolve: (now = new Date()) => addDays(now, 7) },
+];
+
+export function resolveSnoozeUntil(presetKey: string, now: Date = new Date()): Date | null {
+  const preset = AI_OPERATIONS_SNOOZE_PRESETS.find((option) => option.key === presetKey);
+  return preset ? preset.resolve(now) : null;
+}
+
+export type AiOperationsWidgetSummary = {
+  businessDate: string | null;
+  briefStatus: string;
+  briefGeneratedAt: string | null;
+  briefIsPartial: boolean;
+  criticalCount: number;
+  highCount: number;
+  openCount: number;
+  modules: Array<{ module: AiOperationsModule; label: string; status: string }>;
+};
+
+/** Compact, precomputed summary for the Operations Dashboard widget. */
+export function buildAiOperationsWidgetSummary(
+  overview: AiOperationsOverview | null | undefined,
+): AiOperationsWidgetSummary {
+  const counts = overview?.findingCounts ?? {};
+  const openCount = Object.values(counts).reduce((total, value) => total + (Number(value) || 0), 0);
+  const byModule = new Map((overview?.modules ?? []).map((module) => [module.module, module.status]));
+
+  return {
+    businessDate: overview?.run?.businessDate ?? null,
+    briefStatus: overview?.brief?.status ?? 'unavailable',
+    briefGeneratedAt: overview?.brief?.generatedAt ?? null,
+    briefIsPartial: overview?.brief?.isPartial ?? false,
+    criticalCount: Number(counts.critical ?? 0),
+    highCount: Number(counts.high ?? 0),
+    openCount,
+    modules: (['system_integrity', 'client_journey', 'communications', 'youtube'] as const).map((module) => ({
+      module,
+      label: AI_OPERATIONS_MODULE_LABELS[module],
+      status: byModule.get(module) ?? 'unknown',
+    })),
+  };
+}
