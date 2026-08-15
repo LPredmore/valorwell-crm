@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BTY_PASS_TARGET_COUNT,
   BTY_ROTATION_STATES,
   buildDiscoveryPrompt,
+  buildStaggeredDiscoveryPrompt,
+  extractJsonArray,
+  mapStaggeredCandidate,
+  validateStaggeredCandidates,
   centralBusinessDate,
   describesDirectService,
   nextRotationState,
@@ -155,5 +160,89 @@ describe('BTY prompting and dates', () => {
   it('derives the business date in America/Chicago', () => {
     expect(centralBusinessDate(new Date('2026-08-15T04:30:00Z'))).toBe('2026-08-14');
     expect(centralBusinessDate(new Date('2026-08-15T12:30:00Z'))).toBe('2026-08-15');
+  });
+});
+
+describe('BTY staggered two-step discovery', () => {
+  const row = (overrides: Record<string, unknown> = {}) => ({
+    org_name: 'Alabama Veterans Equine Ranch',
+    website: 'https://alveteransranch.org',
+    city: 'Huntsville',
+    state: 'AL',
+    youtube_url: 'https://www.youtube.com/@alveteransranch',
+    estimated_subscribers: 1400,
+    primary_impact_work: 'Runs equine therapy, peer support groups and transitional housing referrals for local veterans and their families.',
+    why_boots_on_ground: 'Delivers its own weekly programs on a ranch it operates.',
+    ...overrides,
+  });
+
+  it('embeds the state and subscriber rules without an ignore list', () => {
+    const prompt = buildStaggeredDiscoveryPrompt('AL');
+    expect(prompt).toContain('up to 4 veteran-focused non-profit organizations');
+    expect(prompt).toContain('Alabama');
+    expect(prompt).toContain('at least 500 subscribers');
+    expect(prompt).toContain('down to 250 subscribers');
+    expect(prompt).not.toMatch(/DO NOT RETURN/i);
+  });
+
+  it('maps the Gemini keys onto the canonical candidate shape', () => {
+    const mapped = mapStaggeredCandidate(row({ estimated_subscribers: '2,300' }), 'AL');
+    expect(mapped.organization_name).toBe('Alabama Veterans Equine Ranch');
+    expect(mapped.youtube_subscriber_count).toBe(2300);
+    expect(mapped.youtube_handle).toBe('alveteransranch');
+    expect(mapped.headquarters_state).toBe('AL');
+  });
+
+  it('discards duplicates, off-state rows and low subscriber counts in code', () => {
+    const outcome = validateStaggeredCandidates(
+      [
+        row(),
+        row({ org_name: 'Georgia Vets', state: 'GA', website: 'https://gavets.org', youtube_url: 'https://youtube.com/@gavets' }),
+        row({ org_name: 'Known Org', website: 'https://known.org', youtube_url: 'https://youtube.com/@known' }),
+        row({ org_name: 'Tiny Channel', website: 'https://tiny.org', youtube_url: 'https://youtube.com/@tiny', estimated_subscribers: 90 }),
+      ],
+      {
+        targetState: 'AL',
+        seenNames: new Set<string>(),
+        duplicateVerdicts: new Map([['known org', 'duplicate_organization_name']]),
+      },
+    );
+    expect(outcome.accepted).toHaveLength(1);
+    expect(outcome.rejected.map((entry) => entry.reason)).toEqual([
+      'headquarters_state_mismatch',
+      'duplicate_organization_name',
+      'subscriber_count_below_minimum',
+    ]);
+  });
+
+  it('relaxes to 250 subscribers only when fewer than three qualify at 500', () => {
+    const relaxed = validateStaggeredCandidates(
+      [row({ estimated_subscribers: 320 })],
+      { targetState: 'AL', seenNames: new Set<string>() },
+    );
+    expect(relaxed.accepted).toHaveLength(1);
+    expect(relaxed.accepted[0].subscriber_range_tier).toBe(2);
+
+    const strict = validateStaggeredCandidates(
+      [
+        row({ org_name: 'A One', website: 'https://a1.org', youtube_url: 'https://youtube.com/@a1' }),
+        row({ org_name: 'B Two', website: 'https://b2.org', youtube_url: 'https://youtube.com/@b2' }),
+        row({ org_name: 'C Three', website: 'https://c3.org', youtube_url: 'https://youtube.com/@c3' }),
+        row({ org_name: 'D Small', website: 'https://d4.org', youtube_url: 'https://youtube.com/@d4', estimated_subscribers: 300 }),
+      ],
+      { targetState: 'AL', seenNames: new Set<string>() },
+    );
+    expect(strict.accepted).toHaveLength(3);
+    expect(strict.rejected[0].reason).toBe('subscriber_relaxation_not_required');
+  });
+
+  it('parses a fenced JSON array from a grounded reply', () => {
+    const rows = extractJsonArray<{ org_name: string }>('```json\n[{"org_name":"X"}]\n```');
+    expect(rows[0].org_name).toBe('X');
+    expect(extractJsonArray('no json here')).toEqual([]);
+  });
+
+  it('keeps each pass capped at four saved organizations', () => {
+    expect(BTY_PASS_TARGET_COUNT).toBe(4);
   });
 });

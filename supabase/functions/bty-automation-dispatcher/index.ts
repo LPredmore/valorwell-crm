@@ -56,7 +56,6 @@ async function sendFailureNotification(
     ``,
     attemptLine(1),
     attemptLine(2),
-    attemptLine(3),
     ``,
     `Final error: ${error.message ?? "unknown error"}${error.kind ? ` (${error.kind})` : ""}`,
     `Candidates validated: ${error.candidatesValidated ?? 0}`,
