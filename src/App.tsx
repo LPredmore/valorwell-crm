@@ -38,6 +38,7 @@ import CommunicationsControlPlanePage from "./pages/crm/CommunicationsControlPla
 import NewsletterManagementPage from "./pages/crm/NewsletterManagementPage";
 import CampaignManagementPage from "./pages/crm/CampaignManagementPage";
 import CommunicationsObservabilityPage from "./pages/crm/CommunicationsObservabilityPage";
+import AiOperationsPage from "./pages/crm/AiOperationsPage";
 
 import RelationshipBulkEnrollmentPage from "./pages/crm/business-development/campaigns/RelationshipBulkEnrollmentPage";
 import RelationshipCampaignDeliveryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDeliveryPage";
