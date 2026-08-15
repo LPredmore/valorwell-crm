@@ -22737,6 +22737,10 @@ export type Database = {
         }
         Returns: Json
       }
+      ai_ops_evaluate_system_integrity: {
+        Args: { p_cutoff_at?: string; p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
       ai_ops_fail_work_item: {
         Args: {
           p_error_code: string
@@ -22745,6 +22749,10 @@ export type Database = {
           p_retryable?: boolean
           p_work_item_id: string
         }
+        Returns: Json
+      }
+      ai_ops_sync_operation_registry: {
+        Args: { p_tenant_id: string }
         Returns: Json
       }
       ai_ops_upsert_finding: {
@@ -22764,6 +22772,10 @@ export type Database = {
           p_title: string
         }
         Returns: Json
+      }
+      ai_ops_worker_flag: {
+        Args: { p_flag_name: string; p_tenant_id: string }
+        Returns: boolean
       }
       apply_relationship_activity: {
         Args: {
