@@ -217,3 +217,19 @@ export function specFor(workType: string): WorkTypeSpec {
   if (!spec) throw new Error(`Unknown AI Operations work type: ${workType}`);
   return spec;
 }
+
+/** The AI work type each module's reasoning stage uses. Source of truth for module provenance. */
+export const MODULE_WORK_TYPES: Record<string, string> = {
+  system_integrity: "system_integrity_triage",
+  client_journey: "client_journey_review",
+  communications: "communications_qa_review",
+  youtube: "youtube_comment_review",
+  executive_brief: "executive_brief_synthesis",
+};
+
+/** Prompt version actually applicable to a module's work, never a single global value. */
+export function promptVersionForModule(module: string): string {
+  const workType = MODULE_WORK_TYPES[module];
+  if (!workType) throw new Error(`Unknown AI Operations module: ${module}`);
+  return specFor(workType).promptVersion;
+}

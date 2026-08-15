@@ -22809,6 +22809,10 @@ export type Database = {
         Args: { p_run_id: string; p_tenant_id: string }
         Returns: Json
       }
+      ai_ops_purge_stale_work_items: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
       ai_ops_sync_operation_registry: {
         Args: { p_tenant_id: string }
         Returns: Json

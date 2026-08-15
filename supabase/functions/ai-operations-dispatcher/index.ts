@@ -4,7 +4,6 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   AI_OPS_MODEL,
-  AI_OPS_PROMPT_VERSION,
   AI_OPS_PROVIDER,
   AI_OPS_TENANT_ID,
   adminClient,
@@ -19,6 +18,7 @@ import {
   safeError,
 } from "../_shared/ai-ops.ts";
 import { syncYoutubeComments } from "../_shared/ai-ops-youtube.ts";
+import { promptVersionForModule } from "../_shared/ai-ops-prompts.ts";
 
 
 const COMPONENT = "ai-operations-dispatcher";
@@ -28,6 +28,7 @@ const ACTION_ALIASES: Record<string, DispatcherAction> = {
   ingest: "reconcile",
   reconcile: "reconcile",
   initialize: "initialize",
+  rebuild: "rebuild",
   youtube: "youtube",
   brief: "brief",
   retry: "retry",
@@ -111,7 +112,8 @@ Deno.serve(async (request) => {
           p_counts: coverage,
           p_coverage: coverage,
           p_model: AI_OPS_MODEL,
-          p_prompt_version: AI_OPS_PROMPT_VERSION,
+          // Each module records the prompt version of the work it actually performs.
+          p_prompt_version: promptVersionForModule(module),
         });
         results[module] = { ...coverage, moduleStatus: terminal ? "success" : "running" };
       } catch (moduleError) {
@@ -254,6 +256,16 @@ Deno.serve(async (request) => {
       case "collect":
         await collectUpstream();
         break;
+      case "rebuild": {
+        // Maintenance: discard unprocessed work built by a superseded collector, then rebuild
+        // the same modules from live production data with the current deterministic collectors.
+        results.purged = await rpc("ai_ops_purge_stale_work_items", {
+          p_tenant_id: tenantId,
+          p_run_id: runId,
+        });
+        await collectUpstream();
+        break;
+      }
       case "youtube":
         await collectYoutube();
         break;
