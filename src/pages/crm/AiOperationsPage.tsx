@@ -335,6 +335,33 @@ export default function AiOperationsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog
+        open={customSnoozeFindingId !== null}
+        onOpenChange={(open) => { if (!open) setCustomSnoozeFindingId(null); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Snooze until a specific time</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="ai-ops-custom-snooze">Snooze until</Label>
+            <Input
+              id="ai-ops-custom-snooze"
+              type="datetime-local"
+              value={customSnoozeValue}
+              onChange={(event) => setCustomSnoozeValue(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCustomSnoozeFindingId(null)}>Cancel</Button>
+            <Button onClick={submitCustomSnooze} disabled={!customSnoozeValue || snoozeMutation.isPending}>
+              Snooze
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }
