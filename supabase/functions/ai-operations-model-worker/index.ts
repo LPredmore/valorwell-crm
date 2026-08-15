@@ -54,7 +54,9 @@ async function processItem(
   item: ClaimedItem,
 ): Promise<"completed" | "failed" | "retry"> {
   const spec = specFor(item.workType);
-  const model = item.requestedModel || settings.model || AI_OPS_MODEL;
+  // The active AI Operations setting is authoritative. A model recorded on the work item when it was
+  // queued is historical metadata only and must never route execution to a retired model.
+  const model = settings.model || AI_OPS_MODEL;
 
   const attempt = async (repair: boolean) => {
     const suffix = repair
@@ -66,7 +68,9 @@ async function processItem(
       systemInstruction: spec.systemInstruction + suffix,
       userPrompt: buildUserPrompt(item),
       responseSchema: spec.responseSchema,
+      thinkingLevel: spec.thinkingLevel,
     });
+
 
     const parsed = parseModelJson(result.text) as Record<string, unknown>;
     if (spec.requiresEntityCoverage) {
