@@ -12,6 +12,9 @@ import {
 const statusVariant = (status: string) =>
   status === 'success' ? 'secondary' : status === 'failed' ? 'destructive' : 'outline';
 
+/** Never imply data exists when a module has not reported yet. */
+const statusLabel = (status: string) => (status === 'unknown' ? 'Not yet run' : status);
+
 /**
  * Compact AI Operations summary for the Operations Dashboard. Reads the precomputed
  * overview only, and never breaks the rest of the page when AI Operations is off.
@@ -43,7 +46,7 @@ export function AiOperationsSummaryCard() {
 
         {!overview.isPending && unavailable && (
           <p className="text-sm text-muted-foreground">
-            AI Operations is switched off or has not produced a brief yet.
+            Unavailable — AI Operations is switched off or has not run yet.
           </p>
         )}
 
@@ -52,7 +55,7 @@ export function AiOperationsSummaryCard() {
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="font-medium">{summary.businessDate}</span>
               <Badge variant={summary.briefStatus === 'published' ? 'secondary' : 'outline'}>
-                Brief: {summary.briefStatus}
+                Brief: {summary.briefStatus === 'unavailable' ? 'Unavailable' : summary.briefStatus}
                 {summary.briefIsPartial ? ' (partial)' : ''}
               </Badge>
               {summary.briefGeneratedAt && (
@@ -71,7 +74,7 @@ export function AiOperationsSummaryCard() {
             <div className="flex flex-wrap gap-2">
               {summary.modules.map((module) => (
                 <Badge key={module.module} variant={statusVariant(module.status)}>
-                  {module.label}: {module.status}
+                  {module.label}: {statusLabel(module.status)}
                 </Badge>
               ))}
             </div>
