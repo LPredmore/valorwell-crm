@@ -22665,6 +22665,106 @@ export type Database = {
         Args: { p_finding_id: string; p_reason: string; p_snooze_until: string }
         Returns: Json
       }
+      ai_ops_autoresolve_findings: {
+        Args: {
+          p_module: Database["public"]["Enums"]["ai_ops_module_enum"]
+          p_observed_fingerprints: string[]
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: number
+      }
+      ai_ops_begin_module: {
+        Args: {
+          p_module: Database["public"]["Enums"]["ai_ops_module_enum"]
+          p_run_id: string
+          p_source_cutoff_at?: string
+        }
+        Returns: string
+      }
+      ai_ops_begin_run: {
+        Args: {
+          p_business_date: string
+          p_source_cutoff_at?: string
+          p_tenant_id: string
+          p_timezone?: string
+        }
+        Returns: string
+      }
+      ai_ops_claim_work_items: { Args: { p_limit?: number }; Returns: Json }
+      ai_ops_complete_module: {
+        Args: {
+          p_counts?: Json
+          p_coverage?: Json
+          p_error_code?: string
+          p_error_summary?: string
+          p_model?: string
+          p_module_run_id: string
+          p_prompt_version?: string
+          p_status: Database["public"]["Enums"]["ai_ops_run_status_enum"]
+        }
+        Returns: undefined
+      }
+      ai_ops_complete_run: {
+        Args: {
+          p_coverage_summary?: Json
+          p_run_id: string
+          p_status?: Database["public"]["Enums"]["ai_ops_run_status_enum"]
+        }
+        Returns: Json
+      }
+      ai_ops_complete_work_item: {
+        Args: {
+          p_structured_result: Json
+          p_token_usage?: Json
+          p_work_item_id: string
+        }
+        Returns: undefined
+      }
+      ai_ops_enqueue_work: {
+        Args: {
+          p_input_payload: Json
+          p_input_snapshot_ids?: string[]
+          p_model?: string
+          p_module: Database["public"]["Enums"]["ai_ops_module_enum"]
+          p_priority?: number
+          p_prompt_version: string
+          p_run_id: string
+          p_schema_version: string
+          p_tenant_id: string
+          p_work_key: string
+          p_work_type: string
+        }
+        Returns: Json
+      }
+      ai_ops_fail_work_item: {
+        Args: {
+          p_error_code: string
+          p_error_summary: string
+          p_max_attempts?: number
+          p_retryable?: boolean
+          p_work_item_id: string
+        }
+        Returns: Json
+      }
+      ai_ops_upsert_finding: {
+        Args: {
+          p_confidence?: number
+          p_entity_id?: string
+          p_entity_type?: string
+          p_evidence?: Json
+          p_fingerprint: string
+          p_module: Database["public"]["Enums"]["ai_ops_module_enum"]
+          p_recommended_action?: string
+          p_related_existing_exception_id?: string
+          p_run_id: string
+          p_severity: Database["public"]["Enums"]["ai_ops_severity_enum"]
+          p_summary?: string
+          p_tenant_id: string
+          p_title: string
+        }
+        Returns: Json
+      }
       apply_relationship_activity: {
         Args: {
           p_activity_type: string
