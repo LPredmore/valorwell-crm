@@ -86,6 +86,8 @@ const App = () => (
             <Route path="communications/newsletters" element={<NewsletterManagementPage />} />
             <Route path="communications/observability" element={<CommunicationsObservabilityPage />} />
             <Route path="tasks" element={<CanonicalTasks />} />
+            <Route path="ai-operations" element={<AiOperationsPage />} />
+
             <Route path="exceptions" element={<CanonicalExceptions />} />
             <Route path="therapist-matches" element={<TherapistMatchReconciliationPage />} />
             <Route path="inbox" element={<CanonicalInbox />} />
