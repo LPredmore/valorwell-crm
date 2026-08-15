@@ -87,6 +87,7 @@ Deno.serve(async (request) => {
       module: string,
       enabled: boolean,
       work: () => Promise<Record<string, unknown>>,
+      options: { terminal?: boolean } = {},
     ) => {
       if (!enabled) {
         results[module] = { skipped: "flag_disabled" };
@@ -100,15 +101,17 @@ Deno.serve(async (request) => {
       if (error) throw new Error(error.message);
       try {
         const coverage = await work();
+        // Collection phases leave the module RUNNING: queued Gemini work is not success.
+        const terminal = options.terminal ?? false;
         await admin.rpc("ai_ops_complete_module", {
           p_module_run_id: moduleRunId,
-          p_status: "success",
+          p_status: terminal ? "success" : "running",
           p_counts: coverage,
           p_coverage: coverage,
           p_model: AI_OPS_MODEL,
           p_prompt_version: AI_OPS_PROMPT_VERSION,
         });
-        results[module] = coverage;
+        results[module] = { ...coverage, moduleStatus: terminal ? "success" : "running" };
       } catch (moduleError) {
         await admin.rpc("ai_ops_complete_module", {
           p_module_run_id: moduleRunId,
@@ -120,6 +123,18 @@ Deno.serve(async (request) => {
         logEvent(COMPONENT, "module_failed", { module, runId, message: safeError(moduleError) });
       }
     };
+
+    /** Terminal status is derived from the module's real work-item outcomes. */
+    const finalizeModule = async (module: string) => {
+      const { data, error } = await admin.rpc("ai_ops_finalize_module_status", {
+        p_tenant_id: tenantId,
+        p_run_id: runId,
+        p_module: module,
+      });
+      if (error) throw new Error(`ai_ops_finalize_module_status(${module}): ${error.message}`);
+      return (data ?? {}) as Record<string, unknown>;
+    };
+
 
     const rpc = async (name: string, args: Record<string, unknown>) => {
       const { data, error } = await admin.rpc(name, args);
