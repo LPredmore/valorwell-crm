@@ -7,12 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,20 +18,22 @@ import {
   type AiOperationsFlagName,
   type AiOperationsFinding,
   dismissAiOperationsFinding,
+  fetchAiBtyBriefs,
+  fetchAiContentOpportunities,
   fetchAiOperationsBrief,
   fetchAiOperationsFindings,
   fetchAiOperationsFlags,
   fetchAiOperationsOverview,
   fetchAiOperationsRuns,
+  fetchAiWeeklyReviews,
   resolveAiOperationsFinding,
   resolveSnoozeUntil,
   setAiOperationsFlag,
   snoozeAiOperationsFinding,
 } from '@/lib/crm/ai-operations';
 
-
-const severityVariant = (severity: string) =>
-  severity === 'critical' || severity === 'high' ? 'destructive' : 'secondary';
+const severityVariant = (severity: string) => severity === 'critical' || severity === 'high' ? 'destructive' : 'secondary';
+const moduleStatusVariant = (status: string) => status === 'success' ? 'secondary' : status === 'running' ? 'outline' : 'destructive';
 
 export default function AiOperationsPage() {
   const queryClient = useQueryClient();
@@ -46,14 +43,13 @@ export default function AiOperationsPage() {
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('open');
 
-  const overview = useQuery({
-    queryKey: ['ai-operations', 'overview'],
-    queryFn: () => fetchAiOperationsOverview(),
-    refetchOnWindowFocus: true,
-  });
+  const overview = useQuery({ queryKey: ['ai-operations', 'overview'], queryFn: () => fetchAiOperationsOverview(), refetchOnWindowFocus: true });
   const brief = useQuery({ queryKey: ['ai-operations', 'brief'], queryFn: () => fetchAiOperationsBrief() });
   const runs = useQuery({ queryKey: ['ai-operations', 'runs'], queryFn: () => fetchAiOperationsRuns(30) });
   const flags = useQuery({ queryKey: ['ai-operations', 'flags'], queryFn: fetchAiOperationsFlags });
+  const contentOpportunities = useQuery({ queryKey: ['ai-operations', 'content-opportunities'], queryFn: () => fetchAiContentOpportunities(20) });
+  const weeklyReviews = useQuery({ queryKey: ['ai-operations', 'weekly-reviews'], queryFn: () => fetchAiWeeklyReviews(8) });
+  const btyBriefs = useQuery({ queryKey: ['ai-operations', 'bty-briefs'], queryFn: () => fetchAiBtyBriefs(20) });
   const findings = useQuery({
     queryKey: ['ai-operations', 'findings', moduleFilter, severityFilter, statusFilter],
     queryFn: () => fetchAiOperationsFindings({
@@ -65,36 +61,28 @@ export default function AiOperationsPage() {
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['ai-operations'] });
-
   const flagMutation = useMutation({
-    mutationFn: ({ flagName, enabled }: { flagName: string; enabled: boolean }) =>
-      setAiOperationsFlag(flagName, enabled, 'Changed from the AI Operations dashboard.'),
+    mutationFn: ({ flagName, enabled }: { flagName: string; enabled: boolean }) => setAiOperationsFlag(flagName, enabled, 'Changed from the AI Operations dashboard.'),
     onSuccess: () => { invalidate(); toast({ title: 'Flag updated' }); },
     onError: (error: Error) => toast({ title: 'Could not update the flag', description: error.message, variant: 'destructive' }),
   });
-
   const actionMutation = useMutation({
-    mutationFn: ({ id, action }: { id: string; action: 'resolve' | 'dismiss' }) =>
-      action === 'resolve'
-        ? resolveAiOperationsFinding(id, 'Reviewed from the AI Operations dashboard.')
-        : dismissAiOperationsFinding(id, 'Dismissed from the AI Operations dashboard.'),
+    mutationFn: ({ id, action }: { id: string; action: 'resolve' | 'dismiss' }) => action === 'resolve'
+      ? resolveAiOperationsFinding(id, 'Reviewed from the AI Operations dashboard.')
+      : dismissAiOperationsFinding(id, 'Dismissed from the AI Operations dashboard.'),
     onSuccess: () => { invalidate(); toast({ title: 'Finding updated' }); },
     onError: (error: Error) => toast({ title: 'Could not update the finding', description: error.message, variant: 'destructive' }),
   });
-
   const snoozeMutation = useMutation({
-    mutationFn: ({ id, until }: { id: string; until: string }) =>
-      snoozeAiOperationsFinding(id, 'Snoozed from the AI Operations dashboard.', until),
+    mutationFn: ({ id, until }: { id: string; until: string }) => snoozeAiOperationsFinding(id, 'Snoozed from the AI Operations dashboard.', until),
     onSuccess: () => { invalidate(); toast({ title: 'Finding snoozed' }); },
     onError: (error: Error) => toast({ title: 'Could not snooze the finding', description: error.message, variant: 'destructive' }),
   });
 
   const applyPresetSnooze = (id: string, presetKey: string) => {
     const until = resolveSnoozeUntil(presetKey);
-    if (!until) return;
-    snoozeMutation.mutate({ id, until: until.toISOString() });
+    if (until) snoozeMutation.mutate({ id, until: until.toISOString() });
   };
-
   const submitCustomSnooze = () => {
     if (!customSnoozeFindingId || !customSnoozeValue) return;
     const until = new Date(customSnoozeValue);
@@ -109,46 +97,30 @@ export default function AiOperationsPage() {
 
   const items: AiOperationsFinding[] = findings.data?.items ?? [];
   const counts = overview.data?.findingCounts ?? {};
-  const platformEnabled = useMemo(
-    () => flags.data?.some((flag) => flag.flagName === 'ai_operations_enabled' && flag.enabled) ?? false,
-    [flags.data],
-  );
+  const platformEnabled = useMemo(() => flags.data?.some((flag) => flag.flagName === 'ai_operations_enabled' && flag.enabled) ?? false, [flags.data]);
 
   return (
     <div className="space-y-6 p-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">AI Operations</h1>
-        <p className="text-sm text-muted-foreground">
-          Read-only operational intelligence. Findings are recommendations for a human — nothing here changes production data.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">ValorWell Daily</h1>
+        <p className="text-sm text-muted-foreground">AI-assisted operational intelligence across care, staff, appointments, billing, relationships, growth, content, and system health. Findings remain human-reviewed.</p>
       </header>
 
       {!platformEnabled && (
-        <Card className="border-dashed">
-          <CardHeader>
-            <CardTitle className="text-base">The platform is switched off</CardTitle>
-            <CardDescription>
-              Enable AI Operations below to start collecting. Modules stay off until you enable them individually.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <Card className="border-dashed"><CardHeader><CardTitle className="text-base">The platform is switched off</CardTitle><CardDescription>Enable AI Operations below to start collection. Individual modules remain independently controllable.</CardDescription></CardHeader></Card>
       )}
 
       <div className="grid gap-4 md:grid-cols-4">
         {(['critical', 'high', 'medium', 'low'] as const).map((severity) => (
-          <Card key={severity}>
-            <CardHeader className="pb-2">
-              <CardDescription className="capitalize">{severity} open</CardDescription>
-              <CardTitle className="text-3xl">{counts[severity] ?? 0}</CardTitle>
-            </CardHeader>
-          </Card>
+          <Card key={severity}><CardHeader className="pb-2"><CardDescription className="capitalize">{severity} open</CardDescription><CardTitle className="text-3xl">{counts[severity] ?? 0}</CardTitle></CardHeader></Card>
         ))}
       </div>
 
       <Tabs defaultValue="brief">
-        <TabsList>
+        <TabsList className="flex h-auto flex-wrap justify-start">
           <TabsTrigger value="brief">Today's brief</TabsTrigger>
-          <TabsTrigger value="findings">Open findings</TabsTrigger>
+          <TabsTrigger value="findings">Findings</TabsTrigger>
+          <TabsTrigger value="intelligence">Growth & content</TabsTrigger>
           <TabsTrigger value="runs">Run history</TabsTrigger>
           <TabsTrigger value="controls">Controls</TabsTrigger>
         </TabsList>
@@ -156,212 +128,85 @@ export default function AiOperationsPage() {
         <TabsContent value="brief" className="space-y-4 pt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">
-                {brief.data ? `Brief for ${brief.data.businessDate}` : 'No brief has been generated yet'}
-              </CardTitle>
-              {brief.data?.isPartial && (
-                <CardDescription>
-                  This brief is partial — one or more modules did not complete, so treat coverage as incomplete.
-                </CardDescription>
-              )}
+              <CardTitle className="text-base">{brief.data ? `Brief for ${brief.data.businessDate}` : 'No brief has been generated yet'}</CardTitle>
+              {brief.data?.isPartial && <CardDescription>This brief is partial — one or more modules did not complete or had unavailable source data.</CardDescription>}
             </CardHeader>
             <CardContent className="space-y-4">
               {(brief.data?.sections ?? []).map((section, index) => (
                 <div key={section.key ?? index} className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium">{section.heading}</h3>
-                    {section.severity && <Badge variant={severityVariant(section.severity)}>{section.severity}</Badge>}
-                  </div>
+                  <div className="flex items-center gap-2"><h3 className="font-medium">{section.heading}</h3>{section.severity && <Badge variant={severityVariant(section.severity)}>{section.severity}</Badge>}</div>
                   <p className="text-sm text-muted-foreground">{section.body}</p>
                 </div>
               ))}
-              {brief.data?.everythingNormal?.length ? (
-                <p className="text-sm text-muted-foreground">
-                  Normal today: {brief.data.everythingNormal.join(', ')}
-                </p>
-              ) : null}
+              {brief.data?.everythingNormal?.length ? <p className="text-sm text-muted-foreground">Normal today: {brief.data.everythingNormal.join(', ')}</p> : null}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-base">Coverage by module</CardTitle><CardDescription>Unavailable and partial sources remain visible rather than being treated as normal.</CardDescription></CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {(overview.data?.modules ?? []).map((module) => (
+                <div key={module.module} className="flex items-start justify-between gap-2 rounded-md border p-3">
+                  <div><p className="text-sm font-medium">{AI_OPERATIONS_MODULE_LABELS[module.module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? module.module}</p><p className="text-xs text-muted-foreground">{module.sourceItemsTotal} source · {module.itemsAnalyzed} analyzed · {module.itemsFailed} failed</p>{module.errorSummary && <p className="mt-1 text-xs text-destructive">{module.errorSummary}</p>}</div>
+                  <Badge variant={moduleStatusVariant(module.status)}>{module.status}</Badge>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="findings" className="space-y-4 pt-4">
           <div className="flex flex-wrap gap-2">
-            <Select value={moduleFilter} onValueChange={setModuleFilter}>
-              <SelectTrigger className="w-56"><SelectValue placeholder="Module" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All modules</SelectItem>
-                {Object.entries(AI_OPERATIONS_MODULE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={severityFilter} onValueChange={setSeverityFilter}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="Severity" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All severities</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="snoozed">Snoozed</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-                <SelectItem value="dismissed">Dismissed</SelectItem>
-              </SelectContent>
-            </Select>
+            <Select value={moduleFilter} onValueChange={setModuleFilter}><SelectTrigger className="w-56"><SelectValue placeholder="Module" /></SelectTrigger><SelectContent><SelectItem value="all">All modules</SelectItem>{Object.entries(AI_OPERATIONS_MODULE_LABELS).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select>
+            <Select value={severityFilter} onValueChange={setSeverityFilter}><SelectTrigger className="w-40"><SelectValue placeholder="Severity" /></SelectTrigger><SelectContent><SelectItem value="all">All severities</SelectItem><SelectItem value="critical">Critical</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="low">Low</SelectItem></SelectContent></Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="open">Open</SelectItem><SelectItem value="snoozed">Snoozed</SelectItem><SelectItem value="resolved">Resolved</SelectItem><SelectItem value="dismissed">Dismissed</SelectItem></SelectContent></Select>
           </div>
-
-          <Card>
-            <CardContent className="divide-y p-0">
-              {items.length === 0 && (
-                <p className="p-6 text-sm text-muted-foreground">No findings match these filters.</p>
-              )}
-              {items.map((finding) => (
-                <div key={finding.id} className="flex flex-col gap-2 p-4 md:flex-row md:items-start md:justify-between">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={severityVariant(finding.severity)}>{finding.severity}</Badge>
-                      <Badge variant="outline">
-                        {AI_OPERATIONS_MODULE_LABELS[finding.module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? finding.module}
-                      </Badge>
-                      <span className="font-medium">{finding.title}</span>
-                    </div>
-                    {finding.summary && <p className="text-sm text-muted-foreground">{finding.summary}</p>}
-                    {finding.recommendedAction && (
-                      <p className="text-sm">Recommended: {finding.recommendedAction}</p>
-                    )}
-                    {finding.entityType === 'client' && finding.entityId && (
-                      <a className="text-sm underline" href={`/crm/clients/${finding.entityId}`}>Open client</a>
-                    )}
-                  </div>
-                  {finding.status === 'open' && (
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline"
-                        onClick={() => actionMutation.mutate({ id: finding.id, action: 'resolve' })}>
-                        Resolve
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="sm" variant="outline">Snooze</Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {AI_OPERATIONS_SNOOZE_PRESETS.map((preset) => (
-                            <DropdownMenuItem
-                              key={preset.key}
-                              onSelect={() => applyPresetSnooze(finding.id, preset.key)}
-                            >
-                              {preset.label}
-                            </DropdownMenuItem>
-                          ))}
-                          <DropdownMenuItem onSelect={() => { setCustomSnoozeFindingId(finding.id); setCustomSnoozeValue(''); }}>
-                            Custom date and time…
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Button size="sm" variant="ghost"
-                        onClick={() => actionMutation.mutate({ id: finding.id, action: 'dismiss' })}>
-                        Dismiss
-                      </Button>
-                    </div>
-                  )}
-                  {finding.status === 'snoozed' && finding.snoozedUntil && (
-                    <span className="text-xs text-muted-foreground">
-                      Snoozed until {new Date(finding.snoozedUntil).toLocaleString()}
-                    </span>
-                  )}
+          <Card><CardContent className="divide-y p-0">
+            {items.length === 0 && <p className="p-6 text-sm text-muted-foreground">No findings match these filters.</p>}
+            {items.map((finding) => (
+              <div key={finding.id} className="flex flex-col gap-2 p-4 md:flex-row md:items-start md:justify-between">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2"><Badge variant={severityVariant(finding.severity)}>{finding.severity}</Badge><Badge variant="outline">{AI_OPERATIONS_MODULE_LABELS[finding.module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? finding.module}</Badge><span className="font-medium">{finding.title}</span></div>
+                  {finding.summary && <p className="text-sm text-muted-foreground">{finding.summary}</p>}
+                  {finding.recommendedAction && <p className="text-sm">Recommended: {finding.recommendedAction}</p>}
+                  {finding.entityType === 'client' && finding.entityId && <a className="text-sm underline" href={`/crm/clients/${finding.entityId}`}>Open client</a>}
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+                {finding.status === 'open' && <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => actionMutation.mutate({ id: finding.id, action: 'resolve' })}>Resolve</Button>
+                  <DropdownMenu><DropdownMenuTrigger asChild><Button size="sm" variant="outline">Snooze</Button></DropdownMenuTrigger><DropdownMenuContent align="end">{AI_OPERATIONS_SNOOZE_PRESETS.map((preset) => <DropdownMenuItem key={preset.key} onSelect={() => applyPresetSnooze(finding.id, preset.key)}>{preset.label}</DropdownMenuItem>)}<DropdownMenuItem onSelect={() => { setCustomSnoozeFindingId(finding.id); setCustomSnoozeValue(''); }}>Custom date and time…</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+                  <Button size="sm" variant="ghost" onClick={() => actionMutation.mutate({ id: finding.id, action: 'dismiss' })}>Dismiss</Button>
+                </div>}
+                {finding.status === 'snoozed' && finding.snoozedUntil && <span className="text-xs text-muted-foreground">Snoozed until {new Date(finding.snoozedUntil).toLocaleString()}</span>}
+              </div>
+            ))}
+          </CardContent></Card>
         </TabsContent>
 
-        <TabsContent value="runs" className="space-y-4 pt-4">
-          <Card>
-            <CardContent className="divide-y p-0">
-              {(runs.data ?? []).length === 0 && (
-                <p className="p-6 text-sm text-muted-foreground">No runs recorded yet.</p>
-              )}
-              {(runs.data ?? []).map((run) => (
-                <div key={run.id} className="space-y-1 p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{run.businessDate}</span>
-                    <Badge variant={run.overallStatus === 'success' ? 'secondary' : 'destructive'}>
-                      {run.overallStatus}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {run.modules.map((module) => `${module.module}: ${module.status}`).join(' · ') || 'No modules ran.'}
-                  </p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+        <TabsContent value="intelligence" className="space-y-4 pt-4">
+          <Card><CardHeader><CardTitle className="text-base">Content opportunities</CardTitle><CardDescription>Current, source-grounded topics surfaced for ValorWell audiences.</CardDescription></CardHeader><CardContent className="divide-y p-0">
+            {(contentOpportunities.data ?? []).length === 0 && <p className="p-6 text-sm text-muted-foreground">No content opportunities have been generated yet.</p>}
+            {(contentOpportunities.data ?? []).map((item) => <div key={item.id} className="space-y-2 p-4"><div className="flex flex-wrap items-center gap-2"><Badge variant={item.priority === 'high' ? 'destructive' : 'secondary'}>{item.priority}</Badge><span className="font-medium">{item.topic}</span><span className="text-xs text-muted-foreground">{item.business_date}</span></div>{item.why_now && <p className="text-sm text-muted-foreground">{item.why_now}</p>}{item.suggested_angle && <p className="text-sm">Angle: {item.suggested_angle}</p>}<div className="flex flex-wrap gap-2 text-xs text-muted-foreground">{item.audience && <span>Audience: {item.audience}</span>}{item.recommended_format && <span>Format: {item.recommended_format}</span>}<span>{item.sources?.length ?? 0} source(s)</span></div></div>)}
+          </CardContent></Card>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card><CardHeader><CardTitle className="text-base">Weekly management patterns</CardTitle></CardHeader><CardContent className="space-y-4">{(weeklyReviews.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No weekly review generated yet.</p>}{(weeklyReviews.data ?? []).map((review) => <div key={review.id} className="space-y-2 rounded-md border p-3"><div className="flex items-center gap-2"><span className="font-medium">Week ending {review.week_ending}</span></div>{review.structured_result?.weekSummary && <p className="text-sm text-muted-foreground">{review.structured_result.weekSummary}</p>}<p className="text-xs text-muted-foreground">{review.structured_result?.patterns?.length ?? 0} pattern(s)</p></div>)}</CardContent></Card>
+            <Card><CardHeader><CardTitle className="text-base">Beyond The Yellow intelligence</CardTitle></CardHeader><CardContent className="space-y-4">{(btyBriefs.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No scheduled BTY meeting currently has an AI prep/post-interview brief.</p>}{(btyBriefs.data ?? []).map((item) => <div key={item.id} className="space-y-2 rounded-md border p-3"><div className="flex items-center gap-2"><Badge variant="outline">{item.brief_type === 'prep' ? 'Interview prep' : 'Post-interview'}</Badge><span className="text-sm">{item.business_date}</span></div>{!item.source_sufficient && <p className="text-xs text-destructive">Source material was insufficient; no fabricated analysis was produced.</p>}<pre className="max-h-48 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">{JSON.stringify(item.structured_result, null, 2)}</pre></div>)}</CardContent></Card>
+          </div>
         </TabsContent>
 
-        <TabsContent value="controls" className="space-y-4 pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Module switches</CardTitle>
-              <CardDescription>
-                Every switch is off until you enable it. Turning off the platform stops all collection immediately.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {(flags.data ?? []).map((flag) => (
-                <div key={flag.flagName} className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {AI_OPERATIONS_FLAG_LABELS[flag.flagName as AiOperationsFlagName] ?? flag.flagName}
-                    </p>
-                    {flag.updatedAt && (
-                      <p className="text-xs text-muted-foreground">
-                        Updated {new Date(flag.updatedAt).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                  <Switch
-                    checked={flag.enabled}
-                    disabled={flagMutation.isPending}
-                    onCheckedChange={(enabled) => flagMutation.mutate({ flagName: flag.flagName, enabled })}
-                  />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        <TabsContent value="runs" className="space-y-4 pt-4"><Card><CardContent className="divide-y p-0">
+          {(runs.data ?? []).length === 0 && <p className="p-6 text-sm text-muted-foreground">No runs recorded yet.</p>}
+          {(runs.data ?? []).map((run) => <div key={run.id} className="space-y-1 p-4"><div className="flex items-center gap-2"><span className="font-medium">{run.businessDate}</span><Badge variant={run.overallStatus === 'success' ? 'secondary' : 'destructive'}>{run.overallStatus}</Badge></div><p className="text-sm text-muted-foreground">{run.modules.map((module) => `${AI_OPERATIONS_MODULE_LABELS[module.module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? module.module}: ${module.status}`).join(' · ') || 'No modules ran.'}</p></div>)}
+        </CardContent></Card></TabsContent>
+
+        <TabsContent value="controls" className="space-y-4 pt-4"><Card><CardHeader><CardTitle className="text-base">Module switches</CardTitle><CardDescription>Source gaps remain visible even when a module is enabled. Turning off the platform stops all collection.</CardDescription></CardHeader><CardContent className="space-y-3">
+          {(flags.data ?? []).map((flag) => <div key={flag.flagName} className="flex items-center justify-between gap-4"><div><p className="text-sm font-medium">{AI_OPERATIONS_FLAG_LABELS[flag.flagName as AiOperationsFlagName] ?? flag.flagName}</p>{flag.updatedAt && <p className="text-xs text-muted-foreground">Updated {new Date(flag.updatedAt).toLocaleString()}</p>}</div><Switch checked={flag.enabled} disabled={flagMutation.isPending} onCheckedChange={(enabled) => flagMutation.mutate({ flagName: flag.flagName, enabled })} /></div>)}
+        </CardContent></Card></TabsContent>
       </Tabs>
 
-      <Dialog
-        open={customSnoozeFindingId !== null}
-        onOpenChange={(open) => { if (!open) setCustomSnoozeFindingId(null); }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Snooze until a specific time</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="ai-ops-custom-snooze">Snooze until</Label>
-            <Input
-              id="ai-ops-custom-snooze"
-              type="datetime-local"
-              value={customSnoozeValue}
-              onChange={(event) => setCustomSnoozeValue(event.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setCustomSnoozeFindingId(null)}>Cancel</Button>
-            <Button onClick={submitCustomSnooze} disabled={!customSnoozeValue || snoozeMutation.isPending}>
-              Snooze
-            </Button>
-          </DialogFooter>
-        </DialogContent>
+      <Dialog open={customSnoozeFindingId !== null} onOpenChange={(open) => { if (!open) setCustomSnoozeFindingId(null); }}>
+        <DialogContent><DialogHeader><DialogTitle>Snooze until a specific time</DialogTitle></DialogHeader><div className="space-y-2"><Label htmlFor="ai-ops-custom-snooze">Snooze until</Label><Input id="ai-ops-custom-snooze" type="datetime-local" value={customSnoozeValue} onChange={(event) => setCustomSnoozeValue(event.target.value)} /></div><DialogFooter><Button variant="ghost" onClick={() => setCustomSnoozeFindingId(null)}>Cancel</Button><Button onClick={submitCustomSnooze} disabled={!customSnoozeValue || snoozeMutation.isPending}>Snooze</Button></DialogFooter></DialogContent>
       </Dialog>
     </div>
-
   );
 }
