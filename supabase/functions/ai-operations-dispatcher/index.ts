@@ -152,8 +152,8 @@ Deno.serve(async (request) => {
         }));
     };
 
-    const collectYoutube = () =>
-      runModule("youtube", await flag("youtube_ai_enabled"), () =>
+    const collectYoutube = async () =>
+      await runModule("youtube", await flag("youtube_ai_enabled"), () =>
         rpc("ai_ops_build_youtube_batches", { p_tenant_id: tenantId, p_run_id: runId }));
 
     const reconcileModules = async () => {
@@ -169,8 +169,8 @@ Deno.serve(async (request) => {
         rpc("ai_ops_ingest_youtube_results", { p_tenant_id: tenantId, p_run_id: runId }));
     };
 
-    const generateBrief = () =>
-      runModule("executive_brief", await flag("executive_brief_enabled"), async () => {
+    const generateBrief = async () =>
+      await runModule("executive_brief", await flag("executive_brief_enabled"), async () => {
         await rpc("ai_ops_build_executive_brief_input", { p_tenant_id: tenantId, p_run_id: runId });
         return rpc("ai_ops_ingest_executive_brief", { p_tenant_id: tenantId, p_run_id: runId });
       });
