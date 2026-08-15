@@ -22947,6 +22947,15 @@ export type Database = {
         Returns: Json
       }
       bty_automation_overview: { Args: { p_limit?: number }; Returns: Json }
+      bty_claim_discovery_pass: {
+        Args: {
+          p_business_date: string
+          p_model: string
+          p_pass: number
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       bty_claim_discovery_run: {
         Args: {
           p_attempt: number
@@ -22962,6 +22971,15 @@ export type Database = {
       }
       bty_commit_discovery_batch: {
         Args: { p_candidates: Json; p_run_id: string }
+        Returns: Json
+      }
+      bty_commit_discovery_pass: {
+        Args: {
+          p_advance_state?: boolean
+          p_candidates: Json
+          p_pass: number
+          p_run_id: string
+        }
         Returns: Json
       }
       bty_contact_enrichment_targets: {
