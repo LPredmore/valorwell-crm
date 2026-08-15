@@ -151,7 +151,8 @@ export type ModelCallResult = {
 };
 
 /** Task-specific reasoning effort. Deterministic facts are computed in SQL, so only interpretation needs thinking. */
-export type ThinkingLevel = "low" | "medium" | "high";
+export type { ThinkingLevel } from "./ai-ops-types.ts";
+import type { ThinkingLevel } from "./ai-ops-types.ts";
 
 export async function callGeminiModel(options: {
   apiKey: string;
