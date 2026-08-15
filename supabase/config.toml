@@ -36,3 +36,12 @@ verify_jwt = false
 
 [functions.newsletter-send-worker]
 verify_jwt = false
+
+[functions.ai-operations-dispatcher]
+# Scheduled AI Operations entrypoint; authorizes the service-role bearer in code.
+verify_jwt = false
+
+[functions.ai-operations-model-worker]
+# Scheduled AI Operations model queue worker; authorizes the service-role bearer in code.
+verify_jwt = false
+
