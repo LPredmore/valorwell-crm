@@ -1,5 +1,6 @@
 // Versioned prompt + response-schema registry for AI Operations work items.
 // Prompts never request or accept free-text clinical narrative.
+import type { ThinkingLevel } from "./ai-ops.ts";
 
 export type WorkTypeSpec = {
   workType: string;
@@ -7,9 +8,12 @@ export type WorkTypeSpec = {
   schemaVersion: string;
   systemInstruction: string;
   responseSchema: Record<string, unknown>;
+  /** Reasoning effort requested from Gemini Flash for this work type. */
+  thinkingLevel: ThinkingLevel;
   /** When true, the result array must cover exactly the requested entity keys. */
   requiresEntityCoverage: boolean;
 };
+
 
 const severityEnum = ["critical", "high", "medium", "low"];
 
