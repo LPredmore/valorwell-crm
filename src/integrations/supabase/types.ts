@@ -22781,6 +22781,14 @@ export type Database = {
         }
         Returns: Json
       }
+      ai_ops_finalize_module_status: {
+        Args: {
+          p_module: Database["public"]["Enums"]["ai_ops_module_enum"]
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       ai_ops_ingest_client_journey_results: {
         Args: { p_run_id: string; p_tenant_id: string }
         Returns: Json
@@ -22790,7 +22798,11 @@ export type Database = {
         Returns: Json
       }
       ai_ops_ingest_executive_brief: {
-        Args: { p_run_id: string; p_tenant_id: string }
+        Args: {
+          p_force_partial?: boolean
+          p_run_id: string
+          p_tenant_id: string
+        }
         Returns: Json
       }
       ai_ops_ingest_youtube_results: {

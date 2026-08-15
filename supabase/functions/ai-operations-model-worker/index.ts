@@ -161,6 +161,21 @@ Deno.serve(async (request) => {
       return json({ error: safeError(configError), code: "gemini_api_key_missing" }, 500);
     }
 
+    // Diagnostic: report the model names this API key may actually call. Never returns the key.
+    if (body?.action === "list_models") {
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
+        headers: { "x-goog-api-key": apiKey },
+      });
+      const payload = await response.json().catch(() => ({}));
+      const models = (payload?.models ?? [])
+        .map((m: { name?: string; supportedGenerationMethods?: string[] }) => ({
+          name: m.name,
+          methods: m.supportedGenerationMethods,
+        }));
+      return json({ ok: response.ok, status: response.status, models });
+    }
+
+
     const { data: settings, error: settingsError } = await admin
       .from("ai_operations_settings")
       .select("model, max_model_concurrency")
