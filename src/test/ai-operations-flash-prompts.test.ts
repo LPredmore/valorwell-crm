@@ -4,13 +4,14 @@ import { readFileSync } from "node:fs";
 import { resolveAiOpsModel } from "../../supabase/functions/_shared/ai-ops-model";
 
 describe("AI Operations model configuration", () => {
-  it("makes Gemini 2.5 Pro authoritative and never falls back to Flash", () => {
+  it("keeps a Gemini Pro model authoritative and never falls back to Flash", () => {
     const runtime = readFileSync("supabase/functions/_shared/ai-ops-model.ts", "utf8") + readFileSync("supabase/functions/_shared/ai-ops.ts", "utf8");
-    expect(runtime).toContain('AI_OPS_MODEL = "gemini-2.5-pro"');
-    expect(runtime).not.toContain("gemini-pro-latest");
-    expect(resolveAiOpsModel("gemini-2.5-flash", "gemini-flash-latest")).toBe("gemini-2.5-pro");
-    expect(resolveAiOpsModel(null, "gemini-2.5-pro")).toBe("gemini-2.5-pro");
-    expect(resolveAiOpsModel("", "")).toBe("gemini-2.5-pro");
+    expect(runtime).toContain('AI_OPS_MODEL = "gemini-pro-latest"');
+    expect(runtime).not.toContain('"gemini-2.5-flash"');
+    expect(runtime).not.toContain('"gemini-flash-latest"');
+    expect(resolveAiOpsModel("gemini-2.5-flash", "gemini-flash-latest")).toBe("gemini-pro-latest");
+    expect(resolveAiOpsModel(null, "gemini-pro-latest")).toBe("gemini-pro-latest");
+    expect(resolveAiOpsModel("", "")).toBe("gemini-pro-latest");
   });
 
   it("uses the current prompt versions for revised judgment-heavy prompts", () => {
