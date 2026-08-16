@@ -1,12 +1,17 @@
 // Real YouTube ingestion for AI Operations, using the official YouTube Data API v3.
 // Read-only: comments and statistics are fetched and stored. Nothing is posted to YouTube.
+// Authentication: OAuth 2.0 refresh-token flow (server-side only). An API key is used only
+// as an optional fallback when OAuth secrets are not configured.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.93.1";
 
 const API = "https://www.googleapis.com/youtube/v3";
+const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 
 export type YoutubeSyncResult = {
   available: boolean;
   reason?: string;
+  authMode?: "oauth" | "api_key";
+  channelTitle?: string;
   videosScanned?: number;
   commentsSeen?: number;
   commentsUpserted?: number;
@@ -15,23 +20,55 @@ export type YoutubeSyncResult = {
 
 export function youtubeApiKey(): string | null { return Deno.env.get("YOUTUBE_API_KEY") || null; }
 
-type CommentThreadItem = {
-  snippet?: { videoId?: string; topLevelComment?: { id?: string; snippet?: YoutubeCommentSnippet } };
-  replies?: { comments?: Array<{ id?: string; snippet?: YoutubeCommentSnippet }> };
-};
-type YoutubeCommentSnippet = {
-  textOriginal?: string; textDisplay?: string; authorDisplayName?: string;
-  publishedAt?: string; updatedAt?: string; parentId?: string;
-};
+export function youtubeOauthConfigured(): boolean {
+  return Boolean(
+    Deno.env.get("YOUTUBE_OAUTH_CLIENT_ID") &&
+    Deno.env.get("YOUTUBE_OAUTH_CLIENT_SECRET") &&
+    Deno.env.get("YOUTUBE_OAUTH_REFRESH_TOKEN"),
+  );
+}
 
-type VideoDetails = {
-  id?: string;
-  snippet?: { title?: string; publishedAt?: string };
-  statistics?: { viewCount?: string; likeCount?: string; commentCount?: string };
-};
+let cachedToken: { token: string; expiresAt: number } | null = null;
 
-async function getJson(url: string): Promise<Record<string, unknown>> {
-  const response = await fetch(url);
+/** Exchanges the stored refresh token for a short-lived access token. Never logged or returned to clients. */
+export async function youtubeAccessToken(): Promise<string> {
+  if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.token;
+  const body = new URLSearchParams({
+    client_id: Deno.env.get("YOUTUBE_OAUTH_CLIENT_ID") ?? "",
+    client_secret: Deno.env.get("YOUTUBE_OAUTH_CLIENT_SECRET") ?? "",
+    refresh_token: Deno.env.get("YOUTUBE_OAUTH_REFRESH_TOKEN") ?? "",
+    grant_type: "refresh_token",
+  });
+  const response = await fetch(TOKEN_ENDPOINT, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload?.access_token) {
+    throw new Error(`YouTube OAuth token refresh failed (${response.status}): ${payload?.error_description ?? payload?.error ?? "unknown error"}`);
+  }
+  const expiresIn = Number(payload.expires_in ?? 3600);
+  cachedToken = { token: payload.access_token as string, expiresAt: Date.now() + expiresIn * 1000 };
+  return cachedToken.token;
+}
+
+type Auth = { mode: "oauth"; token: string } | { mode: "api_key"; key: string };
+
+async function resolveAuth(): Promise<Auth | null> {
+  if (youtubeOauthConfigured()) return { mode: "oauth", token: await youtubeAccessToken() };
+  const key = youtubeApiKey();
+  return key ? { mode: "api_key", key } : null;
+}
+
+function authorize(url: string, auth: Auth): { url: string; headers: HeadersInit } {
+  if (auth.mode === "oauth") return { url, headers: { authorization: `Bearer ${auth.token}` } };
+  return { url: `${url}${url.includes("?") ? "&" : "?"}key=${auth.key}`, headers: {} };
+}
+
+async function getJson(path: string, auth: Auth): Promise<Record<string, unknown>> {
+  const { url, headers } = authorize(`${API}${path}`, auth);
+  const response = await fetch(url, { headers });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     const message = (payload as { error?: { message?: string } })?.error?.message ?? `YouTube API request failed (${response.status}).`;
@@ -42,10 +79,24 @@ async function getJson(url: string): Promise<Record<string, unknown>> {
   return payload as Record<string, unknown>;
 }
 
+/** Identity of the account behind the OAuth refresh token (used for verification and channel fallback). */
+export async function youtubeAuthenticatedChannel(): Promise<{ id: string; title: string } | null> {
+  if (!youtubeOauthConfigured()) return null;
+  const auth = await resolveAuth();
+  if (!auth) return null;
+  const payload = await getJson(`/channels?part=snippet&mine=true`, auth) as {
+    items?: Array<{ id?: string; snippet?: { title?: string } }>;
+  };
+  const item = payload.items?.[0];
+  if (!item?.id) return null;
+  return { id: item.id, title: item.snippet?.title ?? "" };
+}
+
 const asBigIntString = (value: string | undefined) => {
   if (!value || !/^\d+$/.test(value)) return null;
   return value;
 };
+
 
 export async function syncYoutubeComments(options: {
   admin: SupabaseClient; tenantId: string; channelId: string | null; btyPlaylistId: string | null; maxVideos?: number;
