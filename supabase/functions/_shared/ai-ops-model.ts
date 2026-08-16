@@ -10,14 +10,24 @@
 export const AI_OPS_MODEL = "gemini-pro-latest";
 
 /**
- * Picks the first usable model id. Any Flash id is ignored so a cheaper model can
- * never silently take over an analysis module; Gemini 2.5 Pro is the only fallback.
+ * Model ids that must never be called: any Flash tier (a cheaper model must never
+ * silently take over an analysis module) and retired pinned Pro ids that return 404
+ * for this project's API key. Older Phase 2 batch builders persisted
+ * `gemini-2.5-pro` into `requested_model`, so the rejection has to happen here.
+ */
+const REJECTED_MODEL_FRAGMENTS = ["flash", "gemini-2.5-pro", "gemini-1.5"];
+
+/**
+ * Picks the first usable model id, ignoring Flash and retired Pro ids so every
+ * module lands on the current Pro-class alias.
  */
 export function resolveAiOpsModel(...candidates: Array<string | null | undefined>): string {
   for (const candidate of candidates) {
-    const model = (candidate ?? "").trim();
-    if (!model || model.toLowerCase().includes("flash")) continue;
-    return model;
+    const model = (candidate ?? "").trim().toLowerCase();
+    if (!model) continue;
+    if (REJECTED_MODEL_FRAGMENTS.some((fragment) => model.includes(fragment))) continue;
+    return (candidate ?? "").trim();
   }
   return AI_OPS_MODEL;
 }
+

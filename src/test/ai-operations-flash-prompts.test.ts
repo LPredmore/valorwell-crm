@@ -14,6 +14,26 @@ describe("AI Operations model configuration", () => {
     expect(resolveAiOpsModel("", "")).toBe("gemini-pro-latest");
   });
 
+  it("ignores retired pinned Pro ids persisted by earlier Phase 2 batch builders", () => {
+    expect(resolveAiOpsModel("gemini-2.5-pro", "gemini-pro-latest")).toBe("gemini-pro-latest");
+    expect(resolveAiOpsModel("gemini-1.5-pro", null)).toBe("gemini-pro-latest");
+    expect(resolveAiOpsModel("gemini-3.1-pro-preview", null)).toBe("gemini-3.1-pro-preview");
+  });
+
+  it("registers prompt specs for every Phase 2 module work type", () => {
+    for (const workType of [
+      "staff_service_quality_review",
+      "appointment_integrity_review",
+      "billing_claims_review",
+      "data_quality_review",
+    ]) {
+      const spec = specFor(workType);
+      expect(spec.requiresEntityCoverage).toBe(true);
+      expect(spec.responseSchema).toBeTruthy();
+    }
+  });
+
+
   it("uses the current prompt versions for revised judgment-heavy prompts", () => {
     expect(specFor("client_journey_review").promptVersion).toBe("2");
     expect(specFor("communications_qa_review").promptVersion).toBe("2");
