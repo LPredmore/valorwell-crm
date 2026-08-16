@@ -4,20 +4,23 @@ import { readFileSync } from "node:fs";
 import { resolveAiOpsModel } from "../../supabase/functions/_shared/ai-ops-model";
 
 describe("AI Operations model configuration", () => {
-  it("keeps a Gemini Pro model authoritative and never falls back to Flash", () => {
+  it("keeps Gemini 2.5 Flash authoritative for every Gemini-backed call", () => {
     const runtime = readFileSync("supabase/functions/_shared/ai-ops-model.ts", "utf8") + readFileSync("supabase/functions/_shared/ai-ops.ts", "utf8");
-    expect(runtime).toContain('AI_OPS_MODEL = "gemini-pro-latest"');
-    expect(runtime).not.toContain('"gemini-2.5-flash"');
-    expect(runtime).not.toContain('"gemini-flash-latest"');
-    expect(resolveAiOpsModel("gemini-2.5-flash", "gemini-flash-latest")).toBe("gemini-pro-latest");
-    expect(resolveAiOpsModel(null, "gemini-pro-latest")).toBe("gemini-pro-latest");
-    expect(resolveAiOpsModel("", "")).toBe("gemini-pro-latest");
+    expect(runtime).toContain('AI_OPS_MODEL = "gemini-2.5-flash"');
+    expect(resolveAiOpsModel("gemini-pro-latest", "gemini-2.5-pro")).toBe("gemini-2.5-flash");
+    expect(resolveAiOpsModel("gemini-flash-latest", null)).toBe("gemini-2.5-flash");
+    expect(resolveAiOpsModel(null, null)).toBe("gemini-2.5-flash");
   });
 
-  it("ignores retired pinned Pro ids persisted by earlier Phase 2 batch builders", () => {
-    expect(resolveAiOpsModel("gemini-2.5-pro", "gemini-pro-latest")).toBe("gemini-pro-latest");
-    expect(resolveAiOpsModel("gemini-1.5-pro", null)).toBe("gemini-pro-latest");
-    expect(resolveAiOpsModel("gemini-3.1-pro-preview", null)).toBe("gemini-3.1-pro-preview");
+  it("ignores stale or alternate requested models and always routes to Flash", () => {
+    expect(resolveAiOpsModel("gemini-2.5-pro", "gemini-pro-latest")).toBe("gemini-2.5-flash");
+    expect(resolveAiOpsModel("gemini-1.5-pro", null)).toBe("gemini-2.5-flash");
+    expect(resolveAiOpsModel("gemini-3.1-pro-preview", null)).toBe("gemini-2.5-flash");
+  });
+
+  it("does not allow a per-request worker model override", () => {
+    const worker = readFileSync("supabase/functions/ai-operations-model-worker/index.ts", "utf8");
+    expect(worker).not.toContain("validationModel");
   });
 
   it("registers prompt specs for every Phase 2 module work type", () => {
@@ -32,7 +35,6 @@ describe("AI Operations model configuration", () => {
       expect(spec.responseSchema).toBeTruthy();
     }
   });
-
 
   it("uses the current prompt versions for revised judgment-heavy prompts", () => {
     expect(specFor("client_journey_review").promptVersion).toBe("2");
