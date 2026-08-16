@@ -37,6 +37,21 @@ import {
 const severityVariant = (severity: string) => severity === 'critical' || severity === 'high' ? 'destructive' : 'secondary';
 const moduleStatusVariant = (status: string) => status === 'success' ? 'secondary' : status === 'running' ? 'outline' : 'destructive';
 
+/** Direct path back to the underlying CRM record a finding was raised against. */
+const RECORD_LINKS: Record<string, { path: (id: string) => string; label: string }> = {
+  client: { path: (id) => `/crm/clients/${id}`, label: 'Open client' },
+  relationship_organization: { path: (id) => `/crm/business-development/organizations/${id}`, label: 'Open organization' },
+  relationship_contact: { path: (id) => `/crm/business-development/contacts/${id}`, label: 'Open contact' },
+  relationship_opportunity: { path: (id) => `/crm/business-development/opportunities/${id}`, label: 'Open opportunity' },
+};
+
+function FindingRecordLink({ entityType, entityId }: { entityType: string | null; entityId: string | null }) {
+  const link = entityType ? RECORD_LINKS[entityType] : undefined;
+  if (!link || !entityId) return null;
+  return <a className="text-sm underline" href={link.path(entityId)}>{link.label}</a>;
+}
+
+
 /** Per-module view: this run's coverage plus the module's own open findings. */
 function ModuleFindingsPanel({ module, overview }: { module: string; overview: AiOperationsOverview | null }) {
   const label = AI_OPERATIONS_MODULE_LABELS[module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? module;
@@ -75,7 +90,7 @@ function ModuleFindingsPanel({ module, overview }: { module: string; overview: A
             </div>
             {finding.summary && <p className="text-sm text-muted-foreground">{finding.summary}</p>}
             {finding.recommendedAction && <p className="text-sm">Recommended: {finding.recommendedAction}</p>}
-            {finding.entityType === 'client' && finding.entityId && <a className="text-sm underline" href={`/crm/clients/${finding.entityId}`}>Open client</a>}
+            <FindingRecordLink entityType={finding.entityType} entityId={finding.entityId} />
           </div>
         ))}
       </CardContent></Card>
@@ -200,7 +215,8 @@ export default function AiOperationsPage() {
           <TabsTrigger value="client_journey">Client Journey</TabsTrigger>
           <TabsTrigger value="communications">Communications QA</TabsTrigger>
           <TabsTrigger value="youtube">YouTube</TabsTrigger>
-          <TabsTrigger value="intelligence">Growth & content</TabsTrigger>
+          <TabsTrigger value="relationships">Relationships &amp; growth</TabsTrigger>
+          <TabsTrigger value="intelligence">Growth &amp; content</TabsTrigger>
           <TabsTrigger value="runs">History</TabsTrigger>
           <TabsTrigger value="controls">Controls</TabsTrigger>
         </TabsList>
@@ -210,6 +226,12 @@ export default function AiOperationsPage() {
             <ModuleFindingsPanel module={module} overview={overview.data ?? null} />
           </TabsContent>
         ))}
+
+        <TabsContent value="relationships" className="space-y-4 pt-4">
+          <ModuleFindingsPanel module="relationship_followup" overview={overview.data ?? null} />
+          <ModuleFindingsPanel module="donor_intelligence" overview={overview.data ?? null} />
+          <ModuleFindingsPanel module="social_leads" overview={overview.data ?? null} />
+        </TabsContent>
 
         <TabsContent value="youtube" className="space-y-4 pt-4">
           <ModuleFindingsPanel module="youtube" overview={overview.data ?? null} />
@@ -261,7 +283,7 @@ export default function AiOperationsPage() {
                   <div className="flex flex-wrap items-center gap-2"><Badge variant={severityVariant(finding.severity)}>{finding.severity}</Badge><Badge variant="outline">{AI_OPERATIONS_MODULE_LABELS[finding.module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? finding.module}</Badge><span className="font-medium">{finding.title}</span></div>
                   {finding.summary && <p className="text-sm text-muted-foreground">{finding.summary}</p>}
                   {finding.recommendedAction && <p className="text-sm">Recommended: {finding.recommendedAction}</p>}
-                  {finding.entityType === 'client' && finding.entityId && <a className="text-sm underline" href={`/crm/clients/${finding.entityId}`}>Open client</a>}
+                  <FindingRecordLink entityType={finding.entityType} entityId={finding.entityId} />
                 </div>
                 {finding.status === 'open' && <div className="flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => actionMutation.mutate({ id: finding.id, action: 'resolve' })}>Resolve</Button>
