@@ -21,7 +21,7 @@ const requestedEntityKeys = (item: ClaimedItem): string[] => {
 
 async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string, settings: { model: string }, item: ClaimedItem): Promise<"completed" | "failed" | "retry"> {
   const spec = specFor(item.workType);
-  const model = item.requestedModel || settings.model || AI_OPS_MODEL;
+  const model = resolveAiOpsModel(item.requestedModel, settings.model);
   let grounding: { text: string; sources: Array<{ title: string | null; uri: string | null }>; searchQueries: string[]; tokenUsage: Record<string, unknown>; modelVersion: string | null } | null = null;
 
   const userPrompt = async () => {
