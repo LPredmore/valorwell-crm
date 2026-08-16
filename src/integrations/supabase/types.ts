@@ -82,6 +82,124 @@ export type Database = {
           },
         ]
       }
+      ai_operations_bty_briefs: {
+        Row: {
+          brief_type: string
+          business_date: string
+          contact_id: string | null
+          created_at: string
+          id: string
+          meeting_id: string | null
+          opportunity_id: string | null
+          organization_id: string | null
+          run_id: string | null
+          source_sufficient: boolean
+          structured_result: Json
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          brief_type: string
+          business_date: string
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          meeting_id?: string | null
+          opportunity_id?: string | null
+          organization_id?: string | null
+          run_id?: string | null
+          source_sufficient?: boolean
+          structured_result?: Json
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          brief_type?: string
+          business_date?: string
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          meeting_id?: string | null
+          opportunity_id?: string | null
+          organization_id?: string | null
+          run_id?: string | null
+          source_sufficient?: boolean
+          structured_result?: Json
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_bty_briefs_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_content_opportunities: {
+        Row: {
+          audience: string | null
+          business_date: string
+          created_at: string
+          id: string
+          priority: Database["public"]["Enums"]["ai_ops_severity_enum"]
+          recommended_format: string | null
+          run_id: string | null
+          sources: Json
+          status: string
+          suggested_angle: string | null
+          tenant_id: string
+          topic: string
+          topic_key: string
+          updated_at: string
+          why_now: string | null
+        }
+        Insert: {
+          audience?: string | null
+          business_date: string
+          created_at?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["ai_ops_severity_enum"]
+          recommended_format?: string | null
+          run_id?: string | null
+          sources?: Json
+          status?: string
+          suggested_angle?: string | null
+          tenant_id: string
+          topic: string
+          topic_key: string
+          updated_at?: string
+          why_now?: string | null
+        }
+        Update: {
+          audience?: string | null
+          business_date?: string
+          created_at?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["ai_ops_severity_enum"]
+          recommended_format?: string | null
+          run_id?: string | null
+          sources?: Json
+          status?: string
+          suggested_angle?: string | null
+          tenant_id?: string
+          topic?: string
+          topic_key?: string
+          updated_at?: string
+          why_now?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_content_opportunities_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_operations_finding_events: {
         Row: {
           actor_kind: string
@@ -385,6 +503,122 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_operations_sop_controls: {
+        Row: {
+          control_key: string
+          control_text: string
+          created_at: string
+          domain: string
+          enabled: boolean
+          evidence_contract: Json
+          id: string
+          source_doc_locator: string | null
+          source_doc_name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          control_key: string
+          control_text: string
+          created_at?: string
+          domain: string
+          enabled?: boolean
+          evidence_contract?: Json
+          id?: string
+          source_doc_locator?: string | null
+          source_doc_name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          control_key?: string
+          control_text?: string
+          created_at?: string
+          domain?: string
+          enabled?: boolean
+          evidence_contract?: Json
+          id?: string
+          source_doc_locator?: string | null
+          source_doc_name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_operations_sop_observations: {
+        Row: {
+          control_key: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          evidence: Json
+          id: string
+          observed_at: string
+          source_reference: string | null
+          tenant_id: string
+        }
+        Insert: {
+          control_key: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          evidence?: Json
+          id?: string
+          observed_at: string
+          source_reference?: string | null
+          tenant_id: string
+        }
+        Update: {
+          control_key?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          evidence?: Json
+          id?: string
+          observed_at?: string
+          source_reference?: string | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      ai_operations_weekly_reviews: {
+        Row: {
+          created_at: string
+          id: string
+          run_id: string | null
+          structured_result: Json
+          tenant_id: string
+          updated_at: string
+          week_ending: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          run_id?: string | null
+          structured_result?: Json
+          tenant_id: string
+          updated_at?: string
+          week_ending: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          run_id?: string | null
+          structured_result?: Json
+          tenant_id?: string
+          updated_at?: string
+          week_ending?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_weekly_reviews_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_operations_youtube_comments: {
         Row: {
           analyzed_at: string | null
@@ -460,6 +694,54 @@ export type Database = {
           updated_at?: string
           video_id?: string
           video_title?: string | null
+        }
+        Relationships: []
+      }
+      ai_operations_youtube_video_metrics: {
+        Row: {
+          channel_id: string
+          comment_count: number | null
+          created_at: string
+          id: string
+          initiative: string | null
+          like_count: number | null
+          published_at: string | null
+          snapshot_at: string
+          subscriber_count: number | null
+          tenant_id: string
+          video_id: string
+          video_title: string | null
+          view_count: number | null
+        }
+        Insert: {
+          channel_id: string
+          comment_count?: number | null
+          created_at?: string
+          id?: string
+          initiative?: string | null
+          like_count?: number | null
+          published_at?: string | null
+          snapshot_at?: string
+          subscriber_count?: number | null
+          tenant_id: string
+          video_id: string
+          video_title?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          channel_id?: string
+          comment_count?: number | null
+          created_at?: string
+          id?: string
+          initiative?: string | null
+          like_count?: number | null
+          published_at?: string | null
+          snapshot_at?: string
+          subscriber_count?: number | null
+          tenant_id?: string
+          video_id?: string
+          video_title?: string | null
+          view_count?: number | null
         }
         Relationships: []
       }
@@ -22688,6 +22970,28 @@ export type Database = {
         }
         Returns: string
       }
+      ai_ops_build_appointment_integrity_batches: {
+        Args: {
+          p_batch_size?: number
+          p_cutoff_at?: string
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      ai_ops_build_billing_claims_batches: {
+        Args: {
+          p_batch_size?: number
+          p_cutoff_at?: string
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      ai_ops_build_bty_intelligence_batches: {
+        Args: { p_cutoff_at?: string; p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
       ai_ops_build_client_journey_batches: {
         Args: {
           p_batch_size?: number
@@ -22707,8 +23011,74 @@ export type Database = {
         }
         Returns: Json
       }
+      ai_ops_build_content_opportunity_input: {
+        Args: { p_cutoff_at?: string; p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_build_content_performance_batches: {
+        Args: {
+          p_batch_size?: number
+          p_cutoff_at?: string
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      ai_ops_build_data_quality_batches: {
+        Args: { p_cutoff_at?: string; p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_build_donor_intelligence_batches: {
+        Args: {
+          p_batch_size?: number
+          p_cutoff_at?: string
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       ai_ops_build_executive_brief_input: {
         Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_build_relationship_followup_batches: {
+        Args: {
+          p_batch_size?: number
+          p_cutoff_at?: string
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      ai_ops_build_social_lead_batches: {
+        Args: {
+          p_batch_size?: number
+          p_cutoff_at?: string
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      ai_ops_build_sop_compliance_batches: {
+        Args: {
+          p_batch_size?: number
+          p_cutoff_at?: string
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      ai_ops_build_staff_quality_batches: {
+        Args: {
+          p_batch_size?: number
+          p_cutoff_at?: string
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      ai_ops_build_weekly_pattern_input: {
+        Args: { p_cutoff_at?: string; p_run_id: string; p_tenant_id: string }
         Returns: Json
       }
       ai_ops_build_youtube_batches: {
@@ -22789,11 +23159,39 @@ export type Database = {
         }
         Returns: Json
       }
+      ai_ops_ingest_appointment_integrity_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_billing_claims_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_bty_intelligence_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
       ai_ops_ingest_client_journey_results: {
         Args: { p_run_id: string; p_tenant_id: string }
         Returns: Json
       }
       ai_ops_ingest_communications_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_content_opportunities: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_content_performance_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_data_quality_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_donor_intelligence_results: {
         Args: { p_run_id: string; p_tenant_id: string }
         Returns: Json
       }
@@ -22803,6 +23201,34 @@ export type Database = {
           p_run_id: string
           p_tenant_id: string
         }
+        Returns: Json
+      }
+      ai_ops_ingest_generic_results: {
+        Args: {
+          p_module: Database["public"]["Enums"]["ai_ops_module_enum"]
+          p_run_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      ai_ops_ingest_relationship_followup_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_social_leads_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_sop_compliance_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_staff_quality_results: {
+        Args: { p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_ingest_weekly_patterns: {
+        Args: { p_run_id: string; p_tenant_id: string }
         Returns: Json
       }
       ai_ops_ingest_youtube_results: {
@@ -22850,6 +23276,22 @@ export type Database = {
           p_video_title: string
         }
         Returns: Json
+      }
+      ai_ops_upsert_youtube_video_metric: {
+        Args: {
+          p_channel_id: string
+          p_comment_count: number
+          p_initiative: string
+          p_like_count: number
+          p_published_at: string
+          p_snapshot_at?: string
+          p_subscriber_count: number
+          p_tenant_id: string
+          p_video_id: string
+          p_video_title: string
+          p_view_count: number
+        }
+        Returns: string
       }
       ai_ops_worker_flag: {
         Args: { p_flag_name: string; p_tenant_id: string }
@@ -26134,6 +26576,18 @@ export type Database = {
         | "communications"
         | "youtube"
         | "executive_brief"
+        | "staff_quality"
+        | "appointment_integrity"
+        | "billing_claims"
+        | "data_quality"
+        | "relationship_followup"
+        | "donor_intelligence"
+        | "social_leads"
+        | "content_performance"
+        | "bty_intelligence"
+        | "sop_compliance"
+        | "weekly_patterns"
+        | "content_opportunities"
       ai_ops_run_status_enum:
         | "pending"
         | "running"
@@ -26645,6 +27099,18 @@ export const Constants = {
         "communications",
         "youtube",
         "executive_brief",
+        "staff_quality",
+        "appointment_integrity",
+        "billing_claims",
+        "data_quality",
+        "relationship_followup",
+        "donor_intelligence",
+        "social_leads",
+        "content_performance",
+        "bty_intelligence",
+        "sop_compliance",
+        "weekly_patterns",
+        "content_opportunities",
       ],
       ai_ops_run_status_enum: [
         "pending",
