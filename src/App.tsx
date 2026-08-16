@@ -39,6 +39,7 @@ import NewsletterManagementPage from "./pages/crm/NewsletterManagementPage";
 import CampaignManagementPage from "./pages/crm/CampaignManagementPage";
 import CommunicationsObservabilityPage from "./pages/crm/CommunicationsObservabilityPage";
 import AiOperationsPage from "./pages/crm/AiOperationsPage";
+import CommandCenterPage from "./pages/crm/CommandCenterPage";
 
 import RelationshipBulkEnrollmentPage from "./pages/crm/business-development/campaigns/RelationshipBulkEnrollmentPage";
 import RelationshipCampaignDeliveryPage from "./pages/crm/business-development/campaigns/RelationshipCampaignDeliveryPage";
@@ -73,6 +74,9 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/unsubscribe" element={<RelationshipUnsubscribePage />} />
           <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribePage />} />
+          <Route path="/command-center" element={<CrmLayout />}>
+            <Route index element={<CommandCenterPage />} />
+          </Route>
           <Route path="/crm" element={<CrmLayout />}>
             <Route index element={<CrmIndex />} />
             <Route path="clients" element={<CanonicalClients />} />
@@ -87,6 +91,7 @@ const App = () => (
             <Route path="communications/observability" element={<CommunicationsObservabilityPage />} />
             <Route path="tasks" element={<CanonicalTasks />} />
             <Route path="ai-operations" element={<AiOperationsPage />} />
+            <Route path="command-center" element={<Navigate replace to="/command-center" />} />
 
             <Route path="exceptions" element={<CanonicalExceptions />} />
             <Route path="therapist-matches" element={<TherapistMatchReconciliationPage />} />
