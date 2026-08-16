@@ -5,7 +5,7 @@ import { resolveAiOpsModel } from "../../supabase/functions/_shared/ai-ops-model
 
 describe("AI Operations model configuration", () => {
   it("makes Gemini 2.5 Pro authoritative and never falls back to Flash", () => {
-    const runtime = readFileSync("supabase/functions/_shared/ai-ops.ts", "utf8");
+    const runtime = readFileSync("supabase/functions/_shared/ai-ops-model.ts", "utf8") + readFileSync("supabase/functions/_shared/ai-ops.ts", "utf8");
     expect(runtime).toContain('AI_OPS_MODEL = "gemini-2.5-pro"');
     expect(runtime).not.toContain("gemini-pro-latest");
     expect(resolveAiOpsModel("gemini-2.5-flash", "gemini-flash-latest")).toBe("gemini-2.5-pro");
