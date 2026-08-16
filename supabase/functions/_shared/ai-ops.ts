@@ -98,9 +98,10 @@ export async function callGeminiModel(options: {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 120_000);
+  const supportsThinkingLevel = !model.toLowerCase().startsWith("gemini-2.5-");
   const send = async (includeThinking: boolean) => {
     const generationConfig: Record<string, unknown> = { responseMimeType: "application/json", responseSchema: options.responseSchema };
-    if (includeThinking && options.thinkingLevel) generationConfig.thinkingConfig = { thinkingLevel: options.thinkingLevel };
+    if (includeThinking && supportsThinkingLevel && options.thinkingLevel) generationConfig.thinkingConfig = { thinkingLevel: options.thinkingLevel };
     return await fetch(url, {
       method: "POST", signal: controller.signal,
       headers: { "x-goog-api-key": options.apiKey, "content-type": "application/json" },
@@ -112,7 +113,7 @@ export async function callGeminiModel(options: {
   };
   try {
     let response = await send(true);
-    if (response.status === 400 && options.thinkingLevel) {
+    if (response.status === 400 && supportsThinkingLevel && options.thinkingLevel) {
       const detail = await response.clone().json().catch(() => ({}));
       if (String(detail?.error?.message ?? "").toLowerCase().includes("thinking")) {
         logEvent("ai-ops", "thinking_config_unsupported", { model });
