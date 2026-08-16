@@ -93,6 +93,7 @@ export type Database = {
           opportunity_id: string | null
           organization_id: string | null
           run_id: string | null
+          source_hash: string | null
           source_sufficient: boolean
           structured_result: Json
           tenant_id: string
@@ -108,6 +109,7 @@ export type Database = {
           opportunity_id?: string | null
           organization_id?: string | null
           run_id?: string | null
+          source_hash?: string | null
           source_sufficient?: boolean
           structured_result?: Json
           tenant_id: string
@@ -123,6 +125,7 @@ export type Database = {
           opportunity_id?: string | null
           organization_id?: string | null
           run_id?: string | null
+          source_hash?: string | null
           source_sufficient?: boolean
           structured_result?: Json
           tenant_id?: string
@@ -154,6 +157,8 @@ export type Database = {
           topic: string
           topic_key: string
           updated_at: string
+          urgency: string
+          why_fit: string | null
           why_now: string | null
         }
         Insert: {
@@ -171,6 +176,8 @@ export type Database = {
           topic: string
           topic_key: string
           updated_at?: string
+          urgency?: string
+          why_fit?: string | null
           why_now?: string | null
         }
         Update: {
@@ -188,6 +195,8 @@ export type Database = {
           topic?: string
           topic_key?: string
           updated_at?: string
+          urgency?: string
+          why_fit?: string | null
           why_now?: string | null
         }
         Relationships: [
@@ -17325,6 +17334,9 @@ export type Database = {
           starts_at: string | null
           streamyard_url: string
           tenant_id: string
+          transcript_captured_at: string | null
+          transcript_source: string | null
+          transcript_text: string | null
           updated_at: string
         }
         Insert: {
@@ -17345,6 +17357,9 @@ export type Database = {
           starts_at?: string | null
           streamyard_url: string
           tenant_id: string
+          transcript_captured_at?: string | null
+          transcript_source?: string | null
+          transcript_text?: string | null
           updated_at?: string
         }
         Update: {
@@ -17365,6 +17380,9 @@ export type Database = {
           starts_at?: string | null
           streamyard_url?: string
           tenant_id?: string
+          transcript_captured_at?: string | null
+          transcript_source?: string | null
+          transcript_text?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -22992,6 +23010,14 @@ export type Database = {
         Args: { p_cutoff_at?: string; p_run_id: string; p_tenant_id: string }
         Returns: Json
       }
+      ai_ops_build_bty_interview_prep_batches: {
+        Args: { p_cutoff_at?: string; p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_build_bty_post_interview_batches: {
+        Args: { p_cutoff_at?: string; p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
       ai_ops_build_client_journey_batches: {
         Args: {
           p_batch_size?: number
@@ -24299,6 +24325,10 @@ export type Database = {
       }
       crm_reconcile_person_identities: {
         Args: { p_dry_run?: boolean }
+        Returns: Json
+      }
+      crm_record_bty_interview_transcript: {
+        Args: { p_meeting_id: string; p_source?: string; p_transcript: string }
         Returns: Json
       }
       crm_record_newsletter_delivery_event: {
