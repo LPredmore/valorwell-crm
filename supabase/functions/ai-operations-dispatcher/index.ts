@@ -26,7 +26,7 @@ const ACTION_ALIASES: Record<string, DispatcherAction> = {
 };
 
 function modelForModule(module: string): string {
-  if (module === "system_integrity") return "deterministic";
+  if (module === "system_integrity" || module === "user_flow_smoke") return "deterministic";
   return AI_OPS_MODEL;
 }
 
@@ -110,6 +110,7 @@ Deno.serve(async (request) => {
         await rpc("ai_ops_sync_operation_registry", { p_tenant_id: tenantId });
         return rpc("ai_ops_evaluate_system_integrity", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff });
       }, { terminal: true });
+      await runModule("user_flow_smoke", await flag("user_flow_smoke_enabled"), () => rpc("ai_ops_evaluate_user_flow_smoke", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }), { terminal: true });
       await runModule("client_journey", await flag("client_journey_ai_enabled"), () => rpc("ai_ops_build_client_journey_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff, p_batch_size: 8 }));
       await runModule("communications", await flag("communications_ai_enabled"), () => rpc("ai_ops_build_communications_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
       await runModule("staff_quality", await flag("staff_quality_ai_enabled"), () => rpc("ai_ops_build_staff_quality_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));

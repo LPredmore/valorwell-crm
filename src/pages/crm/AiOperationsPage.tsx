@@ -26,6 +26,7 @@ import {
   fetchAiOperationsFlags,
   fetchAiOperationsOverview,
   fetchAiOperationsRuns,
+  fetchAiSmokeResults,
   fetchAiOperationsYoutubeComments,
   fetchAiWeeklyReviews,
   resolveAiOperationsFinding,
@@ -137,6 +138,7 @@ export default function AiOperationsPage() {
   const overview = useQuery({ queryKey: ['ai-operations', 'overview'], queryFn: () => fetchAiOperationsOverview(), refetchOnWindowFocus: true });
   const brief = useQuery({ queryKey: ['ai-operations', 'brief'], queryFn: () => fetchAiOperationsBrief() });
   const runs = useQuery({ queryKey: ['ai-operations', 'runs'], queryFn: () => fetchAiOperationsRuns(30) });
+  const smokeResults = useQuery({ queryKey: ['ai-operations', 'smoke-results'], queryFn: () => fetchAiSmokeResults(60) });
   const flags = useQuery({ queryKey: ['ai-operations', 'flags'], queryFn: fetchAiOperationsFlags });
   const contentOpportunities = useQuery({ queryKey: ['ai-operations', 'content-opportunities'], queryFn: () => fetchAiContentOpportunities(20) });
   const weeklyReviews = useQuery({ queryKey: ['ai-operations', 'weekly-reviews'], queryFn: () => fetchAiWeeklyReviews(8) });
@@ -212,6 +214,7 @@ export default function AiOperationsPage() {
           <TabsTrigger value="brief">Today</TabsTrigger>
           <TabsTrigger value="findings">Open findings</TabsTrigger>
           <TabsTrigger value="system_integrity">System Integrity</TabsTrigger>
+          <TabsTrigger value="reliability">Smoke tests</TabsTrigger>
           <TabsTrigger value="client_journey">Client Journey</TabsTrigger>
           <TabsTrigger value="communications">Communications QA</TabsTrigger>
           <TabsTrigger value="youtube">YouTube</TabsTrigger>
@@ -226,6 +229,37 @@ export default function AiOperationsPage() {
             <ModuleFindingsPanel module={module} overview={overview.data ?? null} />
           </TabsContent>
         ))}
+
+        <TabsContent value="reliability" className="space-y-4 pt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Critical user-flow smoke tests</CardTitle>
+              <CardDescription>Deterministic read-only checks against real production records. A check with nothing to examine reports "not verifiable", never healthy.</CardDescription>
+            </CardHeader>
+            <CardContent className="divide-y p-0">
+              {smokeResults.isPending && <p className="p-6 text-sm text-muted-foreground">Loading smoke test results…</p>}
+              {!smokeResults.isPending && (smokeResults.data ?? []).length === 0 && <p className="p-6 text-sm text-muted-foreground">Not yet run.</p>}
+              {(smokeResults.data ?? []).map((result) => (
+                <div key={result.id} className="flex flex-col gap-1 p-4 md:flex-row md:items-center md:justify-between">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={result.status === 'failing' || result.status === 'error' ? 'destructive' : result.status === 'unknown' ? 'outline' : 'secondary'}>
+                        {result.status === 'unknown' ? 'not verifiable' : result.status}
+                      </Badge>
+                      <span className="font-medium">{result.display_name}</span>
+                      <span className="text-xs text-muted-foreground">{result.domain}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {result.broken_count} broken of {result.source_count} examined · {result.flow_key}
+                    </p>
+                    {result.error_message && <p className="text-sm text-destructive">{result.error_message}</p>}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{new Date(result.checked_at).toLocaleString()}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="relationships" className="space-y-4 pt-4">
           <ModuleFindingsPanel module="relationship_followup" overview={overview.data ?? null} />

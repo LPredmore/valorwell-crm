@@ -28,6 +28,13 @@ const op = (workType: string, instruction: string, thinkingLevel: ThinkingLevel 
 });
 
 export const WORK_TYPE_SPECS: Record<string, WorkTypeSpec> = {
+  // Deterministic module: registered for provenance only. No model call is ever made for it.
+  user_flow_smoke_check: {
+    workType: "user_flow_smoke_check", promptVersion: "1", schemaVersion: "1", thinkingLevel: "low", requiresEntityCoverage: false,
+    systemInstruction: "Deterministic SQL smoke checks. No model reasoning is used for this module.",
+    responseSchema: { type: "object", properties: { results: { type: "array", items: { type: "object" } } }, required: ["results"] },
+  },
+
   system_integrity_triage: {
     workType: "system_integrity_triage", promptVersion: "1", schemaVersion: "1", thinkingLevel: "medium", requiresEntityCoverage: false,
     systemInstruction: "You are an operations reliability analyst. Use only supplied deterministic monitoring evidence. Cluster related failures, rank operational impact, never invent facts and never automatically remediate. Return JSON only.",
@@ -167,7 +174,7 @@ export function specFor(workType: string): WorkTypeSpec {
 }
 
 export const MODULE_WORK_TYPES: Record<string, string> = {
-  system_integrity: "system_integrity_triage", client_journey: "client_journey_review",
+  system_integrity: "system_integrity_triage", user_flow_smoke: "user_flow_smoke_check", client_journey: "client_journey_review",
   communications: "communications_qa_review", staff_quality: "staff_service_quality_review",
   appointment_integrity: "appointment_integrity_review", billing_claims: "billing_claims_review",
   data_quality: "data_quality_review", relationship_followup: "relationship_followup_review",
