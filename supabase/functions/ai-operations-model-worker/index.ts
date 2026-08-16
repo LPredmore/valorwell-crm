@@ -1,4 +1,4 @@
-// AI Operations model worker. Claims queued work, routes the requested Gemini model,
+// AI Operations model worker. Claims queued work, applies the authoritative Gemini model,
 // validates strict structured output, and records provenance. Never remediates source data.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
@@ -19,12 +19,9 @@ const requestedEntityKeys = (item: ClaimedItem): string[] => {
   return (p.entities ?? []).map((e) => e.entityKey ?? "").filter(Boolean);
 };
 
-async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string, settings: { model: string; validationModel?: string | null }, item: ClaimedItem): Promise<"completed" | "failed" | "retry"> {
+async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string, settings: { model: string }, item: ClaimedItem): Promise<"completed" | "failed" | "retry"> {
   const spec = specFor(item.workType);
-  // Scheduled runs always resolve to the Pro-class policy. `validationModel` is an
-  // explicit, operator-supplied one-off override used only for manual validation runs;
-  // the model actually called is always recorded in token_usage for provenance.
-  const model = settings.validationModel || resolveAiOpsModel(item.requestedModel, settings.model);
+  const model = resolveAiOpsModel(item.requestedModel, settings.model);
 
   let grounding: { text: string; sources: Array<{ title: string | null; uri: string | null }>; searchQueries: string[]; tokenUsage: Record<string, unknown>; modelVersion: string | null } | null = null;
 
@@ -124,9 +121,7 @@ Deno.serve(async (request) => {
     if (claimError) throw new Error(claimError.message);
     const items = (claimed ?? []) as ClaimedItem[];
     if (!items.length) return json({ ok: true, claimed: 0, durationMs: Date.now() - started });
-    const validationModel = typeof body?.validationModel === "string" && body.validationModel.trim() ? body.validationModel.trim() : null;
-    if (validationModel) logEvent(COMPONENT, "validation_model_override", { validationModel });
-    const results = await Promise.all(items.map((item) => processItem(admin, apiKey, { model: settings?.model ?? AI_OPS_MODEL, validationModel }, item)));
+    const results = await Promise.all(items.map((item) => processItem(admin, apiKey, { model: settings?.model ?? AI_OPS_MODEL }, item)));
 
     const summary = { claimed: items.length, completed: results.filter((r) => r === "completed").length, retry: results.filter((r) => r === "retry").length, failed: results.filter((r) => r === "failed").length, durationMs: Date.now() - started };
     logEvent(COMPONENT, "batch_complete", summary);
