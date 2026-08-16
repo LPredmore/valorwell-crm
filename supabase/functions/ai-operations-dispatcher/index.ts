@@ -2,6 +2,7 @@
 // the daily America/Chicago sequence is due. Weekday-only and business-date idempotent.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
+  AI_OPS_MODEL,
   AI_OPS_PROVIDER,
   AI_OPS_TENANT_ID,
   adminClient,
@@ -26,8 +27,7 @@ const ACTION_ALIASES: Record<string, DispatcherAction> = {
 
 function modelForModule(module: string): string {
   if (module === "system_integrity") return "deterministic";
-  if (module === "youtube") return "gemini-2.5-flash";
-  return "gemini-2.5-pro";
+  return AI_OPS_MODEL;
 }
 
 Deno.serve(async (request) => {
