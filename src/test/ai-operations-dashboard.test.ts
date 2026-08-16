@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AI_OPERATIONS_MODULES,
   AI_OPERATIONS_SNOOZE_PRESETS,
   buildAiOperationsWidgetSummary,
   resolveSnoozeUntil,
@@ -38,7 +39,7 @@ describe('AI Operations widget summary', () => {
     const summary = buildAiOperationsWidgetSummary(null);
     expect(summary.briefStatus).toBe('unavailable');
     expect(summary.openCount).toBe(0);
-    expect(summary.modules).toHaveLength(4);
+    expect(summary.modules).toHaveLength(AI_OPERATIONS_MODULES.filter((module) => module !== 'executive_brief').length);
     expect(summary.modules.every((module) => module.status === 'unknown')).toBe(true);
   });
 
