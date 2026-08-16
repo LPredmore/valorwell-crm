@@ -160,7 +160,7 @@ export async function syncYoutubeComments(options: {
 
     const metric = await options.admin.rpc("ai_ops_upsert_youtube_video_metric", {
       p_tenant_id: options.tenantId,
-      p_channel_id: options.channelId,
+      p_channel_id: channelId,
       p_video_id: videoId,
       p_video_title: videoTitle,
       p_initiative: initiative,
@@ -175,7 +175,7 @@ export async function syncYoutubeComments(options: {
 
     let threads: { items?: CommentThreadItem[] };
     try {
-      threads = await getJson(`${API}/commentThreads?part=snippet,replies&maxResults=50&order=time&videoId=${videoId}&key=${apiKey}`) as { items?: CommentThreadItem[] };
+      threads = await getJson(`/commentThreads?part=snippet,replies&maxResults=50&order=time&videoId=${videoId}`, auth) as { items?: CommentThreadItem[] };
     } catch {
       continue;
     }
@@ -190,7 +190,7 @@ export async function syncYoutubeComments(options: {
         commentsSeen += 1;
         const snippet = comment.snippet ?? {};
         const { error } = await options.admin.rpc("ai_ops_upsert_youtube_comment", {
-          p_tenant_id: options.tenantId, p_channel_id: options.channelId, p_video_id: videoId,
+          p_tenant_id: options.tenantId, p_channel_id: channelId, p_video_id: videoId,
           p_video_title: videoTitle, p_comment_id: comment.id, p_parent_comment_id: comment.parentId ?? snippet.parentId ?? null,
           p_author_display_name: snippet.authorDisplayName ?? null,
           p_comment_text: snippet.textOriginal ?? snippet.textDisplay ?? "",
@@ -202,5 +202,5 @@ export async function syncYoutubeComments(options: {
     }
   }
 
-  return { available: true, videosScanned, commentsSeen, commentsUpserted, metricsCaptured };
+  return { available: true, authMode: auth.mode, channelTitle, videosScanned, commentsSeen, commentsUpserted, metricsCaptured };
 }
