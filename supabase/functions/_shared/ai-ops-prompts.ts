@@ -174,7 +174,7 @@ export function specFor(workType: string): WorkTypeSpec {
 }
 
 export const MODULE_WORK_TYPES: Record<string, string> = {
-  system_integrity: "system_integrity_triage", client_journey: "client_journey_review",
+  system_integrity: "system_integrity_triage", user_flow_smoke: "user_flow_smoke_check", client_journey: "client_journey_review",
   communications: "communications_qa_review", staff_quality: "staff_service_quality_review",
   appointment_integrity: "appointment_integrity_review", billing_claims: "billing_claims_review",
   data_quality: "data_quality_review", relationship_followup: "relationship_followup_review",
