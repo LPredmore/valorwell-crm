@@ -4,7 +4,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   AI_OPS_MODEL, AI_OPS_PROVIDER, AI_OPS_TENANT_ID, adminClient, authorizeWorker,
   backoffSeconds, callGeminiGroundedSearch, callGeminiModel, classifyModelFailure,
-  geminiApiKey, json, logEvent, parseModelJson, safeError, validateEntityCoverage,
+  geminiApiKey, json, logEvent, parseModelJson, resolveAiOpsModel, safeError, validateEntityCoverage,
 } from "../_shared/ai-ops.ts";
 import { specFor } from "../_shared/ai-ops-prompts.ts";
 
