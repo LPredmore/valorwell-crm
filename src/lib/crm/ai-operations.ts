@@ -124,9 +124,9 @@ export type AiOperationsYoutubeComment = {
   priority: string | null; suggestedReply: string | null; reviewState: string;
 };
 export type AiContentOpportunity = {
-  id: string; business_date: string; topic: string; why_now: string | null; audience: string | null;
-  recommended_format: string | null; suggested_angle: string | null; priority: string; sources: Array<{ title?: string; uri?: string }>;
-  status: string; created_at: string;
+  id: string; business_date: string; topic: string; why_now: string | null; why_fit: string | null; audience: string | null;
+  recommended_format: string | null; suggested_angle: string | null; priority: string; urgency: 'today' | 'this_week' | 'evergreen';
+  sources: Array<{ title?: string; uri?: string }>; status: string; created_at: string;
 };
 export type AiWeeklyReview = { id: string; week_ending: string; structured_result: { weekSummary?: string; patterns?: Array<Record<string, unknown>>; gaps?: string[] }; created_at: string };
 export type AiBtyBrief = { id: string; business_date: string; brief_type: 'prep' | 'post_interview'; source_sufficient: boolean; structured_result: Record<string, unknown>; meeting_id: string | null; created_at: string };
