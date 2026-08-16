@@ -118,12 +118,28 @@ export default function AiOperationsPage() {
 
       <Tabs defaultValue="brief">
         <TabsList className="flex h-auto flex-wrap justify-start">
-          <TabsTrigger value="brief">Today's brief</TabsTrigger>
-          <TabsTrigger value="findings">Findings</TabsTrigger>
+          <TabsTrigger value="brief">Today</TabsTrigger>
+          <TabsTrigger value="findings">Open findings</TabsTrigger>
+          <TabsTrigger value="system_integrity">System Integrity</TabsTrigger>
+          <TabsTrigger value="client_journey">Client Journey</TabsTrigger>
+          <TabsTrigger value="communications">Communications QA</TabsTrigger>
+          <TabsTrigger value="youtube">YouTube</TabsTrigger>
           <TabsTrigger value="intelligence">Growth & content</TabsTrigger>
-          <TabsTrigger value="runs">Run history</TabsTrigger>
+          <TabsTrigger value="runs">History</TabsTrigger>
           <TabsTrigger value="controls">Controls</TabsTrigger>
         </TabsList>
+
+        {(['system_integrity', 'client_journey', 'communications'] as const).map((module) => (
+          <TabsContent key={module} value={module} className="space-y-4 pt-4">
+            <ModuleFindingsPanel module={module} overview={overview.data ?? null} />
+          </TabsContent>
+        ))}
+
+        <TabsContent value="youtube" className="space-y-4 pt-4">
+          <ModuleFindingsPanel module="youtube" overview={overview.data ?? null} />
+          <YoutubeQueuePanel />
+        </TabsContent>
+
 
         <TabsContent value="brief" className="space-y-4 pt-4">
           <Card>
