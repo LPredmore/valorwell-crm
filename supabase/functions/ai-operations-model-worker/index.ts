@@ -19,9 +19,13 @@ const requestedEntityKeys = (item: ClaimedItem): string[] => {
   return (p.entities ?? []).map((e) => e.entityKey ?? "").filter(Boolean);
 };
 
-async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string, settings: { model: string }, item: ClaimedItem): Promise<"completed" | "failed" | "retry"> {
+async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string, settings: { model: string; validationModel?: string | null }, item: ClaimedItem): Promise<"completed" | "failed" | "retry"> {
   const spec = specFor(item.workType);
-  const model = resolveAiOpsModel(item.requestedModel, settings.model);
+  // Scheduled runs always resolve to the Pro-class policy. `validationModel` is an
+  // explicit, operator-supplied one-off override used only for manual validation runs;
+  // the model actually called is always recorded in token_usage for provenance.
+  const model = settings.validationModel || resolveAiOpsModel(item.requestedModel, settings.model);
+
   let grounding: { text: string; sources: Array<{ title: string | null; uri: string | null }>; searchQueries: string[]; tokenUsage: Record<string, unknown>; modelVersion: string | null } | null = null;
 
   const userPrompt = async () => {
