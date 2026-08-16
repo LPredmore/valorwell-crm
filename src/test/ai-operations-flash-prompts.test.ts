@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 import { WORK_TYPE_SPECS, specFor } from "../../supabase/functions/_shared/ai-ops-prompts";
 import { readFileSync } from "node:fs";
 
-describe("AI Operations Flash configuration", () => {
-  it("uses gemini-flash-latest as the single authoritative model", () => {
+describe("AI Operations model configuration", () => {
+  it("keeps Flash as the fallback while permitting explicit Pro routing", () => {
     const runtime = readFileSync("supabase/functions/_shared/ai-ops.ts", "utf8");
     expect(runtime).toContain('AI_OPS_MODEL = "gemini-flash-latest"');
-    expect(runtime).not.toContain("gemini-2.5-pro");
+    expect(runtime).toContain('options.model ?? "gemini-2.5-pro"');
     expect(runtime).not.toContain("gemini-pro-latest");
   });
 
-  it("bumps prompt versions for the prompts revised for Flash", () => {
+  it("uses the current prompt versions for revised judgment-heavy prompts", () => {
     expect(specFor("client_journey_review").promptVersion).toBe("2");
     expect(specFor("communications_qa_review").promptVersion).toBe("2");
     expect(specFor("executive_brief_synthesis").promptVersion).toBe("2");
