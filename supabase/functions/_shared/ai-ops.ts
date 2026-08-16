@@ -4,17 +4,8 @@ import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.9
 
 export const AI_OPS_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 export const AI_OPS_TIMEZONE = "America/Chicago";
-/** Authoritative model for every AI Operations module. Flash is never used as a fallback. */
-export const AI_OPS_MODEL = "gemini-2.5-pro";
-/** Any configured/requested model that is not Pro is ignored so a Flash id can never silently take over. */
-export function resolveAiOpsModel(...candidates: Array<string | null | undefined>): string {
-  for (const candidate of candidates) {
-    const model = (candidate ?? "").trim();
-    if (!model || model.toLowerCase().includes("flash")) continue;
-    return model;
-  }
-  return AI_OPS_MODEL;
-}
+export { AI_OPS_MODEL, resolveAiOpsModel } from "./ai-ops-model.ts";
+import { AI_OPS_MODEL } from "./ai-ops-model.ts";
 export const AI_OPS_PROMPT_VERSION = "1";
 export const AI_OPS_SCHEMA_VERSION = "1";
 
