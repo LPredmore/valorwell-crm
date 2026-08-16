@@ -133,7 +133,7 @@ export async function callGeminiModel(options: {
 export async function callGeminiGroundedSearch(options: {
   apiKey: string; model?: string; prompt: string; timeoutMs?: number;
 }): Promise<GroundedSearchResult> {
-  const model = options.model ?? "gemini-2.5-pro";
+  const model = options.model ?? AI_OPS_MODEL;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 120_000);
