@@ -2,7 +2,7 @@
 // Pure helpers here are unit-tested from src/test/bty-*.test.ts.
 
 export const BTY_TENANT_ID = "00000000-0000-0000-0000-000000000001";
-export const BTY_GEMINI_MODEL = "gemini-flash-latest";
+export const BTY_GEMINI_MODEL = "gemini-2.5-flash";
 export const BTY_FAILURE_RECIPIENT = "info@valorwell.org";
 export const BTY_SOURCE = "bty_automated_research";
 export const BTY_TARGET_COUNT = 5;
