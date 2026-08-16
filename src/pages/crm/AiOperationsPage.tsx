@@ -37,6 +37,21 @@ import {
 const severityVariant = (severity: string) => severity === 'critical' || severity === 'high' ? 'destructive' : 'secondary';
 const moduleStatusVariant = (status: string) => status === 'success' ? 'secondary' : status === 'running' ? 'outline' : 'destructive';
 
+/** Direct path back to the underlying CRM record a finding was raised against. */
+const RECORD_LINKS: Record<string, { path: (id: string) => string; label: string }> = {
+  client: { path: (id) => `/crm/clients/${id}`, label: 'Open client' },
+  relationship_organization: { path: (id) => `/crm/business-development/organizations/${id}`, label: 'Open organization' },
+  relationship_contact: { path: (id) => `/crm/business-development/contacts/${id}`, label: 'Open contact' },
+  relationship_opportunity: { path: (id) => `/crm/business-development/opportunities/${id}`, label: 'Open opportunity' },
+};
+
+function FindingRecordLink({ entityType, entityId }: { entityType: string | null; entityId: string | null }) {
+  const link = entityType ? RECORD_LINKS[entityType] : undefined;
+  if (!link || !entityId) return null;
+  return <a className="text-sm underline" href={link.path(entityId)}>{link.label}</a>;
+}
+
+
 /** Per-module view: this run's coverage plus the module's own open findings. */
 function ModuleFindingsPanel({ module, overview }: { module: string; overview: AiOperationsOverview | null }) {
   const label = AI_OPERATIONS_MODULE_LABELS[module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? module;
