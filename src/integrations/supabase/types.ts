@@ -26622,6 +26622,7 @@ export type Database = {
         | "sop_compliance"
         | "weekly_patterns"
         | "content_opportunities"
+        | "user_flow_smoke"
       ai_ops_run_status_enum:
         | "pending"
         | "running"
@@ -27145,6 +27146,7 @@ export const Constants = {
         "sop_compliance",
         "weekly_patterns",
         "content_opportunities",
+        "user_flow_smoke",
       ],
       ai_ops_run_status_enum: [
         "pending",
