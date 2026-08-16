@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 describe("AI Operations model configuration", () => {
   it("keeps Flash as the fallback while permitting explicit Pro routing", () => {
     const runtime = readFileSync("supabase/functions/_shared/ai-ops.ts", "utf8");
-    expect(runtime).toContain('AI_OPS_MODEL = "gemini-flash-latest"');
+    expect(runtime).toContain('AI_OPS_MODEL = "gemini-2.5-flash"');
     expect(runtime).toContain('options.model ?? "gemini-2.5-pro"');
     expect(runtime).not.toContain("gemini-pro-latest");
   });
