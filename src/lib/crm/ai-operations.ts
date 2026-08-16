@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const AI_OPERATIONS_FLAGS = [
   'ai_operations_enabled',
   'system_integrity_enabled',
+  'user_flow_smoke_enabled',
   'client_journey_ai_enabled',
   'communications_ai_enabled',
   'staff_quality_ai_enabled',
@@ -28,6 +29,7 @@ export type AiOperationsFlagName = (typeof AI_OPERATIONS_FLAGS)[number];
 export const AI_OPERATIONS_FLAG_LABELS: Record<AiOperationsFlagName, string> = {
   ai_operations_enabled: 'AI Operations platform',
   system_integrity_enabled: 'System Integrity',
+  user_flow_smoke_enabled: 'Critical user-flow smoke tests',
   client_journey_ai_enabled: 'Client Journey',
   communications_ai_enabled: 'Communications QA',
   staff_quality_ai_enabled: 'Staff Workflow & Service Quality',
@@ -50,6 +52,7 @@ export const AI_OPERATIONS_FLAG_LABELS: Record<AiOperationsFlagName, string> = {
 
 export const AI_OPERATIONS_MODULES = [
   'system_integrity',
+  'user_flow_smoke',
   'client_journey',
   'communications',
   'staff_quality',
@@ -72,6 +75,7 @@ export type AiOperationsModule = (typeof AI_OPERATIONS_MODULES)[number];
 
 export const AI_OPERATIONS_MODULE_LABELS: Record<AiOperationsModule, string> = {
   system_integrity: 'System Integrity',
+  user_flow_smoke: 'User-flow smoke tests',
   client_journey: 'Client Journey',
   communications: 'Communications QA',
   staff_quality: 'Staff Quality',
@@ -196,4 +200,31 @@ export function buildAiOperationsWidgetSummary(overview: AiOperationsOverview | 
     briefIsPartial: overview?.brief?.isPartial ?? false, criticalCount: Number(counts.critical ?? 0), highCount: Number(counts.high ?? 0), openCount,
     modules: AI_OPERATIONS_MODULES.filter((module) => module !== 'executive_brief').map((module) => ({ module, label: AI_OPERATIONS_MODULE_LABELS[module], status: byModule.get(module) ?? 'unknown' })),
   };
+}
+
+export type AiSmokeResult = {
+  id: string;
+  flow_key: string;
+  display_name: string;
+  domain: string;
+  status: 'healthy' | 'failing' | 'unknown' | 'error';
+  broken_count: number;
+  source_count: number;
+  sample: unknown;
+  error_message: string | null;
+  checked_at: string;
+};
+
+/** Latest smoke-test outcome per critical flow. Deterministic, never model-generated. */
+export async function fetchAiSmokeResults(limit = 60): Promise<AiSmokeResult[]> {
+  const { data, error } = await supabase
+    .from('ai_operations_smoke_results')
+    .select('*')
+    .order('checked_at', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  const rows = (data ?? []) as unknown as AiSmokeResult[];
+  const latest = new Map<string, AiSmokeResult>();
+  for (const row of rows) if (!latest.has(row.flow_key)) latest.set(row.flow_key, row);
+  return [...latest.values()].sort((a, b) => a.flow_key.localeCompare(b.flow_key));
 }
