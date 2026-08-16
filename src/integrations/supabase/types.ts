@@ -258,6 +258,8 @@ export type Database = {
       }
       ai_operations_findings: {
         Row: {
+          assigned_at: string | null
+          assigned_to_profile_id: string | null
           confidence: number | null
           created_at: string
           dismissed_at: string | null
@@ -266,13 +268,16 @@ export type Database = {
           fingerprint: string
           first_detected_at: string
           id: string
+          last_occurrence_date: string | null
           last_run_id: string | null
           last_seen_at: string
           module: Database["public"]["Enums"]["ai_ops_module_enum"]
+          occurrence_count: number
           recommended_action: string | null
           related_existing_exception_id: string | null
           reopen_count: number
           resolved_at: string | null
+          reviewed_at: string | null
           severity: Database["public"]["Enums"]["ai_ops_severity_enum"]
           snoozed_until: string | null
           status: Database["public"]["Enums"]["ai_ops_finding_status_enum"]
@@ -282,6 +287,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_at?: string | null
+          assigned_to_profile_id?: string | null
           confidence?: number | null
           created_at?: string
           dismissed_at?: string | null
@@ -290,13 +297,16 @@ export type Database = {
           fingerprint: string
           first_detected_at?: string
           id?: string
+          last_occurrence_date?: string | null
           last_run_id?: string | null
           last_seen_at?: string
           module: Database["public"]["Enums"]["ai_ops_module_enum"]
+          occurrence_count?: number
           recommended_action?: string | null
           related_existing_exception_id?: string | null
           reopen_count?: number
           resolved_at?: string | null
+          reviewed_at?: string | null
           severity?: Database["public"]["Enums"]["ai_ops_severity_enum"]
           snoozed_until?: string | null
           status?: Database["public"]["Enums"]["ai_ops_finding_status_enum"]
@@ -306,6 +316,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_at?: string | null
+          assigned_to_profile_id?: string | null
           confidence?: number | null
           created_at?: string
           dismissed_at?: string | null
@@ -314,13 +326,16 @@ export type Database = {
           fingerprint?: string
           first_detected_at?: string
           id?: string
+          last_occurrence_date?: string | null
           last_run_id?: string | null
           last_seen_at?: string
           module?: Database["public"]["Enums"]["ai_ops_module_enum"]
+          occurrence_count?: number
           recommended_action?: string | null
           related_existing_exception_id?: string | null
           reopen_count?: number
           resolved_at?: string | null
+          reviewed_at?: string | null
           severity?: Database["public"]["Enums"]["ai_ops_severity_enum"]
           snoozed_until?: string | null
           status?: Database["public"]["Enums"]["ai_ops_finding_status_enum"]
@@ -330,6 +345,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_operations_findings_assigned_to_profile_id_fkey"
+            columns: ["assigned_to_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "ai_operations_findings_assigned_to_profile_id_fkey"
+            columns: ["assigned_to_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_operations_findings_last_run_id_fkey"
             columns: ["last_run_id"]
@@ -23012,6 +23041,10 @@ export type Database = {
       advance_client_intake_if_ready:
         | { Args: never; Returns: Json }
         | { Args: { p_client_id: string }; Returns: Json }
+      ai_operations_assign_finding: {
+        Args: { p_assignee: string; p_finding_id: string; p_reason: string }
+        Returns: Json
+      }
       ai_operations_dismiss_finding: {
         Args: { p_finding_id: string; p_reason: string }
         Returns: Json
@@ -23049,12 +23082,20 @@ export type Database = {
         Args: { p_finding_id: string; p_reason: string }
         Returns: Json
       }
+      ai_operations_review_finding: {
+        Args: { p_finding_id: string; p_reason: string }
+        Returns: Json
+      }
       ai_operations_set_flag: {
         Args: { p_enabled: boolean; p_flag_name: string; p_reason: string }
         Returns: Json
       }
       ai_operations_snooze_finding: {
         Args: { p_finding_id: string; p_reason: string; p_snooze_until: string }
+        Returns: Json
+      }
+      ai_operations_start_finding: {
+        Args: { p_finding_id: string; p_reason: string }
         Returns: Json
       }
       ai_ops_autoresolve_findings: {
@@ -23861,6 +23902,29 @@ export type Database = {
           p_reason?: string
           p_source: string
         }
+        Returns: Json
+      }
+      command_center_assignable_users: { Args: never; Returns: Json }
+      command_center_changes: {
+        Args: { p_business_date?: string; p_limit?: number }
+        Returns: Json
+      }
+      command_center_findings: {
+        Args: {
+          p_assigned_to?: string
+          p_category?: string
+          p_limit?: number
+          p_module?: string
+          p_offset?: number
+          p_severity?: string
+          p_since?: string
+          p_status?: string
+          p_view?: string
+        }
+        Returns: Json
+      }
+      command_center_overview: {
+        Args: { p_business_date?: string }
         Returns: Json
       }
       commit_champva_payment_report_rows: {
@@ -26702,7 +26766,14 @@ export type Database = {
     }
     Enums: {
       accept_assign_enum: "Y" | "N"
-      ai_ops_finding_status_enum: "open" | "snoozed" | "resolved" | "dismissed"
+      ai_ops_finding_status_enum:
+        | "open"
+        | "snoozed"
+        | "resolved"
+        | "dismissed"
+        | "reviewed"
+        | "assigned"
+        | "in_progress"
       ai_ops_module_enum:
         | "system_integrity"
         | "client_journey"
@@ -27226,7 +27297,15 @@ export const Constants = {
   public: {
     Enums: {
       accept_assign_enum: ["Y", "N"],
-      ai_ops_finding_status_enum: ["open", "snoozed", "resolved", "dismissed"],
+      ai_ops_finding_status_enum: [
+        "open",
+        "snoozed",
+        "resolved",
+        "dismissed",
+        "reviewed",
+        "assigned",
+        "in_progress",
+      ],
       ai_ops_module_enum: [
         "system_integrity",
         "client_journey",

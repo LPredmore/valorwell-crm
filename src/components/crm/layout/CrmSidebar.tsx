@@ -56,6 +56,7 @@ const businessDevelopmentItems: NavItem[] = [
 ];
 
 const clinicalNavItems: NavItem[] = [
+  { label: 'Command Center', href: '/command-center', icon: LayoutDashboard },
   { label: 'Clients', href: '/crm/clients', icon: Users },
   { label: 'Communications', href: '/crm/inbox', icon: Inbox },
   { label: 'Campaign Management', href: '/crm/communications/campaigns', icon: Megaphone },
