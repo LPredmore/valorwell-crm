@@ -4,7 +4,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   AI_OPS_MODEL, AI_OPS_PROVIDER, AI_OPS_TENANT_ID, adminClient, authorizeWorker,
   backoffSeconds, callGeminiGroundedSearch, callGeminiModel, classifyModelFailure,
-  geminiApiKey, json, logEvent, parseModelJson, safeError, validateEntityCoverage,
+  geminiApiKey, json, logEvent, parseModelJson, resolveAiOpsModel, safeError, validateEntityCoverage,
 } from "../_shared/ai-ops.ts";
 import { specFor } from "../_shared/ai-ops-prompts.ts";
 
@@ -21,7 +21,7 @@ const requestedEntityKeys = (item: ClaimedItem): string[] => {
 
 async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string, settings: { model: string }, item: ClaimedItem): Promise<"completed" | "failed" | "retry"> {
   const spec = specFor(item.workType);
-  const model = item.requestedModel || settings.model || AI_OPS_MODEL;
+  const model = resolveAiOpsModel(item.requestedModel, settings.model);
   let grounding: { text: string; sources: Array<{ title: string | null; uri: string | null }>; searchQueries: string[]; tokenUsage: Record<string, unknown>; modelVersion: string | null } | null = null;
 
   const userPrompt = async () => {
@@ -30,7 +30,7 @@ async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string
       const request = item.inputPayload ?? {};
       grounding = await callGeminiGroundedSearch({
         apiKey,
-        model: "gemini-2.5-pro",
+        model: AI_OPS_MODEL,
         prompt: [
           "Research timely, source-verifiable content opportunities for ValorWell.",
           "Focus on veteran and military-family mental health access, VA/community-care developments, nonprofit/community action, clinician workforce, and concrete veteran-service work.",
@@ -75,7 +75,7 @@ async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string
         provider: AI_OPS_PROVIDER, model, configuredModel: settings.model || AI_OPS_MODEL,
         requestedModel: item.requestedModel || null, modelVersion: outcome.modelVersion,
         promptVersion: spec.promptVersion, schemaVersion: spec.schemaVersion,
-        ...(grounding ? { groundingModel: "gemini-2.5-pro", groundingSources: grounding.sources, groundingSearchQueries: grounding.searchQueries, groundingTokenUsage: grounding.tokenUsage } : {}),
+        ...(grounding ? { groundingModel: AI_OPS_MODEL, groundingSources: grounding.sources, groundingSearchQueries: grounding.searchQueries, groundingTokenUsage: grounding.tokenUsage } : {}),
       },
     });
     logEvent(COMPONENT, "work_item_completed", { workItemId: item.id, module: item.module, workType: item.workType, model, grounded: Boolean(grounding), attempt: item.attemptCount });

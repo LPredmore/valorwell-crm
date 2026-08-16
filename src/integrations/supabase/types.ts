@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -11,31 +11,6 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
   }
   public: {
     Tables: {
@@ -23264,6 +23239,10 @@ export type Database = {
         Args: { p_run_id: string; p_tenant_id: string }
         Returns: Json
       }
+      ai_ops_refresh_sop_observations: {
+        Args: { p_cutoff_at?: string; p_tenant_id: string }
+        Returns: Json
+      }
       ai_ops_sync_operation_registry: {
         Args: { p_tenant_id: string }
         Returns: Json
@@ -27114,9 +27093,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       accept_assign_enum: ["Y", "N"],

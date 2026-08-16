@@ -17,6 +17,7 @@ import {
   AI_OPERATIONS_SNOOZE_PRESETS,
   type AiOperationsFlagName,
   type AiOperationsFinding,
+  type AiOperationsOverview,
   dismissAiOperationsFinding,
   fetchAiBtyBriefs,
   fetchAiContentOpportunities,
@@ -25,6 +26,7 @@ import {
   fetchAiOperationsFlags,
   fetchAiOperationsOverview,
   fetchAiOperationsRuns,
+  fetchAiOperationsYoutubeComments,
   fetchAiWeeklyReviews,
   resolveAiOperationsFinding,
   resolveSnoozeUntil,
@@ -34,6 +36,80 @@ import {
 
 const severityVariant = (severity: string) => severity === 'critical' || severity === 'high' ? 'destructive' : 'secondary';
 const moduleStatusVariant = (status: string) => status === 'success' ? 'secondary' : status === 'running' ? 'outline' : 'destructive';
+
+/** Per-module view: this run's coverage plus the module's own open findings. */
+function ModuleFindingsPanel({ module, overview }: { module: string; overview: AiOperationsOverview | null }) {
+  const label = AI_OPERATIONS_MODULE_LABELS[module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? module;
+  const run = (overview?.modules ?? []).find((entry) => entry.module === module) ?? null;
+  const findings = useQuery({
+    queryKey: ['ai-operations', 'module-findings', module],
+    queryFn: () => fetchAiOperationsFindings({ module, status: 'open', limit: 100 }),
+  });
+  const items = findings.data?.items ?? [];
+
+  return (
+    <>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-base">{label}</CardTitle>
+            <Badge variant={moduleStatusVariant(run?.status ?? 'unknown')}>{run?.status ?? 'not yet run'}</Badge>
+          </div>
+          <CardDescription>
+            {run
+              ? `${run.sourceItemsTotal} source · ${run.itemsAnalyzed} analyzed · ${run.itemsFailed} failed${run.model ? ` · ${run.model}` : ''}`
+              : 'This module has not run for the current business date yet.'}
+          </CardDescription>
+          {run?.errorSummary && <p className="text-xs text-destructive">{run.errorSummary}</p>}
+        </CardHeader>
+      </Card>
+      <Card><CardContent className="divide-y p-0">
+        {findings.isPending && <p className="p-6 text-sm text-muted-foreground">Loading findings…</p>}
+        {!findings.isPending && items.length === 0 && <p className="p-6 text-sm text-muted-foreground">No open findings for {label}.</p>}
+        {items.map((finding) => (
+          <div key={finding.id} className="space-y-1 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={severityVariant(finding.severity)}>{finding.severity}</Badge>
+              <span className="font-medium">{finding.title}</span>
+              {finding.confidence !== null && <span className="text-xs text-muted-foreground">confidence {Math.round(finding.confidence * 100)}%</span>}
+            </div>
+            {finding.summary && <p className="text-sm text-muted-foreground">{finding.summary}</p>}
+            {finding.recommendedAction && <p className="text-sm">Recommended: {finding.recommendedAction}</p>}
+            {finding.entityType === 'client' && finding.entityId && <a className="text-sm underline" href={`/crm/clients/${finding.entityId}`}>Open client</a>}
+          </div>
+        ))}
+      </CardContent></Card>
+    </>
+  );
+}
+
+/** Read-only YouTube review queue. Suggested replies are never posted automatically. */
+function YoutubeQueuePanel() {
+  const comments = useQuery({ queryKey: ['ai-operations', 'youtube-comments'], queryFn: () => fetchAiOperationsYoutubeComments(null, 50) });
+  const items = comments.data?.items ?? [];
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base">Comment review queue</CardTitle><CardDescription>Imported from the official YouTube API. Suggested replies require a human to post them.</CardDescription></CardHeader>
+      <CardContent className="divide-y p-0">
+        {comments.isPending && <p className="p-6 text-sm text-muted-foreground">Loading comments…</p>}
+        {!comments.isPending && items.length === 0 && <p className="p-6 text-sm text-muted-foreground">No comments have been imported yet.</p>}
+        {items.map((comment) => (
+          <div key={comment.id} className="space-y-1 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {comment.classification && <Badge variant="outline">{comment.classification}</Badge>}
+              {comment.priority && <Badge variant={severityVariant(comment.priority)}>{comment.priority}</Badge>}
+              <span className="text-sm font-medium">{comment.authorDisplayName ?? 'Unknown author'}</span>
+              <span className="text-xs text-muted-foreground">{comment.videoTitle ?? comment.videoId}</span>
+            </div>
+            {comment.commentText && <p className="text-sm text-muted-foreground">{comment.commentText}</p>}
+            {comment.suggestedReply && <p className="text-sm">Suggested reply: {comment.suggestedReply}</p>}
+            <p className="text-xs text-muted-foreground">{comment.reviewState}</p>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function AiOperationsPage() {
   const queryClient = useQueryClient();
@@ -118,12 +194,28 @@ export default function AiOperationsPage() {
 
       <Tabs defaultValue="brief">
         <TabsList className="flex h-auto flex-wrap justify-start">
-          <TabsTrigger value="brief">Today's brief</TabsTrigger>
-          <TabsTrigger value="findings">Findings</TabsTrigger>
+          <TabsTrigger value="brief">Today</TabsTrigger>
+          <TabsTrigger value="findings">Open findings</TabsTrigger>
+          <TabsTrigger value="system_integrity">System Integrity</TabsTrigger>
+          <TabsTrigger value="client_journey">Client Journey</TabsTrigger>
+          <TabsTrigger value="communications">Communications QA</TabsTrigger>
+          <TabsTrigger value="youtube">YouTube</TabsTrigger>
           <TabsTrigger value="intelligence">Growth & content</TabsTrigger>
-          <TabsTrigger value="runs">Run history</TabsTrigger>
+          <TabsTrigger value="runs">History</TabsTrigger>
           <TabsTrigger value="controls">Controls</TabsTrigger>
         </TabsList>
+
+        {(['system_integrity', 'client_journey', 'communications'] as const).map((module) => (
+          <TabsContent key={module} value={module} className="space-y-4 pt-4">
+            <ModuleFindingsPanel module={module} overview={overview.data ?? null} />
+          </TabsContent>
+        ))}
+
+        <TabsContent value="youtube" className="space-y-4 pt-4">
+          <ModuleFindingsPanel module="youtube" overview={overview.data ?? null} />
+          <YoutubeQueuePanel />
+        </TabsContent>
+
 
         <TabsContent value="brief" className="space-y-4 pt-4">
           <Card>

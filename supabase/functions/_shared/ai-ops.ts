@@ -4,8 +4,8 @@ import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.9
 
 export const AI_OPS_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 export const AI_OPS_TIMEZONE = "America/Chicago";
-/** Fallback only. Work-item routing should explicitly choose Pro or Flash. */
-export const AI_OPS_MODEL = "gemini-2.5-flash";
+export { AI_OPS_MODEL, resolveAiOpsModel } from "./ai-ops-model.ts";
+import { AI_OPS_MODEL } from "./ai-ops-model.ts";
 export const AI_OPS_PROMPT_VERSION = "1";
 export const AI_OPS_SCHEMA_VERSION = "1";
 
