@@ -1,0 +1,11 @@
+alter type public.ai_ops_module_enum add value if not exists 'staff_quality';
+alter type public.ai_ops_module_enum add value if not exists 'appointment_integrity';
+alter type public.ai_ops_module_enum add value if not exists 'billing_claims';
+alter type public.ai_ops_module_enum add value if not exists 'data_quality';
+alter type public.ai_ops_module_enum add value if not exists 'relationship_followup';
+alter type public.ai_ops_module_enum add value if not exists 'donor_intelligence';
+alter type public.ai_ops_module_enum add value if not exists 'social_leads';
+alter type public.ai_ops_module_enum add value if not exists 'content_performance';
+alter type public.ai_ops_module_enum add value if not exists 'bty_intelligence';
+alter type public.ai_ops_module_enum add value if not exists 'sop_compliance';
+alter type public.ai_ops_module_enum add value if not exists 'weekly_patterns';
