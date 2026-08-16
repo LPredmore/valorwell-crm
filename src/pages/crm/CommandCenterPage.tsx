@@ -310,8 +310,9 @@ export default function CommandCenterPage() {
               {COMMAND_CENTER_CATEGORIES.map((entry) => (
                 <SelectItem key={entry} value={entry}>
                   {COMMAND_CENTER_CATEGORY_LABELS[entry]}
-                  {overview.data?.byCategory?.[entry］ ? '' : ''}
+                  {overview.data?.byCategory?.[entry]?.open ? ` (${overview.data.byCategory[entry].open})` : ''}
                 </SelectItem>
+
               ))}
             </SelectContent>
           </Select>
