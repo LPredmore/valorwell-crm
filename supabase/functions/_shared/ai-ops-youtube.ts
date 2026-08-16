@@ -101,25 +101,33 @@ const asBigIntString = (value: string | undefined) => {
 export async function syncYoutubeComments(options: {
   admin: SupabaseClient; tenantId: string; channelId: string | null; btyPlaylistId: string | null; maxVideos?: number;
 }): Promise<YoutubeSyncResult> {
-  const apiKey = youtubeApiKey();
-  if (!apiKey) return { available: false, reason: "youtube_api_key_missing" };
-  if (!options.channelId) return { available: false, reason: "youtube_channel_not_configured" };
+  const auth = await resolveAuth();
+  if (!auth) return { available: false, reason: "youtube_credentials_missing" };
+  let channelTitle = "";
+  let channelId = options.channelId;
+  if (!channelId && auth.mode === "oauth") {
+    const identity = await youtubeAuthenticatedChannel();
+    channelId = identity?.id ?? null;
+    channelTitle = identity?.title ?? "";
+  }
+  if (!channelId) return { available: false, reason: "youtube_channel_not_configured", authMode: auth.mode };
   const maxVideos = Math.min(Math.max(options.maxVideos ?? 10, 1), 25);
 
-  const channel = await getJson(`${API}/channels?part=contentDetails,statistics&id=${encodeURIComponent(options.channelId)}&key=${apiKey}`) as {
-    items?: Array<{ contentDetails?: { relatedPlaylists?: { uploads?: string } }; statistics?: { subscriberCount?: string } }>;
+  const channel = await getJson(`/channels?part=snippet,contentDetails,statistics&id=${encodeURIComponent(channelId)}`, auth) as {
+    items?: Array<{ snippet?: { title?: string }; contentDetails?: { relatedPlaylists?: { uploads?: string } }; statistics?: { subscriberCount?: string } }>;
   };
   const uploads = channel.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
-  if (!uploads) return { available: false, reason: "youtube_channel_not_found" };
+  if (!uploads) return { available: false, reason: "youtube_channel_not_found", authMode: auth.mode };
+  channelTitle = channel.items?.[0]?.snippet?.title ?? channelTitle;
   const subscriberCount = asBigIntString(channel.items?.[0]?.statistics?.subscriberCount);
 
-  const playlist = await getJson(`${API}/playlistItems?part=snippet&maxResults=${maxVideos}&playlistId=${encodeURIComponent(uploads)}&key=${apiKey}`) as {
+  const playlist = await getJson(`/playlistItems?part=snippet&maxResults=${maxVideos}&playlistId=${encodeURIComponent(uploads)}`, auth) as {
     items?: Array<{ snippet?: { resourceId?: { videoId?: string }; title?: string } }>;
   };
 
   const btyVideoIds = new Set<string>();
   if (options.btyPlaylistId) {
-    const bty = await getJson(`${API}/playlistItems?part=snippet&maxResults=50&playlistId=${encodeURIComponent(options.btyPlaylistId)}&key=${apiKey}`).catch(() => ({})) as {
+    const bty = await getJson(`/playlistItems?part=snippet&maxResults=50&playlistId=${encodeURIComponent(options.btyPlaylistId)}`, auth).catch(() => ({})) as {
       items?: Array<{ snippet?: { resourceId?: { videoId?: string } } }>;
     };
     for (const item of bty.items ?? []) {
@@ -131,8 +139,9 @@ export async function syncYoutubeComments(options: {
   const videoIds = (playlist.items ?? []).map((item) => item.snippet?.resourceId?.videoId).filter((id): id is string => Boolean(id));
   const detailsById = new Map<string, VideoDetails>();
   if (videoIds.length) {
-    const details = await getJson(`${API}/videos?part=snippet,statistics&id=${encodeURIComponent(videoIds.join(','))}&key=${apiKey}`) as { items?: VideoDetails[] };
+    const details = await getJson(`/videos?part=snippet,statistics&id=${encodeURIComponent(videoIds.join(','))}`, auth) as { items?: VideoDetails[] };
     for (const video of details.items ?? []) if (video.id) detailsById.set(video.id, video);
+
   }
 
   let commentsSeen = 0;
