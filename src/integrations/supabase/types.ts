@@ -512,6 +512,101 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_operations_smoke_checks: {
+        Row: {
+          assertion_sql: string
+          created_at: string
+          criticality: Database["public"]["Enums"]["ai_ops_severity_enum"]
+          display_name: string
+          domain: string
+          enabled: boolean
+          flow_key: string
+          id: string
+          remediation: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          assertion_sql: string
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["ai_ops_severity_enum"]
+          display_name: string
+          domain: string
+          enabled?: boolean
+          flow_key: string
+          id?: string
+          remediation: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          assertion_sql?: string
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["ai_ops_severity_enum"]
+          display_name?: string
+          domain?: string
+          enabled?: boolean
+          flow_key?: string
+          id?: string
+          remediation?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_operations_smoke_results: {
+        Row: {
+          broken_count: number
+          checked_at: string
+          display_name: string
+          domain: string
+          error_message: string | null
+          flow_key: string
+          id: string
+          run_id: string
+          sample: Json
+          source_count: number
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          broken_count?: number
+          checked_at?: string
+          display_name: string
+          domain: string
+          error_message?: string | null
+          flow_key: string
+          id?: string
+          run_id: string
+          sample?: Json
+          source_count?: number
+          status: string
+          tenant_id: string
+        }
+        Update: {
+          broken_count?: number
+          checked_at?: string
+          display_name?: string
+          domain?: string
+          error_message?: string | null
+          flow_key?: string
+          id?: string
+          run_id?: string
+          sample?: Json
+          source_count?: number
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_smoke_results_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_operations_sop_controls: {
         Row: {
           control_key: string
@@ -23163,6 +23258,10 @@ export type Database = {
         Returns: Json
       }
       ai_ops_evaluate_system_integrity: {
+        Args: { p_cutoff_at?: string; p_run_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      ai_ops_evaluate_user_flow_smoke: {
         Args: { p_cutoff_at?: string; p_run_id: string; p_tenant_id: string }
         Returns: Json
       }
