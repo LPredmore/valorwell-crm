@@ -1,6 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {
-  BTY_GEMINI_MODEL,
   BTY_PASS_TARGET_COUNT,
   BTY_TENANT_ID,
   buildStaggeredDiscoveryPrompt,
@@ -14,6 +13,7 @@ import {
 import { adminClient, authorizeWorker, json, logEvent, safeError } from "../_shared/bty-runtime.ts";
 import { awaitGeminiSlot, GeminiRateSlotUnavailable } from "../_shared/gemini-rate-limit.ts";
 
+const BTY_RUNTIME_MODEL = "gemini-3.6-flash";
 /** Total staggered searches per business date (06:00 and 06:05 Central). */
 const TOTAL_PASSES = 2;
 
@@ -35,7 +35,7 @@ Deno.serve(async (request: Request) => {
     p_tenant_id: tenantId,
     p_business_date: businessDate,
     p_pass: pass,
-    p_model: BTY_GEMINI_MODEL,
+    p_model: BTY_RUNTIME_MODEL,
   });
   if (claim.error) return json({ error: claim.error.message }, 500);
   const claimed = claim.data as Record<string, unknown>;
@@ -51,8 +51,6 @@ Deno.serve(async (request: Request) => {
   try {
     if (forceFailure) throw new GeminiError("api_error", "Forced failure rehearsal.");
 
-    // Shared automated Gemini rate limit (8 starts / rolling 60s across all automation jobs).
-    // Exhaustion is surfaced as a retryable rate-limited failure, matching existing 429 handling.
     try {
       await awaitGeminiSlot(admin, { label: "bty-discovery", maxWaitMs: 120_000 });
     } catch (slotError) {
@@ -60,11 +58,11 @@ Deno.serve(async (request: Request) => {
       throw slotError;
     }
 
-    // No ignore list is sent to the model — duplicates are filtered in code below.
-    const rows = await callGeminiGrounded<StaggeredRow>(buildStaggeredDiscoveryPrompt(targetState));
+    const rows = await callGeminiGrounded<StaggeredRow>(
+      buildStaggeredDiscoveryPrompt(targetState),
+      { model: BTY_RUNTIME_MODEL },
+    );
 
-    // Code-level duplicate screen against every organization already stored,
-    // including anything pass 1 saved earlier the same morning.
     const screen = await admin.rpc("bty_screen_organization_candidates", {
       p_tenant_id: tenantId,
       p_run_id: runId,
@@ -84,18 +82,12 @@ Deno.serve(async (request: Request) => {
       }
     }
 
-    // The screen above also flags anything already evaluated inside this run.
     const seenNames = new Set<string>();
-
     const outcome = validateStaggeredCandidates(rows, { targetState, seenNames, duplicateVerdicts });
     accepted = outcome.accepted;
 
     logEvent("bty-discovery", "pass_validated", {
-      runId,
-      targetState,
-      pass,
-      returned: rows.length,
-      accepted: accepted.length,
+      runId, targetState, pass, returned: rows.length, accepted: accepted.length,
       discarded: outcome.rejected.length,
       discardReasons: outcome.rejected.map((entry) => entry.reason),
     });
@@ -111,16 +103,8 @@ Deno.serve(async (request: Request) => {
     const summary = commit.data as Record<string, unknown>;
     logEvent("bty-discovery", "pass_committed", { runId, targetState, pass, ...summary });
     return json({
-      success: true,
-      runId,
-      targetState,
-      pass,
-      returned: rows.length,
-      validated: accepted.length,
-      rejected: outcome.rejected.map((entry) => ({
-        organizationName: entry.candidate.organization_name,
-        reason: entry.reason,
-      })),
+      success: true, runId, targetState, pass, returned: rows.length, validated: accepted.length,
+      rejected: outcome.rejected.map((entry) => ({ organizationName: entry.candidate.organization_name, reason: entry.reason })),
       ...summary,
     });
   } catch (error) {
@@ -128,23 +112,13 @@ Deno.serve(async (request: Request) => {
     const failure = await admin.rpc("bty_mark_run_failed", {
       p_run_id: runId,
       p_attempt: pass >= TOTAL_PASSES ? 3 : pass,
-      p_error: {
-        pass,
-        message: detail.message,
-        kind: detail.kind ?? "workflow_error",
-        candidatesValidated: accepted.length,
-        candidatesRejected: 0,
-      },
+      p_error: { pass, message: detail.message, kind: detail.kind ?? "workflow_error", candidatesValidated: accepted.length, candidatesRejected: 0 },
     });
     logEvent("bty-discovery", "failed", { runId, targetState, pass, error: detail.message });
     return json({
-      success: false,
-      runId,
-      targetState,
-      pass,
+      success: false, runId, targetState, pass,
       status: (failure.data as Record<string, unknown>)?.status ?? "pending",
-      error: detail.message,
-      candidatesValidated: accepted.length,
+      error: detail.message, candidatesValidated: accepted.length,
     }, 200);
   }
 });
