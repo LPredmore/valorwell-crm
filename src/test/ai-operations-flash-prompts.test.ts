@@ -4,18 +4,18 @@ import { readFileSync } from "node:fs";
 import { resolveAiOpsModel } from "../../supabase/functions/_shared/ai-ops-model";
 
 describe("AI Operations model configuration", () => {
-  it("keeps Gemini 2.5 Flash authoritative for every Gemini-backed call", () => {
+  it("keeps Gemini 3.6 Flash authoritative for every Gemini-backed call", () => {
     const runtime = readFileSync("supabase/functions/_shared/ai-ops-model.ts", "utf8") + readFileSync("supabase/functions/_shared/ai-ops.ts", "utf8");
-    expect(runtime).toContain('AI_OPS_MODEL = "gemini-2.5-flash"');
-    expect(resolveAiOpsModel("gemini-pro-latest", "gemini-2.5-pro")).toBe("gemini-2.5-flash");
-    expect(resolveAiOpsModel("gemini-flash-latest", null)).toBe("gemini-2.5-flash");
-    expect(resolveAiOpsModel(null, null)).toBe("gemini-2.5-flash");
+    expect(runtime).toContain('AI_OPS_MODEL = "gemini-3.6-flash"');
+    expect(resolveAiOpsModel("gemini-pro-latest", "gemini-2.5-pro")).toBe("gemini-3.6-flash");
+    expect(resolveAiOpsModel("gemini-flash-latest", null)).toBe("gemini-3.6-flash");
+    expect(resolveAiOpsModel(null, null)).toBe("gemini-3.6-flash");
   });
 
-  it("ignores stale or alternate requested models and always routes to Flash", () => {
-    expect(resolveAiOpsModel("gemini-2.5-pro", "gemini-pro-latest")).toBe("gemini-2.5-flash");
-    expect(resolveAiOpsModel("gemini-1.5-pro", null)).toBe("gemini-2.5-flash");
-    expect(resolveAiOpsModel("gemini-3.1-pro-preview", null)).toBe("gemini-2.5-flash");
+  it("ignores stale or alternate requested models and always routes to Gemini 3.6 Flash", () => {
+    expect(resolveAiOpsModel("gemini-2.5-pro", "gemini-pro-latest")).toBe("gemini-3.6-flash");
+    expect(resolveAiOpsModel("gemini-1.5-pro", null)).toBe("gemini-3.6-flash");
+    expect(resolveAiOpsModel("gemini-3.1-pro-preview", null)).toBe("gemini-3.6-flash");
   });
 
   it("does not allow a per-request worker model override", () => {
