@@ -182,3 +182,46 @@ export function incompleteModules(overview: CommandCenterOverview | null | undef
 export function isFindingRecurring(finding: Pick<CommandCenterFinding, 'occurrenceCount' | 'reopenCount'>): boolean {
   return (finding.occurrenceCount ?? 1) >= 3 || (finding.reopenCount ?? 0) >= 1;
 }
+
+/**
+ * Deterministic source routing. Every entity type a finding can carry must resolve to the
+ * operational page where the work happens; AI Operations entities (operations registry,
+ * smoke flows, runs) fall back to the AI Operations console.
+ */
+export type CommandCenterSourceLink = { path: string; label: string };
+
+export function sourceLinkFor(entityType: string | null | undefined, entityId: string | null | undefined): CommandCenterSourceLink | null {
+  if (!entityType) return null;
+  switch (entityType) {
+    case 'client': return entityId ? { path: `/crm/clients/${entityId}`, label: 'Open client' } : null;
+    case 'staff': return { path: '/crm/staff', label: 'Open staff' };
+    case 'task': return { path: '/crm/tasks', label: 'Open tasks' };
+    case 'claim':
+    case 'appointment': return { path: '/crm/exceptions', label: 'Open exceptions' };
+    case 'conversation': return { path: '/crm/inbox', label: 'Open inbox' };
+    case 'relationship_organization':
+      return entityId ? { path: `/crm/business-development/organizations/${entityId}`, label: 'Open organization' } : null;
+    case 'relationship_contact':
+      return entityId ? { path: `/crm/business-development/contacts/${entityId}`, label: 'Open contact' } : null;
+    case 'relationship_opportunity':
+      return entityId ? { path: `/crm/business-development/opportunities/${entityId}`, label: 'Open opportunity' } : null;
+    case 'operation': return { path: '/crm/ai-operations', label: 'Open AI Operations' };
+    case 'smoke_flow': return { path: '/crm/ai-operations', label: 'Open smoke tests' };
+    case 'run':
+    case 'module_run':
+    case 'ai_operation': return { path: '/crm/ai-operations', label: 'Open AI Operations' };
+    default: return null;
+  }
+}
+
+/** Run publication vocabulary written by the brief publication step. */
+export const RUN_PUBLICATION_LABELS: Record<string, string> = {
+  unpublished: 'Not published',
+  published: 'Published',
+  published_partial: 'Published (partial)',
+};
+
+export function isRunPublished(publicationStatus: string | null | undefined): boolean {
+  return publicationStatus === 'published' || publicationStatus === 'published_partial';
+}
+
