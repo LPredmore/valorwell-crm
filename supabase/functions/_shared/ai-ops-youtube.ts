@@ -86,7 +86,6 @@ export async function youtubeGetJson(path: string): Promise<Record<string, unkno
   return await getJson(path, auth);
 }
 
-
 /** Identity of the account behind the OAuth refresh token (used for verification and channel fallback). */
 export async function youtubeAuthenticatedChannel(): Promise<{ id: string; title: string } | null> {
   if (!youtubeOauthConfigured()) return null;
@@ -105,6 +104,23 @@ const asBigIntString = (value: string | undefined) => {
   return value;
 };
 
+type VideoDetails = {
+  id?: string;
+  snippet?: { title?: string; publishedAt?: string };
+  statistics?: { viewCount?: string; likeCount?: string; commentCount?: string };
+};
+type YoutubeCommentSnippet = {
+  textOriginal?: string;
+  textDisplay?: string;
+  authorDisplayName?: string;
+  publishedAt?: string;
+  updatedAt?: string;
+  parentId?: string;
+};
+type CommentThreadItem = {
+  snippet?: { topLevelComment?: { id?: string; snippet?: YoutubeCommentSnippet } };
+  replies?: { comments?: Array<{ id?: string; snippet?: YoutubeCommentSnippet }> };
+};
 
 export async function syncYoutubeComments(options: {
   admin: SupabaseClient; tenantId: string; channelId: string | null; btyPlaylistId: string | null; maxVideos?: number;
@@ -149,7 +165,6 @@ export async function syncYoutubeComments(options: {
   if (videoIds.length) {
     const details = await getJson(`/videos?part=snippet,statistics&id=${encodeURIComponent(videoIds.join(','))}`, auth) as { items?: VideoDetails[] };
     for (const video of details.items ?? []) if (video.id) detailsById.set(video.id, video);
-
   }
 
   let commentsSeen = 0;
