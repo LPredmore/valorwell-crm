@@ -5,7 +5,7 @@
  * Keep model selection centralized so individual collectors, queued work, settings,
  * or manual worker payloads cannot silently route analysis to a different model.
  */
-export const AI_OPS_MODEL = "gemini-2.5-flash";
+export const AI_OPS_MODEL = "gemini-3.6-flash";
 
 /**
  * AI Operations uses one authoritative Gemini model. Candidate values are accepted
