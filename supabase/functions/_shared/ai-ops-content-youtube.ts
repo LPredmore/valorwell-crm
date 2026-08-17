@@ -96,7 +96,7 @@ async function searchRecentVideoIds(publishedAfter: string, publishedBefore: str
   const sourceQueries = new Map<string, Set<string>>();
   for (const query of CONTENT_OPPORTUNITY_SEARCH_QUERIES) {
     const params = new URLSearchParams({
-      part: "id",
+      part: "snippet",
       type: "video",
       order: "viewCount",
       relevanceLanguage: "en",
