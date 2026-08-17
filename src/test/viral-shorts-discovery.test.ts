@@ -22,8 +22,8 @@ const approve = (videoId: string, rationale = "veteran humor"): HumorVerdict => 
 });
 
 describe("veteran humor shorts discovery", () => {
-  it("uses gemini-2.5-flash", () => {
-    expect(VIRAL_SHORTS_MODEL).toBe("gemini-2.5-flash");
+  it("uses gemini-3.6-flash", () => {
+    expect(VIRAL_SHORTS_MODEL).toBe("gemini-3.6-flash");
   });
 
   it("rotates two complementary search queries per day", () => {
