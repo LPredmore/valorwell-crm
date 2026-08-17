@@ -4,7 +4,7 @@
 // same rolling window in the database, because they share one Gemini project quota.
 /** Minimal structural client contract so this module stays importable from browser/test builds. */
 export type RpcClient = {
-  rpc: (name: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+  rpc: (name: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
 };
 
 /** Gemini 2.5 Flash free tier allows 10 RPM; we deliberately keep ~20% headroom. */
