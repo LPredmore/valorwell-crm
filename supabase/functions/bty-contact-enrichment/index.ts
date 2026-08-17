@@ -1,12 +1,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {
-  BTY_GEMINI_MODEL,
   BTY_TENANT_ID,
   buildContactPrompt,
   callGemini,
   centralBusinessDate,
   CONTACT_SCHEMA,
 } from "../_shared/bty.ts";
+import { BTY_RUNTIME_MODEL } from "../_shared/bty-model.ts";
 import { adminClient, authorizeWorker, json, logEvent, safeError } from "../_shared/bty-runtime.ts";
 import { awaitGeminiSlot } from "../_shared/gemini-rate-limit.ts";
 
@@ -54,9 +54,9 @@ Deno.serve(async (request: Request) => {
   for (const organization of organizations) {
     const organizationId = String(organization.organizationId);
     try {
-      // Shared automated Gemini rate limit (8 starts / rolling 60s across all automation jobs).
       await awaitGeminiSlot(admin, { label: "bty-contact-enrichment", maxWaitMs: 120_000 });
       const contact = await callGemini<ContactResult>({
+        model: BTY_RUNTIME_MODEL,
         prompt: buildContactPrompt({
           organizationName: String(organization.name ?? ""),
           website: (organization.website as string) ?? null,
@@ -75,7 +75,7 @@ Deno.serve(async (request: Request) => {
           p_run_id: runId,
           p_organization_id: organizationId,
           p_status: "no_verified_contact",
-          p_model: BTY_GEMINI_MODEL,
+          p_model: BTY_RUNTIME_MODEL,
           p_error: { reason: "no_verifiable_person_found" },
         });
         results.push({ organizationId, status: "no_verified_contact" });
@@ -86,7 +86,7 @@ Deno.serve(async (request: Request) => {
         p_tenant_id: tenantId,
         p_run_id: runId,
         p_organization_id: organizationId,
-        p_model: BTY_GEMINI_MODEL,
+        p_model: BTY_RUNTIME_MODEL,
         p_contact: {
           first_name: contact.first_name ?? null,
           last_name: contact.last_name ?? null,
@@ -109,7 +109,7 @@ Deno.serve(async (request: Request) => {
         p_run_id: runId,
         p_organization_id: organizationId,
         p_status: "failed",
-        p_model: BTY_GEMINI_MODEL,
+        p_model: BTY_RUNTIME_MODEL,
         p_error: { message: detail.message, kind: detail.kind ?? "workflow_error" },
       });
       results.push({ organizationId, status: "failed", error: detail.message });
