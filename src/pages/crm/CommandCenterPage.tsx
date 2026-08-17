@@ -39,28 +39,16 @@ const moduleLabel = (module: string) => AI_OPERATIONS_MODULE_LABELS[module as ke
 const formatDate = (value: string | null | undefined) => (value ? new Date(value).toLocaleString() : '—');
 const formatDay = (value: string | null | undefined) => (value ? new Date(`${value}T12:00:00Z`).toLocaleDateString() : '—');
 
-/** Route back to the operational page where the work actually happens. */
-const SOURCE_LINKS: Record<string, { path: (id: string) => string; label: string }> = {
-  client: { path: (id) => `/crm/clients/${id}`, label: 'Open client' },
-  staff: { path: () => '/crm/staff', label: 'Open staff' },
-  task: { path: () => '/crm/tasks', label: 'Open tasks' },
-  claim: { path: () => '/crm/exceptions', label: 'Open exceptions' },
-  appointment: { path: () => '/crm/exceptions', label: 'Open exceptions' },
-  conversation: { path: () => '/crm/inbox', label: 'Open inbox' },
-  relationship_organization: { path: (id) => `/crm/business-development/organizations/${id}`, label: 'Open organization' },
-  relationship_contact: { path: (id) => `/crm/business-development/contacts/${id}`, label: 'Open contact' },
-  relationship_opportunity: { path: (id) => `/crm/business-development/opportunities/${id}`, label: 'Open opportunity' },
-};
-
 function SourceLink({ finding }: { finding: CommandCenterFinding }) {
-  const link = finding.entityType ? SOURCE_LINKS[finding.entityType] : undefined;
-  if (!link || !finding.entityId) return null;
+  const link = sourceLinkFor(finding.entityType, finding.entityId);
+  if (!link) return null;
   return (
     <Button asChild size="sm" variant="outline">
-      <Link to={link.path(finding.entityId)}>{link.label}</Link>
+      <Link to={link.path}>{link.label}</Link>
     </Button>
   );
 }
+
 
 type ActionKind = 'resolve' | 'dismiss' | 'review' | 'start' | 'snooze' | 'assign';
 
