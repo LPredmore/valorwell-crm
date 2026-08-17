@@ -1,11 +1,16 @@
-// AI Operations model worker. Claims queued work, applies the authoritative Gemini model,
+// AI Operations model worker. Claims queued work, applies the configured Gemini model,
 // validates strict structured output, and records provenance. Never remediates source data.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   AI_OPS_MODEL, AI_OPS_PROVIDER, AI_OPS_TENANT_ID, adminClient, authorizeWorker,
-  backoffSeconds, callGeminiGroundedSearch, callGeminiModel, classifyModelFailure,
+  backoffSeconds, callGeminiModel, classifyModelFailure,
   geminiApiKey, json, logEvent, parseModelJson, resolveAiOpsModel, safeError, validateEntityCoverage,
 } from "../_shared/ai-ops.ts";
+import {
+  CONTENT_OPPORTUNITY_MODEL,
+  collectYoutubeContentOpportunityEvidence,
+  type YoutubeContentOpportunityEvidence,
+} from "../_shared/ai-ops-content-youtube.ts";
 import { specFor } from "../_shared/ai-ops-prompts.ts";
 import { awaitGeminiSlot, GeminiRateSlotUnavailable } from "../_shared/gemini-rate-limit.ts";
 
@@ -22,30 +27,21 @@ const requestedEntityKeys = (item: ClaimedItem): string[] => {
 
 async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string, settings: { model: string }, item: ClaimedItem): Promise<"completed" | "failed" | "retry" | "deferred"> {
   const spec = specFor(item.workType);
-  const model = resolveAiOpsModel(item.requestedModel, settings.model);
+  // Content opportunities are deliberately isolated on Gemini 3.6 Flash because
+  // retrieval is handled by the YouTube Data API rather than Gemini web grounding.
+  const model = item.workType === "content_opportunity_review"
+    ? CONTENT_OPPORTUNITY_MODEL
+    : resolveAiOpsModel(item.requestedModel, settings.model);
 
-  let grounding: { text: string; sources: Array<{ title: string | null; uri: string | null }>; searchQueries: string[]; tokenUsage: Record<string, unknown>; modelVersion: string | null } | null = null;
+  let youtubeEvidence: YoutubeContentOpportunityEvidence | null = null;
 
   const userPrompt = async () => {
     if (item.workType !== "content_opportunity_review") return JSON.stringify(item.inputPayload ?? {});
-    if (!grounding) {
-      const request = item.inputPayload ?? {};
-      // Shared automation rate limit: never start a Gemini request without a slot.
-      await awaitGeminiSlot(admin, { label: `${COMPONENT}:grounding`, maxWaitMs: 60_000 });
-      grounding = await callGeminiGroundedSearch({
-        apiKey,
-        model: AI_OPS_MODEL,
-        prompt: [
-          "Research timely, source-verifiable content opportunities for ValorWell.",
-          "Focus on veteran and military-family mental health access, VA/community-care developments, nonprofit/community action, clinician workforce, and concrete veteran-service work.",
-          "Prefer developments from the last 72 hours. Avoid generic evergreen awareness topics unless tied to a current event.",
-          "Find up to 12 candidate developments. For each, explain the factual development, date/recency, why it may matter to ValorWell's audiences, and source evidence.",
-          "Do not create social copy and do not make partisan arguments.",
-          `Request context: ${JSON.stringify(request)}`,
-        ].join("\n"),
-      });
-    }
-    return JSON.stringify({ request: item.inputPayload ?? {}, groundedResearch: grounding.text, groundingSources: grounding.sources, searchQueries: grounding.searchQueries });
+    if (!youtubeEvidence) youtubeEvidence = await collectYoutubeContentOpportunityEvidence(item.inputPayload ?? {});
+    return JSON.stringify({
+      request: item.inputPayload ?? {},
+      youtubeResearch: youtubeEvidence,
+    });
   };
 
   const attempt = async (repair: boolean) => {
@@ -77,13 +73,32 @@ async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string
       p_structured_result: outcome.parsed,
       p_token_usage: {
         ...outcome.tokenUsage,
-        provider: AI_OPS_PROVIDER, model, configuredModel: settings.model || AI_OPS_MODEL,
-        requestedModel: item.requestedModel || null, modelVersion: outcome.modelVersion,
-        promptVersion: spec.promptVersion, schemaVersion: spec.schemaVersion,
-        ...(grounding ? { groundingModel: AI_OPS_MODEL, groundingSources: grounding.sources, groundingSearchQueries: grounding.searchQueries, groundingTokenUsage: grounding.tokenUsage } : {}),
+        provider: AI_OPS_PROVIDER,
+        model,
+        configuredModel: item.workType === "content_opportunity_review" ? CONTENT_OPPORTUNITY_MODEL : (settings.model || AI_OPS_MODEL),
+        requestedModel: item.requestedModel || null,
+        modelVersion: outcome.modelVersion,
+        promptVersion: spec.promptVersion,
+        schemaVersion: spec.schemaVersion,
+        ...(youtubeEvidence ? {
+          retrievalProvider: youtubeEvidence.provider,
+          youtubePublishedAfter: youtubeEvidence.publishedAfter,
+          youtubePublishedBefore: youtubeEvidence.publishedBefore,
+          youtubeSearchQueries: youtubeEvidence.searchQueries,
+          youtubeUniqueVideosFound: youtubeEvidence.uniqueVideosFound,
+          youtubeEligibleLongFormVideos: youtubeEvidence.eligibleLongFormVideos,
+          youtubeCandidatesSupplied: youtubeEvidence.candidates.length,
+        } : {}),
       },
     });
-    logEvent(COMPONENT, "work_item_completed", { workItemId: item.id, module: item.module, workType: item.workType, model, grounded: Boolean(grounding), attempt: item.attemptCount });
+    logEvent(COMPONENT, "work_item_completed", {
+      workItemId: item.id,
+      module: item.module,
+      workType: item.workType,
+      model,
+      youtubeSourced: Boolean(youtubeEvidence),
+      attempt: item.attemptCount,
+    });
     return "completed";
   } catch (error) {
     // Waiting for a shared Gemini rate slot is not a work failure: requeue without consuming an attempt.
