@@ -7,6 +7,7 @@ import {
   geminiApiKey, json, logEvent, parseModelJson, resolveAiOpsModel, safeError, validateEntityCoverage,
 } from "../_shared/ai-ops.ts";
 import { specFor } from "../_shared/ai-ops-prompts.ts";
+import { awaitGeminiSlot, GeminiRateSlotUnavailable } from "../_shared/gemini-rate-limit.ts";
 
 type ClaimedItem = {
   id: string; tenantId: string; runId: string | null; module: string; workKey: string;
@@ -19,7 +20,7 @@ const requestedEntityKeys = (item: ClaimedItem): string[] => {
   return (p.entities ?? []).map((e) => e.entityKey ?? "").filter(Boolean);
 };
 
-async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string, settings: { model: string }, item: ClaimedItem): Promise<"completed" | "failed" | "retry"> {
+async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string, settings: { model: string }, item: ClaimedItem): Promise<"completed" | "failed" | "retry" | "deferred"> {
   const spec = specFor(item.workType);
   const model = resolveAiOpsModel(item.requestedModel, settings.model);
 
@@ -29,6 +30,8 @@ async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string
     if (item.workType !== "content_opportunity_review") return JSON.stringify(item.inputPayload ?? {});
     if (!grounding) {
       const request = item.inputPayload ?? {};
+      // Shared automation rate limit: never start a Gemini request without a slot.
+      await awaitGeminiSlot(admin, { label: `${COMPONENT}:grounding`, maxWaitMs: 60_000 });
       grounding = await callGeminiGroundedSearch({
         apiKey,
         model: AI_OPS_MODEL,
@@ -47,6 +50,7 @@ async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string
 
   const attempt = async (repair: boolean) => {
     const suffix = repair ? "\nThe previous response failed schema validation. Return valid JSON matching the schema exactly." : "";
+    await awaitGeminiSlot(admin, { label: `${COMPONENT}:${item.workType}`, maxWaitMs: 60_000 });
     const result = await callGeminiModel({
       apiKey, model, systemInstruction: spec.systemInstruction + suffix,
       userPrompt: await userPrompt(), responseSchema: spec.responseSchema, thinkingLevel: spec.thinkingLevel,
@@ -82,6 +86,12 @@ async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string
     logEvent(COMPONENT, "work_item_completed", { workItemId: item.id, module: item.module, workType: item.workType, model, grounded: Boolean(grounding), attempt: item.attemptCount });
     return "completed";
   } catch (error) {
+    // Waiting for a shared Gemini rate slot is not a work failure: requeue without consuming an attempt.
+    if (error instanceof GeminiRateSlotUnavailable) {
+      await admin.rpc("ai_ops_release_work_item", { p_work_item_id: item.id, p_delay_seconds: 60, p_reason: "gemini_rate_slot_wait" });
+      logEvent(COMPONENT, "work_item_deferred", { workItemId: item.id, module: item.module, workType: item.workType, retryAfterMs: error.retryAfterMs });
+      return "deferred";
+    }
     const classified = classifyModelFailure((error as { status?: number }).status ?? null, safeError(error));
     const { data } = await admin.rpc("ai_ops_fail_work_item", {
       p_work_item_id: item.id, p_error_code: classified.kind, p_error_summary: safeError(error), p_retryable: classified.retryable, p_max_attempts: 4,
@@ -123,7 +133,7 @@ Deno.serve(async (request) => {
     if (!items.length) return json({ ok: true, claimed: 0, durationMs: Date.now() - started });
     const results = await Promise.all(items.map((item) => processItem(admin, apiKey, { model: settings?.model ?? AI_OPS_MODEL }, item)));
 
-    const summary = { claimed: items.length, completed: results.filter((r) => r === "completed").length, retry: results.filter((r) => r === "retry").length, failed: results.filter((r) => r === "failed").length, durationMs: Date.now() - started };
+    const summary = { claimed: items.length, completed: results.filter((r) => r === "completed").length, retry: results.filter((r) => r === "retry").length, failed: results.filter((r) => r === "failed").length, deferred: results.filter((r) => r === "deferred").length, durationMs: Date.now() - started };
     logEvent(COMPONENT, "batch_complete", summary);
     return json({ ok: true, ...summary });
   } catch (error) {

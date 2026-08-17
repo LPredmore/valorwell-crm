@@ -79,6 +79,14 @@ async function getJson(path: string, auth: Auth): Promise<Record<string, unknown
   return payload as Record<string, unknown>;
 }
 
+/** Read-only YouTube Data API request using the configured OAuth token (or API-key fallback). */
+export async function youtubeGetJson(path: string): Promise<Record<string, unknown>> {
+  const auth = await resolveAuth();
+  if (!auth) throw new Error("youtube_credentials_missing");
+  return await getJson(path, auth);
+}
+
+
 /** Identity of the account behind the OAuth refresh token (used for verification and channel fallback). */
 export async function youtubeAuthenticatedChannel(): Promise<{ id: string; title: string } | null> {
   if (!youtubeOauthConfigured()) return null;

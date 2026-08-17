@@ -45,3 +45,8 @@ verify_jwt = false
 # Scheduled AI Operations model queue worker; authorizes the service-role bearer in code.
 verify_jwt = false
 
+[functions.ai-operations-viral-shorts]
+# Scheduled daily veteran-humor Shorts discovery; authorizes the service-role bearer or cron secret in code.
+verify_jwt = false
+
+
