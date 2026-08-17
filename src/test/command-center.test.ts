@@ -8,6 +8,9 @@ import {
   isFindingRecurring,
   severityRank,
   sortFindingsForTriage,
+  sourceLinkFor,
+  isRunPublished,
+  RUN_PUBLICATION_LABELS,
   type CommandCenterOverview,
 } from '@/lib/crm/command-center';
 import { AI_OPERATIONS_MODULES } from '@/lib/crm/ai-operations';
@@ -74,5 +77,45 @@ describe('Command Center lifecycle and degradation', () => {
     } as unknown as CommandCenterOverview;
     expect(incompleteModules(overview).map((entry) => entry.module)).toEqual(['communications']);
     expect(incompleteModules(null)).toEqual([]);
+  });
+});
+
+describe('Command Center source routing', () => {
+  it('routes operational entities back to their working pages', () => {
+    expect(sourceLinkFor('client', 'abc')?.path).toBe('/crm/clients/abc');
+    expect(sourceLinkFor('staff', null)?.path).toBe('/crm/staff');
+    expect(sourceLinkFor('task', null)?.path).toBe('/crm/tasks');
+    expect(sourceLinkFor('claim', null)?.path).toBe('/crm/exceptions');
+    expect(sourceLinkFor('appointment', null)?.path).toBe('/crm/exceptions');
+    expect(sourceLinkFor('conversation', null)?.path).toBe('/crm/inbox');
+    expect(sourceLinkFor('relationship_organization', 'o1')?.path).toBe('/crm/business-development/organizations/o1');
+    expect(sourceLinkFor('relationship_contact', 'c1')?.path).toBe('/crm/business-development/contacts/c1');
+    expect(sourceLinkFor('relationship_opportunity', 'p1')?.path).toBe('/crm/business-development/opportunities/p1');
+  });
+
+  it('falls back to AI Operations for system-health entities', () => {
+    expect(sourceLinkFor('operation', 'daily_dispatch')?.path).toBe('/crm/ai-operations');
+    expect(sourceLinkFor('smoke_flow', 'tasks.open_task_owner_valid')).toEqual({ path: '/crm/ai-operations', label: 'Open smoke tests' });
+    expect(sourceLinkFor('run', null)?.path).toBe('/crm/ai-operations');
+  });
+
+  it('returns nothing when there is no meaningful source', () => {
+    expect(sourceLinkFor(null, null)).toBeNull();
+    expect(sourceLinkFor('unknown_entity', 'x')).toBeNull();
+    expect(sourceLinkFor('client', null)).toBeNull();
+  });
+});
+
+describe('Command Center run publication state', () => {
+  it('treats full and partial publication as published', () => {
+    expect(isRunPublished('published')).toBe(true);
+    expect(isRunPublished('published_partial')).toBe(true);
+    expect(isRunPublished('unpublished')).toBe(false);
+    expect(isRunPublished(null)).toBe(false);
+  });
+
+  it('labels every publication state', () => {
+    expect(RUN_PUBLICATION_LABELS.published_partial).toBe('Published (partial)');
+    expect(RUN_PUBLICATION_LABELS.unpublished).toBe('Not published');
   });
 });
