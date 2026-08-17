@@ -8,6 +8,7 @@ import {
   CONTACT_SCHEMA,
 } from "../_shared/bty.ts";
 import { adminClient, authorizeWorker, json, logEvent, safeError } from "../_shared/bty-runtime.ts";
+import { awaitGeminiSlot } from "../_shared/gemini-rate-limit.ts";
 
 type ContactResult = {
   first_name?: string;
@@ -53,6 +54,8 @@ Deno.serve(async (request: Request) => {
   for (const organization of organizations) {
     const organizationId = String(organization.organizationId);
     try {
+      // Shared automated Gemini rate limit (8 starts / rolling 60s across all automation jobs).
+      await awaitGeminiSlot(admin, { label: "bty-contact-enrichment", maxWaitMs: 120_000 });
       const contact = await callGemini<ContactResult>({
         prompt: buildContactPrompt({
           organizationName: String(organization.name ?? ""),

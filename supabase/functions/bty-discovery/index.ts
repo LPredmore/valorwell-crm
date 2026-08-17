@@ -12,6 +12,7 @@ import {
   type StaggeredRow,
 } from "../_shared/bty.ts";
 import { adminClient, authorizeWorker, json, logEvent, safeError } from "../_shared/bty-runtime.ts";
+import { awaitGeminiSlot, GeminiRateSlotUnavailable } from "../_shared/gemini-rate-limit.ts";
 
 /** Total staggered searches per business date (06:00 and 06:05 Central). */
 const TOTAL_PASSES = 2;
@@ -49,6 +50,15 @@ Deno.serve(async (request: Request) => {
 
   try {
     if (forceFailure) throw new GeminiError("api_error", "Forced failure rehearsal.");
+
+    // Shared automated Gemini rate limit (8 starts / rolling 60s across all automation jobs).
+    // Exhaustion is surfaced as a retryable rate-limited failure, matching existing 429 handling.
+    try {
+      await awaitGeminiSlot(admin, { label: "bty-discovery", maxWaitMs: 120_000 });
+    } catch (slotError) {
+      if (slotError instanceof GeminiRateSlotUnavailable) throw new GeminiError("rate_limited", "Shared Gemini automation rate limit is saturated.");
+      throw slotError;
+    }
 
     // No ignore list is sent to the model — duplicates are filtered in code below.
     const rows = await callGeminiGrounded<StaggeredRow>(buildStaggeredDiscoveryPrompt(targetState));
