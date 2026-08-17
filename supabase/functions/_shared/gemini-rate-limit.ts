@@ -2,7 +2,10 @@
 // All protected automation jobs (AI Operations model worker, BTY discovery,
 // BTY contact enrichment, veteran humor Shorts discovery) claim slots from the
 // same rolling window in the database, because they share one Gemini project quota.
-import type { SupabaseClient } from "npm:@supabase/supabase-js@2.93.1";
+/** Minimal structural client contract so this module stays importable from browser/test builds. */
+export type RpcClient = {
+  rpc: (name: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+};
 
 /** Gemini 2.5 Flash free tier allows 10 RPM; we deliberately keep ~20% headroom. */
 export const GEMINI_AUTOMATION_MAX_STARTS = 8;
@@ -27,7 +30,7 @@ export function slotBackoffMs(retryAfterMs: number, attempt: number): number {
   return Math.min(Math.max(suggested + jitter, 250), 10_000) + attempt * 0;
 }
 
-export async function claimGeminiSlot(admin: SupabaseClient, label: string): Promise<SlotVerdict> {
+export async function claimGeminiSlot(admin: RpcClient, label: string): Promise<SlotVerdict> {
   const { data, error } = await admin.rpc("gemini_automation_claim_slot", {
     p_scope: GEMINI_AUTOMATION_SCOPE,
     p_max: GEMINI_AUTOMATION_MAX_STARTS,
@@ -50,7 +53,7 @@ export async function claimGeminiSlot(admin: SupabaseClient, label: string): Pro
  * Waiting is never an analysis failure — callers defer their work instead.
  */
 export async function awaitGeminiSlot(
-  admin: SupabaseClient,
+  admin: RpcClient,
   options: { label: string; maxWaitMs?: number },
 ): Promise<SlotVerdict> {
   const deadline = Date.now() + (options.maxWaitMs ?? 45_000);
