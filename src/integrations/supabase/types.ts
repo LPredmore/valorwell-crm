@@ -714,6 +714,153 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_operations_viral_short_candidates: {
+        Row: {
+          age_days: number | null
+          business_date: string
+          channel_id: string | null
+          channel_name: string | null
+          comment_count: number | null
+          created_at: string
+          description: string | null
+          discovered_at: string
+          duration_seconds: number | null
+          humor_rationale: string | null
+          id: string
+          like_count: number | null
+          published_at: string | null
+          selection_rank: number | null
+          source_query: string | null
+          status: string
+          tenant_id: string
+          title: string
+          updated_at: string
+          video_id: string
+          video_url: string
+          view_count: number | null
+          views_per_day: number | null
+          viral_tier: string | null
+          youtube_license: string | null
+        }
+        Insert: {
+          age_days?: number | null
+          business_date: string
+          channel_id?: string | null
+          channel_name?: string | null
+          comment_count?: number | null
+          created_at?: string
+          description?: string | null
+          discovered_at?: string
+          duration_seconds?: number | null
+          humor_rationale?: string | null
+          id?: string
+          like_count?: number | null
+          published_at?: string | null
+          selection_rank?: number | null
+          source_query?: string | null
+          status?: string
+          tenant_id: string
+          title: string
+          updated_at?: string
+          video_id: string
+          video_url: string
+          view_count?: number | null
+          views_per_day?: number | null
+          viral_tier?: string | null
+          youtube_license?: string | null
+        }
+        Update: {
+          age_days?: number | null
+          business_date?: string
+          channel_id?: string | null
+          channel_name?: string | null
+          comment_count?: number | null
+          created_at?: string
+          description?: string | null
+          discovered_at?: string
+          duration_seconds?: number | null
+          humor_rationale?: string | null
+          id?: string
+          like_count?: number | null
+          published_at?: string | null
+          selection_rank?: number | null
+          source_query?: string | null
+          status?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          video_id?: string
+          video_url?: string
+          view_count?: number | null
+          views_per_day?: number | null
+          viral_tier?: string | null
+          youtube_license?: string | null
+        }
+        Relationships: []
+      }
+      ai_operations_viral_short_runs: {
+        Row: {
+          business_date: string
+          completed_at: string | null
+          created_at: string
+          failure_reason: string | null
+          filtered_candidate_count: number
+          gemini_calls: number
+          gemini_candidates_evaluated: number
+          id: string
+          raw_candidate_count: number
+          search_queries: Json
+          selected_video_ids: Json
+          started_at: string
+          status: string
+          stored_count: number
+          tenant_id: string
+          updated_at: string
+          youtube_metadata_requests: number
+          youtube_searches: number
+        }
+        Insert: {
+          business_date: string
+          completed_at?: string | null
+          created_at?: string
+          failure_reason?: string | null
+          filtered_candidate_count?: number
+          gemini_calls?: number
+          gemini_candidates_evaluated?: number
+          id?: string
+          raw_candidate_count?: number
+          search_queries?: Json
+          selected_video_ids?: Json
+          started_at?: string
+          status?: string
+          stored_count?: number
+          tenant_id: string
+          updated_at?: string
+          youtube_metadata_requests?: number
+          youtube_searches?: number
+        }
+        Update: {
+          business_date?: string
+          completed_at?: string | null
+          created_at?: string
+          failure_reason?: string | null
+          filtered_candidate_count?: number
+          gemini_calls?: number
+          gemini_candidates_evaluated?: number
+          id?: string
+          raw_candidate_count?: number
+          search_queries?: Json
+          selected_video_ids?: Json
+          started_at?: string
+          status?: string
+          stored_count?: number
+          tenant_id?: string
+          updated_at?: string
+          youtube_metadata_requests?: number
+          youtube_searches?: number
+        }
+        Relationships: []
+      }
       ai_operations_weekly_reviews: {
         Row: {
           created_at: string
@@ -23409,6 +23556,14 @@ export type Database = {
         Args: { p_cutoff_at?: string; p_tenant_id: string }
         Returns: Json
       }
+      ai_ops_release_work_item: {
+        Args: {
+          p_delay_seconds?: number
+          p_reason?: string
+          p_work_item_id: string
+        }
+        Returns: Json
+      }
       ai_ops_sync_operation_registry: {
         Args: { p_tenant_id: string }
         Returns: Json
@@ -24810,6 +24965,15 @@ export type Database = {
       format_timestamp_in_timezone: {
         Args: { p_format?: string; p_timestamp: string; p_timezone: string }
         Returns: string
+      }
+      gemini_automation_claim_slot: {
+        Args: {
+          p_label?: string
+          p_max?: number
+          p_scope?: string
+          p_window_seconds?: number
+        }
+        Returns: Json
       }
       generate_canonical_payroll_cycle_v1: {
         Args: {
