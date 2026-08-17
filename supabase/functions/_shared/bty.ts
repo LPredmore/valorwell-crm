@@ -1,8 +1,9 @@
 // Shared logic for the Beyond The Yellow automated prospect discovery workflow.
 // Pure helpers here are unit-tested from src/test/bty-*.test.ts.
 
+import { BTY_RUNTIME_MODEL } from "./bty-model.ts";
+
 export const BTY_TENANT_ID = "00000000-0000-0000-0000-000000000001";
-export const BTY_GEMINI_MODEL = "gemini-2.5-flash";
 export const BTY_FAILURE_RECIPIENT = "info@valorwell.org";
 export const BTY_SOURCE = "bty_automated_research";
 export const BTY_TARGET_COUNT = 5;
@@ -290,7 +291,7 @@ function envValue(name: string): string | undefined {
   return runtime?.env.get(name);
 }
 
-export async function callGemini<T>({ prompt, schema, model = BTY_GEMINI_MODEL, timeoutMs = 120_000 }: GeminiRequest): Promise<T> {
+export async function callGemini<T>({ prompt, schema, model = BTY_RUNTIME_MODEL, timeoutMs = 120_000 }: GeminiRequest): Promise<T> {
   const key = envValue("GEMINI_API_KEY");
   if (!key) throw new GeminiError("api_error", "GEMINI_API_KEY is not configured.");
 
@@ -635,7 +636,7 @@ export async function callGeminiGrounded<T>(
 ): Promise<T[]> {
   const key = envValue("GEMINI_API_KEY");
   if (!key) throw new GeminiError("api_error", "GEMINI_API_KEY is not configured.");
-  const model = options.model ?? BTY_GEMINI_MODEL;
+  const model = options.model ?? BTY_RUNTIME_MODEL;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 300_000);
 
