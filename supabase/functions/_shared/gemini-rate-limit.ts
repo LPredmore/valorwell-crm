@@ -7,7 +7,7 @@ export type RpcClient = {
   rpc: (name: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
 };
 
-/** Gemini 2.5 Flash free tier allows 10 RPM; we deliberately keep ~20% headroom. */
+/** Conservative shared automation cap; actual Gemini project/model quotas may vary. */
 export const GEMINI_AUTOMATION_MAX_STARTS = 8;
 export const GEMINI_AUTOMATION_WINDOW_SECONDS = 60;
 export const GEMINI_AUTOMATION_SCOPE = "automation";
