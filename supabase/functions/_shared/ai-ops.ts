@@ -12,7 +12,7 @@ export const AI_OPS_SCHEMA_VERSION = "1";
 export type AiOpsModule =
   | "system_integrity" | "user_flow_smoke" | "client_journey" | "communications" | "staff_quality"
   | "appointment_integrity" | "billing_claims" | "data_quality" | "relationship_followup"
-  | "donor_intelligence" | "social_leads" | "content_opportunities" | "content_performance"
+  | "donor_intelligence" | "social_leads" | "content_performance"
   | "bty_intelligence" | "sop_compliance" | "weekly_patterns" | "youtube" | "executive_brief";
 
 export const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
