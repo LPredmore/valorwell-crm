@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCrmAuth } from './useCrmAuth';
 import { useToast } from '@/hooks/use-toast';
-import type { CrmCampaignTrigger } from '@/lib/crm/campaign-types';
+import type { ClientLifecycleStage, CrmCampaignTrigger } from '@/lib/crm/campaign-types';
 
 export function useCampaignTrigger(campaignId: string | undefined) {
   const { tenantId } = useCrmAuth();
@@ -20,7 +20,7 @@ export function useCampaignTrigger(campaignId: string | undefined) {
         .maybeSingle();
 
       if (error) throw error;
-      return data;
+      return data as CrmCampaignTrigger | null;
     },
     enabled: !!tenantId && !!campaignId,
   });
@@ -40,7 +40,7 @@ export function useAllCampaignTriggers() {
         .eq('tenant_id', tenantId);
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as CrmCampaignTrigger[];
     },
     enabled: !!tenantId,
   });
@@ -54,34 +54,38 @@ export function useSaveCampaignTrigger() {
   return useMutation({
     mutationFn: async ({
       campaignId,
-      triggerStatus,
+      triggerLifecycle,
     }: {
       campaignId: string;
-      triggerStatus: string | null;
+      triggerLifecycle: ClientLifecycleStage | null;
     }) => {
       if (!tenantId) throw new Error('Not authenticated');
 
-      // Delete existing trigger for this campaign
       await supabase
         .from('crm_campaign_triggers')
         .delete()
         .eq('campaign_id', campaignId)
         .eq('tenant_id', tenantId);
 
-      // Insert new trigger if status is set
-      if (triggerStatus) {
+      if (triggerLifecycle) {
         const { error } = await supabase
           .from('crm_campaign_triggers')
           .insert({
             campaign_id: campaignId,
             tenant_id: tenantId,
-            trigger_on_status: triggerStatus,
+            trigger_on_status: null,
+            trigger_dimension: 'lifecycle_stage',
+            trigger_operator: 'equals',
+            trigger_value: triggerLifecycle,
+            trigger_event: 'lifecycle_changed',
+            trigger_version: 1,
+            is_manual_only: false,
             is_active: true,
           });
 
         if (error) {
           if (error.code === '23505') {
-            throw new Error(`Another campaign already has an auto-enroll trigger for "${triggerStatus}". Only one campaign per trigger status is allowed.`);
+            throw new Error(`Another campaign already starts when a client enters ${triggerLifecycle}. Only one automatic client campaign may own each lifecycle entry.`);
           }
           throw error;
         }
