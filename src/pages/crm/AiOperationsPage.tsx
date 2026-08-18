@@ -20,7 +20,6 @@ import {
   type AiOperationsOverview,
   dismissAiOperationsFinding,
   fetchAiBtyBriefs,
-  fetchAiContentOpportunities,
   fetchAiOperationsBrief,
   fetchAiOperationsFindings,
   fetchAiOperationsFlags,
@@ -51,7 +50,6 @@ function FindingRecordLink({ entityType, entityId }: { entityType: string | null
   if (!link || !entityId) return null;
   return <a className="text-sm underline" href={link.path(entityId)}>{link.label}</a>;
 }
-
 
 /** Per-module view: this run's coverage plus the module's own open findings. */
 function ModuleFindingsPanel({ module, overview }: { module: string; overview: AiOperationsOverview | null }) {
@@ -140,7 +138,6 @@ export default function AiOperationsPage() {
   const runs = useQuery({ queryKey: ['ai-operations', 'runs'], queryFn: () => fetchAiOperationsRuns(30) });
   const smokeResults = useQuery({ queryKey: ['ai-operations', 'smoke-results'], queryFn: () => fetchAiSmokeResults(60) });
   const flags = useQuery({ queryKey: ['ai-operations', 'flags'], queryFn: fetchAiOperationsFlags });
-  const contentOpportunities = useQuery({ queryKey: ['ai-operations', 'content-opportunities'], queryFn: () => fetchAiContentOpportunities(20) });
   const weeklyReviews = useQuery({ queryKey: ['ai-operations', 'weekly-reviews'], queryFn: () => fetchAiWeeklyReviews(8) });
   const btyBriefs = useQuery({ queryKey: ['ai-operations', 'bty-briefs'], queryFn: () => fetchAiBtyBriefs(20) });
   const findings = useQuery({
@@ -219,7 +216,7 @@ export default function AiOperationsPage() {
           <TabsTrigger value="communications">Communications QA</TabsTrigger>
           <TabsTrigger value="youtube">YouTube</TabsTrigger>
           <TabsTrigger value="relationships">Relationships &amp; growth</TabsTrigger>
-          <TabsTrigger value="intelligence">Growth &amp; content</TabsTrigger>
+          <TabsTrigger value="intelligence">Growth &amp; intelligence</TabsTrigger>
           <TabsTrigger value="runs">History</TabsTrigger>
           <TabsTrigger value="controls">Controls</TabsTrigger>
         </TabsList>
@@ -271,7 +268,6 @@ export default function AiOperationsPage() {
           <ModuleFindingsPanel module="youtube" overview={overview.data ?? null} />
           <YoutubeQueuePanel />
         </TabsContent>
-
 
         <TabsContent value="brief" className="space-y-4 pt-4">
           <Card>
@@ -331,11 +327,6 @@ export default function AiOperationsPage() {
         </TabsContent>
 
         <TabsContent value="intelligence" className="space-y-4 pt-4">
-          <Card><CardHeader><CardTitle className="text-base">Content opportunities</CardTitle><CardDescription>Current, source-grounded topics surfaced for ValorWell audiences.</CardDescription></CardHeader><CardContent className="divide-y p-0">
-            {(contentOpportunities.data ?? []).length === 0 && <p className="p-6 text-sm text-muted-foreground">No content opportunities have been generated yet.</p>}
-            {(contentOpportunities.data ?? []).map((item) => <div key={item.id} className="space-y-2 p-4"><div className="flex flex-wrap items-center gap-2"><Badge variant={item.priority === 'high' ? 'destructive' : 'secondary'}>{item.priority}</Badge><span className="font-medium">{item.topic}</span><span className="text-xs text-muted-foreground">{item.business_date}</span></div>{item.why_now && <p className="text-sm text-muted-foreground">{item.why_now}</p>}{item.suggested_angle && <p className="text-sm">Angle: {item.suggested_angle}</p>}<div className="flex flex-wrap gap-2 text-xs text-muted-foreground">{item.audience && <span>Audience: {item.audience}</span>}{item.recommended_format && <span>Format: {item.recommended_format}</span>}<span>{item.sources?.length ?? 0} source(s)</span></div></div>)}
-          </CardContent></Card>
-
           <div className="grid gap-4 lg:grid-cols-2">
             <Card><CardHeader><CardTitle className="text-base">Weekly management patterns</CardTitle></CardHeader><CardContent className="space-y-4">{(weeklyReviews.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No weekly review generated yet.</p>}{(weeklyReviews.data ?? []).map((review) => <div key={review.id} className="space-y-2 rounded-md border p-3"><div className="flex items-center gap-2"><span className="font-medium">Week ending {review.week_ending}</span></div>{review.structured_result?.weekSummary && <p className="text-sm text-muted-foreground">{review.structured_result.weekSummary}</p>}<p className="text-xs text-muted-foreground">{review.structured_result?.patterns?.length ?? 0} pattern(s)</p></div>)}</CardContent></Card>
             <Card><CardHeader><CardTitle className="text-base">Beyond The Yellow intelligence</CardTitle></CardHeader><CardContent className="space-y-4">{(btyBriefs.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No scheduled BTY meeting currently has an AI prep/post-interview brief.</p>}{(btyBriefs.data ?? []).map((item) => <div key={item.id} className="space-y-2 rounded-md border p-3"><div className="flex items-center gap-2"><Badge variant="outline">{item.brief_type === 'prep' ? 'Interview prep' : 'Post-interview'}</Badge><span className="text-sm">{item.business_date}</span></div>{!item.source_sufficient && <p className="text-xs text-destructive">Source material was insufficient; no fabricated analysis was produced.</p>}<pre className="max-h-48 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">{JSON.stringify(item.structured_result, null, 2)}</pre></div>)}</CardContent></Card>
