@@ -6,11 +6,6 @@ import {
   backoffSeconds, callGeminiModel, classifyModelFailure,
   geminiApiKey, json, logEvent, parseModelJson, resolveAiOpsModel, safeError, validateEntityCoverage,
 } from "../_shared/ai-ops.ts";
-import {
-  CONTENT_OPPORTUNITY_MODEL,
-  collectYoutubeContentOpportunityEvidence,
-  type YoutubeContentOpportunityEvidence,
-} from "../_shared/ai-ops-content-youtube.ts";
 import { specFor } from "../_shared/ai-ops-prompts.ts";
 import { awaitGeminiSlot, GeminiRateSlotUnavailable } from "../_shared/gemini-rate-limit.ts";
 
@@ -27,29 +22,14 @@ const requestedEntityKeys = (item: ClaimedItem): string[] => {
 
 async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string, settings: { model: string }, item: ClaimedItem): Promise<"completed" | "failed" | "retry" | "deferred"> {
   const spec = specFor(item.workType);
-  // Content opportunities are deliberately isolated on Gemini 3.6 Flash because
-  // retrieval is handled by the YouTube Data API rather than Gemini web grounding.
-  const model = item.workType === "content_opportunity_review"
-    ? CONTENT_OPPORTUNITY_MODEL
-    : resolveAiOpsModel(item.requestedModel, settings.model);
-
-  let youtubeEvidence: YoutubeContentOpportunityEvidence | null = null;
-
-  const userPrompt = async () => {
-    if (item.workType !== "content_opportunity_review") return JSON.stringify(item.inputPayload ?? {});
-    if (!youtubeEvidence) youtubeEvidence = await collectYoutubeContentOpportunityEvidence(item.inputPayload ?? {});
-    return JSON.stringify({
-      request: item.inputPayload ?? {},
-      youtubeResearch: youtubeEvidence,
-    });
-  };
+  const model = resolveAiOpsModel(item.requestedModel, settings.model);
 
   const attempt = async (repair: boolean) => {
     const suffix = repair ? "\nThe previous response failed schema validation. Return valid JSON matching the schema exactly." : "";
     await awaitGeminiSlot(admin, { label: `${COMPONENT}:${item.workType}`, maxWaitMs: 60_000 });
     const result = await callGeminiModel({
       apiKey, model, systemInstruction: spec.systemInstruction + suffix,
-      userPrompt: await userPrompt(), responseSchema: spec.responseSchema, thinkingLevel: spec.thinkingLevel,
+      userPrompt: JSON.stringify(item.inputPayload ?? {}), responseSchema: spec.responseSchema, thinkingLevel: spec.thinkingLevel,
     });
     const parsed = parseModelJson(result.text) as Record<string, unknown>;
     if (spec.requiresEntityCoverage) {
@@ -75,20 +55,11 @@ async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string
         ...outcome.tokenUsage,
         provider: AI_OPS_PROVIDER,
         model,
-        configuredModel: item.workType === "content_opportunity_review" ? CONTENT_OPPORTUNITY_MODEL : (settings.model || AI_OPS_MODEL),
+        configuredModel: settings.model || AI_OPS_MODEL,
         requestedModel: item.requestedModel || null,
         modelVersion: outcome.modelVersion,
         promptVersion: spec.promptVersion,
         schemaVersion: spec.schemaVersion,
-        ...(youtubeEvidence ? {
-          retrievalProvider: youtubeEvidence.provider,
-          youtubePublishedAfter: youtubeEvidence.publishedAfter,
-          youtubePublishedBefore: youtubeEvidence.publishedBefore,
-          youtubeSearchQueries: youtubeEvidence.searchQueries,
-          youtubeUniqueVideosFound: youtubeEvidence.uniqueVideosFound,
-          youtubeEligibleLongFormVideos: youtubeEvidence.eligibleLongFormVideos,
-          youtubeCandidatesSupplied: youtubeEvidence.candidates.length,
-        } : {}),
       },
     });
     logEvent(COMPONENT, "work_item_completed", {
@@ -96,7 +67,6 @@ async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string
       module: item.module,
       workType: item.workType,
       model,
-      youtubeSourced: Boolean(youtubeEvidence),
       attempt: item.attemptCount,
     });
     return "completed";
