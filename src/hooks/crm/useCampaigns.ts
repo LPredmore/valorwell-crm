@@ -4,6 +4,17 @@ import { useCrmAuth } from './useCrmAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { CrmCampaign, CampaignFormData } from '@/lib/crm/campaign-types';
 
+function normalizeCampaign(row: unknown): CrmCampaign {
+  const campaign = row as Record<string, unknown>;
+  return {
+    ...(campaign as unknown as CrmCampaign),
+    on_complete_lifecycle_stage: (campaign.on_complete_lifecycle_stage as CrmCampaign['on_complete_lifecycle_stage']) ?? null,
+    on_complete_engagement_state: (campaign.on_complete_engagement_state as CrmCampaign['on_complete_engagement_state']) ?? null,
+    on_complete_action: ((campaign.on_complete_action as string) || 'do_nothing') as 'do_nothing' | 'change_status',
+    on_complete_status: (campaign.on_complete_status as string | null) ?? null,
+  };
+}
+
 export function useCampaigns() {
   const { tenantId } = useCrmAuth();
 
@@ -12,7 +23,6 @@ export function useCampaigns() {
     queryFn: async (): Promise<CrmCampaign[]> => {
       if (!tenantId) return [];
 
-      // First get campaigns
       const { data: campaigns, error } = await supabase
         .from('crm_campaigns')
         .select('*')
@@ -22,21 +32,18 @@ export function useCampaigns() {
       if (error) throw error;
       if (!campaigns || campaigns.length === 0) return [];
 
-      // Get steps count for each campaign
       const campaignIds = campaigns.map(c => c.id);
       const { data: stepsCounts } = await supabase
         .from('crm_campaign_steps')
         .select('campaign_id')
         .in('campaign_id', campaignIds);
 
-      // Get active enrollments count
       const { data: enrollmentsCounts } = await supabase
         .from('crm_campaign_enrollments')
         .select('campaign_id')
         .in('campaign_id', campaignIds)
         .eq('status', 'active');
 
-      // Count by campaign
       const stepsCountMap = new Map<string, number>();
       const enrollmentsCountMap = new Map<string, number>();
 
@@ -48,16 +55,18 @@ export function useCampaigns() {
         enrollmentsCountMap.set(e.campaign_id, (enrollmentsCountMap.get(e.campaign_id) || 0) + 1);
       });
 
-      return campaigns.map(c => ({
-        ...c,
-        on_complete_action: (c.on_complete_action || 'do_nothing') as 'do_nothing' | 'change_status',
-        steps_count: stepsCountMap.get(c.id) || 0,
-        active_enrollments_count: enrollmentsCountMap.get(c.id) || 0,
-      }));
+      return campaigns.map(row => {
+        const campaign = normalizeCampaign(row);
+        return {
+          ...campaign,
+          steps_count: stepsCountMap.get(campaign.id) || 0,
+          active_enrollments_count: enrollmentsCountMap.get(campaign.id) || 0,
+        };
+      });
     },
     enabled: !!tenantId,
     refetchOnWindowFocus: true,
-    staleTime: 30000, // 30 seconds
+    staleTime: 30000,
     refetchOnMount: 'always',
   });
 }
@@ -82,10 +91,7 @@ export function useCampaign(campaignId: string | undefined) {
         throw error;
       }
 
-      return {
-        ...data,
-        on_complete_action: (data.on_complete_action || 'do_nothing') as 'do_nothing' | 'change_status',
-      };
+      return normalizeCampaign(data);
     },
     enabled: !!tenantId && !!campaignId,
   });
@@ -100,29 +106,30 @@ export function useCreateCampaign() {
     mutationFn: async (formData: CampaignFormData): Promise<CrmCampaign> => {
       if (!tenantId || !userId) throw new Error('Not authenticated');
 
+      const payload = {
+        tenant_id: tenantId,
+        name: formData.name,
+        description: formData.description || null,
+        is_active: formData.is_active,
+        weekdays_only: formData.weekdays_only,
+        send_window_start: formData.send_window_start,
+        send_window_end: formData.send_window_end,
+        default_timezone: formData.default_timezone,
+        on_complete_lifecycle_stage: formData.on_complete_lifecycle_stage,
+        on_complete_engagement_state: formData.on_complete_engagement_state,
+        on_complete_action: 'do_nothing',
+        on_complete_status: null,
+        created_by_profile_id: userId,
+      };
+
       const { data, error } = await supabase
         .from('crm_campaigns')
-        .insert({
-          tenant_id: tenantId,
-          name: formData.name,
-          description: formData.description || null,
-          is_active: formData.is_active,
-          weekdays_only: formData.weekdays_only,
-          send_window_start: formData.send_window_start,
-          send_window_end: formData.send_window_end,
-          default_timezone: formData.default_timezone,
-          on_complete_action: formData.on_complete_action,
-          on_complete_status: formData.on_complete_status,
-          created_by_profile_id: userId,
-        })
+        .insert(payload as never)
         .select()
         .single();
 
       if (error) throw error;
-      return {
-        ...data,
-        on_complete_action: (data.on_complete_action || 'do_nothing') as 'do_nothing' | 'change_status',
-      };
+      return normalizeCampaign(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crm-campaigns'] });
@@ -147,38 +154,33 @@ export function useUpdateCampaign() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({
-      campaignId,
-      formData,
-    }: {
-      campaignId: string;
-      formData: Partial<CampaignFormData>;
-    }): Promise<CrmCampaign> => {
+    mutationFn: async ({ campaignId, formData }: { campaignId: string; formData: Partial<CampaignFormData> }): Promise<CrmCampaign> => {
       if (!tenantId) throw new Error('Not authenticated');
+
+      const payload = {
+        name: formData.name,
+        description: formData.description || null,
+        is_active: formData.is_active,
+        weekdays_only: formData.weekdays_only,
+        send_window_start: formData.send_window_start,
+        send_window_end: formData.send_window_end,
+        default_timezone: formData.default_timezone,
+        on_complete_lifecycle_stage: formData.on_complete_lifecycle_stage,
+        on_complete_engagement_state: formData.on_complete_engagement_state,
+        on_complete_action: 'do_nothing',
+        on_complete_status: null,
+      };
 
       const { data, error } = await supabase
         .from('crm_campaigns')
-        .update({
-          name: formData.name,
-          description: formData.description || null,
-          is_active: formData.is_active,
-          weekdays_only: formData.weekdays_only,
-          send_window_start: formData.send_window_start,
-          send_window_end: formData.send_window_end,
-          default_timezone: formData.default_timezone,
-          on_complete_action: formData.on_complete_action,
-          on_complete_status: formData.on_complete_status,
-        })
+        .update(payload as never)
         .eq('id', campaignId)
         .eq('tenant_id', tenantId)
         .select()
         .single();
 
       if (error) throw error;
-      return {
-        ...data,
-        on_complete_action: (data.on_complete_action || 'do_nothing') as 'do_nothing' | 'change_status',
-      };
+      return normalizeCampaign(data);
     },
     onSuccess: (_, { campaignId }) => {
       queryClient.invalidateQueries({ queryKey: ['crm-campaigns'] });
@@ -217,17 +219,10 @@ export function useDeleteCampaign() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crm-campaigns'] });
-      toast({
-        title: 'Campaign deleted',
-        description: 'The campaign has been permanently removed.',
-      });
+      toast({ title: 'Campaign deleted', description: 'The campaign has been permanently removed.' });
     },
     onError: (error) => {
-      toast({
-        title: 'Error deleting campaign',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error deleting campaign', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -241,7 +236,6 @@ export function useDuplicateCampaign() {
     mutationFn: async (sourceCampaign: CrmCampaign): Promise<string> => {
       if (!tenantId || !userId) throw new Error('Not authenticated');
 
-      // Insert duplicated campaign
       const { data: newCampaign, error: campaignError } = await supabase
         .from('crm_campaigns')
         .insert({
@@ -253,16 +247,17 @@ export function useDuplicateCampaign() {
           send_window_start: sourceCampaign.send_window_start,
           send_window_end: sourceCampaign.send_window_end,
           default_timezone: sourceCampaign.default_timezone,
-          on_complete_action: sourceCampaign.on_complete_action,
-          on_complete_status: sourceCampaign.on_complete_status,
+          on_complete_lifecycle_stage: sourceCampaign.on_complete_lifecycle_stage,
+          on_complete_engagement_state: sourceCampaign.on_complete_engagement_state,
+          on_complete_action: 'do_nothing',
+          on_complete_status: null,
           created_by_profile_id: userId,
-        })
+        } as never)
         .select()
         .single();
 
       if (campaignError) throw campaignError;
 
-      // Fetch source steps
       const { data: steps, error: stepsError } = await supabase
         .from('crm_campaign_steps')
         .select('*')
@@ -271,7 +266,6 @@ export function useDuplicateCampaign() {
 
       if (stepsError) throw stepsError;
 
-      // Copy steps to new campaign
       if (steps && steps.length > 0) {
         const newSteps = steps.map(s => ({
           campaign_id: newCampaign.id,
@@ -297,17 +291,10 @@ export function useDuplicateCampaign() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['crm-campaigns'] });
-      toast({
-        title: 'Campaign duplicated',
-        description: 'A paused copy has been created. You can now edit it.',
-      });
+      toast({ title: 'Campaign duplicated', description: 'A paused copy has been created. You can now edit it.' });
     },
     onError: (error) => {
-      toast({
-        title: 'Error duplicating campaign',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error duplicating campaign', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -318,13 +305,7 @@ export function useToggleCampaignActive() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({
-      campaignId,
-      isActive,
-    }: {
-      campaignId: string;
-      isActive: boolean;
-    }): Promise<void> => {
+    mutationFn: async ({ campaignId, isActive }: { campaignId: string; isActive: boolean }): Promise<void> => {
       if (!tenantId) throw new Error('Not authenticated');
 
       const { error } = await supabase
@@ -345,11 +326,7 @@ export function useToggleCampaignActive() {
       });
     },
     onError: (error) => {
-      toast({
-        title: 'Error updating campaign',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error updating campaign', description: error.message, variant: 'destructive' });
     },
   });
 }
