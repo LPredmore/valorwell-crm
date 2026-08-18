@@ -78,7 +78,7 @@ export default function CanonicalDashboard() {
       href: '/crm/tasks?view=client-followups',
       color: 'text-red-600',
     },
-    { label: 'At Risk', value: atRisk.data?.total ?? '—', icon: ShieldAlert, href: '/crm/clients?atRisk=true', color: 'text-red-600' },
+    { label: 'At Risk', value: atRisk.data?.total ?? '—', icon: ShieldAlert, href: '/crm/clients?atRisk=1', color: 'text-red-600' },
     { label: 'Overdue Tasks', value: tasks.data?.length ?? '—', icon: ListTodo, href: '/crm/tasks?view=overdue', color: 'text-amber-600' },
     { label: 'Open Exceptions', value: exceptions.data?.filter(e => e.status === 'Open').length ?? '—', icon: Activity, href: '/crm/exceptions', color: 'text-indigo-600' },
     { label: 'Went Dark', value: dark.data?.total ?? '—', icon: TrendingDown, href: '/crm/clients?engagement=Went+Dark', color: 'text-orange-600' },
