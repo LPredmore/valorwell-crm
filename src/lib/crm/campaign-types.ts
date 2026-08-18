@@ -1,5 +1,21 @@
 import type { EmailContentDocument, EmailEditorDocument } from '@/features/email-studio/contracts';
 
+export type ClientLifecycleStage =
+  | 'registration'
+  | 'intake'
+  | 'matching'
+  | 'matched'
+  | 'scheduled'
+  | 'early_care'
+  | 'established_care'
+  | 'closed';
+
+export type ClientEngagementState =
+  | 'normal'
+  | 'unresponsive_warm'
+  | 'unresponsive_cold'
+  | 'went_dark';
+
 export interface CrmCampaign {
   id: string;
   tenant_id: string;
@@ -10,7 +26,11 @@ export interface CrmCampaign {
   send_window_start: string;
   send_window_end: string;
   default_timezone: string;
+  on_complete_lifecycle_stage: ClientLifecycleStage | null;
+  on_complete_engagement_state: ClientEngagementState | null;
+  /** @deprecated Legacy flat-status completion fields retained only for database compatibility. */
   on_complete_action: 'do_nothing' | 'change_status';
+  /** @deprecated Legacy flat-status completion field. */
   on_complete_status: string | null;
   created_by_profile_id: string | null;
   created_at: string;
@@ -96,7 +116,13 @@ export interface CrmCampaignTrigger {
   id: string;
   campaign_id: string;
   tenant_id: string;
-  trigger_on_status: string;
+  trigger_on_status: string | null;
+  trigger_dimension: string | null;
+  trigger_operator: string | null;
+  trigger_value: string | null;
+  trigger_event: string | null;
+  trigger_version: number | null;
+  is_manual_only: boolean | null;
   is_active: boolean;
   created_at: string;
 }
@@ -109,16 +135,9 @@ export interface CampaignFormData {
   send_window_start: string;
   send_window_end: string;
   default_timezone: string;
-  on_complete_action: 'do_nothing' | 'change_status';
-  on_complete_status: string | null;
+  on_complete_lifecycle_stage: ClientLifecycleStage | null;
+  on_complete_engagement_state: ClientEngagementState | null;
 }
-
-export const SYSTEM_MANAGED_STATUSES = [
-  'Scheduled',
-  'Early Sessions',
-  'Established',
-  'At Risk',
-] as const;
 
 export interface CampaignStepFormData {
   client_key: string;
@@ -139,6 +158,28 @@ export interface CampaignStepFormData {
   signature_id: string | null;
 }
 
+export const LIFECYCLE_STAGE_OPTIONS: Array<{ value: ClientLifecycleStage; label: string }> = [
+  { value: 'registration', label: 'Registration' },
+  { value: 'intake', label: 'Intake' },
+  { value: 'matching', label: 'Matching' },
+  { value: 'matched', label: 'Matched' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'early_care', label: 'Early Care' },
+  { value: 'established_care', label: 'Established Care' },
+  { value: 'closed', label: 'Closed' },
+];
+
+export const ENGAGEMENT_STATE_OPTIONS: Array<{ value: ClientEngagementState; label: string }> = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'unresponsive_warm', label: 'Unresponsive Warm' },
+  { value: 'unresponsive_cold', label: 'Unresponsive Cold' },
+  { value: 'went_dark', label: 'Went Dark' },
+];
+
+export function lifecycleStageLabel(value: string | null | undefined): string {
+  return LIFECYCLE_STAGE_OPTIONS.find((option) => option.value === value)?.label || value || 'Unknown';
+}
+
 export const TIMEZONE_OPTIONS = [
   { value: 'America/New_York', label: 'Eastern Time (ET)' },
   { value: 'America/Chicago', label: 'Central Time (CT)' },
@@ -147,11 +188,6 @@ export const TIMEZONE_OPTIONS = [
   { value: 'America/Phoenix', label: 'Arizona (MST)' },
   { value: 'America/Anchorage', label: 'Alaska Time (AKT)' },
   { value: 'Pacific/Honolulu', label: 'Hawaii Time (HST)' },
-] as const;
-
-export const COMPLETION_ACTION_OPTIONS = [
-  { value: 'do_nothing', label: 'Do Nothing' },
-  { value: 'change_status', label: 'Change Client Status' },
 ] as const;
 
 export const PERSONALIZATION_VARIABLES = [
