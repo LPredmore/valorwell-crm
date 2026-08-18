@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useReports, useTasks, useExceptions } from '@/hooks/canonical/useCrmData';
 import { useCanonicalClients } from '@/hooks/canonical/useCanonicalClients';
 import { Link } from 'react-router-dom';
-import { ListTodo, Users, TrendingDown, Activity } from 'lucide-react';
+import { ListTodo, Users, TrendingDown, Activity, MessageCircleReply, ShieldAlert } from 'lucide-react';
 import type { ReportBucket } from '@/repositories/types';
 import { getReportPanelStatus } from './reportState';
 import {
@@ -11,7 +11,6 @@ import {
   formatReportBucketRange,
 } from './reportPresentation';
 import { AiOperationsSummaryCard } from '@/components/crm/canonical/AiOperationsSummaryCard';
-
 
 interface SummaryQueryState {
   data: unknown;
@@ -57,16 +56,32 @@ export default function CanonicalDashboard() {
   const funnel = reports.funnel;
   const engagement = reports.engagement;
   const tasks = useTasks({ view: 'overdue' });
+  const openClientFollowups = useTasks({
+    types: ['Client Follow-Up'],
+    statuses: ['Not Started', 'In Progress', 'Waiting', 'Blocked'],
+  });
   const exceptions = useExceptions();
   const dark = useCanonicalClients({ engagement: ['Went Dark'], pageSize: 1 });
+  const atRisk = useCanonicalClients({ atRisk: true, pageSize: 1 });
   const funnelStatus = getReportPanelStatus(funnel);
   const engagementStatus = getReportPanelStatus(engagement);
   const funnelMax = Math.max(...(funnel.data?.rows.map(row => row.current_count) ?? [1]), 1);
+  const personalizedResponses = openClientFollowups.data?.filter((task) =>
+    task.tags.includes('personalized-response-required'),
+  ) ?? [];
 
   const kpis = [
-    { label: 'Overdue Tasks', value: tasks.data?.length ?? '—', icon: ListTodo, href: '/crm/canonical/tasks?view=overdue', color: 'text-amber-600' },
-    { label: 'Open Exceptions', value: exceptions.data?.filter(e => e.status === 'Open').length ?? '—', icon: Activity, href: '/crm/canonical/exceptions', color: 'text-indigo-600' },
-    { label: 'Went Dark', value: dark.data?.total ?? '—', icon: TrendingDown, href: '/crm/canonical/clients?engagement=Went+Dark', color: 'text-orange-600' },
+    {
+      label: 'Needs Personalized Response',
+      value: personalizedResponses.length,
+      icon: MessageCircleReply,
+      href: '/crm/tasks?view=client-followups',
+      color: 'text-red-600',
+    },
+    { label: 'At Risk', value: atRisk.data?.total ?? '—', icon: ShieldAlert, href: '/crm/clients?atRisk=true', color: 'text-red-600' },
+    { label: 'Overdue Tasks', value: tasks.data?.length ?? '—', icon: ListTodo, href: '/crm/tasks?view=overdue', color: 'text-amber-600' },
+    { label: 'Open Exceptions', value: exceptions.data?.filter(e => e.status === 'Open').length ?? '—', icon: Activity, href: '/crm/exceptions', color: 'text-indigo-600' },
+    { label: 'Went Dark', value: dark.data?.total ?? '—', icon: TrendingDown, href: '/crm/clients?engagement=Went+Dark', color: 'text-orange-600' },
   ];
 
   return (
@@ -76,10 +91,10 @@ export default function CanonicalDashboard() {
         <p className="text-sm text-muted-foreground">Canonical CRM overview</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {kpis.map(k => (
           <Link key={k.label} to={k.href}>
-            <Card className="transition-shadow hover:shadow-md">
+            <Card className="h-full transition-shadow hover:shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">{k.label}</CardTitle>
                 <k.icon className={`h-4 w-4 ${k.color}`} />
