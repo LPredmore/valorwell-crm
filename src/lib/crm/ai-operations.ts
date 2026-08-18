@@ -13,7 +13,6 @@ export const AI_OPERATIONS_FLAGS = [
   'relationship_followup_ai_enabled',
   'donor_intelligence_ai_enabled',
   'social_leads_ai_enabled',
-  'content_opportunities_ai_enabled',
   'content_performance_ai_enabled',
   'bty_intelligence_ai_enabled',
   'sop_compliance_ai_enabled',
@@ -39,7 +38,6 @@ export const AI_OPERATIONS_FLAG_LABELS: Record<AiOperationsFlagName, string> = {
   relationship_followup_ai_enabled: 'Relationship Follow-up',
   donor_intelligence_ai_enabled: 'Donor Opportunity Intelligence',
   social_leads_ai_enabled: 'Social Engagement Leads',
-  content_opportunities_ai_enabled: 'Daily Content Opportunities',
   content_performance_ai_enabled: 'Content Performance',
   bty_intelligence_ai_enabled: 'Beyond The Yellow Intelligence',
   sop_compliance_ai_enabled: 'SOP Compliance',
@@ -62,7 +60,6 @@ export const AI_OPERATIONS_MODULES = [
   'relationship_followup',
   'donor_intelligence',
   'social_leads',
-  'content_opportunities',
   'content_performance',
   'bty_intelligence',
   'sop_compliance',
@@ -85,7 +82,6 @@ export const AI_OPERATIONS_MODULE_LABELS: Record<AiOperationsModule, string> = {
   relationship_followup: 'Relationship Follow-up',
   donor_intelligence: 'Donor Intelligence',
   social_leads: 'Social Leads',
-  content_opportunities: 'Content Opportunities',
   content_performance: 'Content Performance',
   bty_intelligence: 'BTY Intelligence',
   sop_compliance: 'SOP Compliance',
@@ -127,11 +123,6 @@ export type AiOperationsYoutubeComment = {
   authorDisplayName: string | null; commentText: string | null; publishedAt: string | null; classification: string | null;
   priority: string | null; suggestedReply: string | null; reviewState: string;
 };
-export type AiContentOpportunity = {
-  id: string; business_date: string; topic: string; why_now: string | null; why_fit: string | null; audience: string | null;
-  recommended_format: string | null; suggested_angle: string | null; priority: string; urgency: 'today' | 'this_week' | 'evergreen';
-  sources: Array<{ title?: string; uri?: string }>; status: string; created_at: string;
-};
 export type AiWeeklyReview = { id: string; week_ending: string; structured_result: { weekSummary?: string; patterns?: Array<Record<string, unknown>>; gaps?: string[] }; created_at: string };
 export type AiBtyBrief = { id: string; business_date: string; brief_type: 'prep' | 'post_interview'; source_sufficient: boolean; structured_result: Record<string, unknown>; meeting_id: string | null; created_at: string };
 
@@ -154,11 +145,6 @@ export const dismissAiOperationsFinding = (findingId: string, reason: string) =>
 export const snoozeAiOperationsFinding = (findingId: string, reason: string, snoozeUntil: string) => rpc('ai_operations_snooze_finding', { p_finding_id: findingId, p_reason: reason, p_snooze_until: snoozeUntil });
 export const reopenAiOperationsFinding = (findingId: string, reason: string) => rpc('ai_operations_reopen_finding', { p_finding_id: findingId, p_reason: reason });
 
-export async function fetchAiContentOpportunities(limit = 20): Promise<AiContentOpportunity[]> {
-  const { data, error } = await supabase.from('ai_operations_content_opportunities').select('*').order('business_date', { ascending: false }).order('priority', { ascending: true }).limit(limit);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as AiContentOpportunity[];
-}
 export async function fetchAiWeeklyReviews(limit = 8): Promise<AiWeeklyReview[]> {
   const { data, error } = await supabase.from('ai_operations_weekly_reviews').select('*').order('week_ending', { ascending: false }).limit(limit);
   if (error) throw new Error(error.message);
