@@ -153,9 +153,15 @@ export const supabaseTasksRepository: TasksRepository = {
     if (q.view === 'overdue') {
       query = query.lt('due_at', new Date().toISOString()).not('status', 'in', '(completed,canceled)');
     } else if (q.view === 'unassigned') {
-      query = query.is('owner_id', null);
+      query = query.is('owner_id', null).not('status', 'in', '(completed,canceled)');
     } else if (q.view === 'recently-completed') {
       query = query.eq('status', 'completed');
+    } else if (q.view === 'client-followups') {
+      query = query.eq('type', 'client_follow_up').not('status', 'in', '(completed,canceled)');
+    } else if (q.view === 'staff-followups') {
+      query = query.eq('type', 'staff_follow_up').not('status', 'in', '(completed,canceled)');
+    } else if (q.view === 'campaign-exceptions') {
+      query = query.eq('type', 'campaign_exception').not('status', 'in', '(completed,canceled)');
     }
     const { data, error } = await query;
     if (error) throw new Error(error.message);
