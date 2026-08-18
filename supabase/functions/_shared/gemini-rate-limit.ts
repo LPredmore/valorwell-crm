@@ -1,7 +1,6 @@
 // Shared rate-limit protection for AUTOMATED/BACKGROUND Gemini workloads.
-// All protected automation jobs (AI Operations model worker, BTY discovery,
-// BTY contact enrichment, veteran humor Shorts discovery) claim slots from the
-// same rolling window in the database, because they share one Gemini project quota.
+// Protected automation jobs claim slots from the same rolling window in the database
+// because they share one Gemini project quota.
 /** Minimal structural client contract so this module stays importable from browser/test builds. */
 export type RpcClient = {
   rpc: (name: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
