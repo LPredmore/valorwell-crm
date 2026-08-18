@@ -24,15 +24,28 @@ import { useCampaign, useCreateCampaign, useUpdateCampaign } from '@/hooks/crm/u
 import { useCampaignSteps, useSaveCampaignSteps } from '@/hooks/crm/useCampaignSteps';
 import { useCampaignTrigger, useAllCampaignTriggers, useSaveCampaignTrigger } from '@/hooks/crm/useCampaignTriggers';
 import { CampaignStepEditor } from '@/components/crm/campaigns/CampaignStepEditor';
-import type { CampaignFormData, CampaignStepFormData, CrmCampaignStep } from '@/lib/crm/campaign-types';
-import { TIMEZONE_OPTIONS, PERSONALIZATION_VARIABLES, COMPLETION_ACTION_OPTIONS, SYSTEM_MANAGED_STATUSES } from '@/lib/crm/campaign-types';
-import { ALL_STATUSES } from '@/lib/crm/status-config';
+import type {
+  CampaignFormData,
+  CampaignStepFormData,
+  ClientEngagementState,
+  ClientLifecycleStage,
+  CrmCampaignStep,
+} from '@/lib/crm/campaign-types';
+import {
+  ENGAGEMENT_STATE_OPTIONS,
+  LIFECYCLE_STAGE_OPTIONS,
+  PERSONALIZATION_VARIABLES,
+  TIMEZONE_OPTIONS,
+  lifecycleStageLabel,
+} from '@/lib/crm/campaign-types';
 import type { EmailContentDocument, EmailEditorDocument } from '@/features/email-studio/contracts';
 
 const TIME_OPTIONS = Array.from({ length: 24 }, (_, index) => {
   const hour = index.toString().padStart(2, '0');
   return { value: `${hour}:00:00`, label: `${hour}:00` };
 });
+
+const LIFECYCLE_VALUES = new Set<ClientLifecycleStage>(LIFECYCLE_STAGE_OPTIONS.map((option) => option.value));
 
 type StepExporter = () => Promise<CampaignStepFormData>;
 
@@ -49,9 +62,7 @@ function SortableStep({
   onRemove: () => void;
   registerExporter: (clientKey: string, exporter: StepExporter | null) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: step.client_key,
-  });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: step.client_key });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
@@ -93,10 +104,10 @@ export default function CampaignEditor() {
     send_window_start: '09:00:00',
     send_window_end: '17:00:00',
     default_timezone: 'America/Chicago',
-    on_complete_action: 'do_nothing',
-    on_complete_status: null,
+    on_complete_lifecycle_stage: null,
+    on_complete_engagement_state: null,
   });
-  const [triggerStatus, setTriggerStatus] = useState<string | null>(null);
+  const [triggerLifecycle, setTriggerLifecycle] = useState<ClientLifecycleStage | null>(null);
   const [steps, setSteps] = useState<CampaignStepFormData[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -110,8 +121,8 @@ export default function CampaignEditor() {
       send_window_start: campaign.send_window_start,
       send_window_end: campaign.send_window_end,
       default_timezone: campaign.default_timezone,
-      on_complete_action: campaign.on_complete_action || 'do_nothing',
-      on_complete_status: campaign.on_complete_status,
+      on_complete_lifecycle_stage: campaign.on_complete_lifecycle_stage,
+      on_complete_engagement_state: campaign.on_complete_engagement_state,
     });
   }, [campaign]);
 
@@ -121,7 +132,14 @@ export default function CampaignEditor() {
   }, [existingSteps]);
 
   useEffect(() => {
-    if (existingTrigger) setTriggerStatus(existingTrigger.trigger_on_status);
+    if (!existingTrigger) {
+      setTriggerLifecycle(null);
+      return;
+    }
+    const candidate = existingTrigger.trigger_dimension === 'lifecycle_stage'
+      ? existingTrigger.trigger_value
+      : legacyLifecycleValue(existingTrigger.trigger_on_status);
+    setTriggerLifecycle(isLifecycleStage(candidate) ? candidate : null);
   }, [existingTrigger]);
 
   const registerExporter = useCallback((clientKey: string, exporter: StepExporter | null) => {
@@ -129,9 +147,15 @@ export default function CampaignEditor() {
     else exporters.current.delete(clientKey);
   }, []);
 
-  const getStatusTriggerConflict = (status: string): string | null => {
+  const getLifecycleTriggerConflict = (stage: ClientLifecycleStage): string | null => {
     if (!allTriggers) return null;
-    const conflict = allTriggers.find((trigger) => trigger.trigger_on_status === status && trigger.campaign_id !== id);
+    const conflict = allTriggers.find((trigger) => (
+      trigger.campaign_id !== id
+      && trigger.is_active
+      && !trigger.is_manual_only
+      && trigger.trigger_dimension === 'lifecycle_stage'
+      && trigger.trigger_value === stage
+    ));
     return conflict ? conflict.campaign_id : null;
   };
 
@@ -208,11 +232,11 @@ export default function CampaignEditor() {
       if (isNew) {
         const created = await createCampaign.mutateAsync(formData);
         if (currentSteps.length > 0) await saveSteps.mutateAsync({ campaignId: created.id, steps: currentSteps });
-        await saveTrigger.mutateAsync({ campaignId: created.id, triggerStatus });
+        await saveTrigger.mutateAsync({ campaignId: created.id, triggerLifecycle });
       } else if (id) {
         await updateCampaign.mutateAsync({ campaignId: id, formData });
         await saveSteps.mutateAsync({ campaignId: id, steps: currentSteps });
-        await saveTrigger.mutateAsync({ campaignId: id, triggerStatus });
+        await saveTrigger.mutateAsync({ campaignId: id, triggerLifecycle });
       }
       navigate('/crm/campaigns');
     } catch (caught) {
@@ -259,7 +283,7 @@ export default function CampaignEditor() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Campaign Name *</Label>
-                  <Input id="name" value={formData.name} onChange={(event) => setFormData((previous) => ({ ...previous, name: event.target.value }))} placeholder="e.g., New Client Welcome" />
+                  <Input id="name" value={formData.name} onChange={(event) => setFormData((previous) => ({ ...previous, name: event.target.value }))} placeholder="e.g., Registration Follow-Up" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
@@ -311,62 +335,92 @@ export default function CampaignEditor() {
             <Card>
               <CardHeader>
                 <CardTitle>Completion Settings</CardTitle>
-                <CardDescription>What happens when a client finishes all steps</CardDescription>
+                <CardDescription>What the client state should show if every campaign step is exhausted without a response or lifecycle change.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>When campaign completes</Label>
+                  <Label>Lifecycle after completion</Label>
                   <Select
-                    value={formData.on_complete_action}
-                    onValueChange={(value: 'do_nothing' | 'change_status') => setFormData((previous) => ({
+                    value={formData.on_complete_lifecycle_stage || 'no_change'}
+                    onValueChange={(value) => setFormData((previous) => ({
                       ...previous,
-                      on_complete_action: value,
-                      on_complete_status: value === 'do_nothing' ? null : previous.on_complete_status,
+                      on_complete_lifecycle_stage: value === 'no_change' ? null : value as ClientLifecycleStage,
                     }))}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{COMPLETION_ACTION_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+                    <SelectContent>
+                      <SelectItem value="no_change">No lifecycle change</SelectItem>
+                      {triggerLifecycle && (
+                        <SelectItem value={triggerLifecycle}>Remain in {lifecycleStageLabel(triggerLifecycle)}</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Campaigns never manufacture lifecycle progression. If the client actually moves stages, this campaign stops immediately.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Engagement after completion</Label>
+                  <Select
+                    value={formData.on_complete_engagement_state || 'no_change'}
+                    onValueChange={(value) => setFormData((previous) => ({
+                      ...previous,
+                      on_complete_engagement_state: value === 'no_change' ? null : value as ClientEngagementState,
+                    }))}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no_change">No engagement change</SelectItem>
+                      {ENGAGEMENT_STATE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
-                {formData.on_complete_action === 'change_status' && (
-                  <div className="space-y-2">
-                    <Label>Set status to</Label>
-                    <Select value={formData.on_complete_status || ''} onValueChange={(value) => setFormData((previous) => ({ ...previous, on_complete_status: value }))}>
-                      <SelectTrigger><SelectValue placeholder="Select a status..." /></SelectTrigger>
-                      <SelectContent>{ALL_STATUSES.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Auto-Enroll Trigger</CardTitle>
-                <CardDescription>Optionally auto-enroll clients when their status changes</CardDescription>
+                <CardTitle>Lifecycle Entry</CardTitle>
+                <CardDescription>Automatically enroll a client when they enter a lifecycle stage.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>When client status changes to</Label>
-                  <Select value={triggerStatus || 'none'} onValueChange={(value) => setTriggerStatus(value === 'none' ? null : value)}>
-                    <SelectTrigger><SelectValue placeholder="No auto-enroll" /></SelectTrigger>
+                  <Label>Start this campaign when lifecycle becomes</Label>
+                  <Select
+                    value={triggerLifecycle || 'none'}
+                    onValueChange={(value) => {
+                      const stage = value === 'none' ? null : value as ClientLifecycleStage;
+                      setTriggerLifecycle(stage);
+                      setFormData((previous) => ({
+                        ...previous,
+                        on_complete_lifecycle_stage: previous.on_complete_lifecycle_stage ? stage : null,
+                      }));
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="No automatic lifecycle entry" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No auto-enroll</SelectItem>
-                      {ALL_STATUSES.map((status) => {
-                        const conflict = getStatusTriggerConflict(status);
-                        return <SelectItem key={status} value={status} disabled={Boolean(conflict)}>{status}{conflict ? ' (used by another campaign)' : ''}</SelectItem>;
+                      <SelectItem value="none">No automatic lifecycle entry</SelectItem>
+                      {LIFECYCLE_STAGE_OPTIONS.filter((option) => option.value !== 'closed').map((option) => {
+                        const conflict = getLifecycleTriggerConflict(option.value);
+                        return (
+                          <SelectItem key={option.value} value={option.value} disabled={Boolean(conflict)}>
+                            {option.label}{conflict ? ' (used by another campaign)' : ''}
+                          </SelectItem>
+                        );
                       })}
                     </SelectContent>
                   </Select>
                 </div>
-                {triggerStatus && SYSTEM_MANAGED_STATUSES.some((status) => status === triggerStatus) && (
-                  <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
-                    <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs">
-                      "{triggerStatus}" is set automatically by the system. Clients will be auto-enrolled without manual action.
-                    </AlertDescription>
-                  </Alert>
-                )}
+
+                <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs">
+                    All automated client campaigns stop immediately if the client's lifecycle changes or an inbound email/SMS is received. Do Not Contact blocks campaign enrollment and delivery.
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
 
@@ -478,6 +532,19 @@ function isEditorDocument(value: unknown): value is EmailEditorDocument {
   if (!value || Array.isArray(value) || typeof value !== 'object') return false;
   const record = value as { type?: unknown; content?: unknown };
   return record.type === 'doc' && Array.isArray(record.content);
+}
+
+function legacyLifecycleValue(value: string | null | undefined): string | null {
+  switch ((value || '').trim().toLowerCase()) {
+    case 'registered': return 'registration';
+    case 'early sessions': return 'early_care';
+    case 'established': return 'established_care';
+    default: return value?.trim().toLowerCase().replace(/\s+/g, '_') || null;
+  }
+}
+
+function isLifecycleStage(value: string | null | undefined): value is ClientLifecycleStage {
+  return Boolean(value && LIFECYCLE_VALUES.has(value as ClientLifecycleStage));
 }
 
 function createClientKey(): string {
