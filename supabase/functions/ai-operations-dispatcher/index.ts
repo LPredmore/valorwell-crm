@@ -120,7 +120,6 @@ Deno.serve(async (request) => {
       await runModule("relationship_followup", await flag("relationship_followup_ai_enabled"), () => rpc("ai_ops_build_relationship_followup_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff, p_batch_size: 8 }));
       await runModule("donor_intelligence", await flag("donor_intelligence_ai_enabled"), () => rpc("ai_ops_build_donor_intelligence_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff, p_batch_size: 8 }));
       await runModule("social_leads", await flag("social_leads_ai_enabled"), () => rpc("ai_ops_build_social_lead_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff, p_batch_size: 8 }));
-      await runModule("content_opportunities", await flag("content_opportunities_ai_enabled"), () => rpc("ai_ops_build_content_opportunity_input", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
       await runModule("bty_intelligence", await flag("bty_intelligence_ai_enabled"), () => rpc("ai_ops_build_bty_intelligence_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
       await runModule("sop_compliance", await flag("sop_compliance_ai_enabled"), () => rpc("ai_ops_build_sop_compliance_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff, p_batch_size: 8 }));
       await runModule("weekly_patterns", await flag("weekly_patterns_ai_enabled"), () => rpc("ai_ops_build_weekly_pattern_input", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
@@ -158,7 +157,6 @@ Deno.serve(async (request) => {
       await reconcile("relationship_followup", await flag("relationship_followup_ai_enabled"), "ai_ops_ingest_relationship_followup_results");
       await reconcile("donor_intelligence", await flag("donor_intelligence_ai_enabled"), "ai_ops_ingest_donor_intelligence_results");
       await reconcile("social_leads", await flag("social_leads_ai_enabled"), "ai_ops_ingest_social_leads_results");
-      await reconcile("content_opportunities", await flag("content_opportunities_ai_enabled"), "ai_ops_ingest_content_opportunities");
       await reconcile("content_performance", await flag("content_performance_ai_enabled"), "ai_ops_ingest_content_performance_results");
       await reconcile("bty_intelligence", await flag("bty_intelligence_ai_enabled"), "ai_ops_ingest_bty_intelligence_results");
       await reconcile("sop_compliance", await flag("sop_compliance_ai_enabled"), "ai_ops_ingest_sop_compliance_results");
