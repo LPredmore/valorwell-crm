@@ -68,20 +68,22 @@ export function useSaveCampaignTrigger() {
         .eq('tenant_id', tenantId);
 
       if (triggerLifecycle) {
+        const payload = {
+          campaign_id: campaignId,
+          tenant_id: tenantId,
+          trigger_on_status: null,
+          trigger_dimension: 'lifecycle_stage',
+          trigger_operator: 'equals',
+          trigger_value: triggerLifecycle,
+          trigger_event: 'lifecycle_changed',
+          trigger_version: 1,
+          is_manual_only: false,
+          is_active: true,
+        };
+
         const { error } = await supabase
           .from('crm_campaign_triggers')
-          .insert({
-            campaign_id: campaignId,
-            tenant_id: tenantId,
-            trigger_on_status: null,
-            trigger_dimension: 'lifecycle_stage',
-            trigger_operator: 'equals',
-            trigger_value: triggerLifecycle,
-            trigger_event: 'lifecycle_changed',
-            trigger_version: 1,
-            is_manual_only: false,
-            is_active: true,
-          });
+          .insert(payload as never);
 
         if (error) {
           if (error.code === '23505') {
