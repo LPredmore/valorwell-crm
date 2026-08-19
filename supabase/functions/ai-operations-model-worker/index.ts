@@ -14,11 +14,85 @@ type ClaimedItem = {
   workType: string; inputPayload: Record<string, unknown> | null; requestedModel: string;
   promptVersion: string; schemaVersion: string; attemptCount: number;
 };
+type ClientJourneyInputEntity = {
+  entityKey?: string;
+  activeExceptions?: Array<{ exceptionKey?: string }>;
+};
+type ClientJourneyResult = {
+  entityKey?: string;
+  noConcern?: boolean;
+  concernDisposition?: string;
+  relatedExceptionKeys?: string[];
+  exceptionAssessments?: Array<{ exceptionKey?: string; assessment?: string }>;
+};
 const COMPONENT = "ai-operations-model-worker";
 const requestedEntityKeys = (item: ClaimedItem): string[] => {
   const p = (item.inputPayload ?? {}) as { entities?: Array<{ entityKey?: string }> };
   return (p.entities ?? []).map((e) => e.entityKey ?? "").filter(Boolean);
 };
+
+function validateClientJourneyExceptionReferences(
+  item: ClaimedItem,
+  results: ClientJourneyResult[],
+): { ok: true } | { ok: false; error: string } {
+  const payload = (item.inputPayload ?? {}) as { entities?: ClientJourneyInputEntity[] };
+  const entities = new Map<string, ClientJourneyInputEntity>();
+  for (const entity of payload.entities ?? []) {
+    if (entity.entityKey) entities.set(entity.entityKey, entity);
+  }
+
+  for (const result of results) {
+    const entityKey = result.entityKey ?? "";
+    const entity = entities.get(entityKey);
+    if (!entity) return { ok: false, error: `No input entity exists for entityKey ${entityKey}.` };
+
+    const suppliedKeys = (entity.activeExceptions ?? []).map((x) => x.exceptionKey ?? "").filter(Boolean);
+    const supplied = new Set(suppliedKeys);
+    if (supplied.size !== suppliedKeys.length) return { ok: false, error: `Input entity ${entityKey} contains duplicate exception keys.` };
+
+    const related = Array.isArray(result.relatedExceptionKeys) ? result.relatedExceptionKeys : [];
+    if (new Set(related).size !== related.length) return { ok: false, error: `Result ${entityKey} contains duplicate relatedExceptionKeys.` };
+    for (const key of related) {
+      if (!supplied.has(key)) return { ok: false, error: `Result ${entityKey} referenced an exception key that was not supplied: ${key}` };
+    }
+
+    const assessments = Array.isArray(result.exceptionAssessments) ? result.exceptionAssessments : [];
+    const assessmentKeys = assessments.map((x) => x.exceptionKey ?? "").filter(Boolean);
+    if (assessmentKeys.length !== assessments.length) return { ok: false, error: `Result ${entityKey} has an exception assessment without an exceptionKey.` };
+    if (new Set(assessmentKeys).size !== assessmentKeys.length) return { ok: false, error: `Result ${entityKey} contains duplicate exception assessments.` };
+    if (assessmentKeys.length !== suppliedKeys.length) return { ok: false, error: `Result ${entityKey} did not assess every supplied active exception.` };
+    for (const key of assessmentKeys) {
+      if (!supplied.has(key)) return { ok: false, error: `Result ${entityKey} assessed an exception key that was not supplied: ${key}` };
+    }
+    for (const key of suppliedKeys) {
+      if (!assessmentKeys.includes(key)) return { ok: false, error: `Result ${entityKey} omitted supplied exception key ${key} from exceptionAssessments.` };
+    }
+
+    const disposition = result.concernDisposition ?? "none";
+    if (["stable_existing", "escalating_existing", "appears_resolved_existing"].includes(disposition) && related.length === 0) {
+      return { ok: false, error: `Result ${entityKey} marked an existing concern without relatedExceptionKeys.` };
+    }
+    if (["none", "new_concern"].includes(disposition) && related.length > 0) {
+      return { ok: false, error: `Result ${entityKey} returned relatedExceptionKeys for ${disposition}.` };
+    }
+    if (result.noConcern === true && disposition !== "none") {
+      return { ok: false, error: `Result ${entityKey} set noConcern=true with concernDisposition=${disposition}.` };
+    }
+
+    const relatedAssessments = assessments.filter((assessment) => related.includes(assessment.exceptionKey ?? ""));
+    if (disposition === "stable_existing" && !relatedAssessments.some((x) => x.assessment === "stable")) {
+      return { ok: false, error: `Result ${entityKey} marked a stable existing concern without a stable related exception assessment.` };
+    }
+    if (disposition === "escalating_existing" && !relatedAssessments.some((x) => x.assessment === "escalating")) {
+      return { ok: false, error: `Result ${entityKey} marked an escalating existing concern without an escalating related exception assessment.` };
+    }
+    if (disposition === "appears_resolved_existing" && !relatedAssessments.some((x) => x.assessment === "appears_resolved")) {
+      return { ok: false, error: `Result ${entityKey} marked an appears-resolved concern without an appears_resolved related exception assessment.` };
+    }
+  }
+
+  return { ok: true };
+}
 
 async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string, settings: { model: string }, item: ClaimedItem): Promise<"completed" | "failed" | "retry" | "deferred"> {
   const spec = specFor(item.workType);
@@ -32,9 +106,14 @@ async function processItem(admin: ReturnType<typeof adminClient>, apiKey: string
       userPrompt: JSON.stringify(item.inputPayload ?? {}), responseSchema: spec.responseSchema, thinkingLevel: spec.thinkingLevel,
     });
     const parsed = parseModelJson(result.text) as Record<string, unknown>;
+    const parsedResults = (parsed.results ?? []) as Array<{ entityKey?: string }>;
     if (spec.requiresEntityCoverage) {
-      const coverage = validateEntityCoverage(requestedEntityKeys(item), (parsed.results ?? []) as Array<{ entityKey?: string }>);
+      const coverage = validateEntityCoverage(requestedEntityKeys(item), parsedResults);
       if (!coverage.ok) throw new Error(`schema: ${coverage.error}`);
+    }
+    if (item.workType === "client_journey_review") {
+      const exceptionCoverage = validateClientJourneyExceptionReferences(item, parsedResults as ClientJourneyResult[]);
+      if (!exceptionCoverage.ok) throw new Error(`schema: ${exceptionCoverage.error}`);
     }
     return { parsed, tokenUsage: result.tokenUsage, modelVersion: result.modelVersion };
   };
