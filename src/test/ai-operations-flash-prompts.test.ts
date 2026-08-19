@@ -39,7 +39,7 @@ describe("AI Operations model configuration", () => {
   it("uses the current prompt versions for revised judgment-heavy prompts", () => {
     expect(specFor("client_journey_review").promptVersion).toBe("3");
     expect(specFor("communications_qa_review").promptVersion).toBe("2");
-    expect(specFor("executive_brief_synthesis").promptVersion).toBe("2");
+    expect(specFor("executive_brief_synthesis").promptVersion).toBe("3");
     expect(specFor("system_integrity_triage").promptVersion).toBe("1");
     expect(specFor("youtube_comment_review").promptVersion).toBe("1");
   });
