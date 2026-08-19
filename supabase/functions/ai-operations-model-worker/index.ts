@@ -78,6 +78,9 @@ function validateClientJourneyExceptionReferences(
     if (result.noConcern === true && disposition !== "none") {
       return { ok: false, error: `Result ${entityKey} set noConcern=true with concernDisposition=${disposition}.` };
     }
+    if (["none", "stable_existing", "appears_resolved_existing"].includes(disposition) && assessments.some((x) => x.assessment === "escalating")) {
+      return { ok: false, error: `Result ${entityKey} used concernDisposition=${disposition} while an active exception was assessed escalating.` };
+    }
 
     const relatedAssessments = assessments.filter((assessment) => related.includes(assessment.exceptionKey ?? ""));
     if (disposition === "stable_existing" && !relatedAssessments.some((x) => x.assessment === "stable")) {
