@@ -37,11 +37,30 @@ describe("AI Operations model configuration", () => {
   });
 
   it("uses the current prompt versions for revised judgment-heavy prompts", () => {
-    expect(specFor("client_journey_review").promptVersion).toBe("3");
+    expect(specFor("client_journey_review").promptVersion).toBe("4");
     expect(specFor("communications_qa_review").promptVersion).toBe("2");
-    expect(specFor("executive_brief_synthesis").promptVersion).toBe("3");
+    expect(specFor("executive_brief_synthesis").promptVersion).toBe("4");
     expect(specFor("system_integrity_triage").promptVersion).toBe("1");
     expect(specFor("youtube_comment_review").promptVersion).toBe("1");
+  });
+
+  it("keeps the Client Journey v4 gate and exact prior-finding contract in runtime", () => {
+    const prompt = specFor("client_journey_review");
+    expect(prompt.systemInstruction).toContain("modelReviewReasons");
+    expect(prompt.systemInstruction).toContain("materialStateChanged");
+    expect(prompt.systemInstruction).toContain("activeAiFindings");
+    expect(JSON.stringify(prompt.responseSchema)).toContain("existing_ai_concern");
+    expect(JSON.stringify(prompt.responseSchema)).toContain("relatedAiFindingKeys");
+    expect(JSON.stringify(prompt.responseSchema)).toContain("priorAiFindingAssessments");
+
+    const dispatcher = readFileSync("supabase/functions/ai-operations-dispatcher/index.ts", "utf8");
+    expect(dispatcher).toContain('runModule("client_journey", true');
+    expect(dispatcher).toContain('reconcile("client_journey", true');
+
+    const worker = readFileSync("supabase/functions/ai-operations-model-worker/index.ts", "utf8");
+    expect(worker).toContain('p_flag_name: "client_journey_ai_enabled"');
+    expect(worker).toContain("client_journey_ai_paused");
+    expect(worker).toContain("priorAiFindingAssessments");
   });
 
   it("assigns a thinking level to every work type", () => {
