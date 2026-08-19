@@ -6,6 +6,7 @@ import {
   backoffSeconds, callGeminiModel, classifyModelFailure,
   geminiApiKey, json, logEvent, parseModelJson, resolveAiOpsModel, safeError, validateEntityCoverage,
 } from "../_shared/ai-ops.ts";
+import { boundedModelWorkerBatchSize } from "../_shared/ai-ops-model.ts";
 import { specFor } from "../_shared/ai-ops-prompts.ts";
 import { awaitGeminiSlot, GeminiRateSlotUnavailable } from "../_shared/gemini-rate-limit.ts";
 
@@ -203,7 +204,7 @@ Deno.serve(async (request) => {
 
     const { data: settings, error: settingsError } = await admin.from("ai_operations_settings").select("model, max_model_concurrency").eq("tenant_id", tenantId).maybeSingle();
     if (settingsError) throw new Error(settingsError.message);
-    const batchSize = Math.min(Math.max(Number(body?.limit ?? settings?.max_model_concurrency ?? 4), 1), 20);
+    const batchSize = boundedModelWorkerBatchSize(settings?.max_model_concurrency, body?.limit);
     const { data: claimed, error: claimError } = await admin.rpc("ai_ops_claim_work_items", { p_limit: batchSize });
     if (claimError) throw new Error(claimError.message);
     const items = (claimed ?? []) as ClaimedItem[];
@@ -211,8 +212,8 @@ Deno.serve(async (request) => {
     const results = await Promise.all(items.map((item) => processItem(admin, apiKey, { model: settings?.model ?? AI_OPS_MODEL }, item)));
 
     const summary = { claimed: items.length, completed: results.filter((r) => r === "completed").length, retry: results.filter((r) => r === "retry").length, failed: results.filter((r) => r === "failed").length, deferred: results.filter((r) => r === "deferred").length, durationMs: Date.now() - started };
-    logEvent(COMPONENT, "batch_complete", summary);
-    return json({ ok: true, ...summary });
+    logEvent(COMPONENT, "batch_complete", { ...summary, configuredConcurrency: settings?.max_model_concurrency ?? null, effectiveBatchSize: batchSize });
+    return json({ ok: true, ...summary, effectiveBatchSize: batchSize });
   } catch (error) {
     logEvent(COMPONENT, "batch_failed", { message: safeError(error) });
     return json({ error: safeError(error) }, 500);
