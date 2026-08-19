@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { WORK_TYPE_SPECS, specFor } from "../../supabase/functions/_shared/ai-ops-prompts";
 import { readFileSync } from "node:fs";
-import { resolveAiOpsModel } from "../../supabase/functions/_shared/ai-ops-model";
+import { boundedModelWorkerBatchSize, resolveAiOpsModel } from "../../supabase/functions/_shared/ai-ops-model";
 
 describe("AI Operations model configuration", () => {
   it("keeps Gemini 3.6 Flash authoritative for every Gemini-backed call", () => {
@@ -21,6 +21,19 @@ describe("AI Operations model configuration", () => {
   it("does not allow a per-request worker model override", () => {
     const worker = readFileSync("supabase/functions/ai-operations-model-worker/index.ts", "utf8");
     expect(worker).not.toContain("validationModel");
+  });
+
+  it("treats configured concurrency as the hard worker ceiling", () => {
+    expect(boundedModelWorkerBatchSize(2)).toBe(2);
+    expect(boundedModelWorkerBatchSize(2, 1)).toBe(1);
+    expect(boundedModelWorkerBatchSize(2, 4)).toBe(2);
+    expect(boundedModelWorkerBatchSize(2, 999)).toBe(2);
+    expect(boundedModelWorkerBatchSize(undefined, 4)).toBe(2);
+    expect(boundedModelWorkerBatchSize("bad", "bad")).toBe(2);
+
+    const worker = readFileSync("supabase/functions/ai-operations-model-worker/index.ts", "utf8");
+    expect(worker).toContain("boundedModelWorkerBatchSize(settings?.max_model_concurrency, body?.limit)");
+    expect(worker).not.toContain("body?.limit ?? settings?.max_model_concurrency ?? 4");
   });
 
   it("registers prompt specs for every Phase 2 module work type", () => {
