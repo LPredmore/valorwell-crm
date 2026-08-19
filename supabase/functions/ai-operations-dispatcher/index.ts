@@ -111,7 +111,12 @@ Deno.serve(async (request) => {
         return rpc("ai_ops_evaluate_system_integrity", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff });
       }, { terminal: true });
       await runModule("user_flow_smoke", await flag("user_flow_smoke_enabled"), () => rpc("ai_ops_evaluate_user_flow_smoke", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }), { terminal: true });
-      await runModule("client_journey", await flag("client_journey_ai_enabled"), () => rpc("ai_ops_build_client_journey_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff, p_batch_size: 8 }));
+
+      // Client Journey census is deterministic infrastructure and always runs. The builder
+      // reads client_journey_ai_enabled only to decide whether logical review candidates
+      // are queued for Gemini or counted as suppressed while AI is paused.
+      await runModule("client_journey", true, () => rpc("ai_ops_build_client_journey_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff, p_batch_size: 8 }));
+
       await runModule("communications", await flag("communications_ai_enabled"), () => rpc("ai_ops_build_communications_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
       await runModule("staff_quality", await flag("staff_quality_ai_enabled"), () => rpc("ai_ops_build_staff_quality_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
       await runModule("appointment_integrity", await flag("appointment_integrity_ai_enabled"), () => rpc("ai_ops_build_appointment_integrity_batches", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }));
@@ -148,7 +153,10 @@ Deno.serve(async (request) => {
           logEvent(COMPONENT, "reconcile_failed", { module, runId, message: safeError(moduleError) });
         }
       };
-      await reconcile("client_journey", await flag("client_journey_ai_enabled"), "ai_ops_ingest_client_journey_results");
+
+      // Reconciliation also always runs so deterministic source-resolution logic is not
+      // disabled merely because Gemini execution is paused.
+      await reconcile("client_journey", true, "ai_ops_ingest_client_journey_results");
       await reconcile("communications", await flag("communications_ai_enabled"), "ai_ops_ingest_communications_results");
       await reconcile("staff_quality", await flag("staff_quality_ai_enabled"), "ai_ops_ingest_staff_quality_results");
       await reconcile("appointment_integrity", await flag("appointment_integrity_ai_enabled"), "ai_ops_ingest_appointment_integrity_results");
