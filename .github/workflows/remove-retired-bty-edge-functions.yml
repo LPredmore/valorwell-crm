@@ -1,9 +1,10 @@
 name: Remove retired BTY Edge Functions
 
 on:
-  push:
+  pull_request:
     branches:
-      - ops/remove-retired-bty-edge-functions-20260820
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
