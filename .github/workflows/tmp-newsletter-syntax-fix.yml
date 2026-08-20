@@ -1,0 +1,37 @@
+name: Temporary newsletter syntax fix
+
+on:
+  push:
+    branches:
+      - agent/newsletter-architecture-hardening
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/newsletter-architecture-hardening
+      - name: Apply exact syntax fix and self-remove
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/pages/crm/NewsletterManagementPage.tsx')
+          text = path.read_text()
+          old1 = "onChange={(event) => setReasons((current) => ({ ...current, [letter.id]: event.target.value }))"
+          old2 = "onChange={(event) => setScheduleAt((current) => ({ ...current, [letter.id]: event.target.value }))"
+          if text.count(old1) != 1 or text.count(old2) != 1:
+              raise SystemExit('Expected newsletter syntax targets were not found exactly once.')
+          text = text.replace(old1, old1 + '}').replace(old2, old2 + '}')
+          path.write_text(text)
+          PY
+          rm .github/workflows/tmp-newsletter-syntax-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- src/pages/crm/NewsletterManagementPage.tsx .github/workflows/tmp-newsletter-syntax-fix.yml
+          git commit -m "Fix newsletter management JSX syntax"
+          git push origin HEAD:agent/newsletter-architecture-hardening
