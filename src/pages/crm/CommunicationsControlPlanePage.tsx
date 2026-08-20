@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,20 +10,13 @@ import { Switch } from '@/components/ui/switch';
 import { useCanMutate } from '@/hooks/crm/useCanMutate';
 import {
   CONTROL_PLANE_FLAG_LABELS,
-  buildNewsletterRecipients,
-  cancelNewsletterSend,
   canEnableControlPlaneFlag,
-  scheduleNewsletter,
   getCampaignParticipation,
   getCampaignTriggerShadowReport,
-  getNewsletterDeliveryTrace,
-  listAudienceCampaigns,
-  listCampaignTriggerRules,
-  listNewsletters,
-  suppressNewsletterMailbox,
-
   getPersonIdentityOverview,
+  listAudienceCampaigns,
   listCampaignRegistry,
+  listCampaignTriggerRules,
   listControlPlaneFlags,
   reconcilePersonIdentities,
   setControlPlaneFlag,
@@ -34,8 +28,6 @@ export default function CommunicationsControlPlanePage() {
   const queryClient = useQueryClient();
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<PersonReconcileResult | null>(null);
-  const [suppressEmail, setSuppressEmail] = useState('');
-  const [traceNewsletterId, setTraceNewsletterId] = useState<string | null>(null);
 
   const flags = useQuery({ queryKey: ['control-plane-flags'], queryFn: listControlPlaneFlags, retry: false });
   const identity = useQuery({ queryKey: ['control-plane-identity'], queryFn: getPersonIdentityOverview, retry: false });
@@ -51,57 +43,12 @@ export default function CommunicationsControlPlanePage() {
     queryFn: () => getCampaignTriggerShadowReport(50),
     retry: false,
   });
-
   const audiences = useQuery({ queryKey: ['control-plane-audience-campaigns'], queryFn: listAudienceCampaigns, retry: false });
-  const newsletters = useQuery({ queryKey: ['control-plane-newsletters'], queryFn: listNewsletters, retry: false });
-  const trace = useQuery({
-    queryKey: ['control-plane-newsletter-trace', traceNewsletterId],
-    queryFn: () => getNewsletterDeliveryTrace(traceNewsletterId as string),
-    enabled: Boolean(traceNewsletterId),
-    retry: false,
-  });
-
-  const suppress = useMutation({
-    mutationFn: ({ email, reason }: { email: string; reason: string }) => suppressNewsletterMailbox({ email, reason }),
-    onSuccess: () => {
-      setSuppressEmail('');
-      void queryClient.invalidateQueries({ queryKey: ['control-plane-newsletters'] });
-    },
-  });
-
-  const buildRecipients = useMutation({
-    mutationFn: (newsletterId: string) =>
-      buildNewsletterRecipients({ newsletterId, reason: reasons[`newsletter:${newsletterId}`] ?? '' }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['control-plane-newsletters'] });
-    },
-  });
-
-  const schedule = useMutation({
-    mutationFn: (newsletterId: string) =>
-      scheduleNewsletter({ newsletterId, reason: reasons[`newsletter:${newsletterId}`] ?? '' }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['control-plane-newsletters'] });
-    },
-  });
-
-  const cancelSend = useMutation({
-    mutationFn: (newsletterId: string) =>
-      cancelNewsletterSend({ newsletterId, reason: reasons[`newsletter:${newsletterId}`] ?? '' }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['control-plane-newsletters'] });
-    },
-  });
-
-
-
 
   const toggle = useMutation({
     mutationFn: ({ flagName, enabled, reason }: { flagName: string; enabled: boolean; reason: string }) =>
       setControlPlaneFlag(flagName, enabled, reason),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['control-plane-flags'] });
-    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['control-plane-flags'] }),
   });
 
   const reconcile = useMutation({
@@ -118,17 +65,20 @@ export default function CommunicationsControlPlanePage() {
   const flagList = flags.data ?? [];
 
   return <div className="space-y-6">
-    <div>
-      <h1 className="text-3xl font-bold tracking-tight">Communications control plane</h1>
-      <p className="mt-2 max-w-3xl text-muted-foreground">
-        Staged rollout switches, the canonical person directory, and cross-domain campaign visibility. Every switch change is recorded with the reason you give.
-      </p>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Communications control plane</h1>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
+          Campaign rollout switches, the canonical person directory, and cross-domain campaign visibility. Newsletter delivery has its own bounded runtime and is managed separately.
+        </p>
+      </div>
+      <Button asChild variant="outline"><Link to="/crm/newsletters">Newsletter runtime</Link></Button>
     </div>
 
     <Card>
       <CardHeader>
         <CardTitle>Implementation switches</CardTitle>
-        <CardDescription>All switches start off. Trigger cutovers stay blocked until the trigger engine is on.</CardDescription>
+        <CardDescription>Campaign switches only. Newsletter delivery uses PRELAUNCH / PAUSED / ACTIVE instead of generic booleans.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {flags.isLoading && <p className="text-sm text-muted-foreground">Loading switches…</p>}
@@ -176,7 +126,7 @@ export default function CommunicationsControlPlanePage() {
           <div><p className="text-xs uppercase text-muted-foreground">People</p><p className="text-lg font-semibold">{identity.data.people}</p></div>
           <div><p className="text-xs uppercase text-muted-foreground">Identifiers</p><p className="text-lg font-semibold">{identity.data.identities}</p></div>
           <div><p className="text-xs uppercase text-muted-foreground">Linked records</p><p className="text-lg font-semibold">{identity.data.linkedRecords}</p></div>
-          <div><p className="text-xs uppercase text-muted-foreground">People in more than one domain</p><p className="text-lg font-semibold">{identity.data.crossDomainPeople}</p></div>
+          <div><p className="text-xs uppercase text-muted-foreground">Cross-domain people</p><p className="text-lg font-semibold">{identity.data.crossDomainPeople}</p></div>
         </div>}
         {identity.data && <div className="text-sm text-muted-foreground">
           {Object.entries(identity.data.byDomain).map(([domain, total]) => <span className="mr-4" key={domain}>
@@ -184,15 +134,11 @@ export default function CommunicationsControlPlanePage() {
           </span>)}
         </div>}
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" disabled={reconcile.isPending} onClick={() => reconcile.mutate(true)}>
-            {reconcile.isPending ? 'Working…' : 'Preview matches'}
-          </Button>
-          <Button disabled={!canMutate || reconcile.isPending} onClick={() => reconcile.mutate(false)}>
-            Link records
-          </Button>
+          <Button variant="outline" disabled={reconcile.isPending} onClick={() => reconcile.mutate(true)}>Preview matches</Button>
+          <Button disabled={!canMutate || reconcile.isPending} onClick={() => reconcile.mutate(false)}>Link records</Button>
         </div>
         {preview && <p className="text-sm text-muted-foreground">
-          {preview.dryRun ? 'Preview' : 'Applied'} — {preview.peopleCreated} new people, {preview.peopleReused} matched to an existing person, {preview.recordsLinked} records linked, {preview.recordsWithoutIdentifier} records have no email or phone.
+          {preview.dryRun ? 'Preview' : 'Applied'} — {preview.peopleCreated} new people, {preview.peopleReused} matched, {preview.recordsLinked} records linked, {preview.recordsWithoutIdentifier} without email/phone.
         </p>}
         {reconcile.isError && <p className="text-sm text-destructive">{reconcile.error instanceof Error ? reconcile.error.message : 'Reconciliation failed.'}</p>}
       </CardContent>
@@ -206,10 +152,7 @@ export default function CommunicationsControlPlanePage() {
       <CardContent className="space-y-2">
         {registry.isError && <p className="text-sm text-destructive">{registry.error instanceof Error ? registry.error.message : 'Registry unavailable.'}</p>}
         {(registry.data ?? []).map((entry) => <div className="flex flex-wrap items-center gap-2 border-b py-2 text-sm last:border-0" key={entry.id}>
-          <span className="font-medium">{entry.name}</span>
-          <Badge variant="outline">{entry.campaign_domain}</Badge>
-          <span className="text-muted-foreground">{entry.status}</span>
-          {entry.is_active && <Badge variant="secondary">Active</Badge>}
+          <span className="font-medium">{entry.name}</span><Badge variant="outline">{entry.campaign_domain}</Badge><span className="text-muted-foreground">{entry.status}</span>{entry.is_active && <Badge variant="secondary">Active</Badge>}
         </div>)}
       </CardContent>
     </Card>
@@ -217,19 +160,13 @@ export default function CommunicationsControlPlanePage() {
     <Card>
       <CardHeader>
         <CardTitle>Trigger rules</CardTitle>
-        <CardDescription>Which business event starts which campaign. Rules run in shadow mode until the client trigger cutover switch is on.</CardDescription>
+        <CardDescription>Which business event starts which campaign. Rules run in shadow mode until the relevant cutover switch is on.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         {rules.isError && <p className="text-sm text-destructive">{rules.error instanceof Error ? rules.error.message : 'Trigger rules unavailable.'}</p>}
         {(rules.data ?? []).length === 0 && !rules.isLoading && !rules.isError && <p className="text-sm text-muted-foreground">No trigger rules configured yet.</p>}
         {(rules.data ?? []).map((rule) => <div className="flex flex-wrap items-center gap-2 border-b py-2 text-sm last:border-0" key={rule.id}>
-          <Badge variant="outline">{rule.eventType}</Badge>
-          <span className="font-medium">{rule.campaignName ?? 'Unnamed campaign'}</span>
-          <span className="text-muted-foreground">
-            {rule.delayAmount > 0 ? `after ${rule.delayAmount} ${rule.delayUnit}` : 'immediately'}
-          </span>
-          {rule.requiredSourceOutcome && <span className="text-muted-foreground">requires previous outcome: {rule.requiredSourceOutcome}</span>}
-          {rule.active ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline">Paused</Badge>}
+          <Badge variant="outline">{rule.eventType}</Badge><span className="font-medium">{rule.campaignName ?? 'Unnamed campaign'}</span><span className="text-muted-foreground">{rule.delayAmount > 0 ? `after ${rule.delayAmount} ${rule.delayUnit}` : 'immediately'}</span>{rule.requiredSourceOutcome && <span className="text-muted-foreground">requires previous outcome: {rule.requiredSourceOutcome}</span>}{rule.active ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline">Paused</Badge>}
         </div>)}
       </CardContent>
     </Card>
@@ -237,22 +174,16 @@ export default function CommunicationsControlPlanePage() {
     <Card>
       <CardHeader>
         <CardTitle>Shadow decisions</CardTitle>
-        <CardDescription>What the trigger engine would have done. Nothing is enrolled while the cutover switch is off.</CardDescription>
+        <CardDescription>What the trigger engine would have done while cutovers remain disabled.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {shadow.isError && <p className="text-sm text-destructive">{shadow.error instanceof Error ? shadow.error.message : 'Shadow report unavailable.'}</p>}
         {(shadow.data?.summary ?? []).length > 0 && <div className="flex flex-wrap gap-2 text-sm">
-          {(shadow.data?.summary ?? []).map((row) => <Badge key={`${row.status}-${row.skipReason ?? 'none'}`} variant="outline">
-            {row.status}{row.skipReason ? ` · ${row.skipReason}` : ''}: {row.count}
-          </Badge>)}
+          {(shadow.data?.summary ?? []).map((row) => <Badge key={`${row.status}-${row.skipReason ?? 'none'}`} variant="outline">{row.status}{row.skipReason ? ` · ${row.skipReason}` : ''}: {row.count}</Badge>)}
         </div>}
         {(shadow.data?.recent ?? []).length === 0 && !shadow.isLoading && !shadow.isError && <p className="text-sm text-muted-foreground">No trigger activity recorded yet.</p>}
         {(shadow.data?.recent ?? []).map((row) => <div className="flex flex-wrap items-center gap-2 border-b py-2 text-sm last:border-0" key={row.jobId}>
-          <Badge variant="outline">{row.eventType ?? 'event'}</Badge>
-          <span className="font-medium">{row.campaignName ?? 'Unnamed campaign'}</span>
-          <span className="text-muted-foreground">{row.status}</span>
-          {row.wouldEnroll ? <Badge variant="secondary">Would enrol</Badge> : <Badge variant="outline">{row.skipReason ?? 'no action'}</Badge>}
-          <span className="text-muted-foreground">{row.createdAt ? new Date(row.createdAt).toLocaleString() : '—'}</span>
+          <Badge variant="outline">{row.eventType ?? 'event'}</Badge><span className="font-medium">{row.campaignName ?? 'Unnamed campaign'}</span><span className="text-muted-foreground">{row.status}</span>{row.wouldEnroll ? <Badge variant="secondary">Would enrol</Badge> : <Badge variant="outline">{row.skipReason ?? 'no action'}</Badge>}<span className="text-muted-foreground">{row.createdAt ? new Date(row.createdAt).toLocaleString() : '—'}</span>
         </div>)}
       </CardContent>
     </Card>
@@ -260,147 +191,28 @@ export default function CommunicationsControlPlanePage() {
     <Card>
       <CardHeader>
         <CardTitle>Staff and donor campaigns</CardTitle>
-        <CardDescription>Audience campaigns can only be activated once the matching staff or donor switch is on.</CardDescription>
+        <CardDescription>Audience campaigns are separate from the marketing-newsletter runtime.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         {audiences.isError && <p className="text-sm text-destructive">{audiences.error instanceof Error ? audiences.error.message : 'Audience campaigns unavailable.'}</p>}
         {(audiences.data ?? []).length === 0 && !audiences.isLoading && !audiences.isError && <p className="text-sm text-muted-foreground">No staff or donor campaigns yet.</p>}
         {(audiences.data ?? []).map((campaign) => <div className="flex flex-wrap items-center gap-2 border-b py-2 text-sm last:border-0" key={campaign.id}>
-          <Badge variant="outline">{campaign.audienceDomain}</Badge>
-          <span className="font-medium">{campaign.name}</span>
-          <span className="text-muted-foreground">{campaign.status}</span>
-          <span className="text-muted-foreground">{campaign.stepCount} steps</span>
-          <span className="text-muted-foreground">{campaign.activeEnrollments} enrolled</span>
+          <Badge variant="outline">{campaign.audienceDomain}</Badge><span className="font-medium">{campaign.name}</span><span className="text-muted-foreground">{campaign.status}</span><span className="text-muted-foreground">{campaign.stepCount} steps</span><span className="text-muted-foreground">{campaign.activeEnrollments} enrolled</span>
         </div>)}
       </CardContent>
     </Card>
-
-    <Card>
-      <CardHeader>
-        <CardTitle>Newsletters</CardTitle>
-        <CardDescription>
-          {newsletters.data?.suppressedMailboxes ?? 0} mailboxes have unsubscribed. An unsubscribe covers the whole mailbox, so family+child addresses share one decision.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {newsletters.isError && <p className="text-sm text-destructive">{newsletters.error instanceof Error ? newsletters.error.message : 'Newsletters unavailable.'}</p>}
-        {(newsletters.data?.newsletters ?? []).length === 0 && !newsletters.isLoading && !newsletters.isError && <p className="text-sm text-muted-foreground">No newsletters yet.</p>}
-        {(newsletters.data?.newsletters ?? []).map((letter) => <div className="space-y-2 border-b py-2 last:border-0" key={letter.id}>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="font-medium">{letter.name}</span>
-            <span className="text-muted-foreground">{letter.status}</span>
-            <Badge variant="outline">{letter.queued} queued</Badge>
-            <Badge variant="outline">{letter.sent} sent</Badge>
-            {letter.failed > 0 && <Badge variant="destructive">{letter.failed} failed</Badge>}
-            <Badge variant="secondary">{letter.suppressed} unsubscribed</Badge>
-            <Button
-              onClick={() => setTraceNewsletterId((current) => (current === letter.id ? null : letter.id))}
-              size="sm"
-              variant="ghost"
-            >
-              {traceNewsletterId === letter.id ? 'Hide delivery trace' : 'Delivery trace'}
-            </Button>
-          </div>
-          {traceNewsletterId === letter.id && <div className="space-y-2 rounded-md border bg-muted/30 p-3">
-            {trace.isLoading && <p className="text-sm text-muted-foreground">Loading delivery trace…</p>}
-            {trace.isError && <p className="text-sm text-destructive">{trace.error instanceof Error ? trace.error.message : 'Delivery trace unavailable.'}</p>}
-            {(trace.data?.summary ?? []).length > 0 && <div className="flex flex-wrap gap-2">
-              {(trace.data?.summary ?? []).map((row) => <Badge key={row.status} variant="outline">{row.status}: {row.count}</Badge>)}
-            </div>}
-            {(trace.data?.recipients ?? []).length === 0 && !trace.isLoading && !trace.isError && <p className="text-sm text-muted-foreground">No recipients have been built for this newsletter yet.</p>}
-            {(trace.data?.recipients ?? []).map((row) => <div className="flex flex-wrap items-center gap-2 border-b py-1 text-xs last:border-0" key={row.recipientId}>
-              <span className="font-medium">{row.deliveryEmail}</span>
-              <Badge variant="outline">{row.recipientStatus}</Badge>
-              {row.ledgerStatus && <Badge variant="secondary">ledger: {row.ledgerStatus}</Badge>}
-              <span className="text-muted-foreground">{row.qualifyingAudiences.join(', ')}</span>
-              {row.attemptCount > 1 && <span className="text-muted-foreground">attempt {row.attemptCount}</span>}
-              {row.deliveredAt && <span className="text-muted-foreground">delivered {new Date(row.deliveredAt).toLocaleString()}</span>}
-              {!row.deliveredAt && row.sentAt && <span className="text-muted-foreground">sent {new Date(row.sentAt).toLocaleString()}</span>}
-              {row.errorCode && <span className="text-destructive">{row.errorCode}</span>}
-              {row.suppressionReason && <span className="text-muted-foreground">{row.suppressionReason}</span>}
-              {!row.emailMessageId && <Badge variant="outline">no ledger record yet</Badge>}
-            </div>)}
-          </div>}
-          {canMutate && (letter.status === 'draft' || letter.status === 'scheduled' || letter.status === 'sending') && <div className="flex flex-wrap items-center gap-2">
-            <Input
-              className="max-w-sm"
-              onChange={(event) => setReasons((current) => ({ ...current, [`newsletter:${letter.id}`]: event.target.value }))}
-              placeholder="Reason for this action"
-              value={reasons[`newsletter:${letter.id}`] ?? ''}
-            />
-            {(letter.status === 'draft' || letter.status === 'scheduled') && <Button
-              disabled={!((reasons[`newsletter:${letter.id}`] ?? '').trim()) || buildRecipients.isPending}
-              onClick={() => buildRecipients.mutate(letter.id)}
-              size="sm"
-              variant="outline"
-            >
-              Rebuild recipients
-            </Button>}
-            {(letter.status === 'draft' || letter.status === 'scheduled') && <Button
-              disabled={!((reasons[`newsletter:${letter.id}`] ?? '').trim()) || schedule.isPending}
-              onClick={() => schedule.mutate(letter.id)}
-              size="sm"
-            >
-              {letter.status === 'scheduled' ? 'Send now' : 'Schedule send'}
-            </Button>}
-            {(letter.status === 'scheduled' || letter.status === 'sending') && <Button
-              disabled={!((reasons[`newsletter:${letter.id}`] ?? '').trim()) || cancelSend.isPending}
-              onClick={() => cancelSend.mutate(letter.id)}
-              size="sm"
-              variant="destructive"
-            >
-              Cancel send
-            </Button>}
-          </div>}
-        </div>)}
-        {buildRecipients.isError && <p className="text-sm text-destructive">{buildRecipients.error instanceof Error ? buildRecipients.error.message : 'Could not rebuild the recipient list.'}</p>}
-
-        {canMutate && <div className="space-y-2 rounded-md border p-3">
-          <Label htmlFor="suppress-email">Add a mailbox to the unsubscribe list</Label>
-          <div className="flex flex-wrap items-center gap-2">
-            <Input
-              className="max-w-xs"
-              id="suppress-email"
-              onChange={(event) => setSuppressEmail(event.target.value)}
-              placeholder="person@example.com"
-              value={suppressEmail}
-            />
-            <Input
-              className="max-w-sm"
-              onChange={(event) => setReasons((current) => ({ ...current, suppression: event.target.value }))}
-              placeholder="Reason"
-              value={reasons.suppression ?? ''}
-            />
-            <Button
-              disabled={!suppressEmail.trim() || !((reasons.suppression ?? '').trim()) || suppress.isPending}
-              onClick={() => suppress.mutate({ email: suppressEmail.trim(), reason: reasons.suppression ?? '' })}
-              size="sm"
-            >
-              Unsubscribe mailbox
-            </Button>
-          </div>
-          {suppress.isError && <p className="text-sm text-destructive">{suppress.error instanceof Error ? suppress.error.message : 'Could not update the unsubscribe list.'}</p>}
-        </div>}
-      </CardContent>
-    </Card>
-
 
     <Card>
       <CardHeader>
         <CardTitle>Recent participation</CardTitle>
-        <CardDescription>Latest 25 enrolments from every campaign domain in one list.</CardDescription>
+        <CardDescription>Latest 25 enrollments from every campaign domain in one list.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         {participation.isError && <p className="text-sm text-destructive">{participation.error instanceof Error ? participation.error.message : 'Participation unavailable.'}</p>}
         {(participation.data ?? []).map((row) => <div className="flex flex-wrap items-center gap-2 border-b py-2 text-sm last:border-0" key={row.enrollmentId}>
-          <Badge variant="outline">{row.campaignDomain}</Badge>
-          <span className="font-medium">{row.campaignName ?? 'Unnamed campaign'}</span>
-          <span className="text-muted-foreground">{row.status ?? 'unknown'}</span>
-          <span className="text-muted-foreground">{row.enrolledAt ? new Date(row.enrolledAt).toLocaleDateString() : '—'}</span>
-          {!row.personId && <Badge variant="secondary">Not yet linked to a person</Badge>}
+          <Badge variant="outline">{row.campaignDomain}</Badge><span className="font-medium">{row.campaignName ?? 'Unnamed campaign'}</span><span className="text-muted-foreground">{row.status ?? 'unknown'}</span><span className="text-muted-foreground">{row.enrolledAt ? new Date(row.enrolledAt).toLocaleDateString() : '—'}</span>{!row.personId && <Badge variant="secondary">Not yet linked to a person</Badge>}
         </div>)}
       </CardContent>
     </Card>
   </div>;
 }
-
