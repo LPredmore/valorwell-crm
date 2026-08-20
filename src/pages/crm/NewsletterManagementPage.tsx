@@ -333,7 +333,7 @@ export default function NewsletterManagementPage() {
                 <Label htmlFor={`reason-${letter.id}`}>Reason for this action</Label>
                 <Input
                   id={`reason-${letter.id}`}
-                  onChange={(event) => setReasons((current) => ({ ...current, [letter.id]: event.target.value }))
+                  onChange={(event) => setReasons((current) => ({ ...current, [letter.id]: event.target.value }))}
                   placeholder="Audit reason"
                   value={reason}
                 />
@@ -342,7 +342,7 @@ export default function NewsletterManagementPage() {
                 <Label htmlFor={`when-${letter.id}`}>Send at (optional)</Label>
                 <Input
                   id={`when-${letter.id}`}
-                  onChange={(event) => setScheduleAt((current) => ({ ...current, [letter.id]: event.target.value }))
+                  onChange={(event) => setScheduleAt((current) => ({ ...current, [letter.id]: event.target.value }))}
                   type="datetime-local"
                   value={scheduleAt[letter.id] ?? ''}
                 />
