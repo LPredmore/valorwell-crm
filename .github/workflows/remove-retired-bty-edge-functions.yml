@@ -1,6 +1,9 @@
 name: Remove retired BTY Edge Functions
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -25,7 +28,14 @@ jobs:
             echo "SUPABASE_ACCESS_TOKEN is not configured for this repository."
             exit 2
           fi
-          npx --yes supabase@latest functions delete bty-discovery --project-ref "$SUPABASE_PROJECT_REF" --yes
-          npx --yes supabase@latest functions delete bty-contact-enrichment --project-ref "$SUPABASE_PROJECT_REF" --yes
-          npx --yes supabase@latest functions delete bty-automation-dispatcher --project-ref "$SUPABASE_PROJECT_REF" --yes
-          echo "Retired BTY Edge Functions removed."
+
+          functions="$(npx --yes supabase@latest functions list --project-ref "$SUPABASE_PROJECT_REF")"
+          for fn in bty-discovery bty-contact-enrichment bty-automation-dispatcher; do
+            if printf '%s\n' "$functions" | grep -Fq "$fn"; then
+              npx --yes supabase@latest functions delete "$fn" --project-ref "$SUPABASE_PROJECT_REF" --yes
+            else
+              echo "$fn is already absent."
+            fi
+          done
+
+          echo "Retired BTY Edge Function cleanup completed."
