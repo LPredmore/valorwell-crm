@@ -106,10 +106,9 @@ Deno.serve(async (request) => {
     };
 
     const collectUpstream = async () => {
-      await runModule("system_integrity", await flag("system_integrity_enabled"), async () => {
-        await rpc("ai_ops_sync_operation_registry", { p_tenant_id: tenantId });
-        return rpc("ai_ops_evaluate_system_integrity", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff });
-      }, { terminal: true });
+      await runModule("system_integrity", await flag("system_integrity_enabled"), () =>
+        rpc("ai_ops_evaluate_system_integrity", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }),
+      { terminal: true });
       await runModule("user_flow_smoke", await flag("user_flow_smoke_enabled"), () => rpc("ai_ops_evaluate_user_flow_smoke", { p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff }), { terminal: true });
 
       // Client Journey census is deterministic infrastructure and always runs. The builder
