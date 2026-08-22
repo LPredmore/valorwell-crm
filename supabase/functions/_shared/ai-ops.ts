@@ -6,6 +6,7 @@ export const AI_OPS_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 export const AI_OPS_TIMEZONE = "America/Chicago";
 export { AI_OPS_MODEL, resolveAiOpsModel } from "./ai-ops-model.ts";
 import { AI_OPS_MODEL } from "./ai-ops-model.ts";
+export { dispatcherActionFor, type DispatcherAction } from "./ai-ops-schedule.ts";
 export const AI_OPS_PROMPT_VERSION = "1";
 export const AI_OPS_SCHEMA_VERSION = "1";
 
@@ -62,20 +63,6 @@ export function classifyModelFailure(status: number | null, message: string): { 
   return { kind: "unknown", retryable: status === null };
 }
 export function backoffSeconds(attempt: number): number { return Math.min(Math.pow(2, Math.max(attempt, 1)) * 30, 1800); }
-
-export type DispatcherAction = "initialize" | "rebuild" | "collect" | "youtube" | "reconcile" | "brief" | "retry" | "finalize";
-export function dispatcherActionFor(localTime: string): DispatcherAction | null {
-  switch (localTime) {
-    case "03:15": return "initialize";
-    case "03:20": return "collect";
-    case "04:10": return "youtube";
-    case "04:30": return "reconcile";
-    case "04:35": return "brief";
-    case "04:45": return "retry";
-    case "04:50": return "finalize";
-    default: return null;
-  }
-}
 
 export const AI_OPS_PROVIDER = "gemini_developer_api";
 export function geminiApiKey(): string {

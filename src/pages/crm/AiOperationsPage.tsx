@@ -52,14 +52,58 @@ function FindingRecordLink({ entityType, entityId }: { entityType: string | null
   return <a className="text-sm underline" href={link.path(entityId)}>{link.label}</a>;
 }
 
+function evidenceValue(value: unknown): string {
+  let text: string;
+  if (value === null || value === undefined) text = '—';
+  else if (typeof value === 'string') text = value;
+  else if (typeof value === 'number' || typeof value === 'boolean') text = String(value);
+  else {
+    try { text = JSON.stringify(value, null, 2); }
+    catch { text = String(value); }
+  }
+  return text.length > 900 ? `${text.slice(0, 900)}…` : text;
+}
+
+function evidenceLabel(key: string): string {
+  return key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').replace(/^./, (value) => value.toUpperCase());
+}
+
+function FindingEvidence({ finding }: { finding: AiOperationsFinding }) {
+  if (finding.mode !== 'automatic') return null;
+  const evidence = finding.evidence;
+  return (
+    <details className="mt-2 rounded-md border px-3 py-2">
+      <summary className="cursor-pointer text-sm font-medium">Why this fired</summary>
+      <div className="mt-2 space-y-2 text-xs text-muted-foreground">
+        {evidence === null || evidence === undefined ? (
+          <p>No source-evidence payload is available for this historical finding.</p>
+        ) : Array.isArray(evidence) ? (
+          <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-muted p-2">{evidenceValue(evidence)}</pre>
+        ) : typeof evidence === 'object' ? (
+          Object.entries(evidence as Record<string, unknown>).slice(0, 16).map(([key, value]) => (
+            <div key={key} className="grid gap-1 sm:grid-cols-[180px_1fr]">
+              <span className="font-medium text-foreground">{evidenceLabel(key)}</span>
+              <pre className="whitespace-pre-wrap break-words font-sans">{evidenceValue(value)}</pre>
+            </div>
+          ))
+        ) : (
+          <pre className="whitespace-pre-wrap">{evidenceValue(evidence)}</pre>
+        )}
+        {finding.evidenceObservedAt && <p>Evidence observed {new Date(finding.evidenceObservedAt).toLocaleString()}.</p>}
+        <p className="font-mono">{finding.fingerprint}</p>
+      </div>
+    </details>
+  );
+}
+
 /** Per-module view: this run's coverage plus the module's own open findings. */
 function ModuleFindingsPanel({ module, overview }: { module: string; overview: AiOperationsOverview | null }) {
   const label = AI_OPERATIONS_MODULE_LABELS[module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? module;
   const run = (overview?.modules ?? []).find((entry) => entry.module === module) ?? null;
   const manual = isAiOperationsManualModule(module);
   const findings = useQuery({
-    queryKey: ['ai-operations', 'module-findings', module],
-    queryFn: () => fetchAiOperationsFindings({ module, status: 'open', limit: 100 }),
+    queryKey: ['ai-operations', 'module-findings', module, manual ? 'manual' : 'automatic'],
+    queryFn: () => fetchAiOperationsFindings({ module, status: 'open', mode: manual ? 'manual' : 'automatic', limit: 100 }),
   });
   const items = findings.data?.items ?? [];
 
@@ -73,7 +117,7 @@ function ModuleFindingsPanel({ module, overview }: { module: string; overview: A
           </div>
           <CardDescription>
             {run
-              ? `${run.sourceItemsTotal} source · ${run.itemsAnalyzed} analyzed · ${run.itemsFailed} failed${run.model ? ` · ${run.model}` : ''}`
+              ? `${run.sourceItemsTotal} source · ${run.itemsAnalyzed} ${manual ? 'analyzed' : 'checked'} · ${run.itemsFailed} failed${run.model ? ` · ${run.model}` : ''}`
               : manual
                 ? 'Manual/on-demand analysis; no scheduled model run is expected.'
                 : 'This monitoring module has not run for the current business date yet.'}
@@ -88,12 +132,14 @@ function ModuleFindingsPanel({ module, overview }: { module: string; overview: A
           <div key={finding.id} className="space-y-1 p-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={severityVariant(finding.severity)}>{finding.severity}</Badge>
+              {finding.mode === 'automatic' && <Badge variant="outline">DETERMINISTIC RULE</Badge>}
               <span className="font-medium">{finding.title}</span>
-              {finding.confidence !== null && <span className="text-xs text-muted-foreground">confidence {Math.round(finding.confidence * 100)}%</span>}
+              {finding.mode === 'manual' && finding.confidence !== null && <span className="text-xs text-muted-foreground">confidence {Math.round(finding.confidence * 100)}%</span>}
             </div>
             {finding.summary && <p className="text-sm text-muted-foreground">{finding.summary}</p>}
             {finding.recommendedAction && <p className="text-sm">Recommended: {finding.recommendedAction}</p>}
             <FindingRecordLink entityType={finding.entityType} entityId={finding.entityId} />
+            <FindingEvidence finding={finding} />
           </div>
         ))}
       </CardContent></Card>
@@ -136,6 +182,7 @@ export default function AiOperationsPage() {
   const [customSnoozeValue, setCustomSnoozeValue] = useState('');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('open');
+  const [modeFilter, setModeFilter] = useState<'automatic' | 'manual' | 'all'>('automatic');
 
   const overview = useQuery({ queryKey: ['ai-operations', 'overview'], queryFn: () => fetchAiOperationsOverview(), refetchOnWindowFocus: true });
   const brief = useQuery({ queryKey: ['ai-operations', 'brief'], queryFn: () => fetchAiOperationsBrief() });
@@ -145,12 +192,13 @@ export default function AiOperationsPage() {
   const weeklyReviews = useQuery({ queryKey: ['ai-operations', 'weekly-reviews'], queryFn: () => fetchAiWeeklyReviews(8) });
   const btyBriefs = useQuery({ queryKey: ['ai-operations', 'bty-briefs'], queryFn: () => fetchAiBtyBriefs(20) });
   const findings = useQuery({
-    queryKey: ['ai-operations', 'findings', moduleFilter, severityFilter, statusFilter],
+    queryKey: ['ai-operations', 'findings', moduleFilter, severityFilter, statusFilter, modeFilter],
     queryFn: () => fetchAiOperationsFindings({
       module: moduleFilter === 'all' ? null : moduleFilter,
       severity: severityFilter === 'all' ? null : severityFilter,
       status: statusFilter,
-      limit: 100,
+      mode: modeFilter,
+      limit: 200,
     }),
   });
 
@@ -190,8 +238,11 @@ export default function AiOperationsPage() {
   };
 
   const items: AiOperationsFinding[] = findings.data?.items ?? [];
-  const counts = overview.data?.findingCounts ?? {};
+  const counts = overview.data?.automaticFindingCounts ?? {};
+  const manualOpenCount = overview.data?.manualOpenCount ?? 0;
   const platformEnabled = useMemo(() => flags.data?.some((flag) => flag.flagName === 'ai_operations_enabled' && flag.enabled) ?? false, [flags.data]);
+  const coverage = brief.data?.coverageManifest ?? {};
+  const coverageNumber = (key: string) => Number(coverage[key] ?? 0);
 
   return (
     <div className="space-y-6 p-6">
@@ -206,14 +257,18 @@ export default function AiOperationsPage() {
 
       <div className="grid gap-4 md:grid-cols-4">
         {(['critical', 'high', 'medium', 'low'] as const).map((severity) => (
-          <Card key={severity}><CardHeader className="pb-2"><CardDescription className="capitalize">{severity} open</CardDescription><CardTitle className="text-3xl">{counts[severity] ?? 0}</CardTitle></CardHeader></Card>
+          <Card key={severity}><CardHeader className="pb-2"><CardDescription className="capitalize">Automatic {severity} open</CardDescription><CardTitle className="text-3xl">{counts[severity] ?? 0}</CardTitle></CardHeader></Card>
         ))}
       </div>
+
+      <Card className="border-dashed"><CardContent className="py-3 text-sm text-muted-foreground">
+        Manual/on-demand backlog: <span className="font-medium text-foreground">{manualOpenCount}</span> open finding(s). These remain available for review but are excluded from automatic morning totals.
+      </CardContent></Card>
 
       <Tabs defaultValue="brief">
         <TabsList className="flex h-auto flex-wrap justify-start">
           <TabsTrigger value="brief">Today</TabsTrigger>
-          <TabsTrigger value="findings">Open findings</TabsTrigger>
+          <TabsTrigger value="findings">Findings</TabsTrigger>
           <TabsTrigger value="system_integrity">System Integrity</TabsTrigger>
           <TabsTrigger value="reliability">Smoke tests</TabsTrigger>
           <TabsTrigger value="client_journey">Client Journey</TabsTrigger>
@@ -277,16 +332,35 @@ export default function AiOperationsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{brief.data ? `Daily summary for ${brief.data.businessDate}` : 'No daily summary has been generated yet'}</CardTitle>
-              {brief.data?.isPartial && <CardDescription>This summary is partial — one or more monitoring modules did not complete or had unavailable source data.</CardDescription>}
+              {brief.data?.isPartial && <CardDescription>This summary is partial — one or more enabled automatic monitoring modules did not complete.</CardDescription>}
             </CardHeader>
             <CardContent className="space-y-4">
+              {brief.data && (
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    ['Automatic open', coverageNumber('automaticOpenFindings')],
+                    ['New today', coverageNumber('newToday')],
+                    ['Still open from prior days', coverageNumber('stillOpenFromPriorDays')],
+                    ['Reopened today', coverageNumber('reopenedToday')],
+                    ['Resolved today', coverageNumber('resolvedToday')],
+                    ['Overdue / stalled', coverageNumber('agedOrOverdueOpen')],
+                    ['Modules completed', `${coverageNumber('modulesHealthy')}/${coverageNumber('modulesExpected')}`],
+                    ['Records examined', coverageNumber('recordsExamined')],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-md border p-3">
+                      <p className="text-xs text-muted-foreground">{label}</p>
+                      <p className="text-xl font-semibold">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
               {(brief.data?.sections ?? []).map((section, index) => (
                 <div key={section.key ?? index} className="space-y-1">
                   <div className="flex items-center gap-2"><h3 className="font-medium">{section.heading}</h3>{section.severity && <Badge variant={severityVariant(section.severity)}>{section.severity}</Badge>}</div>
                   <p className="text-sm text-muted-foreground">{section.body}</p>
                 </div>
               ))}
-              {brief.data?.everythingNormal?.length ? <p className="text-sm text-muted-foreground">Normal today: {brief.data.everythingNormal.join(', ')}</p> : null}
+              {brief.data?.everythingNormal?.length ? <p className="text-sm text-muted-foreground">No open automatic findings: {brief.data.everythingNormal.map((module) => AI_OPERATIONS_MODULE_LABELS[module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? module).join(', ')}</p> : null}
             </CardContent>
           </Card>
 
@@ -295,7 +369,7 @@ export default function AiOperationsPage() {
             <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {(overview.data?.modules ?? []).map((module) => (
                 <div key={module.module} className="flex items-start justify-between gap-2 rounded-md border p-3">
-                  <div><p className="text-sm font-medium">{AI_OPERATIONS_MODULE_LABELS[module.module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? module.module}</p><p className="text-xs text-muted-foreground">{module.sourceItemsTotal} source · {module.itemsAnalyzed} analyzed · {module.itemsFailed} failed</p>{module.errorSummary && <p className="mt-1 text-xs text-destructive">{module.errorSummary}</p>}</div>
+                  <div><p className="text-sm font-medium">{AI_OPERATIONS_MODULE_LABELS[module.module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? module.module}</p><p className="text-xs text-muted-foreground">{module.sourceItemsTotal} source · {module.itemsAnalyzed} checked · {module.itemsFailed} failed</p>{module.errorSummary && <p className="mt-1 text-xs text-destructive">{module.errorSummary}</p>}</div>
                   <Badge variant={moduleStatusVariant(module.status)}>{module.status}</Badge>
                 </div>
               ))}
@@ -305,6 +379,7 @@ export default function AiOperationsPage() {
 
         <TabsContent value="findings" className="space-y-4 pt-4">
           <div className="flex flex-wrap gap-2">
+            <Select value={modeFilter} onValueChange={(value) => setModeFilter(value as 'automatic' | 'manual' | 'all')}><SelectTrigger className="w-52"><SelectValue placeholder="Finding type" /></SelectTrigger><SelectContent><SelectItem value="automatic">Automatic monitoring</SelectItem><SelectItem value="manual">Manual / AI</SelectItem><SelectItem value="all">All findings</SelectItem></SelectContent></Select>
             <Select value={moduleFilter} onValueChange={setModuleFilter}><SelectTrigger className="w-56"><SelectValue placeholder="Module" /></SelectTrigger><SelectContent><SelectItem value="all">All modules</SelectItem>{Object.entries(AI_OPERATIONS_MODULE_LABELS).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select>
             <Select value={severityFilter} onValueChange={setSeverityFilter}><SelectTrigger className="w-40"><SelectValue placeholder="Severity" /></SelectTrigger><SelectContent><SelectItem value="all">All severities</SelectItem><SelectItem value="critical">Critical</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="low">Low</SelectItem></SelectContent></Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="open">Open</SelectItem><SelectItem value="snoozed">Snoozed</SelectItem><SelectItem value="resolved">Resolved</SelectItem><SelectItem value="dismissed">Dismissed</SelectItem></SelectContent></Select>
@@ -313,11 +388,12 @@ export default function AiOperationsPage() {
             {items.length === 0 && <p className="p-6 text-sm text-muted-foreground">No findings match these filters.</p>}
             {items.map((finding) => (
               <div key={finding.id} className="flex flex-col gap-2 p-4 md:flex-row md:items-start md:justify-between">
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2"><Badge variant={severityVariant(finding.severity)}>{finding.severity}</Badge><Badge variant="outline">{AI_OPERATIONS_MODULE_LABELS[finding.module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? finding.module}</Badge><span className="font-medium">{finding.title}</span></div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2"><Badge variant={severityVariant(finding.severity)}>{finding.severity}</Badge><Badge variant="outline">{AI_OPERATIONS_MODULE_LABELS[finding.module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? finding.module}</Badge>{finding.mode === 'automatic' && <Badge variant="outline">DETERMINISTIC RULE</Badge>}<span className="font-medium">{finding.title}</span></div>
                   {finding.summary && <p className="text-sm text-muted-foreground">{finding.summary}</p>}
                   {finding.recommendedAction && <p className="text-sm">Recommended: {finding.recommendedAction}</p>}
                   <FindingRecordLink entityType={finding.entityType} entityId={finding.entityId} />
+                  <FindingEvidence finding={finding} />
                 </div>
                 {finding.status === 'open' && <div className="flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => actionMutation.mutate({ id: finding.id, action: 'resolve' })}>Resolve</Button>
@@ -342,7 +418,7 @@ export default function AiOperationsPage() {
           {(runs.data ?? []).map((run) => <div key={run.id} className="space-y-1 p-4"><div className="flex items-center gap-2"><span className="font-medium">{run.businessDate}</span><Badge variant={run.overallStatus === 'success' ? 'secondary' : 'destructive'}>{run.overallStatus}</Badge></div><p className="text-sm text-muted-foreground">{run.modules.map((module) => `${AI_OPERATIONS_MODULE_LABELS[module.module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? module.module}: ${module.status}`).join(' · ') || 'No modules ran.'}</p></div>)}
         </CardContent></Card></TabsContent>
 
-        <TabsContent value="controls" className="space-y-4 pt-4"><Card><CardHeader><CardTitle className="text-base">Monitoring and analysis controls</CardTitle><CardDescription>Deterministic monitoring runs automatically where configured. AI-labeled switches permit manual/on-demand analysis only; no Gemini model worker is scheduled.</CardDescription></CardHeader><CardContent className="space-y-3">
+        <TabsContent value="controls" className="space-y-4 pt-4"><Card><CardHeader><CardTitle className="text-base">Monitoring and analysis controls</CardTitle><CardDescription>Deterministic monitoring switches control automatic database checks. AI-labeled switches permit manual/on-demand analysis only; no Gemini model worker is scheduled.</CardDescription></CardHeader><CardContent className="space-y-3">
           {(flags.data ?? []).map((flag) => <div key={flag.flagName} className="flex items-center justify-between gap-4"><div><p className="text-sm font-medium">{AI_OPERATIONS_FLAG_LABELS[flag.flagName as AiOperationsFlagName] ?? flag.flagName}</p>{flag.updatedAt && <p className="text-xs text-muted-foreground">Updated {new Date(flag.updatedAt).toLocaleString()}</p>}</div><Switch checked={flag.enabled} disabled={flagMutation.isPending} onCheckedChange={(enabled) => flagMutation.mutate({ flagName: flag.flagName, enabled })} /></div>)}
         </CardContent></Card></TabsContent>
       </Tabs>

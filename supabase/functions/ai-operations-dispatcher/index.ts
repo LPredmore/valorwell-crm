@@ -18,7 +18,7 @@ import {
 const COMPONENT = "ai-operations-dispatcher";
 const ACTION_ALIASES: Record<string, DispatcherAction> = {
   collect: "collect", ingest: "reconcile", reconcile: "reconcile", initialize: "initialize",
-  rebuild: "rebuild", youtube: "youtube", brief: "brief", retry: "retry", finalize: "finalize",
+  rebuild: "rebuild", integrity: "integrity", youtube: "youtube", brief: "brief", retry: "retry", finalize: "finalize",
 };
 
 Deno.serve(async (request) => {
@@ -112,41 +112,50 @@ Deno.serve(async (request) => {
           p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff,
         }));
 
-      // Client Journey monitoring is operational infrastructure, not an AI feature flag.
-      await runModule("client_journey", true, () =>
+      await runModule("client_journey", await flag("client_journey_monitoring_enabled"), () =>
         rpc("ai_ops_evaluate_client_journey_deterministic", {
           p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff,
         }));
 
-      await runModule("staff_quality", await flag("staff_quality_ai_enabled"), () =>
+      await runModule("staff_quality", await flag("staff_workflow_monitoring_enabled"), () =>
         rpc("ai_ops_evaluate_staff_workflow_deterministic", {
           p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff,
         }));
 
-      await runModule("appointment_integrity", await flag("appointment_integrity_ai_enabled"), () =>
+      await runModule("appointment_integrity", await flag("appointment_integrity_monitoring_enabled"), () =>
         rpc("ai_ops_evaluate_appointment_integrity_deterministic", {
           p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff,
         }));
 
-      await runModule("billing_claims", await flag("billing_claims_ai_enabled"), () =>
+      await runModule("billing_claims", await flag("billing_claims_monitoring_enabled"), () =>
         rpc("ai_ops_evaluate_billing_claims_deterministic", {
           p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff,
         }));
 
-      await runModule("data_quality", await flag("data_quality_ai_enabled"), () =>
+      await runModule("data_quality", await flag("data_quality_monitoring_enabled"), () =>
         rpc("ai_ops_evaluate_data_quality_deterministic", {
           p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff,
         }));
 
-      await runModule("relationship_followup", await flag("relationship_followup_ai_enabled"), () =>
+      await runModule("relationship_followup", await flag("relationship_followup_monitoring_enabled"), () =>
         rpc("ai_ops_evaluate_relationship_followup_deterministic", {
           p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff,
         }));
 
-      await runModule("sop_compliance", await flag("sop_compliance_ai_enabled"), () =>
+      await runModule("sop_compliance", await flag("sop_compliance_monitoring_enabled"), () =>
         rpc("ai_ops_evaluate_sop_compliance_deterministic", {
           p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff,
         }));
+    };
+
+    const refreshSystemIntegrity = async () => {
+      if (!(await flag("system_integrity_enabled"))) {
+        results.system_integrity = { skipped: "flag_disabled" };
+        return;
+      }
+      results.system_integrity = await rpc("ai_ops_evaluate_system_integrity", {
+        p_tenant_id: tenantId, p_run_id: runId, p_cutoff_at: cutoff,
+      });
     };
 
     const housekeeping = async () => {
@@ -167,6 +176,9 @@ Deno.serve(async (request) => {
         break;
       case "collect":
         await collectBucket2();
+        break;
+      case "integrity":
+        await refreshSystemIntegrity();
         break;
       case "rebuild":
         results.purged = await rpc("ai_ops_purge_stale_work_items", { p_tenant_id: tenantId, p_run_id: runId });
