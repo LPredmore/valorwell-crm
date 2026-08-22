@@ -63,7 +63,7 @@ export function classifyModelFailure(status: number | null, message: string): { 
 }
 export function backoffSeconds(attempt: number): number { return Math.min(Math.pow(2, Math.max(attempt, 1)) * 30, 1800); }
 
-export type DispatcherAction = "initialize" | "rebuild" | "collect" | "youtube" | "reconcile" | "brief" | "retry" | "finalize";
+export type DispatcherAction = "initialize" | "rebuild" | "collect" | "integrity" | "youtube" | "reconcile" | "brief" | "retry" | "finalize";
 export function dispatcherActionFor(localTime: string): DispatcherAction | null {
   switch (localTime) {
     case "03:15": return "initialize";
@@ -73,8 +73,18 @@ export function dispatcherActionFor(localTime: string): DispatcherAction | null 
     case "04:35": return "brief";
     case "04:45": return "retry";
     case "04:50": return "finalize";
-    default: return null;
   }
+
+  // After the daily run has been initialized, refresh System Integrity every
+  // 15 minutes for the rest of the business day. This reuses the existing
+  // five-minute dispatcher cron and does not create model work or extra crons.
+  const match = /^(\d{2}):(\d{2})$/.exec(localTime);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  if (hour < 3 || (hour === 3 && minute < 30)) return null;
+  return minute % 15 === 0 ? "integrity" : null;
 }
 
 export const AI_OPS_PROVIDER = "gemini_developer_api";
