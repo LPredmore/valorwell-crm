@@ -28,6 +28,7 @@ import {
   fetchAiSmokeResults,
   fetchAiOperationsYoutubeComments,
   fetchAiWeeklyReviews,
+  isAiOperationsManualModule,
   resolveAiOperationsFinding,
   resolveSnoozeUntil,
   setAiOperationsFlag,
@@ -55,6 +56,7 @@ function FindingRecordLink({ entityType, entityId }: { entityType: string | null
 function ModuleFindingsPanel({ module, overview }: { module: string; overview: AiOperationsOverview | null }) {
   const label = AI_OPERATIONS_MODULE_LABELS[module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? module;
   const run = (overview?.modules ?? []).find((entry) => entry.module === module) ?? null;
+  const manual = isAiOperationsManualModule(module);
   const findings = useQuery({
     queryKey: ['ai-operations', 'module-findings', module],
     queryFn: () => fetchAiOperationsFindings({ module, status: 'open', limit: 100 }),
@@ -67,12 +69,14 @@ function ModuleFindingsPanel({ module, overview }: { module: string; overview: A
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-base">{label}</CardTitle>
-            <Badge variant={moduleStatusVariant(run?.status ?? 'unknown')}>{run?.status ?? 'not yet run'}</Badge>
+            <Badge variant={manual && !run ? 'outline' : moduleStatusVariant(run?.status ?? 'unknown')}>{run?.status ?? (manual ? 'manual' : 'not yet run')}</Badge>
           </div>
           <CardDescription>
             {run
               ? `${run.sourceItemsTotal} source · ${run.itemsAnalyzed} analyzed · ${run.itemsFailed} failed${run.model ? ` · ${run.model}` : ''}`
-              : 'This module has not run for the current business date yet.'}
+              : manual
+                ? 'Manual/on-demand analysis; no scheduled model run is expected.'
+                : 'This monitoring module has not run for the current business date yet.'}
           </CardDescription>
           {run?.errorSummary && <p className="text-xs text-destructive">{run.errorSummary}</p>}
         </CardHeader>
@@ -103,7 +107,7 @@ function YoutubeQueuePanel() {
   const items = comments.data?.items ?? [];
   return (
     <Card>
-      <CardHeader><CardTitle className="text-base">Comment review queue</CardTitle><CardDescription>Imported from the official YouTube API. Suggested replies require a human to post them.</CardDescription></CardHeader>
+      <CardHeader><CardTitle className="text-base">Comment review queue</CardTitle><CardDescription>Stored YouTube comments remain review-only. AI classification and reply suggestions are manual/on-demand; replies are never posted automatically.</CardDescription></CardHeader>
       <CardContent className="divide-y p-0">
         {comments.isPending && <p className="p-6 text-sm text-muted-foreground">Loading comments…</p>}
         {!comments.isPending && items.length === 0 && <p className="p-6 text-sm text-muted-foreground">No comments have been imported yet.</p>}
@@ -152,19 +156,19 @@ export default function AiOperationsPage() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['ai-operations'] });
   const flagMutation = useMutation({
-    mutationFn: ({ flagName, enabled }: { flagName: string; enabled: boolean }) => setAiOperationsFlag(flagName, enabled, 'Changed from the AI Operations dashboard.'),
+    mutationFn: ({ flagName, enabled }: { flagName: string; enabled: boolean }) => setAiOperationsFlag(flagName, enabled, 'Changed from the ValorWell Daily dashboard.'),
     onSuccess: () => { invalidate(); toast({ title: 'Flag updated' }); },
     onError: (error: Error) => toast({ title: 'Could not update the flag', description: error.message, variant: 'destructive' }),
   });
   const actionMutation = useMutation({
     mutationFn: ({ id, action }: { id: string; action: 'resolve' | 'dismiss' }) => action === 'resolve'
-      ? resolveAiOperationsFinding(id, 'Reviewed from the AI Operations dashboard.')
-      : dismissAiOperationsFinding(id, 'Dismissed from the AI Operations dashboard.'),
+      ? resolveAiOperationsFinding(id, 'Reviewed from the ValorWell Daily dashboard.')
+      : dismissAiOperationsFinding(id, 'Dismissed from the ValorWell Daily dashboard.'),
     onSuccess: () => { invalidate(); toast({ title: 'Finding updated' }); },
     onError: (error: Error) => toast({ title: 'Could not update the finding', description: error.message, variant: 'destructive' }),
   });
   const snoozeMutation = useMutation({
-    mutationFn: ({ id, until }: { id: string; until: string }) => snoozeAiOperationsFinding(id, 'Snoozed from the AI Operations dashboard.', until),
+    mutationFn: ({ id, until }: { id: string; until: string }) => snoozeAiOperationsFinding(id, 'Snoozed from the ValorWell Daily dashboard.', until),
     onSuccess: () => { invalidate(); toast({ title: 'Finding snoozed' }); },
     onError: (error: Error) => toast({ title: 'Could not snooze the finding', description: error.message, variant: 'destructive' }),
   });
@@ -193,11 +197,11 @@ export default function AiOperationsPage() {
     <div className="space-y-6 p-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">ValorWell Daily</h1>
-        <p className="text-sm text-muted-foreground">AI-assisted operational intelligence across care, staff, appointments, billing, relationships, growth, content, and system health. Findings remain human-reviewed.</p>
+        <p className="text-sm text-muted-foreground">Deterministic operational monitoring runs daily across care, staff, appointments, billing, relationships, SOPs, and system health. Qualitative AI analysis is manual/on-demand. Findings remain human-reviewed.</p>
       </header>
 
       {!platformEnabled && (
-        <Card className="border-dashed"><CardHeader><CardTitle className="text-base">The platform is switched off</CardTitle><CardDescription>Enable AI Operations below to start collection. Individual modules remain independently controllable.</CardDescription></CardHeader></Card>
+        <Card className="border-dashed"><CardHeader><CardTitle className="text-base">Daily monitoring is switched off</CardTitle><CardDescription>Enable ValorWell Daily monitoring below to resume scheduled deterministic checks. Manual AI analysis remains separate.</CardDescription></CardHeader></Card>
       )}
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -213,10 +217,10 @@ export default function AiOperationsPage() {
           <TabsTrigger value="system_integrity">System Integrity</TabsTrigger>
           <TabsTrigger value="reliability">Smoke tests</TabsTrigger>
           <TabsTrigger value="client_journey">Client Journey</TabsTrigger>
-          <TabsTrigger value="communications">Communications QA</TabsTrigger>
-          <TabsTrigger value="youtube">YouTube</TabsTrigger>
+          <TabsTrigger value="communications">Communications (manual)</TabsTrigger>
+          <TabsTrigger value="youtube">YouTube (manual)</TabsTrigger>
           <TabsTrigger value="relationships">Relationships &amp; growth</TabsTrigger>
-          <TabsTrigger value="intelligence">Growth &amp; intelligence</TabsTrigger>
+          <TabsTrigger value="intelligence">Manual intelligence</TabsTrigger>
           <TabsTrigger value="runs">History</TabsTrigger>
           <TabsTrigger value="controls">Controls</TabsTrigger>
         </TabsList>
@@ -272,8 +276,8 @@ export default function AiOperationsPage() {
         <TabsContent value="brief" className="space-y-4 pt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{brief.data ? `Brief for ${brief.data.businessDate}` : 'No brief has been generated yet'}</CardTitle>
-              {brief.data?.isPartial && <CardDescription>This brief is partial — one or more modules did not complete or had unavailable source data.</CardDescription>}
+              <CardTitle className="text-base">{brief.data ? `Daily summary for ${brief.data.businessDate}` : 'No daily summary has been generated yet'}</CardTitle>
+              {brief.data?.isPartial && <CardDescription>This summary is partial — one or more monitoring modules did not complete or had unavailable source data.</CardDescription>}
             </CardHeader>
             <CardContent className="space-y-4">
               {(brief.data?.sections ?? []).map((section, index) => (
@@ -328,8 +332,8 @@ export default function AiOperationsPage() {
 
         <TabsContent value="intelligence" className="space-y-4 pt-4">
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card><CardHeader><CardTitle className="text-base">Weekly management patterns</CardTitle></CardHeader><CardContent className="space-y-4">{(weeklyReviews.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No weekly review generated yet.</p>}{(weeklyReviews.data ?? []).map((review) => <div key={review.id} className="space-y-2 rounded-md border p-3"><div className="flex items-center gap-2"><span className="font-medium">Week ending {review.week_ending}</span></div>{review.structured_result?.weekSummary && <p className="text-sm text-muted-foreground">{review.structured_result.weekSummary}</p>}<p className="text-xs text-muted-foreground">{review.structured_result?.patterns?.length ?? 0} pattern(s)</p></div>)}</CardContent></Card>
-            <Card><CardHeader><CardTitle className="text-base">Beyond The Yellow intelligence</CardTitle></CardHeader><CardContent className="space-y-4">{(btyBriefs.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No scheduled BTY meeting currently has an AI prep/post-interview brief.</p>}{(btyBriefs.data ?? []).map((item) => <div key={item.id} className="space-y-2 rounded-md border p-3"><div className="flex items-center gap-2"><Badge variant="outline">{item.brief_type === 'prep' ? 'Interview prep' : 'Post-interview'}</Badge><span className="text-sm">{item.business_date}</span></div>{!item.source_sufficient && <p className="text-xs text-destructive">Source material was insufficient; no fabricated analysis was produced.</p>}<pre className="max-h-48 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">{JSON.stringify(item.structured_result, null, 2)}</pre></div>)}</CardContent></Card>
+            <Card><CardHeader><CardTitle className="text-base">Weekly management patterns (manual)</CardTitle></CardHeader><CardContent className="space-y-4">{(weeklyReviews.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No manual weekly review has been generated yet.</p>}{(weeklyReviews.data ?? []).map((review) => <div key={review.id} className="space-y-2 rounded-md border p-3"><div className="flex items-center gap-2"><span className="font-medium">Week ending {review.week_ending}</span></div>{review.structured_result?.weekSummary && <p className="text-sm text-muted-foreground">{review.structured_result.weekSummary}</p>}<p className="text-xs text-muted-foreground">{review.structured_result?.patterns?.length ?? 0} pattern(s)</p></div>)}</CardContent></Card>
+            <Card><CardHeader><CardTitle className="text-base">Beyond The Yellow intelligence (manual)</CardTitle></CardHeader><CardContent className="space-y-4">{(btyBriefs.data ?? []).length === 0 && <p className="text-sm text-muted-foreground">No manual BTY AI prep/post-interview brief has been generated.</p>}{(btyBriefs.data ?? []).map((item) => <div key={item.id} className="space-y-2 rounded-md border p-3"><div className="flex items-center gap-2"><Badge variant="outline">{item.brief_type === 'prep' ? 'Interview prep' : 'Post-interview'}</Badge><span className="text-sm">{item.business_date}</span></div>{!item.source_sufficient && <p className="text-xs text-destructive">Source material was insufficient; no fabricated analysis was produced.</p>}<pre className="max-h-48 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">{JSON.stringify(item.structured_result, null, 2)}</pre></div>)}</CardContent></Card>
           </div>
         </TabsContent>
 
@@ -338,7 +342,7 @@ export default function AiOperationsPage() {
           {(runs.data ?? []).map((run) => <div key={run.id} className="space-y-1 p-4"><div className="flex items-center gap-2"><span className="font-medium">{run.businessDate}</span><Badge variant={run.overallStatus === 'success' ? 'secondary' : 'destructive'}>{run.overallStatus}</Badge></div><p className="text-sm text-muted-foreground">{run.modules.map((module) => `${AI_OPERATIONS_MODULE_LABELS[module.module as keyof typeof AI_OPERATIONS_MODULE_LABELS] ?? module.module}: ${module.status}`).join(' · ') || 'No modules ran.'}</p></div>)}
         </CardContent></Card></TabsContent>
 
-        <TabsContent value="controls" className="space-y-4 pt-4"><Card><CardHeader><CardTitle className="text-base">Module switches</CardTitle><CardDescription>Source gaps remain visible even when a module is enabled. Turning off the platform stops all collection.</CardDescription></CardHeader><CardContent className="space-y-3">
+        <TabsContent value="controls" className="space-y-4 pt-4"><Card><CardHeader><CardTitle className="text-base">Monitoring and analysis controls</CardTitle><CardDescription>Deterministic monitoring runs automatically where configured. AI-labeled switches permit manual/on-demand analysis only; no Gemini model worker is scheduled.</CardDescription></CardHeader><CardContent className="space-y-3">
           {(flags.data ?? []).map((flag) => <div key={flag.flagName} className="flex items-center justify-between gap-4"><div><p className="text-sm font-medium">{AI_OPERATIONS_FLAG_LABELS[flag.flagName as AiOperationsFlagName] ?? flag.flagName}</p>{flag.updatedAt && <p className="text-xs text-muted-foreground">Updated {new Date(flag.updatedAt).toLocaleString()}</p>}</div><Switch checked={flag.enabled} disabled={flagMutation.isPending} onCheckedChange={(enabled) => flagMutation.mutate({ flagName: flag.flagName, enabled })} /></div>)}
         </CardContent></Card></TabsContent>
       </Tabs>

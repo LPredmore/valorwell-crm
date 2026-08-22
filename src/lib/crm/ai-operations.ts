@@ -26,26 +26,26 @@ export const AI_OPERATIONS_FLAGS = [
 export type AiOperationsFlagName = (typeof AI_OPERATIONS_FLAGS)[number];
 
 export const AI_OPERATIONS_FLAG_LABELS: Record<AiOperationsFlagName, string> = {
-  ai_operations_enabled: 'AI Operations platform',
-  system_integrity_enabled: 'System Integrity',
-  user_flow_smoke_enabled: 'Critical user-flow smoke tests',
-  client_journey_ai_enabled: 'Client Journey',
-  communications_ai_enabled: 'Communications QA',
-  staff_quality_ai_enabled: 'Staff Workflow & Service Quality',
-  appointment_integrity_ai_enabled: 'Appointment Integrity',
-  billing_claims_ai_enabled: 'Billing & Claims Exceptions',
-  data_quality_ai_enabled: 'Data Quality Watchdog',
-  relationship_followup_ai_enabled: 'Relationship Follow-up',
-  donor_intelligence_ai_enabled: 'Donor Opportunity Intelligence',
-  social_leads_ai_enabled: 'Social Engagement Leads',
-  content_performance_ai_enabled: 'Content Performance',
-  bty_intelligence_ai_enabled: 'Beyond The Yellow Intelligence',
-  sop_compliance_ai_enabled: 'SOP Compliance',
-  weekly_patterns_ai_enabled: 'Weekly Pattern Detection',
-  youtube_ai_enabled: 'YouTube comment operations',
-  executive_brief_enabled: 'Executive Brief generation',
-  executive_brief_email_enabled: 'Executive Brief email delivery',
-  shadow_mode: 'Shadow mode (observe only)',
+  ai_operations_enabled: 'ValorWell Daily monitoring',
+  system_integrity_enabled: 'System Integrity monitoring',
+  user_flow_smoke_enabled: 'Critical user-flow monitoring',
+  client_journey_ai_enabled: 'Manual Client Journey AI review',
+  communications_ai_enabled: 'Manual Communications QA',
+  staff_quality_ai_enabled: 'Staff Workflow monitoring',
+  appointment_integrity_ai_enabled: 'Appointment Integrity monitoring',
+  billing_claims_ai_enabled: 'Billing & Claims monitoring',
+  data_quality_ai_enabled: 'Data Quality monitoring',
+  relationship_followup_ai_enabled: 'Relationship Follow-up monitoring',
+  donor_intelligence_ai_enabled: 'Manual Donor Intelligence',
+  social_leads_ai_enabled: 'Manual Social Leads analysis',
+  content_performance_ai_enabled: 'Manual Content Performance analysis',
+  bty_intelligence_ai_enabled: 'Manual Beyond The Yellow analysis',
+  sop_compliance_ai_enabled: 'SOP Compliance monitoring',
+  weekly_patterns_ai_enabled: 'Manual Weekly Pattern analysis',
+  youtube_ai_enabled: 'Manual YouTube comment analysis',
+  executive_brief_enabled: 'Daily deterministic summary',
+  executive_brief_email_enabled: 'Daily summary email delivery',
+  shadow_mode: 'Observe-only mode',
 };
 
 export const AI_OPERATIONS_MODULES = [
@@ -70,24 +70,39 @@ export const AI_OPERATIONS_MODULES = [
 
 export type AiOperationsModule = (typeof AI_OPERATIONS_MODULES)[number];
 
+export const AI_OPERATIONS_MANUAL_MODULES = [
+  'communications',
+  'donor_intelligence',
+  'social_leads',
+  'content_performance',
+  'bty_intelligence',
+  'weekly_patterns',
+  'youtube',
+] as const satisfies readonly AiOperationsModule[];
+
+const AI_OPERATIONS_MANUAL_MODULE_SET = new Set<string>(AI_OPERATIONS_MANUAL_MODULES);
+export function isAiOperationsManualModule(module: string): boolean {
+  return AI_OPERATIONS_MANUAL_MODULE_SET.has(module);
+}
+
 export const AI_OPERATIONS_MODULE_LABELS: Record<AiOperationsModule, string> = {
   system_integrity: 'System Integrity',
   user_flow_smoke: 'User-flow smoke tests',
   client_journey: 'Client Journey',
-  communications: 'Communications QA',
-  staff_quality: 'Staff Quality',
+  communications: 'Communications QA (manual)',
+  staff_quality: 'Staff Workflow',
   appointment_integrity: 'Appointment Integrity',
   billing_claims: 'Billing & Claims',
   data_quality: 'Data Quality',
   relationship_followup: 'Relationship Follow-up',
-  donor_intelligence: 'Donor Intelligence',
-  social_leads: 'Social Leads',
-  content_performance: 'Content Performance',
-  bty_intelligence: 'BTY Intelligence',
+  donor_intelligence: 'Donor Intelligence (manual)',
+  social_leads: 'Social Leads (manual)',
+  content_performance: 'Content Performance (manual)',
+  bty_intelligence: 'BTY Intelligence (manual)',
   sop_compliance: 'SOP Compliance',
-  weekly_patterns: 'Weekly Patterns',
-  youtube: 'YouTube',
-  executive_brief: 'Executive Brief',
+  weekly_patterns: 'Weekly Patterns (manual)',
+  youtube: 'YouTube (manual)',
+  executive_brief: 'Daily Summary',
 };
 
 export type AiOperationsFlag = { flagName: string; enabled: boolean; updatedAt: string | null };
