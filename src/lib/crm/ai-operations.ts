@@ -4,18 +4,19 @@ export const AI_OPERATIONS_FLAGS = [
   'ai_operations_enabled',
   'system_integrity_enabled',
   'user_flow_smoke_enabled',
+  'client_journey_monitoring_enabled',
+  'staff_workflow_monitoring_enabled',
+  'appointment_integrity_monitoring_enabled',
+  'billing_claims_monitoring_enabled',
+  'data_quality_monitoring_enabled',
+  'relationship_followup_monitoring_enabled',
+  'sop_compliance_monitoring_enabled',
   'client_journey_ai_enabled',
   'communications_ai_enabled',
-  'staff_quality_ai_enabled',
-  'appointment_integrity_ai_enabled',
-  'billing_claims_ai_enabled',
-  'data_quality_ai_enabled',
-  'relationship_followup_ai_enabled',
   'donor_intelligence_ai_enabled',
   'social_leads_ai_enabled',
   'content_performance_ai_enabled',
   'bty_intelligence_ai_enabled',
-  'sop_compliance_ai_enabled',
   'weekly_patterns_ai_enabled',
   'youtube_ai_enabled',
   'executive_brief_enabled',
@@ -29,18 +30,19 @@ export const AI_OPERATIONS_FLAG_LABELS: Record<AiOperationsFlagName, string> = {
   ai_operations_enabled: 'ValorWell Daily monitoring',
   system_integrity_enabled: 'System Integrity monitoring',
   user_flow_smoke_enabled: 'Critical user-flow monitoring',
+  client_journey_monitoring_enabled: 'Client Journey monitoring',
+  staff_workflow_monitoring_enabled: 'Staff Workflow monitoring',
+  appointment_integrity_monitoring_enabled: 'Appointment Integrity monitoring',
+  billing_claims_monitoring_enabled: 'Billing & Claims monitoring',
+  data_quality_monitoring_enabled: 'Data Quality monitoring',
+  relationship_followup_monitoring_enabled: 'Relationship Follow-up monitoring',
+  sop_compliance_monitoring_enabled: 'SOP Compliance monitoring',
   client_journey_ai_enabled: 'Manual Client Journey AI review',
   communications_ai_enabled: 'Manual Communications QA',
-  staff_quality_ai_enabled: 'Staff Workflow monitoring',
-  appointment_integrity_ai_enabled: 'Appointment Integrity monitoring',
-  billing_claims_ai_enabled: 'Billing & Claims monitoring',
-  data_quality_ai_enabled: 'Data Quality monitoring',
-  relationship_followup_ai_enabled: 'Relationship Follow-up monitoring',
   donor_intelligence_ai_enabled: 'Manual Donor Intelligence',
   social_leads_ai_enabled: 'Manual Social Leads analysis',
   content_performance_ai_enabled: 'Manual Content Performance analysis',
   bty_intelligence_ai_enabled: 'Manual Beyond The Yellow analysis',
-  sop_compliance_ai_enabled: 'SOP Compliance monitoring',
   weekly_patterns_ai_enabled: 'Manual Weekly Pattern analysis',
   youtube_ai_enabled: 'Manual YouTube comment analysis',
   executive_brief_enabled: 'Daily deterministic summary',
@@ -69,6 +71,18 @@ export const AI_OPERATIONS_MODULES = [
 ] as const;
 
 export type AiOperationsModule = (typeof AI_OPERATIONS_MODULES)[number];
+
+export const AI_OPERATIONS_AUTOMATIC_MODULES = [
+  'system_integrity',
+  'user_flow_smoke',
+  'client_journey',
+  'staff_quality',
+  'appointment_integrity',
+  'billing_claims',
+  'data_quality',
+  'relationship_followup',
+  'sop_compliance',
+] as const satisfies readonly AiOperationsModule[];
 
 export const AI_OPERATIONS_MANUAL_MODULES = [
   'communications',
@@ -107,10 +121,11 @@ export const AI_OPERATIONS_MODULE_LABELS: Record<AiOperationsModule, string> = {
 
 export type AiOperationsFlag = { flagName: string; enabled: boolean; updatedAt: string | null };
 export type AiOperationsFinding = {
-  id: string; module: string; fingerprint: string; entityType: string | null; entityId: string | null;
+  id: string; module: string; fingerprint: string; mode: 'automatic' | 'manual'; entityType: string | null; entityId: string | null;
   title: string; summary: string | null; severity: 'critical' | 'high' | 'medium' | 'low'; confidence: number | null;
   recommendedAction: string | null; status: 'open' | 'snoozed' | 'resolved' | 'dismissed'; firstDetectedAt: string;
   lastSeenAt: string; snoozedUntil: string | null; reopenCount: number; relatedExistingExceptionId: string | null; businessDate: string | null;
+  evidence: unknown; evidenceObservedAt: string | null;
 };
 export type AiOperationsFindingPage = { total: number; limit: number; offset: number; items: AiOperationsFinding[] };
 export type AiOperationsModuleRun = {
@@ -120,7 +135,15 @@ export type AiOperationsModuleRun = {
 };
 export type AiOperationsOverview = {
   run: { id: string; businessDate: string; timezone: string; startedAt: string | null; sourceCutoffAt: string | null; completedAt: string | null; overallStatus: string; publicationStatus: string; coverageSummary: Record<string, unknown> } | null;
-  modules: AiOperationsModuleRun[]; findingCounts: Record<string, number>; openFindingsByModule: Record<string, number>;
+  modules: AiOperationsModuleRun[];
+  findingCounts: Record<string, number>;
+  automaticFindingCounts: Record<string, number>;
+  manualFindingCounts: Record<string, number>;
+  automaticOpenCount: number;
+  manualOpenCount: number;
+  openFindingsByModule: Record<string, number>;
+  automaticOpenFindingsByModule: Record<string, number>;
+  manualOpenFindingsByModule: Record<string, number>;
   brief: { id: string; businessDate: string; isPartial: boolean; status: string; generatedAt: string | null; publishedAt: string | null; emailStatus: string } | null;
 };
 export type AiOperationsBrief = {
@@ -151,7 +174,7 @@ async function rpc<T>(name: string, args: Record<string, unknown> = {}): Promise
 export const fetchAiOperationsFlags = () => rpc<AiOperationsFlag[]>('ai_operations_list_flags');
 export const setAiOperationsFlag = (flagName: string, enabled: boolean, reason: string) => rpc<Record<string, unknown>>('ai_operations_set_flag', { p_flag_name: flagName, p_enabled: enabled, p_reason: reason });
 export const fetchAiOperationsOverview = (businessDate?: string | null) => rpc<AiOperationsOverview>('ai_operations_overview', { p_business_date: businessDate ?? null });
-export const fetchAiOperationsFindings = (options: { module?: string | null; status?: string | null; severity?: string | null; businessDate?: string | null; limit?: number; offset?: number } = {}) => rpc<AiOperationsFindingPage>('ai_operations_list_findings', { p_module: options.module ?? null, p_status: options.status ?? 'open', p_severity: options.severity ?? null, p_business_date: options.businessDate ?? null, p_limit: options.limit ?? 50, p_offset: options.offset ?? 0 });
+export const fetchAiOperationsFindings = (options: { module?: string | null; status?: string | null; severity?: string | null; businessDate?: string | null; mode?: 'automatic' | 'manual' | 'all' | null; limit?: number; offset?: number } = {}) => rpc<AiOperationsFindingPage>('ai_operations_list_findings_v2', { p_module: options.module ?? null, p_status: options.status ?? 'open', p_severity: options.severity ?? null, p_business_date: options.businessDate ?? null, p_mode: options.mode ?? null, p_limit: options.limit ?? 50, p_offset: options.offset ?? 0 });
 export const fetchAiOperationsRuns = (limit = 30) => rpc<AiOperationsRunSummary[]>('ai_operations_list_runs', { p_limit: limit });
 export const fetchAiOperationsBrief = (businessDate?: string | null) => rpc<AiOperationsBrief | null>('ai_operations_get_brief', { p_business_date: businessDate ?? null });
 export const fetchAiOperationsYoutubeComments = (reviewState?: string | null, limit = 50, offset = 0) => rpc<{ total: number; items: AiOperationsYoutubeComment[] }>('ai_operations_list_youtube_comments', { p_review_state: reviewState ?? null, p_limit: limit, p_offset: offset });
@@ -173,7 +196,7 @@ export async function fetchAiBtyBriefs(limit = 20): Promise<AiBtyBrief[]> {
 
 export function briefCoverageIsComplete(overview: AiOperationsOverview | null | undefined): boolean {
   if (!overview?.modules?.length) return false;
-  return overview.modules.every((module) => module.status === 'success');
+  return overview.modules.filter((module) => AI_OPERATIONS_AUTOMATIC_MODULES.includes(module.module as (typeof AI_OPERATIONS_AUTOMATIC_MODULES)[number])).every((module) => module.status === 'success');
 }
 export function severityRank(severity: string): number { switch (severity) { case 'critical': return 0; case 'high': return 1; case 'medium': return 2; default: return 3; } }
 export type SnoozePreset = { key: string; label: string; resolve: (now?: Date) => Date };
@@ -192,14 +215,14 @@ export type AiOperationsWidgetSummary = {
   criticalCount: number; highCount: number; openCount: number; modules: Array<{ module: AiOperationsModule; label: string; status: string }>;
 };
 export function buildAiOperationsWidgetSummary(overview: AiOperationsOverview | null | undefined): AiOperationsWidgetSummary {
-  const counts = overview?.findingCounts ?? {};
-  const openCount = Object.values(counts).reduce((total, value) => total + (Number(value) || 0), 0);
+  const counts = overview?.automaticFindingCounts ?? overview?.findingCounts ?? {};
+  const openCount = overview?.automaticOpenCount ?? Object.values(counts).reduce((total, value) => total + (Number(value) || 0), 0);
   const byModule = new Map((overview?.modules ?? []).map((module) => [module.module, module.status]));
   return {
     businessDate: overview?.run?.businessDate ?? null,
     briefStatus: overview?.brief?.status ?? 'unavailable', briefGeneratedAt: overview?.brief?.generatedAt ?? null,
     briefIsPartial: overview?.brief?.isPartial ?? false, criticalCount: Number(counts.critical ?? 0), highCount: Number(counts.high ?? 0), openCount,
-    modules: AI_OPERATIONS_MODULES.filter((module) => module !== 'executive_brief').map((module) => ({ module, label: AI_OPERATIONS_MODULE_LABELS[module], status: byModule.get(module) ?? 'unknown' })),
+    modules: AI_OPERATIONS_AUTOMATIC_MODULES.map((module) => ({ module, label: AI_OPERATIONS_MODULE_LABELS[module], status: byModule.get(module) ?? 'unknown' })),
   };
 }
 
