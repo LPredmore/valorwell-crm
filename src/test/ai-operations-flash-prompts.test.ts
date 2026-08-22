@@ -59,7 +59,7 @@ describe("AI Operations model configuration", () => {
 
   it("moves scheduled Client Journey monitoring to the deterministic Bucket 2 path", () => {
     const dispatcher = readFileSync("supabase/functions/ai-operations-dispatcher/index.ts", "utf8");
-    expect(dispatcher).toContain('runModule("client_journey", true');
+    expect(dispatcher).toContain('flag("client_journey_monitoring_enabled")');
     expect(dispatcher).toContain('rpc("ai_ops_evaluate_client_journey_deterministic"');
     expect(dispatcher).not.toContain("ai_ops_build_client_journey_batches");
     expect(dispatcher).not.toContain("ai_ops_ingest_client_journey_results");
@@ -79,6 +79,21 @@ describe("AI Operations model configuration", () => {
     expect(worker).toContain('p_flag_name: "client_journey_ai_enabled"');
     expect(worker).toContain("client_journey_ai_paused");
     expect(worker).toContain("priorAiFindingAssessments");
+  });
+
+  it("uses monitoring-specific flags for every automatic Bucket 2 evaluator", () => {
+    const dispatcher = readFileSync("supabase/functions/ai-operations-dispatcher/index.ts", "utf8");
+    for (const flag of [
+      "client_journey_monitoring_enabled",
+      "staff_workflow_monitoring_enabled",
+      "appointment_integrity_monitoring_enabled",
+      "billing_claims_monitoring_enabled",
+      "data_quality_monitoring_enabled",
+      "relationship_followup_monitoring_enabled",
+      "sop_compliance_monitoring_enabled",
+    ]) expect(dispatcher).toContain(`flag("${flag}")`);
+    expect(dispatcher).not.toContain('flag("staff_quality_ai_enabled")');
+    expect(dispatcher).not.toContain('flag("billing_claims_ai_enabled")');
   });
 
   it("keeps scheduled qualitative modules out of the automatic dispatcher", () => {
