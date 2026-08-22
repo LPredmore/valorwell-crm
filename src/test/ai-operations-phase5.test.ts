@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MODULE_WORK_TYPES, promptVersionForModule } from '../../supabase/functions/_shared/ai-ops-prompts';
-import { dispatcherActionFor } from '../../supabase/functions/_shared/ai-ops';
+import { dispatcherActionFor } from '../../supabase/functions/_shared/ai-ops-schedule';
 import { AI_OPERATIONS_MODULES, AI_OPERATIONS_MODULE_LABELS, AI_OPERATIONS_FLAGS } from '@/lib/crm/ai-operations';
 
 describe('Phase 5 AI Operations modules', () => {
