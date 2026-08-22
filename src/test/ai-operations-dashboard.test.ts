@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  AI_OPERATIONS_MODULES,
+  AI_OPERATIONS_AUTOMATIC_MODULES,
+  AI_OPERATIONS_FLAGS,
   AI_OPERATIONS_SNOOZE_PRESETS,
   buildAiOperationsWidgetSummary,
   resolveSnoozeUntil,
@@ -34,23 +35,40 @@ describe('AI Operations snooze presets', () => {
   });
 });
 
+describe('AI Operations monitoring controls', () => {
+  it('uses monitoring-specific flags for deterministic Bucket 2 modules', () => {
+    expect(AI_OPERATIONS_FLAGS).toContain('client_journey_monitoring_enabled');
+    expect(AI_OPERATIONS_FLAGS).toContain('staff_workflow_monitoring_enabled');
+    expect(AI_OPERATIONS_FLAGS).toContain('appointment_integrity_monitoring_enabled');
+    expect(AI_OPERATIONS_FLAGS).toContain('billing_claims_monitoring_enabled');
+    expect(AI_OPERATIONS_FLAGS).toContain('data_quality_monitoring_enabled');
+    expect(AI_OPERATIONS_FLAGS).toContain('relationship_followup_monitoring_enabled');
+    expect(AI_OPERATIONS_FLAGS).toContain('sop_compliance_monitoring_enabled');
+    expect(AI_OPERATIONS_FLAGS).not.toContain('staff_quality_ai_enabled' as never);
+    expect(AI_OPERATIONS_FLAGS).not.toContain('billing_claims_ai_enabled' as never);
+  });
+});
+
 describe('AI Operations widget summary', () => {
   it('degrades gracefully when no overview is available', () => {
     const summary = buildAiOperationsWidgetSummary(null);
     expect(summary.briefStatus).toBe('unavailable');
     expect(summary.openCount).toBe(0);
-    expect(summary.modules).toHaveLength(AI_OPERATIONS_MODULES.filter((module) => module !== 'executive_brief').length);
+    expect(summary.modules).toHaveLength(AI_OPERATIONS_AUTOMATIC_MODULES.length);
     expect(summary.modules.every((module) => module.status === 'unknown')).toBe(true);
   });
 
-  it('summarises counts, brief state, and module status', () => {
+  it('summarises automatic counts without mixing in manual backlog', () => {
     const summary = buildAiOperationsWidgetSummary({
       run: { businessDate: '2026-08-17' },
       brief: { status: 'published', generatedAt: '2026-08-17T09:35:00.000Z', isPartial: true },
-      findingCounts: { critical: 2, high: 3, medium: 1 },
+      findingCounts: { critical: 2, high: 3, medium: 9 },
+      automaticFindingCounts: { critical: 2, high: 3 },
+      automaticOpenCount: 5,
+      manualOpenCount: 9,
       modules: [
         { module: 'system_integrity', status: 'success' },
-        { module: 'communications', status: 'failed' },
+        { module: 'client_journey', status: 'success' },
       ],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
@@ -59,8 +77,9 @@ describe('AI Operations widget summary', () => {
     expect(summary.briefIsPartial).toBe(true);
     expect(summary.criticalCount).toBe(2);
     expect(summary.highCount).toBe(3);
-    expect(summary.openCount).toBe(6);
-    expect(summary.modules.find((module) => module.module === 'communications')?.status).toBe('failed');
-    expect(summary.modules.find((module) => module.module === 'youtube')?.status).toBe('unknown');
+    expect(summary.openCount).toBe(5);
+    expect(summary.modules.find((module) => module.module === 'system_integrity')?.status).toBe('success');
+    expect(summary.modules.find((module) => module.module === 'billing_claims')?.status).toBe('unknown');
+    expect(summary.modules.some((module) => module.module === 'communications')).toBe(false);
   });
 });
