@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -15,42 +14,47 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  ClientNewsletterEmailStudioComposer,
+  type ClientNewsletterEmailStudioHandle,
+} from '@/features/email-studio/newsletter/ClientNewsletterEmailStudioComposer';
+import type { EmailContentDocument } from '@/features/email-studio/contracts';
 import { useCanMutate } from '@/hooks/crm/useCanMutate';
 import {
   NEWSLETTER_AUDIENCE_DOMAINS,
   NEWSLETTER_AUDIENCE_LABELS,
-  buildNewsletterRecipients,
   cancelNewsletterSend,
+  cloneNewsletterToDraft,
   getNewsletter,
   getNewsletterDeliveryTrace,
   listNewsletters,
+  newsletterDetailToContent,
   previewNewsletterAudience,
   scheduleNewsletter,
   suppressNewsletterMailbox,
-  upsertNewsletter,
+  upsertCanonicalNewsletter,
+  type NewsletterAudienceDomain,
   type NewsletterSummary,
-} from '@/lib/crm/communications-control-plane';
+} from '@/lib/crm/newsletter-control-plane';
 
 type ComposerState = {
   newsletterId: string | null;
   name: string;
   subject: string;
-  preheader: string;
-  bodyHtml: string;
-  bodyText: string;
-  audienceDomains: string[];
+  audienceDomains: NewsletterAudienceDomain[];
   reason: string;
+  initialContent: EmailContentDocument | null;
+  templateVersionId: string | null;
 };
 
 const emptyComposer: ComposerState = {
   newsletterId: null,
   name: '',
   subject: '',
-  preheader: '',
-  bodyHtml: '',
-  bodyText: '',
   audienceDomains: ['client'],
   reason: '',
+  initialContent: null,
+  templateVersionId: null,
 };
 
 function statusVariant(status: string) {
@@ -63,6 +67,7 @@ function statusVariant(status: string) {
 export default function NewsletterManagementPage() {
   const canMutate = useCanMutate();
   const queryClient = useQueryClient();
+  const emailStudioRef = useRef<ClientNewsletterEmailStudioHandle>(null);
   const [composer, setComposer] = useState<ComposerState | null>(null);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [scheduleAt, setScheduleAt] = useState<Record<string, string>>({});
@@ -81,7 +86,9 @@ export default function NewsletterManagementPage() {
   const audienceKey = composer?.audienceDomains.slice().sort().join(',') ?? '';
   const audiencePreview = useQuery({
     queryKey: ['newsletter-audience-preview', audienceKey],
-    queryFn: () => previewNewsletterAudience(audienceKey ? audienceKey.split(',') : []),
+    queryFn: () => previewNewsletterAudience(
+      (audienceKey ? audienceKey.split(',') : []) as NewsletterAudienceDomain[],
+    ),
     enabled: Boolean(composer) && audienceKey.length > 0,
     retry: false,
   });
@@ -92,27 +99,25 @@ export default function NewsletterManagementPage() {
   };
 
   const save = useMutation({
-    mutationFn: (state: ComposerState) =>
-      upsertNewsletter({
+    mutationFn: async (state: ComposerState) => {
+      const content = await emailStudioRef.current?.exportContent();
+      if (!content) {
+        throw new Error('Resolve the Email Studio validation errors before saving this draft.');
+      }
+      return upsertCanonicalNewsletter({
         newsletterId: state.newsletterId,
         name: state.name.trim(),
-        subject: state.subject.trim() || null,
-        preheader: state.preheader.trim() || null,
-        bodyHtml: state.bodyHtml || null,
-        bodyText: state.bodyText || null,
+        subject: state.subject.trim(),
+        content,
         audienceDomains: state.audienceDomains,
         reason: state.reason.trim(),
-      }),
+        templateVersionId: state.templateVersionId,
+      });
+    },
     onSuccess: () => {
       setComposer(null);
       refresh();
     },
-  });
-
-  const build = useMutation({
-    mutationFn: (newsletterId: string) =>
-      buildNewsletterRecipients({ newsletterId, reason: reasons[newsletterId] ?? '' }),
-    onSuccess: refresh,
   });
 
   const schedule = useMutation({
@@ -126,7 +131,10 @@ export default function NewsletterManagementPage() {
   });
 
   const cancelSend = useMutation({
-    mutationFn: (newsletterId: string) => cancelNewsletterSend({ newsletterId, reason: reasons[newsletterId] ?? '' }),
+    mutationFn: (newsletterId: string) => cancelNewsletterSend({
+      newsletterId,
+      reason: reasons[newsletterId] ?? '',
+    }),
     onSuccess: refresh,
   });
 
@@ -140,17 +148,54 @@ export default function NewsletterManagementPage() {
   });
 
   const openExisting = useMutation({
-    mutationFn: (newsletterId: string) => getNewsletter(newsletterId),
-    onSuccess: (detail) => {
+    mutationFn: async (newsletterId: string) => {
+      const detail = await getNewsletter(newsletterId);
+      const content = newsletterDetailToContent(detail);
+      if (detail.status !== 'draft') {
+        throw new Error('Only draft newsletters can be edited. Duplicate this newsletter to create a new draft.');
+      }
+      if (!content) {
+        throw new Error('This newsletter does not contain canonical Email Studio content and cannot be edited here.');
+      }
+      return { detail, content };
+    },
+    onSuccess: ({ detail, content }) => {
       setComposer({
         newsletterId: detail.id,
         name: detail.name,
         subject: detail.subject ?? '',
-        preheader: detail.preheader ?? '',
-        bodyHtml: detail.bodyHtml ?? '',
-        bodyText: detail.bodyText ?? '',
         audienceDomains: detail.audienceDomains.length > 0 ? detail.audienceDomains : ['client'],
         reason: '',
+        initialContent: content,
+        templateVersionId: detail.templateVersionId,
+      });
+    },
+  });
+
+  const duplicate = useMutation({
+    mutationFn: async (letter: NewsletterSummary) => {
+      const result = await cloneNewsletterToDraft({
+        newsletterId: letter.id,
+        name: `${letter.name} copy`,
+        reason: reasons[letter.id] ?? '',
+      });
+      const detail = await getNewsletter(result.newsletterId);
+      const content = newsletterDetailToContent(detail);
+      if (!content) {
+        throw new Error('The duplicated newsletter did not preserve canonical Email Studio content.');
+      }
+      return { detail, content };
+    },
+    onSuccess: ({ detail, content }) => {
+      refresh();
+      setComposer({
+        newsletterId: detail.id,
+        name: detail.name,
+        subject: detail.subject ?? '',
+        audienceDomains: detail.audienceDomains.length > 0 ? detail.audienceDomains : ['client'],
+        reason: '',
+        initialContent: content,
+        templateVersionId: detail.templateVersionId,
       });
     },
   });
@@ -162,7 +207,11 @@ export default function NewsletterManagementPage() {
   }, [composer, save]);
 
   const composerValid = Boolean(
-    composer && composer.name.trim() && composer.reason.trim() && composer.audienceDomains.length > 0,
+    composer
+      && composer.name.trim()
+      && composer.subject.trim()
+      && composer.reason.trim()
+      && composer.audienceDomains.length > 0,
   );
 
   return <div className="space-y-6">
@@ -170,7 +219,7 @@ export default function NewsletterManagementPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Newsletters</h1>
         <p className="mt-2 max-w-3xl text-muted-foreground">
-          Compose a newsletter, preview which mailboxes it will reach across every audience, then build the recipient list and schedule the send. Sending stays blocked until the universal newsletters switch is on.
+          Design canonical Email Studio newsletters, verify the eligible mailbox count, then send now or schedule delivery. Recipient snapshots and suppression checks are enforced by the server when a draft is scheduled.
         </p>
       </div>
       <Button disabled={!canMutate} onClick={() => setComposer({ ...emptyComposer })}>New newsletter</Button>
@@ -190,11 +239,12 @@ export default function NewsletterManagementPage() {
 
         {rows.map((letter) => {
           const reason = reasons[letter.id] ?? '';
-          const editable = letter.status === 'draft' || letter.status === 'scheduled';
+          const editable = letter.status === 'draft' && letter.canonical;
           return <div className="space-y-3 rounded-md border p-3" key={letter.id}>
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="font-medium">{letter.name}</span>
               <Badge variant={statusVariant(letter.status)}>{letter.status}</Badge>
+              {letter.canonical && <Badge variant="secondary">Email Studio</Badge>}
               {letter.audienceDomains.map((domain) => <Badge key={domain} variant="outline">{NEWSLETTER_AUDIENCE_LABELS[domain] ?? domain}</Badge>)}
               {letter.scheduledAt && <span className="text-muted-foreground">scheduled {new Date(letter.scheduledAt).toLocaleString()}</span>}
             </div>
@@ -204,6 +254,7 @@ export default function NewsletterManagementPage() {
               <Badge variant="outline">{letter.sent} sent</Badge>
               {letter.failed > 0 && <Badge variant="destructive">{letter.failed} failed</Badge>}
               <Badge variant="secondary">{letter.suppressed} unsubscribed</Badge>
+              {letter.skipped > 0 && <Badge variant="outline">{letter.skipped} skipped</Badge>}
             </div>
             {letter.subject && <p className="text-sm text-muted-foreground">Subject: {letter.subject}</p>}
 
@@ -212,11 +263,11 @@ export default function NewsletterManagementPage() {
                 {traceNewsletterId === letter.id ? 'Hide delivery trace' : 'Delivery trace'}
               </Button>
               {canMutate && editable && <Button disabled={openExisting.isPending} onClick={() => openExisting.mutate(letter.id)} size="sm" variant="outline">
-                Edit content
+                Edit draft
               </Button>}
             </div>
 
-            {canMutate && (editable || letter.status === 'sending') && <div className="flex flex-wrap items-end gap-2 rounded border bg-muted/30 p-3">
+            {canMutate && letter.canonical && <div className="flex flex-wrap items-end gap-2 rounded border bg-muted/30 p-3">
               <div className="min-w-56 flex-1 space-y-1">
                 <Label htmlFor={`reason-${letter.id}`}>Reason for this action</Label>
                 <Input
@@ -226,7 +277,7 @@ export default function NewsletterManagementPage() {
                   value={reason}
                 />
               </div>
-              {editable && <div className="space-y-1">
+              {letter.status === 'draft' && <div className="space-y-1">
                 <Label htmlFor={`when-${letter.id}`}>Send at (optional)</Label>
                 <Input
                   id={`when-${letter.id}`}
@@ -235,13 +286,18 @@ export default function NewsletterManagementPage() {
                   value={scheduleAt[letter.id] ?? ''}
                 />
               </div>}
-              {editable && <Button disabled={!reason.trim() || build.isPending} onClick={() => build.mutate(letter.id)} size="sm" variant="outline">
-                Build recipients
-              </Button>}
-              {editable && <Button disabled={!reason.trim() || schedule.isPending} onClick={() => schedule.mutate(letter.id)} size="sm">
+              <Button
+                disabled={!reason.trim() || duplicate.isPending}
+                onClick={() => duplicate.mutate(letter)}
+                size="sm"
+                variant="outline"
+              >
+                Duplicate to draft
+              </Button>
+              {letter.status === 'draft' && <Button disabled={!reason.trim() || schedule.isPending} onClick={() => schedule.mutate(letter.id)} size="sm">
                 {scheduleAt[letter.id] ? 'Schedule send' : 'Send now'}
               </Button>}
-              {(letter.status === 'scheduled' || letter.status === 'sending') && <Button
+              {letter.status === 'scheduled' && <Button
                 disabled={!reason.trim() || cancelSend.isPending}
                 onClick={() => cancelSend.mutate(letter.id)}
                 size="sm"
@@ -257,7 +313,7 @@ export default function NewsletterManagementPage() {
               {(trace.data?.summary ?? []).length > 0 && <div className="flex flex-wrap gap-2">
                 {(trace.data?.summary ?? []).map((row) => <Badge key={row.status} variant="outline">{row.status}: {row.count}</Badge>)}
               </div>}
-              {(trace.data?.recipients ?? []).length === 0 && !trace.isLoading && !trace.isError && <p className="text-sm text-muted-foreground">No recipients have been built yet.</p>}
+              {(trace.data?.recipients ?? []).length === 0 && !trace.isLoading && !trace.isError && <p className="text-sm text-muted-foreground">No recipient snapshot yet.</p>}
               {(trace.data?.recipients ?? []).map((row) => <div className="flex flex-wrap items-center gap-2 border-b py-1 text-xs last:border-0" key={row.recipientId}>
                 <span className="font-medium">{row.deliveryEmail}</span>
                 <Badge variant="outline">{row.recipientStatus}</Badge>
@@ -269,10 +325,10 @@ export default function NewsletterManagementPage() {
           </div>;
         })}
 
-        {build.isError && <p className="text-sm text-destructive">{build.error instanceof Error ? build.error.message : 'Could not build the recipient list.'}</p>}
         {schedule.isError && <p className="text-sm text-destructive">{schedule.error instanceof Error ? schedule.error.message : 'Could not schedule this newsletter.'}</p>}
         {cancelSend.isError && <p className="text-sm text-destructive">{cancelSend.error instanceof Error ? cancelSend.error.message : 'Could not cancel this send.'}</p>}
         {openExisting.isError && <p className="text-sm text-destructive">{openExisting.error instanceof Error ? openExisting.error.message : 'Could not open this newsletter.'}</p>}
+        {duplicate.isError && <p className="text-sm text-destructive">{duplicate.error instanceof Error ? duplicate.error.message : 'Could not duplicate this newsletter.'}</p>}
       </CardContent>
     </Card>
 
@@ -298,11 +354,11 @@ export default function NewsletterManagementPage() {
     </Card>}
 
     <Dialog onOpenChange={(open) => { if (!open) setComposer(null); }} open={Boolean(composer)}>
-      <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{composer?.newsletterId ? 'Edit newsletter' : 'New newsletter'}</DialogTitle>
+          <DialogTitle>{composer?.newsletterId ? 'Edit newsletter draft' : 'New newsletter'}</DialogTitle>
           <DialogDescription>
-            Personalisation is limited to a greeting name, so a shared mailbox never sees another person's details.
+            The marketing newsletter scope limits personalization to mailbox-safe variables. Save produces the canonical HTML, text, editor document, theme, and render hash used by the delivery pipeline.
           </DialogDescription>
         </DialogHeader>
 
@@ -316,11 +372,6 @@ export default function NewsletterManagementPage() {
               <Label htmlFor="newsletter-subject">Subject line</Label>
               <Input id="newsletter-subject" onChange={(event) => setComposer({ ...composer, subject: event.target.value })} value={composer.subject} />
             </div>
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="newsletter-preheader">Preheader</Label>
-            <Input id="newsletter-preheader" onChange={(event) => setComposer({ ...composer, preheader: event.target.value })} value={composer.preheader} />
           </div>
 
           <div className="space-y-2">
@@ -356,7 +407,7 @@ export default function NewsletterManagementPage() {
                 <Badge variant="outline">{audiencePreview.data.overlapMailboxes} in more than one audience</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                {Object.entries(audiencePreview.data.byDomain).map(([domain, count]) => `${NEWSLETTER_AUDIENCE_LABELS[domain] ?? domain}: ${count}`).join(' · ') || 'No matching mailboxes.'}
+                {Object.entries(audiencePreview.data.byDomain).map(([domain, count]) => `${NEWSLETTER_AUDIENCE_LABELS[domain as NewsletterAudienceDomain] ?? domain}: ${count}`).join(' · ') || 'No matching mailboxes.'}
               </p>
               {audiencePreview.data.sample.length > 0 && <p className="text-xs text-muted-foreground">
                 Sample: {audiencePreview.data.sample.map((row) => `${row.email}${row.suppressed ? ' (unsubscribed)' : ''}`).join(', ')}
@@ -364,16 +415,12 @@ export default function NewsletterManagementPage() {
             </div>}
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="newsletter-html">HTML body</Label>
-            <Textarea id="newsletter-html" onChange={(event) => setComposer({ ...composer, bodyHtml: event.target.value })} rows={10} value={composer.bodyHtml} />
-            <p className="text-xs text-muted-foreground">A postal address and one-click unsubscribe link are added automatically if your HTML does not include them.</p>
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="newsletter-text">Plain text body</Label>
-            <Textarea id="newsletter-text" onChange={(event) => setComposer({ ...composer, bodyText: event.target.value })} rows={5} value={composer.bodyText} />
-          </div>
+          <ClientNewsletterEmailStudioComposer
+            key={composer.newsletterId ?? 'new-newsletter'}
+            ref={emailStudioRef}
+            initialContent={composer.initialContent}
+            scope="marketing_newsletter"
+          />
 
           <div className="space-y-1">
             <Label htmlFor="newsletter-reason">Reason for this change</Label>
@@ -386,7 +433,7 @@ export default function NewsletterManagementPage() {
         <DialogFooter>
           <Button onClick={() => setComposer(null)} variant="outline">Cancel</Button>
           <Button disabled={!composerValid || save.isPending} onClick={() => composer && save.mutate(composer)}>
-            {save.isPending ? 'Saving…' : 'Save newsletter'}
+            {save.isPending ? 'Saving…' : 'Save draft'}
           </Button>
         </DialogFooter>
       </DialogContent>

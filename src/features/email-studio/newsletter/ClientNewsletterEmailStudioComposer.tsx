@@ -13,6 +13,7 @@ import {
   finalizeEmailContentDocument,
   getEmailVariablesForScope,
   type EmailContentDocument,
+  type EmailContentScope,
   type EmailEditorDocument,
   type EmailEditorNode,
   type EmailValidationResult,
@@ -57,18 +58,24 @@ export type ClientNewsletterEmailStudioHandle = {
 export type ClientNewsletterEmailStudioComposerProps = {
   initialContent?: EmailContentDocument | null;
   readOnly?: boolean;
+  scope?: EmailContentScope;
   onDirty?: () => void;
 };
 
 export const ClientNewsletterEmailStudioComposer = forwardRef<
   ClientNewsletterEmailStudioHandle,
   ClientNewsletterEmailStudioComposerProps
->(function ClientNewsletterEmailStudioComposer({ initialContent, readOnly = false, onDirty }, ref) {
+>(function ClientNewsletterEmailStudioComposer({
+  initialContent,
+  readOnly = false,
+  scope = 'client',
+  onDirty,
+}, ref) {
   const editorRef = useRef<EmailEditorRef>(null);
   const initialThemeKey = normalizeThemeKey(initialContent?.themeKey);
   const initialDocument = initialContent?.mode === 'newsletter' && initialContent.editorDocument
     ? initialContent.editorDocument
-    : createEmailStudioDocument({ mode: 'newsletter', scope: 'client', themeKey: initialThemeKey });
+    : createEmailStudioDocument({ mode: 'newsletter', scope, themeKey: initialThemeKey });
 
   const [themeKey, setThemeKey] = useState<EmailStudioThemeKey>(initialThemeKey);
   const [content, setContent] = useState<EmailEditorDocument>(() => cloneEmailStudioDocument(initialDocument));
@@ -76,14 +83,14 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
   const [editorKey, setEditorKey] = useState(0);
   const [status, setStatus] = useState<EmailStudioStatus>('loading');
   const [validation, setValidation] = useState<EmailValidationResult>(() =>
-    validateEmailStudioEditorDocument(initialDocument, 'newsletter', 'client'),
+    validateEmailStudioEditorDocument(initialDocument, 'newsletter', scope),
   );
   const [snapshot, setSnapshot] = useState<EmailContentDocument | null>(initialContent?.mode === 'newsletter' ? initialContent : null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const blocks = useMemo(() => getEmailStudioBlocksForMode('newsletter'), []);
-  const variables = useMemo(() => getEmailVariablesForScope('client'), []);
+  const variables = useMemo(() => getEmailVariablesForScope(scope), [scope]);
 
   const markDirty = () => {
     setSnapshot(null);
@@ -95,7 +102,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     setThemeKey(nextThemeKey);
     setContent(cloneEmailStudioDocument(nextDocument));
     setSnapshot(null);
-    setValidation(validateEmailStudioEditorDocument(nextDocument, 'newsletter', 'client'));
+    setValidation(validateEmailStudioEditorDocument(nextDocument, 'newsletter', scope));
     setError(null);
     setStatus('loading');
     setEditorKey((value) => value + 1);
@@ -122,7 +129,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
         preheader,
         themeKey,
       });
-      const studioValidation = validateEmailStudioDraft(draft, 'client');
+      const studioValidation = validateEmailStudioDraft(draft, scope);
       setValidation(studioValidation);
       if (!studioValidation.valid) {
         setSnapshot(null);
@@ -130,7 +137,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
         return null;
       }
 
-      const finalized = await finalizeEmailContentDocument(draft, 'client');
+      const finalized = await finalizeEmailContentDocument(draft, scope);
       if (!finalized.document) {
         setValidation(finalized.validation);
         setSnapshot(null);
@@ -194,7 +201,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
         onExport={() => void exportContent(false)}
         onReset={() => {
           setPreheader('');
-          replaceDocument(createEmailStudioDocument({ mode: 'newsletter', scope: 'client', themeKey }));
+          replaceDocument(createEmailStudioDocument({ mode: 'newsletter', scope, themeKey }));
         }}
       />
 
@@ -212,13 +219,13 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
           }}
           onUpdate={() => {
             const document = getCurrentDocument(editorRef.current, content);
-            setValidation(validateEmailStudioEditorDocument(document, 'newsletter', 'client'));
+            setValidation(validateEmailStudioEditorDocument(document, 'newsletter', scope));
             markDirty();
           }}
         />
         <div className="space-y-4">
           <EmailStudioInspector
-            scope="client"
+            scope={scope}
             mode="newsletter"
             themeKey={themeKey}
             preheader={preheader}
