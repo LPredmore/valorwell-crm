@@ -8,47 +8,100 @@ export type EmailStudioTheme = {
   label: string;
   description: string;
   accentColor: string;
+  accentTextColor: string;
+  secondaryAccentColor: string;
   backgroundColor: string;
   surfaceColor: string;
+  subtleSurfaceColor: string;
+  highlightColor: string;
   textColor: string;
+  mutedTextColor: string;
+  borderColor: string;
+  buttonColor: string;
+  buttonTextColor: string;
+  fontFamily: string;
 };
+
+export const EMAIL_STUDIO_LAYOUT = {
+  contentWidth: 600,
+  outerPadding: 24,
+  sectionGap: 20,
+  cardRadius: 12,
+  imageRadius: 10,
+} as const;
 
 export const EMAIL_STUDIO_THEMES: Record<EmailStudioThemeKey, EmailStudioTheme> = {
   valorwell: {
     key: 'valorwell',
     label: 'ValorWell',
-    description: 'Clinical, grounded, and mission connected.',
-    accentColor: '#315b45',
-    backgroundColor: '#eef4f0',
-    surfaceColor: '#ffffff',
-    textColor: '#173326',
+    description: 'Grounded veteran mental-health communication with forest green, warm gold, charcoal, and off-white.',
+    accentColor: '#315B45',
+    accentTextColor: '#FFFFFF',
+    secondaryAccentColor: '#C69A45',
+    backgroundColor: '#F5F3ED',
+    surfaceColor: '#FFFFFF',
+    subtleSurfaceColor: '#EDF3EF',
+    highlightColor: '#F5EAD3',
+    textColor: '#202823',
+    mutedTextColor: '#667269',
+    borderColor: '#D8E0DA',
+    buttonColor: '#C69A45',
+    buttonTextColor: '#18221C',
+    fontFamily: 'Arial, Helvetica, sans-serif',
   },
   ocs: {
     key: 'ocs',
     label: 'Operation Claims Success',
     description: 'Evidence-forward veteran claims education.',
-    accentColor: '#8a5a1f',
-    backgroundColor: '#f7f0e6',
-    surfaceColor: '#ffffff',
-    textColor: '#3d2b16',
+    accentColor: '#8A5A1F',
+    accentTextColor: '#FFFFFF',
+    secondaryAccentColor: '#C28B45',
+    backgroundColor: '#F7F0E6',
+    surfaceColor: '#FFFFFF',
+    subtleSurfaceColor: '#FBF6EE',
+    highlightColor: '#F3E5D0',
+    textColor: '#3D2B16',
+    mutedTextColor: '#75634E',
+    borderColor: '#E5D7C2',
+    buttonColor: '#8A5A1F',
+    buttonTextColor: '#FFFFFF',
+    fontFamily: 'Arial, Helvetica, sans-serif',
   },
   bty: {
     key: 'bty',
     label: 'Beyond The Yellow',
     description: 'Community, conversation, and collaboration.',
-    accentColor: '#315a7d',
-    backgroundColor: '#edf3f8',
-    surfaceColor: '#ffffff',
-    textColor: '#19354c',
+    accentColor: '#315A7D',
+    accentTextColor: '#FFFFFF',
+    secondaryAccentColor: '#D0A33E',
+    backgroundColor: '#EDF3F8',
+    surfaceColor: '#FFFFFF',
+    subtleSurfaceColor: '#F3F7FA',
+    highlightColor: '#F7EED5',
+    textColor: '#19354C',
+    mutedTextColor: '#607384',
+    borderColor: '#D6E0E8',
+    buttonColor: '#315A7D',
+    buttonTextColor: '#FFFFFF',
+    fontFamily: 'Arial, Helvetica, sans-serif',
   },
   'plain-outreach': {
     key: 'plain-outreach',
     label: 'Plain Outreach',
     description: 'Minimal formatting for personal outreach.',
-    accentColor: '#3f3f46',
-    backgroundColor: '#f4f4f5',
-    surfaceColor: '#ffffff',
-    textColor: '#18181b',
+    accentColor: '#3F3F46',
+    accentTextColor: '#FFFFFF',
+    secondaryAccentColor: '#71717A',
+    backgroundColor: '#F4F4F5',
+    surfaceColor: '#FFFFFF',
+    subtleSurfaceColor: '#FAFAFA',
+    highlightColor: '#F4F4F5',
+    textColor: '#18181B',
+    mutedTextColor: '#71717A',
+    borderColor: '#E4E4E7',
+    buttonColor: '#3F3F46',
+    buttonTextColor: '#FFFFFF',
+    fontFamily: 'Arial, Helvetica, sans-serif',
   },
 };
 
@@ -72,6 +125,125 @@ export const EMAIL_STUDIO_BLOCK_KINDS = [
 
 export type EmailStudioBlockKind = (typeof EMAIL_STUDIO_BLOCK_KINDS)[number];
 
+export type EmailStudioBlockPresentation = {
+  backgroundColor: string;
+  textColor: string;
+  titleColor: string;
+  borderColor: string;
+  borderLeftColor?: string;
+  textAlign: 'left' | 'center';
+  titleSize: number;
+  bodySize: number;
+  padding: string;
+  borderRadius: number;
+  linkKind: 'button' | 'text';
+  linkBackgroundColor: string;
+  linkColor: string;
+  footer: boolean;
+};
+
+export function getEmailStudioBlockPresentation(
+  kind: EmailStudioBlockKind,
+  themeKey: string,
+): EmailStudioBlockPresentation {
+  const theme = getEmailStudioTheme(themeKey);
+  const base: EmailStudioBlockPresentation = {
+    backgroundColor: theme.surfaceColor,
+    textColor: theme.textColor,
+    titleColor: theme.textColor,
+    borderColor: theme.borderColor,
+    textAlign: 'left',
+    titleSize: 20,
+    bodySize: 15,
+    padding: '22px 24px',
+    borderRadius: EMAIL_STUDIO_LAYOUT.cardRadius,
+    linkKind: 'text',
+    linkBackgroundColor: 'transparent',
+    linkColor: theme.accentColor,
+    footer: false,
+  };
+
+  if (kind === 'hero') {
+    return {
+      ...base,
+      backgroundColor: theme.accentColor,
+      textColor: theme.accentTextColor,
+      titleColor: theme.accentTextColor,
+      borderColor: theme.accentColor,
+      textAlign: 'center',
+      titleSize: 30,
+      bodySize: 16,
+      padding: '34px 30px',
+      borderRadius: 14,
+    };
+  }
+
+  if (kind === 'callout') {
+    return {
+      ...base,
+      backgroundColor: theme.subtleSurfaceColor,
+      borderLeftColor: theme.secondaryAccentColor,
+    };
+  }
+
+  if (kind === 'quote') {
+    return {
+      ...base,
+      backgroundColor: theme.highlightColor,
+      borderLeftColor: theme.secondaryAccentColor,
+      titleSize: 17,
+    };
+  }
+
+  if (kind === 'stats') {
+    return {
+      ...base,
+      backgroundColor: theme.textColor,
+      textColor: theme.accentTextColor,
+      titleColor: theme.accentTextColor,
+      borderColor: theme.textColor,
+      textAlign: 'center',
+      titleSize: 22,
+      bodySize: 17,
+    };
+  }
+
+  if (kind === 'bty' || kind === 'ocs-resource') {
+    return {
+      ...base,
+      backgroundColor: theme.highlightColor,
+    };
+  }
+
+  if (kind === 'cta') {
+    return {
+      ...base,
+      backgroundColor: theme.subtleSurfaceColor,
+      textAlign: 'center',
+      linkKind: 'button',
+      linkBackgroundColor: theme.buttonColor,
+      linkColor: theme.buttonTextColor,
+    };
+  }
+
+  if (kind === 'social-footer' || kind === 'compliance-footer') {
+    return {
+      ...base,
+      backgroundColor: theme.backgroundColor,
+      textColor: theme.mutedTextColor,
+      titleColor: theme.textColor,
+      borderColor: theme.backgroundColor,
+      titleSize: 15,
+      bodySize: 12,
+      padding: kind === 'compliance-footer' ? '12px 18px' : '18px 20px',
+      borderRadius: 0,
+      footer: true,
+    };
+  }
+
+  return base;
+}
+
 export type EmailStudioBlockDefinition = {
   kind: EmailStudioBlockKind;
   label: string;
@@ -93,12 +265,10 @@ export const EMAIL_STUDIO_BLOCKS: readonly EmailStudioBlockDefinition[] = [
   {
     kind: 'hero',
     label: 'Hero',
-    description: 'A prominent title, summary, and optional image.',
+    description: 'A prominent branded title, summary, and optional image.',
     modes: CAMPAIGN_AND_UP,
     title: 'A clearer next step',
     body: 'Use this space to frame the most important message in the email.',
-    imageUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80',
-    altText: 'A care professional speaking with a client',
   },
   {
     kind: 'text',
@@ -128,7 +298,7 @@ export const EMAIL_STUDIO_BLOCKS: readonly EmailStudioBlockDefinition[] = [
   {
     kind: 'story',
     label: 'Story',
-    description: 'A narrative section for a person or community outcome.',
+    description: 'A narrative card for a person, care update, or community outcome.',
     modes: CAMPAIGN_AND_UP,
     title: 'A story worth sharing',
     body: 'Describe the situation, the action taken, and what changed.',
@@ -136,7 +306,7 @@ export const EMAIL_STUDIO_BLOCKS: readonly EmailStudioBlockDefinition[] = [
   {
     kind: 'resource',
     label: 'Resource',
-    description: 'Feature an external or internal resource.',
+    description: 'Feature an external or internal resource as an article card.',
     modes: CAMPAIGN_AND_UP,
     title: 'Featured resource',
     body: 'Explain why this resource is useful and who it is for.',
@@ -162,10 +332,10 @@ export const EMAIL_STUDIO_BLOCKS: readonly EmailStudioBlockDefinition[] = [
   {
     kind: 'stats',
     label: 'Statistics',
-    description: 'Show a compact set of outcome or activity numbers.',
+    description: 'Show a compact set of verified outcome or activity numbers.',
     modes: NEWSLETTER_ONLY,
     title: 'This month in numbers',
-    body: '42 conversations • 18 new connections • 7 community partners',
+    body: 'Replace this copy with verified numbers before sending.',
   },
   {
     kind: 'clinician-spotlight',
@@ -204,10 +374,10 @@ export const EMAIL_STUDIO_BLOCKS: readonly EmailStudioBlockDefinition[] = [
   {
     kind: 'social-footer',
     label: 'Social footer',
-    description: 'Add approved social destinations.',
+    description: 'Add approved ValorWell destinations.',
     modes: NEWSLETTER_ONLY,
     title: 'Stay connected',
-    body: 'Follow ValorWell for new conversations and resources.',
+    body: 'Visit ValorWell for care information, new conversations, and practical resources.',
     href: 'https://valorwell.org',
   },
   {

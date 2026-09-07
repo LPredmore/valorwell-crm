@@ -51,6 +51,83 @@ export function createEmailStudioBlockNodeByKind(
   return createEmailStudioBlockNode(definition, themeKey);
 }
 
+function createConfiguredBlock(
+  kind: EmailStudioBlockKind,
+  themeKey: EmailStudioThemeKey,
+  attrs: Partial<Record<'title' | 'body' | 'href' | 'imageUrl' | 'altText', string>>,
+): EmailEditorNode {
+  const node = createEmailStudioBlockNodeByKind(kind, themeKey);
+  return {
+    ...node,
+    attrs: {
+      ...node.attrs,
+      ...attrs,
+    },
+  };
+}
+
+function weeklyGreetingToken(scope: EmailContentScope): string {
+  if (scope === 'client') return '{{first_name}}';
+  if (scope === 'staff') return '{{staff_first_name}}';
+  if (scope === 'relationship') return '{{contact_first_name}}';
+  return '{{newsletter_greeting_name}}';
+}
+
+export function createValorWellWeeklyNewsletterDocument(
+  scope: EmailContentScope = 'marketing_newsletter',
+  themeKey: EmailStudioThemeKey = 'valorwell',
+): EmailEditorDocument {
+  return {
+    type: 'doc',
+    content: [
+      createConfiguredBlock('hero', themeKey, {
+        title: 'ValorWell Weekly',
+        body: 'Veteran mental health, practical resources, and the people moving care forward.',
+        imageUrl: '',
+        altText: '',
+      }),
+      createConfiguredBlock('text', themeKey, {
+        title: 'A quick note from ValorWell',
+        body: `Hi ${weeklyGreetingToken(scope)},\n\nHere is the short version of what is worth knowing from ValorWell this week.`,
+      }),
+      createConfiguredBlock('story', themeKey, {
+        title: 'From the care side',
+        body: 'Share one concrete care update, lesson, or change that matters to veterans and families.',
+      }),
+      createConfiguredBlock('callout', themeKey, {
+        title: 'One thing worth knowing',
+        body: 'Use this space for the single practical point readers should remember after they close the email.',
+      }),
+      createConfiguredBlock('resource', themeKey, {
+        title: 'Resource of the week',
+        body: 'Feature one useful ValorWell resource and explain in plain language who it can help.',
+        href: 'https://valorwell.org',
+        imageUrl: '',
+        altText: '',
+      }),
+      createConfiguredBlock('bty', themeKey, {
+        title: 'Beyond The Yellow',
+        body: 'Highlight a recent conversation with someone moving beyond awareness and into meaningful action.',
+        href: 'https://valorwell.org/watch',
+        imageUrl: '',
+        altText: '',
+      }),
+      createConfiguredBlock('cta', themeKey, {
+        title: 'Looking for care?',
+        body: 'ValorWell provides virtual mental-health care for veterans and their families. Start here when you are ready.',
+        href: 'https://valorwell.org/get-care',
+      }),
+      createEmailStudioBlockNodeByKind('divider', themeKey),
+      createConfiguredBlock('social-footer', themeKey, {
+        title: 'Stay connected with ValorWell',
+        body: 'Find care information, new conversations, and practical resources at ValorWell.org.',
+        href: 'https://valorwell.org',
+      }),
+      ...(scope === 'staff' ? [] : [createEmailStudioBlockNodeByKind('compliance-footer', themeKey)]),
+    ],
+  };
+}
+
 export function createEmailStudioDocument(input: {
   mode: EmailContentMode;
   scope: EmailContentScope;
@@ -61,7 +138,9 @@ export function createEmailStudioDocument(input: {
     ? variable('first_name', 'Client first name')
     : input.scope === 'staff'
       ? variable('staff_first_name', 'Staff first name')
-      : variable('contact_first_name', 'Contact first name');
+      : input.scope === 'marketing_newsletter'
+        ? variable('newsletter_greeting_name', 'Newsletter greeting name')
+        : variable('contact_first_name', 'Contact first name');
 
   if (input.mode === 'direct') {
     return {
@@ -88,6 +167,10 @@ export function createEmailStudioDocument(input: {
         ...(input.scope === 'staff' ? [] : [createEmailStudioBlockNodeByKind('compliance-footer', themeKey)]),
       ],
     };
+  }
+
+  if (input.scope === 'marketing_newsletter') {
+    return createValorWellWeeklyNewsletterDocument(input.scope, themeKey);
   }
 
   if (input.scope === 'staff') {
@@ -133,6 +216,13 @@ export type EmailStudioPreset = {
 
 export const EMAIL_STUDIO_PRESETS: readonly EmailStudioPreset[] = [
   {
+    key: 'valorwell-weekly',
+    label: 'ValorWell Weekly',
+    description: 'The polished default newsletter for weekly ValorWell updates, resources, and calls to action.',
+    mode: 'newsletter',
+    themeKey: 'valorwell',
+  },
+  {
     key: 'personal-follow-up',
     label: 'Personal follow-up',
     description: 'A restrained direct message with structured personalization.',
@@ -160,6 +250,14 @@ export function createEmailStudioPresetDocument(
   scope: EmailContentScope,
 ): { mode: EmailContentMode; themeKey: EmailStudioThemeKey; document: EmailEditorDocument } {
   const preset = EMAIL_STUDIO_PRESETS.find((entry) => entry.key === presetKey) || EMAIL_STUDIO_PRESETS[0];
+  if (preset.key === 'valorwell-weekly') {
+    return {
+      mode: 'newsletter',
+      themeKey: 'valorwell',
+      document: createValorWellWeeklyNewsletterDocument(scope, 'valorwell'),
+    };
+  }
+
   const mode = scope === 'staff' ? 'newsletter' : preset.mode;
   return {
     mode,

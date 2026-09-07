@@ -1,5 +1,10 @@
 import { EmailNode } from '@react-email/editor/core';
-import { getEmailStudioTheme, type EmailStudioBlockKind } from './config';
+import {
+  EMAIL_STUDIO_LAYOUT,
+  getEmailStudioBlockPresentation,
+  getEmailStudioTheme,
+  type EmailStudioBlockKind,
+} from './config';
 
 export type EmailStudioBlockAttributes = {
   kind: EmailStudioBlockKind;
@@ -24,6 +29,14 @@ function blockAttributes(node: { attrs?: Record<string, unknown> }): EmailStudio
     themeKey: String(attrs.themeKey || 'valorwell'),
     locked: Boolean(attrs.locked),
   };
+}
+
+function linkLabel(kind: EmailStudioBlockKind): string {
+  if (kind === 'video') return 'Watch video';
+  if (kind === 'bty') return 'Explore Beyond The Yellow';
+  if (kind === 'social-footer') return 'Visit ValorWell';
+  if (kind === 'cta') return 'Get started';
+  return 'Open resource';
 }
 
 export const EmailStudioBlock = EmailNode.create({
@@ -70,7 +83,11 @@ export const EmailStudioBlock = EmailNode.create({
   renderHTML({ node }) {
     const attrs = blockAttributes(node);
     const theme = getEmailStudioTheme(attrs.themeKey);
+    const presentation = getEmailStudioBlockPresentation(attrs.kind, attrs.themeKey);
     const summary = [attrs.title, attrs.body].filter(Boolean).join(' — ') || 'Divider';
+    const borderLeft = presentation.borderLeftColor
+      ? `border-left:4px solid ${presentation.borderLeftColor}`
+      : '';
     return [
       'section',
       {
@@ -85,15 +102,19 @@ export const EmailStudioBlock = EmailNode.create({
         contenteditable: 'false',
         style: [
           'display:block',
-          'margin:16px 0',
-          'padding:16px 18px',
-          `border:1px solid ${theme.accentColor}33`,
-          `border-left:4px solid ${theme.accentColor}`,
-          'border-radius:8px',
-          `background:${theme.backgroundColor}`,
-          `color:${theme.textColor}`,
-          'font-family:Arial,sans-serif',
-        ].join(';'),
+          'box-sizing:border-box',
+          'width:100%',
+          `max-width:${EMAIL_STUDIO_LAYOUT.contentWidth}px`,
+          `margin:${EMAIL_STUDIO_LAYOUT.sectionGap}px auto`,
+          `padding:${presentation.padding}`,
+          `border:1px solid ${presentation.borderColor}`,
+          borderLeft,
+          `border-radius:${presentation.borderRadius}px`,
+          `background:${presentation.backgroundColor}`,
+          `color:${presentation.textColor}`,
+          `font-family:${theme.fontFamily}`,
+          `text-align:${presentation.textAlign}`,
+        ].filter(Boolean).join(';'),
       },
       summary,
     ];
@@ -102,62 +123,113 @@ export const EmailStudioBlock = EmailNode.create({
   renderToReactEmail({ node }) {
     const attrs = blockAttributes(node);
     const theme = getEmailStudioTheme(attrs.themeKey);
+    const presentation = getEmailStudioBlockPresentation(attrs.kind, attrs.themeKey);
 
     if (attrs.kind === 'divider') {
-      return <hr style={{ border: 0, borderTop: `1px solid ${theme.accentColor}55`, margin: '24px 0' }} />;
+      return (
+        <hr
+          style={{
+            width: '100%',
+            maxWidth: `${EMAIL_STUDIO_LAYOUT.contentWidth}px`,
+            border: 0,
+            borderTop: `1px solid ${theme.borderColor}`,
+            margin: '26px auto',
+          }}
+        />
+      );
     }
 
-    const isQuote = attrs.kind === 'quote';
-    const isFooter = attrs.kind === 'social-footer' || attrs.kind === 'compliance-footer';
     const isHero = attrs.kind === 'hero';
 
     return (
       <section
         style={{
-          margin: isFooter ? '24px 0 0' : '18px 0',
-          padding: isHero ? '28px 24px' : '18px 20px',
-          border: `1px solid ${theme.accentColor}22`,
-          borderLeft: isQuote || attrs.kind === 'callout' ? `4px solid ${theme.accentColor}` : undefined,
-          borderRadius: isFooter ? '0' : '8px',
-          backgroundColor: isFooter ? theme.surfaceColor : theme.backgroundColor,
-          color: theme.textColor,
-          textAlign: isHero ? 'center' : 'left',
-          fontFamily: 'Arial, sans-serif',
-          fontSize: isFooter ? '12px' : '15px',
-          lineHeight: '1.55',
+          boxSizing: 'border-box',
+          width: '100%',
+          maxWidth: `${EMAIL_STUDIO_LAYOUT.contentWidth}px`,
+          margin: presentation.footer ? '12px auto 0' : `${EMAIL_STUDIO_LAYOUT.sectionGap}px auto`,
+          padding: presentation.padding,
+          border: `1px solid ${presentation.borderColor}`,
+          borderLeft: presentation.borderLeftColor ? `4px solid ${presentation.borderLeftColor}` : undefined,
+          borderRadius: `${presentation.borderRadius}px`,
+          backgroundColor: presentation.backgroundColor,
+          color: presentation.textColor,
+          textAlign: presentation.textAlign,
+          fontFamily: theme.fontFamily,
+          fontSize: `${presentation.bodySize}px`,
+          lineHeight: '1.6',
         }}
       >
+        {isHero ? (
+          <p
+            style={{
+              margin: '0 0 10px',
+              color: theme.secondaryAccentColor,
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '1.8px',
+              textTransform: 'uppercase',
+            }}
+          >
+            {theme.label}
+          </p>
+        ) : null}
         {attrs.imageUrl ? (
           <img
             src={attrs.imageUrl}
             alt={attrs.altText}
-            width="560"
-            style={{ width: '100%', maxWidth: '560px', height: 'auto', borderRadius: '7px', marginBottom: '16px' }}
+            width="552"
+            style={{
+              display: 'block',
+              width: '100%',
+              maxWidth: '552px',
+              height: 'auto',
+              borderRadius: `${EMAIL_STUDIO_LAYOUT.imageRadius}px`,
+              margin: isHero ? '0 auto 20px' : '0 0 18px',
+            }}
           />
         ) : null}
         {attrs.title ? (
-          <h2 style={{ margin: '0 0 10px', color: theme.textColor, fontSize: isHero ? '28px' : '20px', lineHeight: '1.25' }}>
+          <h2
+            style={{
+              margin: '0 0 10px',
+              color: presentation.titleColor,
+              fontSize: `${presentation.titleSize}px`,
+              lineHeight: '1.25',
+              letterSpacing: isHero ? '-0.4px' : '0',
+            }}
+          >
             {attrs.title}
           </h2>
         ) : null}
-        {attrs.body ? <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{attrs.body}</p> : null}
+        {attrs.body ? (
+          <p
+            style={{
+              margin: 0,
+              color: presentation.textColor,
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {attrs.body}
+          </p>
+        ) : null}
         {attrs.href ? (
-          <p style={{ margin: '16px 0 0' }}>
+          <p style={{ margin: '18px 0 0' }}>
             <a
               href={attrs.href}
               target="_blank"
               rel="noreferrer"
               style={{
                 display: 'inline-block',
-                padding: attrs.kind === 'cta' ? '10px 16px' : '0',
-                borderRadius: attrs.kind === 'cta' ? '6px' : '0',
-                backgroundColor: attrs.kind === 'cta' ? theme.accentColor : 'transparent',
-                color: attrs.kind === 'cta' ? '#ffffff' : theme.accentColor,
+                padding: presentation.linkKind === 'button' ? '12px 20px' : '0',
+                borderRadius: presentation.linkKind === 'button' ? '7px' : '0',
+                backgroundColor: presentation.linkBackgroundColor,
+                color: presentation.linkColor,
                 fontWeight: 700,
-                textDecoration: attrs.kind === 'cta' ? 'none' : 'underline',
+                textDecoration: presentation.linkKind === 'button' ? 'none' : 'underline',
               }}
             >
-              {attrs.kind === 'video' ? 'Watch video' : attrs.kind === 'cta' ? attrs.title || 'Continue' : 'Open resource'}
+              {linkLabel(attrs.kind)}
             </a>
           </p>
         ) : null}
