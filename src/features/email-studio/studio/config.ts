@@ -125,6 +125,125 @@ export const EMAIL_STUDIO_BLOCK_KINDS = [
 
 export type EmailStudioBlockKind = (typeof EMAIL_STUDIO_BLOCK_KINDS)[number];
 
+export type EmailStudioBlockPresentation = {
+  backgroundColor: string;
+  textColor: string;
+  titleColor: string;
+  borderColor: string;
+  borderLeftColor?: string;
+  textAlign: 'left' | 'center';
+  titleSize: number;
+  bodySize: number;
+  padding: string;
+  borderRadius: number;
+  linkKind: 'button' | 'text';
+  linkBackgroundColor: string;
+  linkColor: string;
+  footer: boolean;
+};
+
+export function getEmailStudioBlockPresentation(
+  kind: EmailStudioBlockKind,
+  themeKey: string,
+): EmailStudioBlockPresentation {
+  const theme = getEmailStudioTheme(themeKey);
+  const base: EmailStudioBlockPresentation = {
+    backgroundColor: theme.surfaceColor,
+    textColor: theme.textColor,
+    titleColor: theme.textColor,
+    borderColor: theme.borderColor,
+    textAlign: 'left',
+    titleSize: 20,
+    bodySize: 15,
+    padding: '22px 24px',
+    borderRadius: EMAIL_STUDIO_LAYOUT.cardRadius,
+    linkKind: 'text',
+    linkBackgroundColor: 'transparent',
+    linkColor: theme.accentColor,
+    footer: false,
+  };
+
+  if (kind === 'hero') {
+    return {
+      ...base,
+      backgroundColor: theme.accentColor,
+      textColor: theme.accentTextColor,
+      titleColor: theme.accentTextColor,
+      borderColor: theme.accentColor,
+      textAlign: 'center',
+      titleSize: 30,
+      bodySize: 16,
+      padding: '34px 30px',
+      borderRadius: 14,
+    };
+  }
+
+  if (kind === 'callout') {
+    return {
+      ...base,
+      backgroundColor: theme.subtleSurfaceColor,
+      borderLeftColor: theme.secondaryAccentColor,
+    };
+  }
+
+  if (kind === 'quote') {
+    return {
+      ...base,
+      backgroundColor: theme.highlightColor,
+      borderLeftColor: theme.secondaryAccentColor,
+      titleSize: 17,
+    };
+  }
+
+  if (kind === 'stats') {
+    return {
+      ...base,
+      backgroundColor: theme.textColor,
+      textColor: theme.accentTextColor,
+      titleColor: theme.accentTextColor,
+      borderColor: theme.textColor,
+      textAlign: 'center',
+      titleSize: 22,
+      bodySize: 17,
+    };
+  }
+
+  if (kind === 'bty' || kind === 'ocs-resource') {
+    return {
+      ...base,
+      backgroundColor: theme.highlightColor,
+    };
+  }
+
+  if (kind === 'cta') {
+    return {
+      ...base,
+      backgroundColor: theme.subtleSurfaceColor,
+      textAlign: 'center',
+      linkKind: 'button',
+      linkBackgroundColor: theme.buttonColor,
+      linkColor: theme.buttonTextColor,
+    };
+  }
+
+  if (kind === 'social-footer' || kind === 'compliance-footer') {
+    return {
+      ...base,
+      backgroundColor: theme.backgroundColor,
+      textColor: theme.mutedTextColor,
+      titleColor: theme.textColor,
+      borderColor: theme.backgroundColor,
+      titleSize: 15,
+      bodySize: 12,
+      padding: kind === 'compliance-footer' ? '12px 18px' : '18px 20px',
+      borderRadius: 0,
+      footer: true,
+    };
+  }
+
+  return base;
+}
+
 export type EmailStudioBlockDefinition = {
   kind: EmailStudioBlockKind;
   label: string;
