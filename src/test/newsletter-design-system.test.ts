@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   EMAIL_STUDIO_LAYOUT,
   EMAIL_STUDIO_THEMES,
+  getEmailStudioBlockPresentation,
 } from '@/features/email-studio/studio/config';
 import {
   EMAIL_STUDIO_PRESETS,
@@ -9,7 +10,6 @@ import {
   createEmailStudioPresetDocument,
   createValorWellWeeklyNewsletterDocument,
 } from '@/features/email-studio/studio/documents';
-import { getEmailStudioBlockPresentation } from '@/features/email-studio/studio/extensions';
 import { validateEmailStudioEditorDocument } from '@/features/email-studio/studio/validation';
 
 function blocks(document: ReturnType<typeof createValorWellWeeklyNewsletterDocument>) {
