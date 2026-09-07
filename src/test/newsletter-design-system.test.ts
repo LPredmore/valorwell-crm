@@ -10,6 +10,7 @@ import {
   createValorWellWeeklyNewsletterDocument,
 } from '@/features/email-studio/studio/documents';
 import { getEmailStudioBlockPresentation } from '@/features/email-studio/studio/extensions';
+import { validateEmailStudioEditorDocument } from '@/features/email-studio/studio/validation';
 
 function blocks(document: ReturnType<typeof createValorWellWeeklyNewsletterDocument>) {
   return document.content.filter((node) => node.type === 'emailStudioBlock');
@@ -35,7 +36,7 @@ describe('N3 ValorWell newsletter design system', () => {
     });
   });
 
-  it('makes ValorWell Weekly the default marketing newsletter document', () => {
+  it('makes ValorWell Weekly the default canonical marketing newsletter document', () => {
     const expected = createValorWellWeeklyNewsletterDocument();
     const actual = createEmailStudioDocument({
       mode: 'newsletter',
@@ -56,6 +57,7 @@ describe('N3 ValorWell newsletter design system', () => {
       'social-footer',
       'compliance-footer',
     ]);
+    expect(validateEmailStudioEditorDocument(actual, 'newsletter', 'marketing_newsletter').valid).toBe(true);
   });
 
   it('keeps the weekly starter truthful, mailbox-safe, and ready for operator images', () => {
@@ -86,6 +88,16 @@ describe('N3 ValorWell newsletter design system', () => {
     expect(created.mode).toBe('newsletter');
     expect(created.themeKey).toBe('valorwell');
     expect(created.document).toEqual(createValorWellWeeklyNewsletterDocument());
+  });
+
+  it('keeps the shared Weekly preset valid when another Email Studio scope selects it', () => {
+    const staff = createEmailStudioPresetDocument('valorwell-weekly', 'staff');
+    const serialized = JSON.stringify(staff.document);
+
+    expect(serialized).toContain('{{staff_first_name}}');
+    expect(serialized).not.toContain('{{newsletter_greeting_name}}');
+    expect(blocks(staff.document).some((node) => node.attrs?.kind === 'compliance-footer')).toBe(false);
+    expect(validateEmailStudioEditorDocument(staff.document, 'newsletter', 'staff').valid).toBe(true);
   });
 
   it('uses distinct but consistent visual treatments for the weekly hierarchy', () => {
