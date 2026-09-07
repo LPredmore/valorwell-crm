@@ -66,8 +66,17 @@ function createConfiguredBlock(
   };
 }
 
-export function createValorWellWeeklyNewsletterDocument(): EmailEditorDocument {
-  const themeKey: EmailStudioThemeKey = 'valorwell';
+function weeklyGreetingToken(scope: EmailContentScope): string {
+  if (scope === 'client') return '{{first_name}}';
+  if (scope === 'staff') return '{{staff_first_name}}';
+  if (scope === 'relationship') return '{{contact_first_name}}';
+  return '{{newsletter_greeting_name}}';
+}
+
+export function createValorWellWeeklyNewsletterDocument(
+  scope: EmailContentScope = 'marketing_newsletter',
+  themeKey: EmailStudioThemeKey = 'valorwell',
+): EmailEditorDocument {
   return {
     type: 'doc',
     content: [
@@ -79,7 +88,7 @@ export function createValorWellWeeklyNewsletterDocument(): EmailEditorDocument {
       }),
       createConfiguredBlock('text', themeKey, {
         title: 'A quick note from ValorWell',
-        body: 'Hi {{newsletter_greeting_name}},\n\nHere is the short version of what is worth knowing from ValorWell this week.',
+        body: `Hi ${weeklyGreetingToken(scope)},\n\nHere is the short version of what is worth knowing from ValorWell this week.`,
       }),
       createConfiguredBlock('story', themeKey, {
         title: 'From the care side',
@@ -114,7 +123,7 @@ export function createValorWellWeeklyNewsletterDocument(): EmailEditorDocument {
         body: 'Find care information, new conversations, and practical resources at ValorWell.org.',
         href: 'https://valorwell.org',
       }),
-      createEmailStudioBlockNodeByKind('compliance-footer', themeKey),
+      ...(scope === 'staff' ? [] : [createEmailStudioBlockNodeByKind('compliance-footer', themeKey)]),
     ],
   };
 }
@@ -161,7 +170,7 @@ export function createEmailStudioDocument(input: {
   }
 
   if (input.scope === 'marketing_newsletter') {
-    return createValorWellWeeklyNewsletterDocument();
+    return createValorWellWeeklyNewsletterDocument(input.scope, themeKey);
   }
 
   if (input.scope === 'staff') {
@@ -245,7 +254,7 @@ export function createEmailStudioPresetDocument(
     return {
       mode: 'newsletter',
       themeKey: 'valorwell',
-      document: createValorWellWeeklyNewsletterDocument(),
+      document: createValorWellWeeklyNewsletterDocument(scope, 'valorwell'),
     };
   }
 
