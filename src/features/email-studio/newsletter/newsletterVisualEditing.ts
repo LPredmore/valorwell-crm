@@ -127,11 +127,7 @@ export function moveSelectedNewsletterBlock(editor: Editor | null, direction: 'u
 
 function getSelectedBlockNode(editor: Editor) {
   const selection = editor.state.selection as typeof editor.state.selection & {
-    node?: {
-      type: { name: string };
-      attrs: Record<string, unknown>;
-      nodeSize: number;
-    };
+    node?: typeof editor.state.doc;
   };
   const node = selection.node;
   if (!node || node.type.name !== 'emailStudioBlock') return null;
