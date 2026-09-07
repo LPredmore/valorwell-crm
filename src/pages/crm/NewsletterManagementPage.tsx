@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -105,10 +105,10 @@ export default function NewsletterManagementPage() {
     retry: false,
   });
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['newsletters'] });
     void queryClient.invalidateQueries({ queryKey: ['newsletter-trace'] });
-  };
+  }, [queryClient]);
 
   const requestAutosave = () => {
     setAutosaveError(null);
@@ -193,11 +193,11 @@ export default function NewsletterManagementPage() {
       return { detail, content };
     },
     onSuccess: ({ detail, content }) => {
-      const next = {
+      const next: ComposerState = {
         newsletterId: detail.id,
         name: detail.name,
         subject: detail.subject ?? '',
-        audienceDomains: detail.audienceDomains.length > 0 ? detail.audienceDomains : ['client'] as NewsletterAudienceDomain[],
+        audienceDomains: detail.audienceDomains.length > 0 ? detail.audienceDomains : ['client'],
         reason: '',
         initialContent: content,
         templateVersionId: detail.templateVersionId,
@@ -225,11 +225,11 @@ export default function NewsletterManagementPage() {
     },
     onSuccess: ({ detail, content }) => {
       refresh();
-      const next = {
+      const next: ComposerState = {
         newsletterId: detail.id,
         name: detail.name,
         subject: detail.subject ?? '',
-        audienceDomains: detail.audienceDomains.length > 0 ? detail.audienceDomains : ['client'] as NewsletterAudienceDomain[],
+        audienceDomains: detail.audienceDomains.length > 0 ? detail.audienceDomains : ['client'],
         reason: '',
         initialContent: content,
         templateVersionId: detail.templateVersionId,
@@ -318,7 +318,7 @@ export default function NewsletterManagementPage() {
     }, AUTOSAVE_DELAY_MS);
 
     return () => window.clearTimeout(timeout);
-  }, [autosaveRevision, composer]);
+  }, [autosaveRevision, composer, refresh]);
 
   const composerValid = Boolean(
     composer
