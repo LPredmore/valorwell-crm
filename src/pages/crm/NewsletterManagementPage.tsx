@@ -47,6 +47,11 @@ type ComposerState = {
   templateVersionId: string | null;
 };
 
+type AutosaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
+
+const AUTOSAVE_REASON = 'Newsletter visual editor autosave';
+const AUTOSAVE_DELAY_MS = 1200;
+
 const emptyComposer: ComposerState = {
   newsletterId: null,
   name: '',
@@ -68,7 +73,14 @@ export default function NewsletterManagementPage() {
   const canMutate = useCanMutate();
   const queryClient = useQueryClient();
   const emailStudioRef = useRef<ClientNewsletterEmailStudioHandle>(null);
+  const composerRef = useRef<ComposerState | null>(null);
+  const autosaveBusyRef = useRef(false);
+  const autosavePendingRef = useRef(false);
+  const autosaveRevisionRef = useRef(0);
   const [composer, setComposer] = useState<ComposerState | null>(null);
+  const [autosaveRevision, setAutosaveRevision] = useState(0);
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle');
+  const [autosaveError, setAutosaveError] = useState<string | null>(null);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [scheduleAt, setScheduleAt] = useState<Record<string, string>>({});
   const [traceNewsletterId, setTraceNewsletterId] = useState<string | null>(null);
@@ -98,6 +110,26 @@ export default function NewsletterManagementPage() {
     void queryClient.invalidateQueries({ queryKey: ['newsletter-trace'] });
   };
 
+  const requestAutosave = () => {
+    setAutosaveError(null);
+    setAutosaveStatus('pending');
+    setAutosaveRevision((current) => {
+      const next = current + 1;
+      autosaveRevisionRef.current = next;
+      return next;
+    });
+  };
+
+  const updateComposer = (updater: (current: ComposerState) => ComposerState) => {
+    setComposer((current) => {
+      if (!current) return current;
+      const next = updater(current);
+      composerRef.current = next;
+      return next;
+    });
+    requestAutosave();
+  };
+
   const save = useMutation({
     mutationFn: async (state: ComposerState) => {
       const content = await emailStudioRef.current?.exportContent();
@@ -115,6 +147,7 @@ export default function NewsletterManagementPage() {
       });
     },
     onSuccess: () => {
+      composerRef.current = null;
       setComposer(null);
       refresh();
     },
@@ -160,15 +193,19 @@ export default function NewsletterManagementPage() {
       return { detail, content };
     },
     onSuccess: ({ detail, content }) => {
-      setComposer({
+      const next = {
         newsletterId: detail.id,
         name: detail.name,
         subject: detail.subject ?? '',
-        audienceDomains: detail.audienceDomains.length > 0 ? detail.audienceDomains : ['client'],
+        audienceDomains: detail.audienceDomains.length > 0 ? detail.audienceDomains : ['client'] as NewsletterAudienceDomain[],
         reason: '',
         initialContent: content,
         templateVersionId: detail.templateVersionId,
-      });
+      };
+      composerRef.current = next;
+      setComposer(next);
+      setAutosaveStatus('idle');
+      setAutosaveError(null);
     },
   });
 
@@ -188,29 +225,112 @@ export default function NewsletterManagementPage() {
     },
     onSuccess: ({ detail, content }) => {
       refresh();
-      setComposer({
+      const next = {
         newsletterId: detail.id,
         name: detail.name,
         subject: detail.subject ?? '',
-        audienceDomains: detail.audienceDomains.length > 0 ? detail.audienceDomains : ['client'],
+        audienceDomains: detail.audienceDomains.length > 0 ? detail.audienceDomains : ['client'] as NewsletterAudienceDomain[],
         reason: '',
         initialContent: content,
         templateVersionId: detail.templateVersionId,
-      });
+      };
+      composerRef.current = next;
+      setComposer(next);
+      setAutosaveStatus('idle');
+      setAutosaveError(null);
     },
   });
 
   const rows: NewsletterSummary[] = useMemo(() => newsletters.data?.newsletters ?? [], [newsletters.data]);
 
   useEffect(() => {
-    if (!composer) save.reset();
+    composerRef.current = composer;
+    if (!composer) {
+      save.reset();
+      setAutosaveStatus('idle');
+      setAutosaveError(null);
+    }
   }, [composer, save]);
+
+  useEffect(() => {
+    if (!composer || autosaveRevision === 0) return;
+    const eligible = Boolean(
+      composer.name.trim()
+        && composer.subject.trim()
+        && composer.audienceDomains.length > 0,
+    );
+    if (!eligible) return;
+
+    const timeout = window.setTimeout(() => {
+      const runAutosave = async () => {
+        if (autosaveBusyRef.current) {
+          autosavePendingRef.current = true;
+          return;
+        }
+
+        autosaveBusyRef.current = true;
+        setAutosaveStatus('saving');
+        setAutosaveError(null);
+        const revisionAtStart = autosaveRevisionRef.current;
+
+        try {
+          const content = await emailStudioRef.current?.exportContent();
+          if (!content) {
+            throw new Error('Autosave paused until the newsletter passes Email Studio validation.');
+          }
+          const current = composerRef.current;
+          if (!current) return;
+          if (!current.name.trim() || !current.subject.trim() || current.audienceDomains.length === 0) return;
+
+          const result = await upsertCanonicalNewsletter({
+            newsletterId: current.newsletterId,
+            name: current.name.trim(),
+            subject: current.subject.trim(),
+            content,
+            audienceDomains: current.audienceDomains,
+            reason: AUTOSAVE_REASON,
+            templateVersionId: current.templateVersionId,
+          });
+
+          if (composerRef.current && !composerRef.current.newsletterId) {
+            const next = { ...composerRef.current, newsletterId: result.newsletterId };
+            composerRef.current = next;
+            setComposer(next);
+          }
+          refresh();
+          setAutosaveStatus('saved');
+        } catch (caught) {
+          setAutosaveStatus('error');
+          setAutosaveError(caught instanceof Error ? caught.message : 'Newsletter autosave failed.');
+        } finally {
+          autosaveBusyRef.current = false;
+          if (autosavePendingRef.current || autosaveRevisionRef.current > revisionAtStart) {
+            autosavePendingRef.current = false;
+            setAutosaveRevision((current) => {
+              const next = current + 1;
+              autosaveRevisionRef.current = next;
+              return next;
+            });
+          }
+        }
+      };
+      void runAutosave();
+    }, AUTOSAVE_DELAY_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [autosaveRevision, composer]);
 
   const composerValid = Boolean(
     composer
       && composer.name.trim()
       && composer.subject.trim()
       && composer.reason.trim()
+      && composer.audienceDomains.length > 0,
+  );
+  const autosaveEligible = Boolean(
+    composer
+      && composer.name.trim()
+      && composer.subject.trim()
       && composer.audienceDomains.length > 0,
   );
 
@@ -222,7 +342,13 @@ export default function NewsletterManagementPage() {
           Design canonical Email Studio newsletters, verify the eligible mailbox count, then send now or schedule delivery. Recipient snapshots and suppression checks are enforced by the server when a draft is scheduled.
         </p>
       </div>
-      <Button disabled={!canMutate} onClick={() => setComposer({ ...emptyComposer })}>New newsletter</Button>
+      <Button disabled={!canMutate} onClick={() => {
+        const next = { ...emptyComposer };
+        composerRef.current = next;
+        setComposer(next);
+        setAutosaveStatus('idle');
+        setAutosaveError(null);
+      }}>New newsletter</Button>
     </div>
 
     <Card>
@@ -358,7 +484,7 @@ export default function NewsletterManagementPage() {
         <DialogHeader>
           <DialogTitle>{composer?.newsletterId ? 'Edit newsletter draft' : 'New newsletter'}</DialogTitle>
           <DialogDescription>
-            The marketing newsletter scope limits personalization to mailbox-safe variables. Save produces the canonical HTML, text, editor document, theme, and render hash used by the delivery pipeline.
+            The marketing newsletter scope limits personalization to mailbox-safe variables. Changes to a valid draft autosave through the same canonical server path used by Save draft.
           </DialogDescription>
         </DialogHeader>
 
@@ -366,11 +492,19 @@ export default function NewsletterManagementPage() {
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="newsletter-name">Internal name</Label>
-              <Input id="newsletter-name" onChange={(event) => setComposer({ ...composer, name: event.target.value })} value={composer.name} />
+              <Input
+                id="newsletter-name"
+                onChange={(event) => updateComposer((current) => ({ ...current, name: event.target.value }))}
+                value={composer.name}
+              />
             </div>
             <div className="space-y-1">
               <Label htmlFor="newsletter-subject">Subject line</Label>
-              <Input id="newsletter-subject" onChange={(event) => setComposer({ ...composer, subject: event.target.value })} value={composer.subject} />
+              <Input
+                id="newsletter-subject"
+                onChange={(event) => updateComposer((current) => ({ ...current, subject: event.target.value }))}
+                value={composer.subject}
+              />
             </div>
           </div>
 
@@ -382,12 +516,12 @@ export default function NewsletterManagementPage() {
                 return <label className="flex items-center gap-2 text-sm" key={domain}>
                   <Checkbox
                     checked={checked}
-                    onCheckedChange={(next) => setComposer({
-                      ...composer,
+                    onCheckedChange={(next) => updateComposer((current) => ({
+                      ...current,
                       audienceDomains: next
-                        ? [...composer.audienceDomains, domain]
-                        : composer.audienceDomains.filter((item) => item !== domain),
-                    })}
+                        ? [...current.audienceDomains, domain]
+                        : current.audienceDomains.filter((item) => item !== domain),
+                    }))}
                   />
                   {NEWSLETTER_AUDIENCE_LABELS[domain]}
                 </label>;
@@ -415,24 +549,40 @@ export default function NewsletterManagementPage() {
             </div>}
           </div>
 
+          <div className="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-xs">
+            <span className="font-medium">Autosave</span>
+            {!autosaveEligible ? <span className="text-muted-foreground">Add an internal name, subject, and audience to enable autosave.</span> : null}
+            {autosaveEligible && autosaveStatus === 'idle' ? <span className="text-muted-foreground">Changes save automatically after you stop editing.</span> : null}
+            {autosaveEligible && autosaveStatus === 'pending' ? <Badge variant="outline">Unsaved changes</Badge> : null}
+            {autosaveStatus === 'saving' ? <Badge variant="secondary">Saving…</Badge> : null}
+            {autosaveStatus === 'saved' ? <Badge>Saved</Badge> : null}
+            {autosaveStatus === 'error' ? <Badge variant="destructive">Autosave failed</Badge> : null}
+            {autosaveError ? <span className="w-full text-destructive">{autosaveError}</span> : null}
+          </div>
+
           <ClientNewsletterEmailStudioComposer
-            key={composer.newsletterId ?? 'new-newsletter'}
             ref={emailStudioRef}
             initialContent={composer.initialContent}
             scope="marketing_newsletter"
+            onDirty={requestAutosave}
           />
 
           <div className="space-y-1">
             <Label htmlFor="newsletter-reason">Reason for this change</Label>
-            <Input id="newsletter-reason" onChange={(event) => setComposer({ ...composer, reason: event.target.value })} value={composer.reason} />
+            <Input
+              id="newsletter-reason"
+              onChange={(event) => setComposer((current) => current ? { ...current, reason: event.target.value } : current)}
+              value={composer.reason}
+            />
+            <p className="text-xs text-muted-foreground">Required for the explicit Save draft audit entry; autosave uses its own fixed audit reason.</p>
           </div>
 
           {save.isError && <p className="text-sm text-destructive">{save.error instanceof Error ? save.error.message : 'Could not save this newsletter.'}</p>}
         </div>}
 
         <DialogFooter>
-          <Button onClick={() => setComposer(null)} variant="outline">Cancel</Button>
-          <Button disabled={!composerValid || save.isPending} onClick={() => composer && save.mutate(composer)}>
+          <Button onClick={() => setComposer(null)} variant="outline">Close</Button>
+          <Button disabled={!composerValid || save.isPending || autosaveStatus === 'saving'} onClick={() => composer && save.mutate(composer)}>
             {save.isPending ? 'Saving…' : 'Save draft'}
           </Button>
         </DialogFooter>
