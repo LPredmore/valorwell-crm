@@ -83,8 +83,22 @@ describe('newsletter visual editing', () => {
     const updateAttributes = vi.fn(() => ({ run }));
     const focus = vi.fn(() => ({ updateAttributes }));
     const chain = vi.fn(() => ({ focus }));
-    const editor = selectedEditor({ kind: 'story', locked: false }) as Editor & { chain: typeof chain };
-    editor.chain = chain;
+    const editor = {
+      state: {
+        selection: {
+          from: 10,
+          to: 12,
+          $from: { depth: 0, index: () => 1 },
+          node: {
+            type: { name: 'emailStudioBlock' },
+            attrs: { kind: 'story', locked: false },
+            nodeSize: 2,
+          },
+        },
+        doc: { childCount: 3 },
+      },
+      chain,
+    } as unknown as Editor;
 
     expect(updateSelectedNewsletterBlock(editor, { title: 'A new title' })).toBe(true);
     expect(updateAttributes).toHaveBeenCalledWith('emailStudioBlock', { title: 'A new title' });
