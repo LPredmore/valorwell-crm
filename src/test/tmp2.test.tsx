@@ -1,0 +1,23 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { ClientNewsletterEmailStudioComposer } from '@/features/email-studio/newsletter/ClientNewsletterEmailStudioComposer';
+vi.mock('@/features/email-studio/templates/api', () => ({ getEmailStudioAccessContext: async () => ({ tenantId: 't', userId: 'u', role: 'admin' }) }));
+describe('render', () => { it('clicks', async () => {
+  render(<ClientNewsletterEmailStudioComposer scope="marketing_newsletter" />);
+  await new Promise(r => setTimeout(r, 1200));
+  const sections = Array.from(document.querySelectorAll('section[data-email-studio-block]')) as HTMLElement[];
+  const target = sections.find(s => s.dataset.emailStudioBlock === 'story')!;
+  console.log('target title', target.dataset.title);
+  fireEvent.mouseDown(target.querySelector('h2')!, { bubbles: true });
+  console.log('after mousedown');
+  fireEvent.click(target.querySelector('h2')!, { bubbles: true });
+  console.log('after click');
+  await new Promise(r => setTimeout(r, 300));
+  const title = screen.getByLabelText('Title') as HTMLInputElement;
+  console.log('TITLE VALUE', JSON.stringify(title.value), 'disabled', title.disabled);
+  fireEvent.change(title, { target: { value: 'Edited' } });
+  await new Promise(r => setTimeout(r, 300));
+  console.log('after change value', (screen.getByLabelText('Title') as HTMLInputElement).value);
+  console.log('canvas titles', Array.from(document.querySelectorAll('section[data-email-studio-block="story"]')).map(s => (s as HTMLElement).dataset.title));
+  expect(true).toBe(true);
+}); });

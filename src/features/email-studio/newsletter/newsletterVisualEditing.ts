@@ -24,6 +24,8 @@ export type NewsletterSelectedBlock = {
   canMoveDown: boolean;
 };
 
+const BLOCK_NODE_NAME = 'emailStudioBlock';
+
 const IMAGE_BLOCK_KINDS: readonly EmailStudioBlockKind[] = [
   'hero',
   'story',
@@ -51,41 +53,79 @@ export function newsletterBlockSupportsLink(kind: EmailStudioBlockKind): boolean
   return LINK_BLOCK_KINDS.includes(kind);
 }
 
-export function getSelectedNewsletterBlock(editor: Editor | null): NewsletterSelectedBlock | null {
-  if (!editor) return null;
-  const selected = getSelectedBlockNode(editor);
-  if (!selected) return null;
+type BlockNode = {
+  type: { name: string };
+  attrs: Record<string, unknown>;
+  nodeSize: number;
+};
 
-  const { selection, node } = selected;
-  if (selection.$from.depth !== 0) return null;
+/**
+ * Structured blocks are NOT always top-level children of the document: the
+ * email editor wraps authored content in a `container` node. Every lookup here
+ * is therefore depth-agnostic and walks the whole document instead of assuming
+ * `doc.child(i)`.
+ */
+function collectBlockPositions(editor: Editor | null): number[] {
+  if (!editor) return [];
+  const positions: number[] = [];
+  editor.state.doc.descendants((node: BlockNode, pos: number) => {
+    if (node.type.name === BLOCK_NODE_NAME) {
+      positions.push(pos);
+      return false;
+    }
+    return true;
+  });
+  return positions;
+}
 
-  const rawKind = String(node.attrs.kind || 'text');
-  const kind = (EMAIL_STUDIO_BLOCK_KINDS as readonly string[]).includes(rawKind)
-    ? rawKind as EmailStudioBlockKind
+function normalizeKind(raw: unknown): EmailStudioBlockKind {
+  const value = String(raw || 'text');
+  return (EMAIL_STUDIO_BLOCK_KINDS as readonly string[]).includes(value)
+    ? value as EmailStudioBlockKind
     : 'text';
-  const index = selection.$from.index(0);
+}
+
+function describeBlock(editor: Editor, position: number, node: BlockNode): NewsletterSelectedBlock {
   const locked = Boolean(node.attrs.locked);
+  const resolved = editor.state.doc.resolve(position);
+  const index = resolved.index();
+  const siblingCount = resolved.parent.childCount;
 
   return {
-    kind,
+    kind: normalizeKind(node.attrs.kind),
     title: String(node.attrs.title || ''),
     body: String(node.attrs.body || ''),
     href: String(node.attrs.href || ''),
     imageUrl: String(node.attrs.imageUrl || ''),
     altText: String(node.attrs.altText || ''),
     locked,
-    from: selection.from,
-    to: selection.to,
+    from: position,
+    to: position + node.nodeSize,
     index,
     canMoveUp: !locked && index > 0,
-    canMoveDown: !locked && index < editor.state.doc.childCount - 1,
+    canMoveDown: !locked && index < siblingCount - 1,
   };
+}
+
+function blockAt(editor: Editor | null, position: number): BlockNode | null {
+  if (!editor || position < 0) return null;
+  const node = editor.state.doc.nodeAt(position) as BlockNode | null;
+  if (!node || node.type.name !== BLOCK_NODE_NAME) return null;
+  return node;
+}
+
+export function getSelectedNewsletterBlock(editor: Editor | null): NewsletterSelectedBlock | null {
+  if (!editor) return null;
+  const selection = editor.state.selection as { from: number; node?: BlockNode };
+  const node = selection.node;
+  if (!node || node.type.name !== BLOCK_NODE_NAME) return null;
+  return describeBlock(editor, selection.from, node);
 }
 
 export function updateSelectedNewsletterBlock(editor: Editor | null, patch: NewsletterBlockPatch): boolean {
   const selected = getSelectedNewsletterBlock(editor);
-  if (!editor || !selected || selected.locked) return false;
-  return editor.chain().focus().updateAttributes('emailStudioBlock', patch).run();
+  if (!editor || !selected) return false;
+  return updateNewsletterBlockAtPosition(editor, selected.from, patch);
 }
 
 /**
@@ -96,36 +136,9 @@ export function getNewsletterBlockAtPosition(
   editor: Editor | null,
   position: number,
 ): NewsletterSelectedBlock | null {
-  if (!editor) return null;
-  const doc = editor.state.doc;
-  let pos = 0;
-  for (let index = 0; index < doc.childCount; index += 1) {
-    const child = doc.child(index);
-    if (pos === position) {
-      if (child.type.name !== 'emailStudioBlock') return null;
-      const rawKind = String(child.attrs.kind || 'text');
-      const kind = (EMAIL_STUDIO_BLOCK_KINDS as readonly string[]).includes(rawKind)
-        ? rawKind as EmailStudioBlockKind
-        : 'text';
-      const locked = Boolean(child.attrs.locked);
-      return {
-        kind,
-        title: String(child.attrs.title || ''),
-        body: String(child.attrs.body || ''),
-        href: String(child.attrs.href || ''),
-        imageUrl: String(child.attrs.imageUrl || ''),
-        altText: String(child.attrs.altText || ''),
-        locked,
-        from: pos,
-        to: pos + child.nodeSize,
-        index,
-        canMoveUp: !locked && index > 0,
-        canMoveDown: !locked && index < doc.childCount - 1,
-      };
-    }
-    pos += child.nodeSize;
-  }
-  return null;
+  const node = blockAt(editor, position);
+  if (!editor || !node) return null;
+  return describeBlock(editor, position, node);
 }
 
 /**
@@ -137,10 +150,8 @@ export function updateNewsletterBlockAtPosition(
   position: number,
   patch: NewsletterBlockPatch,
 ): boolean {
-  const block = getNewsletterBlockAtPosition(editor, position);
-  if (!editor || !block || block.locked) return false;
-  const node = editor.state.doc.nodeAt(position);
-  if (!node || node.type.name !== 'emailStudioBlock') return false;
+  const node = blockAt(editor, position);
+  if (!editor || !node || node.attrs.locked) return false;
   const transaction = editor.state.tr.setNodeMarkup(position, undefined, {
     ...node.attrs,
     ...patch,
@@ -149,31 +160,58 @@ export function updateNewsletterBlockAtPosition(
   return true;
 }
 
-/** Selects the structured block that owns a clicked DOM element. */
+/**
+ * Maps a clicked DOM element (anywhere inside a block, including descendants)
+ * to the owning structured block position and selects it.
+ */
 export function selectNewsletterBlockFromDom(editor: Editor | null, target: EventTarget | null): boolean {
-  if (!editor || !(target instanceof Element)) return false;
-  const section = target.closest('section[data-email-studio-block]');
-  if (!section) return false;
-  const doc = editor.state.doc;
-  let pos = 0;
-  for (let index = 0; index < doc.childCount; index += 1) {
-    const child = doc.child(index);
-    if (editor.view.nodeDOM(pos) === section) {
-      return editor.commands.setNodeSelection(pos);
-    }
-    pos += child.nodeSize;
+  const position = findNewsletterBlockPositionFromDom(editor, target);
+  if (editor === null || position === null) return false;
+  return editor.commands.setNodeSelection(position);
+}
+
+export function findNewsletterBlockPositionFromDom(
+  editor: Editor | null,
+  target: EventTarget | null,
+): number | null {
+  if (!editor || !(target instanceof Element)) return null;
+  const element = target.closest('[data-email-studio-block]');
+  if (!element) return null;
+
+  for (const pos of collectBlockPositions(editor)) {
+    const dom = editor.view.nodeDOM(pos);
+    if (!(dom instanceof Element)) continue;
+    if (dom === element || dom.contains(element) || element.contains(dom)) return pos;
   }
-  return false;
+
+  // Fall back to ProseMirror's own DOM mapping when the rendered wrapper is not
+  // the node DOM itself.
+  try {
+    const mapped = editor.view.posAtDOM(element, 0);
+    if (typeof mapped === 'number' && mapped >= 0) {
+      if (blockAt(editor, mapped)) return mapped;
+      const before = mapped - 1;
+      if (blockAt(editor, before)) return before;
+      const resolved = editor.state.doc.resolve(Math.max(0, mapped));
+      for (let depth = resolved.depth; depth > 0; depth -= 1) {
+        const candidate = resolved.before(depth);
+        if (blockAt(editor, candidate)) return candidate;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 export function duplicateSelectedNewsletterBlock(editor: Editor | null): boolean {
   if (!editor) return false;
   const selected = getSelectedNewsletterBlock(editor);
-  const selectedNode = getSelectedBlockNode(editor);
-  if (!selected || !selectedNode || selected.locked) return false;
+  const node = blockAt(editor, selected?.from ?? -1);
+  if (!selected || !node || selected.locked) return false;
 
   const insertAt = selected.to;
-  editor.view.dispatch(editor.state.tr.insert(insertAt, selectedNode.node));
+  editor.view.dispatch(editor.state.tr.insert(insertAt, node as never));
   return editor.commands.setNodeSelection(insertAt);
 }
 
@@ -186,28 +224,20 @@ export function deleteSelectedNewsletterBlock(editor: Editor | null): boolean {
 export function moveSelectedNewsletterBlock(editor: Editor | null, direction: 'up' | 'down'): boolean {
   if (!editor) return false;
   const selected = getSelectedNewsletterBlock(editor);
-  const selectedNode = getSelectedBlockNode(editor);
-  if (!selected || !selectedNode || selected.locked) return false;
+  const node = blockAt(editor, selected?.from ?? -1);
+  if (!selected || !node || selected.locked) return false;
   if (direction === 'up' && !selected.canMoveUp) return false;
   if (direction === 'down' && !selected.canMoveDown) return false;
 
-  const sibling = editor.state.doc.child(selected.index + (direction === 'up' ? -1 : 1));
+  const resolved = editor.state.doc.resolve(selected.from);
+  const sibling = resolved.parent.child(selected.index + (direction === 'up' ? -1 : 1));
   const targetPosition = direction === 'up'
     ? selected.from - sibling.nodeSize
     : selected.from + sibling.nodeSize;
 
   const transaction = editor.state.tr
     .delete(selected.from, selected.to)
-    .insert(targetPosition, selectedNode.node);
+    .insert(targetPosition, node as never);
   editor.view.dispatch(transaction);
   return editor.commands.setNodeSelection(targetPosition);
-}
-
-function getSelectedBlockNode(editor: Editor) {
-  const selection = editor.state.selection as typeof editor.state.selection & {
-    node?: typeof editor.state.doc;
-  };
-  const node = selection.node;
-  if (!node || node.type.name !== 'emailStudioBlock') return null;
-  return { selection, node };
 }

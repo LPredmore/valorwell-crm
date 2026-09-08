@@ -72,6 +72,7 @@ import {
 import {
   deleteSelectedNewsletterBlock,
   duplicateSelectedNewsletterBlock,
+  findNewsletterBlockPositionFromDom,
   getNewsletterBlockAtPosition,
   getSelectedNewsletterBlock,
   moveSelectedNewsletterBlock,
@@ -321,6 +322,23 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     if (action()) syncEditorControls();
   };
 
+  // Runs on both mousedown and click: the capture-phase selection can be
+  // replaced by ProseMirror's own mousedown handling, so the bubbled click
+  // re-asserts the logical block selection afterwards.
+  const selectBlockFromEvent = (target: EventTarget | null) => {
+    const editor = editorRef.current?.editor ?? null;
+    const position = findNewsletterBlockPositionFromDom(editor, target);
+    if (editor === null || position === null) return;
+    selectedPositionRef.current = position;
+    const stored = getNewsletterBlockAtPosition(editor, position);
+    if (stored) {
+      setSelectedBlock(stored);
+      setInspectorTab('block');
+    }
+    selectNewsletterBlockFromDom(editor, target);
+    syncEditorControls();
+  };
+
   const runFormattingAction = (action: () => boolean) => {
     if (readOnly) return;
     if (action()) {
@@ -442,11 +460,8 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
           <div
             className="mx-auto w-[648px] rounded-xl border border-border/80 bg-white p-6 shadow-[0_10px_30px_rgba(20,30,24,0.10)]"
             data-testid="newsletter-email-canvas"
-            onMouseDownCapture={(event) => {
-              if (selectNewsletterBlockFromDom(editorRef.current?.editor ?? null, event.target)) {
-                syncEditorControls();
-              }
-            }}
+            onMouseDown={(event) => selectBlockFromEvent(event.target)}
+            onClick={(event) => selectBlockFromEvent(event.target)}
           >
             <EmailEditor
               key={`newsletter-${editorKey}`}
