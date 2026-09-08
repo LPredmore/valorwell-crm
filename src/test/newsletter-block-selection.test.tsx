@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ClientNewsletterEmailStudioComposer } from '@/features/email-studio/newsletter/ClientNewsletterEmailStudioComposer';
 
 vi.mock('@/features/email-studio/templates/api', () => ({
@@ -9,6 +9,14 @@ vi.mock('@/features/email-studio/templates/api', () => ({
     role: 'admin',
   }),
 }));
+
+beforeAll(() => {
+  // ProseMirror's mousedown handler calls document.elementFromPoint, which
+  // jsdom does not implement.
+  if (!document.elementFromPoint) {
+    (document as unknown as { elementFromPoint: () => null }).elementFromPoint = () => null;
+  }
+});
 
 async function renderComposer(onDirty?: () => void) {
   render(<ClientNewsletterEmailStudioComposer scope="marketing_newsletter" onDirty={onDirty} />);
