@@ -128,6 +128,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
   const editorRef = useRef<EmailEditorRef>(null);
   const selectionCleanupRef = useRef<(() => void) | null>(null);
   const selectedPositionRef = useRef<number | null>(null);
+  const selectedSignatureRef = useRef<string | null>(null);
   const initialThemeKey = normalizeThemeKey(initialContent?.themeKey);
   const initialDocument = initialContent?.mode === 'newsletter' && initialContent.editorDocument
     ? initialContent.editorDocument
