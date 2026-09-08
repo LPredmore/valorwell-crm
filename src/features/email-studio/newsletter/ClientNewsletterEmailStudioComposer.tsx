@@ -72,6 +72,7 @@ import {
 import {
   deleteSelectedNewsletterBlock,
   duplicateSelectedNewsletterBlock,
+  findNewsletterBlockPositionFromDom,
   getNewsletterBlockAtPosition,
   getSelectedNewsletterBlock,
   moveSelectedNewsletterBlock,
@@ -127,6 +128,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
   const editorRef = useRef<EmailEditorRef>(null);
   const selectionCleanupRef = useRef<(() => void) | null>(null);
   const selectedPositionRef = useRef<number | null>(null);
+  const selectedSignatureRef = useRef<string | null>(null);
   const initialThemeKey = normalizeThemeKey(initialContent?.themeKey);
   const initialDocument = initialContent?.mode === 'newsletter' && initialContent.editorDocument
     ? initialContent.editorDocument
@@ -175,24 +177,31 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     onDirty?.();
   };
 
+  // Editor transactions fire constantly; committing a brand-new selected-block
+  // object every time re-renders the editor and can feed itself. Only commit
+  // when the logical block actually changed.
+  const commitSelectedBlock = (next: NewsletterSelectedBlock | null) => {
+    const signature = next ? JSON.stringify(next) : null;
+    if (signature === selectedSignatureRef.current) return;
+    selectedSignatureRef.current = signature;
+    setSelectedBlock(next);
+  };
+
   const syncEditorControls = () => {
     const editor = editorRef.current?.editor ?? null;
     const nextSelectedBlock = getSelectedNewsletterBlock(editor);
     if (nextSelectedBlock) {
       selectedPositionRef.current = nextSelectedBlock.from;
-      setSelectedBlock(nextSelectedBlock);
+      commitSelectedBlock(nextSelectedBlock);
       setInspectorTab('block');
-    } else if (editor?.isFocused) {
-      // Caret moved into free text inside the canvas: no structured block is selected.
-      selectedPositionRef.current = null;
-      setSelectedBlock(null);
     } else if (selectedPositionRef.current !== null) {
-      // Editor lost focus (e.g. typing in the inspector): keep the logical block.
+      // Keep the logical block while the caret or focus lives elsewhere
+      // (inspector inputs, toolbar buttons, or a plain text caret).
       const stored = getNewsletterBlockAtPosition(editor, selectedPositionRef.current);
-      if (stored) setSelectedBlock(stored);
+      if (stored) commitSelectedBlock(stored);
       else {
         selectedPositionRef.current = null;
-        setSelectedBlock(null);
+        commitSelectedBlock(null);
       }
     }
     setCanUndo(Boolean(editor?.can().undo()));
@@ -217,7 +226,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     setThemeKey(nextThemeKey);
     setContent(cloneEmailStudioDocument(nextDocument));
     setSnapshot(null);
-    setSelectedBlock(null);
+    commitSelectedBlock(null);
     setValidation(validateEmailStudioEditorDocument(nextDocument, 'newsletter', scope));
     setError(null);
     setStatus('loading');
@@ -312,13 +321,30 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     if (position === null) return;
     if (updateNewsletterBlockAtPosition(editor, position, patch)) {
       const updated = getNewsletterBlockAtPosition(editor, position);
-      if (updated) setSelectedBlock(updated);
+      if (updated) commitSelectedBlock(updated);
     }
   };
 
   const runEditorAction = (action: () => boolean) => {
     if (readOnly) return;
     if (action()) syncEditorControls();
+  };
+
+  // Runs on both mousedown and click: the capture-phase selection can be
+  // replaced by ProseMirror's own mousedown handling, so the bubbled click
+  // re-asserts the logical block selection afterwards.
+  const selectBlockFromEvent = (target: EventTarget | null) => {
+    const editor = editorRef.current?.editor ?? null;
+    const position = findNewsletterBlockPositionFromDom(editor, target);
+    if (editor === null || position === null) return;
+    selectedPositionRef.current = position;
+    const stored = getNewsletterBlockAtPosition(editor, position);
+    if (stored) {
+      commitSelectedBlock(stored);
+      setInspectorTab('block');
+    }
+    selectNewsletterBlockFromDom(editor, target);
+    syncEditorControls();
   };
 
   const runFormattingAction = (action: () => boolean) => {
@@ -442,11 +468,8 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
           <div
             className="mx-auto w-[648px] rounded-xl border border-border/80 bg-white p-6 shadow-[0_10px_30px_rgba(20,30,24,0.10)]"
             data-testid="newsletter-email-canvas"
-            onMouseDownCapture={(event) => {
-              if (selectNewsletterBlockFromDom(editorRef.current?.editor ?? null, event.target)) {
-                syncEditorControls();
-              }
-            }}
+            onMouseDown={(event) => selectBlockFromEvent(event.target)}
+            onClick={(event) => selectBlockFromEvent(event.target)}
           >
             <EmailEditor
               key={`newsletter-${editorKey}`}
