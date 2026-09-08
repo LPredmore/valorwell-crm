@@ -5,6 +5,8 @@ import {
   getSelectedNewsletterBlock,
   newsletterBlockSupportsImage,
   newsletterBlockSupportsLink,
+  resolveNewsletterBlockPositionFromDom,
+  selectNewsletterBlockFromDom,
   updateNewsletterBlockAtPosition,
   updateSelectedNewsletterBlock,
 } from '@/features/email-studio/newsletter/newsletterVisualEditing';
@@ -175,5 +177,91 @@ describe('newsletter block editing by stored position', () => {
     const { editor, dispatch } = docEditor({ kind: 'compliance-footer', locked: true });
     expect(updateNewsletterBlockAtPosition(editor, 0, { body: 'Remove unsubscribe' })).toBe(false);
     expect(dispatch).not.toHaveBeenCalled();
+  });
+});
+
+describe('newsletter block DOM selection bridge', () => {
+  function domEditor(nodeDom: Element) {
+    const node = {
+      type: { name: 'emailStudioBlock' },
+      attrs: {
+        kind: 'text',
+        title: 'Existing title',
+        body: 'Existing body',
+        href: '',
+        imageUrl: '',
+        altText: '',
+        locked: false,
+      },
+      nodeSize: 2,
+    };
+    const setNodeSelection = vi.fn(() => true);
+    return {
+      setNodeSelection,
+      editor: {
+        state: {
+          doc: {
+            childCount: 1,
+            child: () => node,
+            nodeAt: () => node,
+          },
+        },
+        view: {
+          nodeDOM: () => nodeDom,
+        },
+        commands: { setNodeSelection },
+        isDestroyed: false,
+      } as unknown as Editor,
+    };
+  }
+
+  it('resolves a nested click when React Email wraps the rendered block DOM', () => {
+    const nodeWrapper = document.createElement('div');
+    const renderedBlock = document.createElement('div');
+    renderedBlock.dataset.emailStudioBlock = 'text';
+    const clickedChild = document.createElement('span');
+    renderedBlock.appendChild(clickedChild);
+    nodeWrapper.appendChild(renderedBlock);
+
+    const { editor } = domEditor(nodeWrapper);
+    expect(resolveNewsletterBlockPositionFromDom(editor, clickedChild)).toBe(0);
+  });
+
+  it('does not require the rendered structured block to be a section element', () => {
+    const renderedBlock = document.createElement('article');
+    renderedBlock.dataset.emailStudioBlock = 'text';
+    const clickedChild = document.createElement('strong');
+    renderedBlock.appendChild(clickedChild);
+
+    const { editor } = domEditor(renderedBlock);
+    expect(resolveNewsletterBlockPositionFromDom(editor, clickedChild)).toBe(0);
+  });
+
+  it('reasserts the block selection after the capture-phase event stack completes', async () => {
+    const nodeWrapper = document.createElement('div');
+    const renderedBlock = document.createElement('div');
+    renderedBlock.dataset.emailStudioBlock = 'text';
+    const clickedChild = document.createElement('span');
+    renderedBlock.appendChild(clickedChild);
+    nodeWrapper.appendChild(renderedBlock);
+
+    const { editor, setNodeSelection } = domEditor(nodeWrapper);
+    expect(selectNewsletterBlockFromDom(editor, clickedChild)).toBe(true);
+    expect(setNodeSelection).toHaveBeenCalledTimes(1);
+
+    await Promise.resolve();
+
+    expect(setNodeSelection).toHaveBeenCalledTimes(2);
+    expect(setNodeSelection).toHaveBeenLastCalledWith(0);
+  });
+
+  it('ignores clicks outside structured newsletter blocks', () => {
+    const nodeWrapper = document.createElement('div');
+    const outside = document.createElement('button');
+    const { editor, setNodeSelection } = domEditor(nodeWrapper);
+
+    expect(resolveNewsletterBlockPositionFromDom(editor, outside)).toBeNull();
+    expect(selectNewsletterBlockFromDom(editor, outside)).toBe(false);
+    expect(setNodeSelection).not.toHaveBeenCalled();
   });
 });
