@@ -81,6 +81,30 @@ describe('newsletter visual editing against the real email editor', () => {
     }
   });
 
+  it('resolves a data-marked element that is not a SECTION tag', async () => {
+    const editor = await mountEditor();
+    const marker = document.createElement('div');
+    marker.setAttribute('data-email-studio-block', 'story');
+    section('story').appendChild(marker);
+
+    const position = findNewsletterBlockPositionFromDom(editor, marker);
+    expect(position).not.toBeNull();
+    expect(getNewsletterBlockAtPosition(editor, position!)?.kind).toBe('story');
+  });
+
+  it('resolves a block whose node DOM merely contains the clicked marked element', async () => {
+    const editor = await mountEditor();
+    const story = section('story');
+    const wrapper = document.createElement('div');
+    const inner = document.createElement('span');
+    inner.setAttribute('data-email-studio-block', 'story');
+    wrapper.appendChild(inner);
+    story.appendChild(wrapper);
+
+    const position = findNewsletterBlockPositionFromDom(editor, inner);
+    expect(getNewsletterBlockAtPosition(editor, position!)?.kind).toBe('story');
+  });
+
   it('ignores clicks outside any structured block', async () => {
     const editor = await mountEditor();
     expect(findNewsletterBlockPositionFromDom(editor, editor.view.dom)).toBeNull();
