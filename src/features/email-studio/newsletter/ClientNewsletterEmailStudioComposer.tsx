@@ -10,18 +10,21 @@ import { EmailEditor, type EmailEditorRef } from '@react-email/editor';
 import { StarterKit } from '@react-email/editor/extensions';
 import { EmailTheming } from '@react-email/editor/plugins';
 import {
+  Bold,
   Copy,
+  Heading2,
   ImagePlus,
+  Italic,
   Lock,
   MoveDown,
   MoveUp,
   Redo2,
   Trash2,
+  Underline,
   Undo2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +34,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { EmailAssetManager } from '../templates/EmailAssetManager';
 import { getEmailStudioAccessContext } from '../templates/api';
@@ -45,18 +50,11 @@ import {
   type EmailEditorNode,
   type EmailValidationResult,
 } from '../contracts';
-import {
-  BlockLibrary,
-  ComposerField,
-  EmailStudioInspector,
-  EmailStudioToolbar,
-  PreviewDialog,
-  ValidationPanel,
-  VariablePicker,
-  type EmailStudioStatus,
-} from '../studio/EmailStudio';
+import { PreviewDialog, type EmailStudioStatus } from '../studio/EmailStudio';
 import {
   EMAIL_STUDIO_BLOCKS,
+  EMAIL_STUDIO_THEME_KEYS,
+  EMAIL_STUDIO_THEMES,
   getEmailStudioBlocksForMode,
   type EmailStudioBlockDefinition,
   type EmailStudioThemeKey,
@@ -90,8 +88,20 @@ const NEWSLETTER_EXTENSIONS = [
   EmailStudioVariable,
 ];
 
+const HIDDEN_BUBBLE_MENU_NODES = [
+  'paragraph',
+  'heading',
+  'emailStudioBlock',
+  'bulletList',
+  'orderedList',
+  'listItem',
+];
+
+const HIDDEN_BUBBLE_MENU_MARKS = ['link', 'bold', 'italic', 'underline'];
+
 export type ClientNewsletterEmailStudioHandle = {
   exportContent: () => Promise<EmailContentDocument | null>;
+  preview: () => Promise<EmailContentDocument | null>;
 };
 
 export type ClientNewsletterEmailStudioComposerProps = {
@@ -100,6 +110,8 @@ export type ClientNewsletterEmailStudioComposerProps = {
   scope?: EmailContentScope;
   onDirty?: () => void;
 };
+
+type InspectorTab = 'block' | 'email' | 'checks';
 
 export const ClientNewsletterEmailStudioComposer = forwardRef<
   ClientNewsletterEmailStudioHandle,
@@ -134,6 +146,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
   const [assetDialogOpen, setAssetDialogOpen] = useState(false);
   const [assetContext, setAssetContext] = useState<EmailStudioAccessContext | null>(null);
   const [assetError, setAssetError] = useState<string | null>(null);
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>('block');
 
   const blocks = useMemo(() => getEmailStudioBlocksForMode('newsletter'), []);
   const variables = useMemo(() => getEmailVariablesForScope(scope), [scope]);
@@ -161,7 +174,9 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
 
   const syncEditorControls = () => {
     const editor = editorRef.current?.editor ?? null;
-    setSelectedBlock(getSelectedNewsletterBlock(editor));
+    const nextSelectedBlock = getSelectedNewsletterBlock(editor);
+    setSelectedBlock(nextSelectedBlock);
+    if (nextSelectedBlock) setInspectorTab('block');
     setCanUndo(Boolean(editor?.can().undo()));
     setCanRedo(Boolean(editor?.can().redo()));
   };
@@ -196,6 +211,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     const current = editorRef.current;
     if (!current) {
       setError('The Newsletter Email Studio editor is not ready.');
+      setInspectorTab('checks');
       return null;
     }
 
@@ -217,6 +233,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
       if (!studioValidation.valid) {
         setSnapshot(null);
         setStatus('invalid');
+        setInspectorTab('checks');
         return null;
       }
 
@@ -225,6 +242,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
         setValidation(finalized.validation);
         setSnapshot(null);
         setStatus('invalid');
+        setInspectorTab('checks');
         return null;
       }
 
@@ -236,12 +254,14 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Newsletter Email Studio export failed.');
       setStatus('dirty');
+      setInspectorTab('checks');
       return null;
     }
   };
 
   useImperativeHandle(ref, () => ({
     exportContent: () => exportContent(false),
+    preview: () => exportContent(true),
   }));
 
   const insertBlock = (definition: EmailStudioBlockDefinition) => {
@@ -279,97 +299,260 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     if (action()) syncEditorControls();
   };
 
-  return (
-    <div className="space-y-4">
-      <EmailStudioToolbar
-        mode="newsletter"
-        allowedModes={['newsletter']}
-        themeKey={themeKey}
-        status={status}
-        readOnly={readOnly}
-        onModeChange={() => undefined}
-        onThemeChange={(nextTheme) => {
-          const current = getCurrentDocument(editorRef.current, content);
-          replaceDocument(applyTheme(current, nextTheme), nextTheme);
-        }}
-        onPreview={() => void exportContent(true)}
-        onExport={() => void exportContent(false)}
-        onReset={() => {
-          setPreheader('');
-          replaceDocument(createEmailStudioDocument({ mode: 'newsletter', scope, themeKey }));
-        }}
-      />
+  const runFormattingAction = (action: () => boolean) => {
+    if (readOnly) return;
+    if (action()) {
+      syncEditorControls();
+      markDirty();
+    }
+  };
 
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 p-3">
-          <span className="mr-2 text-sm font-medium">Editing</span>
+  return (
+    <div
+      className="grid h-full min-h-0 grid-cols-[190px_minmax(680px,1fr)_310px] bg-muted/30"
+      data-testid="newsletter-authoring-layout"
+    >
+      <aside
+        className="min-h-0 overflow-y-auto border-r bg-background p-3"
+        data-testid="newsletter-block-library"
+      >
+        <div className="mb-3">
+          <p className="text-sm font-semibold">Blocks</p>
+          <p className="text-xs text-muted-foreground">Add an email-safe section.</p>
+        </div>
+        <div className="space-y-1.5">
+          {blocks.map((block) => (
+            <Button
+              key={block.kind}
+              type="button"
+              variant="ghost"
+              className="h-auto w-full justify-start whitespace-normal rounded-md border px-2.5 py-2 text-left"
+              onClick={() => insertBlock(block)}
+              disabled={readOnly}
+              title={block.description}
+            >
+              <span>
+                <span className="block text-sm font-medium">{block.label}</span>
+                <span className="mt-0.5 line-clamp-2 block text-[11px] font-normal leading-4 text-muted-foreground">
+                  {block.description}
+                </span>
+              </span>
+            </Button>
+          ))}
+        </div>
+      </aside>
+
+      <section
+        className="min-h-0 min-w-0 overflow-auto bg-[#e9ece9]"
+        data-testid="newsletter-canvas-region"
+      >
+        <div
+          className="sticky top-0 z-20 flex min-h-12 items-center gap-1 border-b bg-background/95 px-3 shadow-sm backdrop-blur"
+          data-testid="newsletter-formatting-toolbar"
+        >
           <Button
             type="button"
             size="sm"
-            variant="outline"
+            variant="ghost"
             disabled={readOnly || !canUndo}
             onClick={() => runEditorAction(() => Boolean(editorRef.current?.editor?.chain().focus().undo().run()))}
+            aria-label="Undo"
           >
-            <Undo2 className="mr-2 h-4 w-4" />Undo
+            <Undo2 className="h-4 w-4" />
           </Button>
           <Button
             type="button"
             size="sm"
-            variant="outline"
+            variant="ghost"
             disabled={readOnly || !canRedo}
             onClick={() => runEditorAction(() => Boolean(editorRef.current?.editor?.chain().focus().redo().run()))}
+            aria-label="Redo"
           >
-            <Redo2 className="mr-2 h-4 w-4" />Redo
+            <Redo2 className="h-4 w-4" />
           </Button>
-          <p className="ml-auto text-xs text-muted-foreground">Select a structured block in the canvas to edit its content and image.</p>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)_320px]">
-        <BlockLibrary blocks={blocks} onInsert={insertBlock} disabled={readOnly} />
-        <ComposerField
-          editorRef={editorRef}
-          editorKey={editorKey}
-          mode="newsletter"
-          content={content}
-          readOnly={readOnly}
-          onReady={() => {
-            editorRef.current?.editor?.setEditable(!readOnly);
-            attachEditorControls();
-            setStatus('ready');
-          }}
-          onUpdate={() => {
-            const document = getCurrentDocument(editorRef.current, content);
-            setValidation(validateEmailStudioEditorDocument(document, 'newsletter', scope));
-            markDirty();
-          }}
-        />
-        <div className="space-y-4">
-          <NewsletterBlockInspector
-            selectedBlock={selectedBlock}
-            readOnly={readOnly}
-            onChange={updateBlock}
-            onMoveUp={() => runEditorAction(() => moveSelectedNewsletterBlock(editorRef.current?.editor ?? null, 'up'))}
-            onMoveDown={() => runEditorAction(() => moveSelectedNewsletterBlock(editorRef.current?.editor ?? null, 'down'))}
-            onDuplicate={() => runEditorAction(() => duplicateSelectedNewsletterBlock(editorRef.current?.editor ?? null))}
-            onDelete={() => runEditorAction(() => deleteSelectedNewsletterBlock(editorRef.current?.editor ?? null))}
-            onOpenAssets={() => setAssetDialogOpen(true)}
-          />
-          <EmailStudioInspector
-            scope={scope}
-            mode="newsletter"
-            themeKey={themeKey}
-            preheader={preheader}
-            readOnly={readOnly}
-            onPreheaderChange={(value) => {
-              setPreheader(value);
-              markDirty();
-            }}
-          />
-          <VariablePicker variables={variables} onInsert={insertVariable} disabled={readOnly} />
-          <ValidationPanel validation={validation} error={error} />
+          <span className="mx-1 h-6 w-px bg-border" />
+          <Button
+            type="button"
+            size="sm"
+            variant={editorRef.current?.editor?.isActive('bold') ? 'secondary' : 'ghost'}
+            disabled={readOnly}
+            onClick={() => runFormattingAction(() => Boolean(editorRef.current?.editor?.chain().focus().toggleBold().run()))}
+            aria-label="Bold"
+          >
+            <Bold className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={editorRef.current?.editor?.isActive('italic') ? 'secondary' : 'ghost'}
+            disabled={readOnly}
+            onClick={() => runFormattingAction(() => Boolean(editorRef.current?.editor?.chain().focus().toggleItalic().run()))}
+            aria-label="Italic"
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={editorRef.current?.editor?.isActive('underline') ? 'secondary' : 'ghost'}
+            disabled={readOnly}
+            onClick={() => runFormattingAction(() => Boolean(editorRef.current?.editor?.chain().focus().toggleUnderline().run()))}
+            aria-label="Underline"
+          >
+            <Underline className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={editorRef.current?.editor?.isActive('heading', { level: 2 }) ? 'secondary' : 'ghost'}
+            disabled={readOnly}
+            onClick={() => runFormattingAction(() => Boolean(editorRef.current?.editor?.chain().focus().toggleHeading({ level: 2 }).run()))}
+            aria-label="Heading"
+          >
+            <Heading2 className="h-4 w-4" />
+          </Button>
+          <span className="ml-auto text-xs text-muted-foreground">
+            Select a block to edit its content on the right.
+          </span>
         </div>
-      </div>
+
+        <div className="min-w-[680px] px-4 py-8">
+          <div
+            className="mx-auto w-[648px] rounded-xl border border-border/80 bg-white p-6 shadow-[0_10px_30px_rgba(20,30,24,0.10)]"
+            data-testid="newsletter-email-canvas"
+          >
+            <EmailEditor
+              key={`newsletter-${editorKey}`}
+              ref={editorRef}
+              content={content}
+              extensions={NEWSLETTER_EXTENSIONS}
+              editable={!readOnly}
+              bubbleMenu={{
+                hideWhenActiveNodes: HIDDEN_BUBBLE_MENU_NODES,
+                hideWhenActiveMarks: HIDDEN_BUBBLE_MENU_MARKS,
+              }}
+              placeholder="Add or select a newsletter block"
+              className="newsletter-email-editor min-h-[760px] w-full [&_.ProseMirror]:min-h-[720px] [&_.ProseMirror]:outline-none [&_.ProseMirror-selectednode]:outline [&_.ProseMirror-selectednode]:outline-2 [&_.ProseMirror-selectednode]:outline-offset-2 [&_.ProseMirror-selectednode]:outline-[#C69A45] [&_.newsletter-structured-block]:cursor-pointer"
+              onReady={() => {
+                editorRef.current?.editor?.setEditable(!readOnly);
+                attachEditorControls();
+                setStatus('ready');
+              }}
+              onUpdate={() => {
+                const document = getCurrentDocument(editorRef.current, content);
+                setValidation(validateEmailStudioEditorDocument(document, 'newsletter', scope));
+                markDirty();
+              }}
+            />
+          </div>
+        </div>
+      </section>
+
+      <aside
+        className="min-h-0 overflow-y-auto border-l bg-background"
+        data-testid="newsletter-settings-panel"
+      >
+        <Tabs value={inspectorTab} onValueChange={(value) => setInspectorTab(value as InspectorTab)} className="min-h-full">
+          <div className="sticky top-0 z-10 border-b bg-background p-3">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="block">Block</TabsTrigger>
+              <TabsTrigger value="email">Email</TabsTrigger>
+              <TabsTrigger value="checks">
+                Checks{validation.errors.length > 0 ? ` (${validation.errors.length})` : ''}
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="block" className="m-0 p-4">
+            <NewsletterBlockInspector
+              selectedBlock={selectedBlock}
+              readOnly={readOnly}
+              onChange={updateBlock}
+              onMoveUp={() => runEditorAction(() => moveSelectedNewsletterBlock(editorRef.current?.editor ?? null, 'up'))}
+              onMoveDown={() => runEditorAction(() => moveSelectedNewsletterBlock(editorRef.current?.editor ?? null, 'down'))}
+              onDuplicate={() => runEditorAction(() => duplicateSelectedNewsletterBlock(editorRef.current?.editor ?? null))}
+              onDelete={() => runEditorAction(() => deleteSelectedNewsletterBlock(editorRef.current?.editor ?? null))}
+              onOpenAssets={() => setAssetDialogOpen(true)}
+            />
+          </TabsContent>
+
+          <TabsContent value="email" className="m-0 space-y-5 p-4">
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-semibold">Newsletter settings</p>
+                <p className="text-xs text-muted-foreground">Inbox text, theme, and safe personalization.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">{scope}</Badge>
+                <Badge variant="outline">Newsletter</Badge>
+                <Badge variant={status === 'invalid' ? 'destructive' : 'secondary'}>{status}</Badge>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="newsletter-theme">Theme</Label>
+              <Select
+                value={themeKey}
+                onValueChange={(nextTheme) => {
+                  const normalized = nextTheme as EmailStudioThemeKey;
+                  const current = getCurrentDocument(editorRef.current, content);
+                  replaceDocument(applyTheme(current, normalized), normalized);
+                }}
+                disabled={readOnly}
+              >
+                <SelectTrigger id="newsletter-theme"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {EMAIL_STUDIO_THEME_KEYS.map((key) => (
+                    <SelectItem key={key} value={key}>{EMAIL_STUDIO_THEMES[key].label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="newsletter-preheader">Preview text</Label>
+              <Textarea
+                id="newsletter-preheader"
+                value={preheader}
+                maxLength={240}
+                rows={3}
+                disabled={readOnly}
+                onChange={(event) => {
+                  setPreheader(event.target.value);
+                  markDirty();
+                }}
+                placeholder="Inbox preview text"
+              />
+              <p className="text-xs text-muted-foreground">{preheader.length}/200 recommended characters</p>
+            </div>
+
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium">Personalization</p>
+                <p className="text-xs text-muted-foreground">Only mailbox-safe newsletter variables are available.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {variables.map((variable) => (
+                  <Button
+                    key={variable.key}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={readOnly}
+                    onClick={() => insertVariable(variable.key)}
+                  >
+                    {variable.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="checks" className="m-0 p-4">
+            <NewsletterChecks validation={validation} error={error} />
+          </TabsContent>
+        </Tabs>
+      </aside>
 
       <PreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} snapshot={snapshot} />
 
@@ -418,17 +601,15 @@ function NewsletterBlockInspector({
 }) {
   if (!selectedBlock) {
     return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Block settings</CardTitle>
-          <CardDescription>Select a structured block in the canvas to edit it visually.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-            Text can still be edited directly in the canvas. Hero, story, CTA, resource, image, footer, and other structured blocks are edited here.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-3">
+        <div>
+          <p className="text-sm font-semibold">Block settings</p>
+          <p className="text-xs text-muted-foreground">Select a structured block in the email canvas.</p>
+        </div>
+        <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+          Hero, story, CTA, resource, image, footer, and other structured blocks are edited here. Direct text remains editable in the canvas.
+        </p>
+      </div>
     );
   }
 
@@ -439,116 +620,138 @@ function NewsletterBlockInspector({
   const hasTextFields = selectedBlock.kind !== 'divider';
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <CardTitle className="text-base">{definition?.label ?? selectedBlock.kind}</CardTitle>
-            <CardDescription>{definition?.description ?? 'Edit the selected newsletter block.'}</CardDescription>
-          </div>
-          {selectedBlock.locked ? <Badge variant="secondary"><Lock className="mr-1 h-3 w-3" />Locked</Badge> : null}
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold">{definition?.label ?? selectedBlock.kind}</p>
+          <p className="text-xs text-muted-foreground">{definition?.description ?? 'Edit the selected newsletter block.'}</p>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="outline" disabled={!editable || !selectedBlock.canMoveUp} onClick={onMoveUp}>
-            <MoveUp className="mr-1 h-3.5 w-3.5" />Up
-          </Button>
-          <Button type="button" size="sm" variant="outline" disabled={!editable || !selectedBlock.canMoveDown} onClick={onMoveDown}>
-            <MoveDown className="mr-1 h-3.5 w-3.5" />Down
-          </Button>
-          <Button type="button" size="sm" variant="outline" disabled={!editable} onClick={onDuplicate}>
-            <Copy className="mr-1 h-3.5 w-3.5" />Duplicate
-          </Button>
-          <Button type="button" size="sm" variant="ghost" className="text-destructive" disabled={!editable} onClick={onDelete}>
-            <Trash2 className="mr-1 h-3.5 w-3.5" />Delete
-          </Button>
-        </div>
+        {selectedBlock.locked ? <Badge variant="secondary"><Lock className="mr-1 h-3 w-3" />Locked</Badge> : null}
+      </div>
 
-        {selectedBlock.locked ? (
-          <p className="rounded-md border p-3 text-xs text-muted-foreground">
-            This block is required by newsletter policy and cannot be edited, duplicated, moved, or deleted.
-          </p>
-        ) : null}
+      <div className="grid grid-cols-2 gap-2">
+        <Button type="button" size="sm" variant="outline" disabled={!editable || !selectedBlock.canMoveUp} onClick={onMoveUp}>
+          <MoveUp className="mr-1 h-3.5 w-3.5" />Up
+        </Button>
+        <Button type="button" size="sm" variant="outline" disabled={!editable || !selectedBlock.canMoveDown} onClick={onMoveDown}>
+          <MoveDown className="mr-1 h-3.5 w-3.5" />Down
+        </Button>
+        <Button type="button" size="sm" variant="outline" disabled={!editable} onClick={onDuplicate}>
+          <Copy className="mr-1 h-3.5 w-3.5" />Duplicate
+        </Button>
+        <Button type="button" size="sm" variant="ghost" className="text-destructive" disabled={!editable} onClick={onDelete}>
+          <Trash2 className="mr-1 h-3.5 w-3.5" />Delete
+        </Button>
+      </div>
 
-        {hasTextFields ? (
-          <>
-            <div className="space-y-1.5">
-              <Label htmlFor="newsletter-block-title">Title</Label>
-              <Input
-                id="newsletter-block-title"
-                value={selectedBlock.title}
-                disabled={!editable}
-                onChange={(event) => onChange({ title: event.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="newsletter-block-body">Body</Label>
-              <Textarea
-                id="newsletter-block-body"
-                value={selectedBlock.body}
-                disabled={!editable}
-                rows={5}
-                onChange={(event) => onChange({ body: event.target.value })}
-              />
-            </div>
-          </>
-        ) : null}
+      {selectedBlock.locked ? (
+        <p className="rounded-md border p-3 text-xs text-muted-foreground">
+          This block is required by newsletter policy and cannot be edited, duplicated, moved, or deleted.
+        </p>
+      ) : null}
 
-        {supportsLink ? (
+      {hasTextFields ? (
+        <>
           <div className="space-y-1.5">
-            <Label htmlFor="newsletter-block-link">Destination URL</Label>
+            <Label htmlFor="newsletter-block-title">Title</Label>
             <Input
-              id="newsletter-block-link"
-              value={selectedBlock.href}
+              id="newsletter-block-title"
+              value={selectedBlock.title}
               disabled={!editable}
-              inputMode="url"
-              placeholder="https://valorwell.org/..."
-              onChange={(event) => onChange({ href: event.target.value })}
+              onChange={(event) => onChange({ title: event.target.value })}
             />
-            <p className="text-xs text-muted-foreground">Enter an external destination only when this block should be clickable.</p>
           </div>
-        ) : null}
+          <div className="space-y-1.5">
+            <Label htmlFor="newsletter-block-body">Body</Label>
+            <Textarea
+              id="newsletter-block-body"
+              value={selectedBlock.body}
+              disabled={!editable}
+              rows={6}
+              onChange={(event) => onChange({ body: event.target.value })}
+            />
+          </div>
+        </>
+      ) : null}
 
-        {supportsImage ? (
-          <div className="space-y-3 rounded-md border p-3">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="newsletter-block-image">Image</Label>
-              <Button type="button" size="sm" variant="outline" disabled={!editable} onClick={onOpenAssets}>
-                <ImagePlus className="mr-2 h-4 w-4" />Choose / upload
-              </Button>
-            </div>
-            {selectedBlock.imageUrl ? (
-              <img src={selectedBlock.imageUrl} alt={selectedBlock.altText} className="max-h-40 w-full rounded-md border object-contain" />
-            ) : null}
-            <Input
-              id="newsletter-block-image"
-              value={selectedBlock.imageUrl}
-              disabled={!editable}
-              inputMode="url"
-              placeholder="https://..."
-              onChange={(event) => onChange({ imageUrl: event.target.value })}
-            />
-            <div className="space-y-1.5">
-              <Label htmlFor="newsletter-block-alt">Alt text</Label>
-              <Input
-                id="newsletter-block-alt"
-                value={selectedBlock.altText}
-                disabled={!editable}
-                maxLength={240}
-                placeholder="Describe the image"
-                onChange={(event) => onChange({ altText: event.target.value })}
-              />
-            </div>
-            {selectedBlock.imageUrl ? (
-              <Button type="button" size="sm" variant="ghost" disabled={!editable} onClick={() => onChange({ imageUrl: '', altText: '' })}>
-                Remove image
-              </Button>
-            ) : null}
+      {supportsLink ? (
+        <div className="space-y-1.5">
+          <Label htmlFor="newsletter-block-link">Destination URL</Label>
+          <Input
+            id="newsletter-block-link"
+            value={selectedBlock.href}
+            disabled={!editable}
+            inputMode="url"
+            placeholder="https://valorwell.org/..."
+            onChange={(event) => onChange({ href: event.target.value })}
+          />
+        </div>
+      ) : null}
+
+      {supportsImage ? (
+        <div className="space-y-3 rounded-md border p-3">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="newsletter-block-image">Image</Label>
+            <Button type="button" size="sm" variant="outline" disabled={!editable} onClick={onOpenAssets}>
+              <ImagePlus className="mr-2 h-4 w-4" />Choose
+            </Button>
           </div>
-        ) : null}
-      </CardContent>
-    </Card>
+          {selectedBlock.imageUrl ? (
+            <img src={selectedBlock.imageUrl} alt={selectedBlock.altText} className="max-h-40 w-full rounded-md border object-contain" />
+          ) : null}
+          <Input
+            id="newsletter-block-image"
+            value={selectedBlock.imageUrl}
+            disabled={!editable}
+            inputMode="url"
+            placeholder="https://..."
+            onChange={(event) => onChange({ imageUrl: event.target.value })}
+          />
+          <div className="space-y-1.5">
+            <Label htmlFor="newsletter-block-alt">Alt text</Label>
+            <Input
+              id="newsletter-block-alt"
+              value={selectedBlock.altText}
+              disabled={!editable}
+              maxLength={240}
+              placeholder="Describe the image"
+              onChange={(event) => onChange({ altText: event.target.value })}
+            />
+          </div>
+          {selectedBlock.imageUrl ? (
+            <Button type="button" size="sm" variant="ghost" disabled={!editable} onClick={() => onChange({ imageUrl: '', altText: '' })}>
+              Remove image
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function NewsletterChecks({
+  validation,
+  error,
+}: {
+  validation: EmailValidationResult;
+  error: string | null;
+}) {
+  const clean = !error && validation.issues.length === 0;
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="text-sm font-semibold">Newsletter checks</p>
+        <p className="text-xs text-muted-foreground">{validation.errors.length} errors · {validation.warnings.length} warnings</p>
+      </div>
+      {error ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
+      {clean ? <p className="rounded-md border p-3 text-sm text-muted-foreground">No current policy or rendering issues.</p> : null}
+      {validation.issues.map((issue, index) => (
+        <div key={`${issue.code}-${issue.path || ''}-${index}`} className="rounded-md border p-3 text-sm">
+          <p className={issue.severity === 'error' ? 'text-destructive' : 'text-amber-700'}>{issue.message}</p>
+          {issue.path ? <p className="mt-1 text-xs text-muted-foreground">{issue.path}</p> : null}
+        </div>
+      ))}
+    </div>
   );
 }
 

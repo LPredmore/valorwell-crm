@@ -84,13 +84,42 @@ export const EmailStudioBlock = EmailNode.create({
     const attrs = blockAttributes(node);
     const theme = getEmailStudioTheme(attrs.themeKey);
     const presentation = getEmailStudioBlockPresentation(attrs.kind, attrs.themeKey);
-    const summary = [attrs.title, attrs.body].filter(Boolean).join(' — ') || 'Divider';
+
+    if (attrs.kind === 'divider') {
+      return [
+        'section',
+        {
+          class: 'newsletter-structured-block',
+          'data-email-studio-block': attrs.kind,
+          'data-title': attrs.title,
+          'data-body': attrs.body,
+          'data-href': attrs.href,
+          'data-image-url': attrs.imageUrl,
+          'data-alt-text': attrs.altText,
+          'data-theme-key': attrs.themeKey,
+          'data-locked': String(attrs.locked),
+          contenteditable: 'false',
+          style: `box-sizing:border-box;width:100%;max-width:${EMAIL_STUDIO_LAYOUT.contentWidth}px;margin:24px auto;padding:10px 0;cursor:pointer;`,
+        },
+        [
+          'hr',
+          {
+            style: `width:100%;border:0;border-top:1px solid ${theme.borderColor};margin:0;`,
+          },
+        ],
+      ];
+    }
+
+    const isHero = attrs.kind === 'hero';
     const borderLeft = presentation.borderLeftColor
-      ? `border-left:4px solid ${presentation.borderLeftColor}`
+      ? `border-left:4px solid ${presentation.borderLeftColor};`
       : '';
+    const linkIsButton = presentation.linkKind === 'button';
+
     return [
       'section',
       {
+        class: 'newsletter-structured-block',
         'data-email-studio-block': attrs.kind,
         'data-title': attrs.title,
         'data-body': attrs.body,
@@ -105,7 +134,7 @@ export const EmailStudioBlock = EmailNode.create({
           'box-sizing:border-box',
           'width:100%',
           `max-width:${EMAIL_STUDIO_LAYOUT.contentWidth}px`,
-          `margin:${EMAIL_STUDIO_LAYOUT.sectionGap}px auto`,
+          `margin:${presentation.footer ? '12px' : EMAIL_STUDIO_LAYOUT.sectionGap + 'px'} auto`,
           `padding:${presentation.padding}`,
           `border:1px solid ${presentation.borderColor}`,
           borderLeft,
@@ -113,10 +142,73 @@ export const EmailStudioBlock = EmailNode.create({
           `background:${presentation.backgroundColor}`,
           `color:${presentation.textColor}`,
           `font-family:${theme.fontFamily}`,
+          `font-size:${presentation.bodySize}px`,
+          'line-height:1.6',
           `text-align:${presentation.textAlign}`,
+          'cursor:pointer',
+          'transition:box-shadow 120ms ease,outline-color 120ms ease',
         ].filter(Boolean).join(';'),
       },
-      summary,
+      [
+        'p',
+        {
+          style: isHero
+            ? `display:block;margin:0 0 10px;color:${theme.secondaryAccentColor};font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;`
+            : 'display:none;',
+        },
+        isHero ? theme.label : '',
+      ],
+      [
+        'img',
+        {
+          src: attrs.imageUrl || undefined,
+          alt: attrs.altText,
+          style: attrs.imageUrl
+            ? `display:block;width:100%;max-width:552px;height:auto;border-radius:${EMAIL_STUDIO_LAYOUT.imageRadius}px;margin:${isHero ? '0 auto 20px' : '0 0 18px'};`
+            : 'display:none;',
+        },
+      ],
+      [
+        'h2',
+        {
+          style: attrs.title
+            ? `display:block;margin:0 0 10px;color:${presentation.titleColor};font-size:${presentation.titleSize}px;line-height:1.25;letter-spacing:${isHero ? '-0.4px' : '0'};font-weight:700;`
+            : 'display:none;',
+        },
+        attrs.title,
+      ],
+      [
+        'p',
+        {
+          style: attrs.body
+            ? `display:block;margin:0;color:${presentation.textColor};white-space:pre-wrap;`
+            : 'display:none;',
+        },
+        attrs.body,
+      ],
+      [
+        'p',
+        {
+          style: attrs.href ? 'display:block;margin:18px 0 0;' : 'display:none;',
+        },
+        [
+          'span',
+          {
+            style: attrs.href
+              ? [
+                  'display:inline-block',
+                  `padding:${linkIsButton ? '12px 20px' : '0'}`,
+                  `border-radius:${linkIsButton ? '7px' : '0'}`,
+                  `background:${presentation.linkBackgroundColor}`,
+                  `color:${presentation.linkColor}`,
+                  'font-weight:700',
+                  `text-decoration:${linkIsButton ? 'none' : 'underline'}`,
+                ].join(';')
+              : 'display:none;',
+          },
+          attrs.href ? linkLabel(attrs.kind) : '',
+        ],
+      ],
     ];
   },
 
