@@ -176,24 +176,31 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     onDirty?.();
   };
 
+  // Editor transactions fire constantly; committing a brand-new selected-block
+  // object every time re-renders the editor and can feed itself. Only commit
+  // when the logical block actually changed.
+  const commitSelectedBlock = (next: NewsletterSelectedBlock | null) => {
+    const signature = next ? JSON.stringify(next) : null;
+    if (signature === selectedSignatureRef.current) return;
+    selectedSignatureRef.current = signature;
+    setSelectedBlock(next);
+  };
+
   const syncEditorControls = () => {
     const editor = editorRef.current?.editor ?? null;
     const nextSelectedBlock = getSelectedNewsletterBlock(editor);
     if (nextSelectedBlock) {
       selectedPositionRef.current = nextSelectedBlock.from;
-      setSelectedBlock(nextSelectedBlock);
+      commitSelectedBlock(nextSelectedBlock);
       setInspectorTab('block');
-    } else if (editor?.isFocused) {
-      // Caret moved into free text inside the canvas: no structured block is selected.
-      selectedPositionRef.current = null;
-      setSelectedBlock(null);
     } else if (selectedPositionRef.current !== null) {
-      // Editor lost focus (e.g. typing in the inspector): keep the logical block.
+      // Keep the logical block while the caret or focus lives elsewhere
+      // (inspector inputs, toolbar buttons, or a plain text caret).
       const stored = getNewsletterBlockAtPosition(editor, selectedPositionRef.current);
-      if (stored) setSelectedBlock(stored);
+      if (stored) commitSelectedBlock(stored);
       else {
         selectedPositionRef.current = null;
-        setSelectedBlock(null);
+        commitSelectedBlock(null);
       }
     }
     setCanUndo(Boolean(editor?.can().undo()));
