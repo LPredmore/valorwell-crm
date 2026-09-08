@@ -226,7 +226,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     setThemeKey(nextThemeKey);
     setContent(cloneEmailStudioDocument(nextDocument));
     setSnapshot(null);
-    setSelectedBlock(null);
+    commitSelectedBlock(null);
     setValidation(validateEmailStudioEditorDocument(nextDocument, 'newsletter', scope));
     setError(null);
     setStatus('loading');
@@ -321,7 +321,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     if (position === null) return;
     if (updateNewsletterBlockAtPosition(editor, position, patch)) {
       const updated = getNewsletterBlockAtPosition(editor, position);
-      if (updated) setSelectedBlock(updated);
+      if (updated) commitSelectedBlock(updated);
     }
   };
 
@@ -340,7 +340,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     selectedPositionRef.current = position;
     const stored = getNewsletterBlockAtPosition(editor, position);
     if (stored) {
-      setSelectedBlock(stored);
+      commitSelectedBlock(stored);
       setInspectorTab('block');
     }
     selectNewsletterBlockFromDom(editor, target);
