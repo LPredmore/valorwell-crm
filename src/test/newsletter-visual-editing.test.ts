@@ -1,9 +1,11 @@
 import type { Editor } from '@tiptap/react';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  getNewsletterBlockAtPosition,
   getSelectedNewsletterBlock,
   newsletterBlockSupportsImage,
   newsletterBlockSupportsLink,
+  updateNewsletterBlockAtPosition,
   updateSelectedNewsletterBlock,
 } from '@/features/email-studio/newsletter/newsletterVisualEditing';
 
@@ -120,5 +122,58 @@ describe('newsletter visual editing', () => {
 
     expect(getSelectedNewsletterBlock(nested)).toBeNull();
     expect(getSelectedNewsletterBlock(textSelection)).toBeNull();
+  });
+});
+
+describe('newsletter block editing by stored position', () => {
+  function docEditor(attrs: Record<string, unknown>) {
+    const node = {
+      type: { name: 'emailStudioBlock' },
+      attrs,
+      nodeSize: 2,
+    };
+    const dispatch = vi.fn();
+    const setNodeMarkup = vi.fn(() => 'tr');
+    return {
+      dispatch,
+      setNodeMarkup,
+      editor: {
+        state: {
+          selection: { from: 0, to: 0, $from: { depth: 0, index: () => 0 } },
+          doc: {
+            childCount: 1,
+            child: () => node,
+            nodeAt: () => node,
+          },
+          tr: { setNodeMarkup },
+        },
+        view: { dispatch },
+      } as unknown as Editor,
+    };
+  }
+
+  it('reads a block from its absolute document position', () => {
+    const { editor } = docEditor({ kind: 'story', title: 'Story', body: 'Body', locked: false });
+    expect(getNewsletterBlockAtPosition(editor, 0)).toMatchObject({
+      kind: 'story',
+      title: 'Story',
+      body: 'Body',
+      from: 0,
+      to: 2,
+      index: 0,
+    });
+  });
+
+  it('updates the stored block without requiring editor focus or selection', () => {
+    const { editor, dispatch, setNodeMarkup } = docEditor({ kind: 'story', title: 'Story', locked: false });
+    expect(updateNewsletterBlockAtPosition(editor, 0, { title: 'Updated' })).toBe(true);
+    expect(setNodeMarkup).toHaveBeenCalledWith(0, undefined, { kind: 'story', title: 'Updated', locked: false });
+    expect(dispatch).toHaveBeenCalledWith('tr');
+  });
+
+  it('refuses to edit locked blocks by position', () => {
+    const { editor, dispatch } = docEditor({ kind: 'compliance-footer', locked: true });
+    expect(updateNewsletterBlockAtPosition(editor, 0, { body: 'Remove unsubscribe' })).toBe(false);
+    expect(dispatch).not.toHaveBeenCalled();
   });
 });

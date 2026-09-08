@@ -88,6 +88,84 @@ export function updateSelectedNewsletterBlock(editor: Editor | null, patch: News
   return editor.chain().focus().updateAttributes('emailStudioBlock', patch).run();
 }
 
+/**
+ * Reads the structured block stored at an absolute document position, so the
+ * inspector keeps working after the editor loses focus or selection moves.
+ */
+export function getNewsletterBlockAtPosition(
+  editor: Editor | null,
+  position: number,
+): NewsletterSelectedBlock | null {
+  if (!editor) return null;
+  const doc = editor.state.doc;
+  let pos = 0;
+  for (let index = 0; index < doc.childCount; index += 1) {
+    const child = doc.child(index);
+    if (pos === position) {
+      if (child.type.name !== 'emailStudioBlock') return null;
+      const rawKind = String(child.attrs.kind || 'text');
+      const kind = (EMAIL_STUDIO_BLOCK_KINDS as readonly string[]).includes(rawKind)
+        ? rawKind as EmailStudioBlockKind
+        : 'text';
+      const locked = Boolean(child.attrs.locked);
+      return {
+        kind,
+        title: String(child.attrs.title || ''),
+        body: String(child.attrs.body || ''),
+        href: String(child.attrs.href || ''),
+        imageUrl: String(child.attrs.imageUrl || ''),
+        altText: String(child.attrs.altText || ''),
+        locked,
+        from: pos,
+        to: pos + child.nodeSize,
+        index,
+        canMoveUp: !locked && index > 0,
+        canMoveDown: !locked && index < doc.childCount - 1,
+      };
+    }
+    pos += child.nodeSize;
+  }
+  return null;
+}
+
+/**
+ * Updates block attributes at a stored position without requiring the editor to
+ * hold the selection or focus (inspector inputs keep focus while typing).
+ */
+export function updateNewsletterBlockAtPosition(
+  editor: Editor | null,
+  position: number,
+  patch: NewsletterBlockPatch,
+): boolean {
+  const block = getNewsletterBlockAtPosition(editor, position);
+  if (!editor || !block || block.locked) return false;
+  const node = editor.state.doc.nodeAt(position);
+  if (!node || node.type.name !== 'emailStudioBlock') return false;
+  const transaction = editor.state.tr.setNodeMarkup(position, undefined, {
+    ...node.attrs,
+    ...patch,
+  });
+  editor.view.dispatch(transaction);
+  return true;
+}
+
+/** Selects the structured block that owns a clicked DOM element. */
+export function selectNewsletterBlockFromDom(editor: Editor | null, target: EventTarget | null): boolean {
+  if (!editor || !(target instanceof Element)) return false;
+  const section = target.closest('section[data-email-studio-block]');
+  if (!section) return false;
+  const doc = editor.state.doc;
+  let pos = 0;
+  for (let index = 0; index < doc.childCount; index += 1) {
+    const child = doc.child(index);
+    if (editor.view.nodeDOM(pos) === section) {
+      return editor.commands.setNodeSelection(pos);
+    }
+    pos += child.nodeSize;
+  }
+  return false;
+}
+
 export function duplicateSelectedNewsletterBlock(editor: Editor | null): boolean {
   if (!editor) return false;
   const selected = getSelectedNewsletterBlock(editor);
