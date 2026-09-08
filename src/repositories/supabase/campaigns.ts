@@ -44,6 +44,7 @@ type EnrollmentRow = Pick<
 const CAMPAIGN_COLS = `
   id, tenant_id, name, description, is_active,
   on_complete_action, on_complete_status,
+  on_complete_engagement_state, on_complete_lifecycle_stage,
   default_timezone, send_window_start, send_window_end, weekdays_only,
   created_by_profile_id, created_at, updated_at
 `;

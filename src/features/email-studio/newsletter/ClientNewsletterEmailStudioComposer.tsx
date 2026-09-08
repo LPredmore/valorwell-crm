@@ -72,11 +72,13 @@ import {
 import {
   deleteSelectedNewsletterBlock,
   duplicateSelectedNewsletterBlock,
+  getNewsletterBlockAtPosition,
   getSelectedNewsletterBlock,
   moveSelectedNewsletterBlock,
   newsletterBlockSupportsImage,
   newsletterBlockSupportsLink,
-  updateSelectedNewsletterBlock,
+  selectNewsletterBlockFromDom,
+  updateNewsletterBlockAtPosition,
   type NewsletterBlockPatch,
   type NewsletterSelectedBlock,
 } from './newsletterVisualEditing';
@@ -124,6 +126,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
 }, ref) {
   const editorRef = useRef<EmailEditorRef>(null);
   const selectionCleanupRef = useRef<(() => void) | null>(null);
+  const selectedPositionRef = useRef<number | null>(null);
   const initialThemeKey = normalizeThemeKey(initialContent?.themeKey);
   const initialDocument = initialContent?.mode === 'newsletter' && initialContent.editorDocument
     ? initialContent.editorDocument
@@ -175,8 +178,23 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
   const syncEditorControls = () => {
     const editor = editorRef.current?.editor ?? null;
     const nextSelectedBlock = getSelectedNewsletterBlock(editor);
-    setSelectedBlock(nextSelectedBlock);
-    if (nextSelectedBlock) setInspectorTab('block');
+    if (nextSelectedBlock) {
+      selectedPositionRef.current = nextSelectedBlock.from;
+      setSelectedBlock(nextSelectedBlock);
+      setInspectorTab('block');
+    } else if (editor?.isFocused) {
+      // Caret moved into free text inside the canvas: no structured block is selected.
+      selectedPositionRef.current = null;
+      setSelectedBlock(null);
+    } else if (selectedPositionRef.current !== null) {
+      // Editor lost focus (e.g. typing in the inspector): keep the logical block.
+      const stored = getNewsletterBlockAtPosition(editor, selectedPositionRef.current);
+      if (stored) setSelectedBlock(stored);
+      else {
+        selectedPositionRef.current = null;
+        setSelectedBlock(null);
+      }
+    }
     setCanUndo(Boolean(editor?.can().undo()));
     setCanRedo(Boolean(editor?.can().redo()));
   };
@@ -289,8 +307,12 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
 
   const updateBlock = (patch: NewsletterBlockPatch) => {
     if (readOnly) return;
-    if (updateSelectedNewsletterBlock(editorRef.current?.editor ?? null, patch)) {
-      syncEditorControls();
+    const editor = editorRef.current?.editor ?? null;
+    const position = selectedPositionRef.current ?? selectedBlock?.from ?? null;
+    if (position === null) return;
+    if (updateNewsletterBlockAtPosition(editor, position, patch)) {
+      const updated = getNewsletterBlockAtPosition(editor, position);
+      if (updated) setSelectedBlock(updated);
     }
   };
 
@@ -411,8 +433,8 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
           >
             <Heading2 className="h-4 w-4" />
           </Button>
-          <span className="ml-auto text-xs text-muted-foreground">
-            Select a block to edit its content on the right.
+          <span className="ml-auto text-xs text-muted-foreground" data-testid="newsletter-canvas-hint">
+            Click a section, then edit its text in the Block panel.
           </span>
         </div>
 
@@ -420,6 +442,11 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
           <div
             className="mx-auto w-[648px] rounded-xl border border-border/80 bg-white p-6 shadow-[0_10px_30px_rgba(20,30,24,0.10)]"
             data-testid="newsletter-email-canvas"
+            onMouseDownCapture={(event) => {
+              if (selectNewsletterBlockFromDom(editorRef.current?.editor ?? null, event.target)) {
+                syncEditorControls();
+              }
+            }}
           >
             <EmailEditor
               key={`newsletter-${editorKey}`}
@@ -604,7 +631,7 @@ function NewsletterBlockInspector({
       <div className="space-y-3">
         <div>
           <p className="text-sm font-semibold">Block settings</p>
-          <p className="text-xs text-muted-foreground">Select a structured block in the email canvas.</p>
+          <p className="text-xs text-muted-foreground">Click a section, then edit its text in the Block panel.</p>
         </div>
         <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
           Hero, story, CTA, resource, image, footer, and other structured blocks are edited here. Direct text remains editable in the canvas.
