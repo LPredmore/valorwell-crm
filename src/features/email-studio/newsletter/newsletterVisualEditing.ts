@@ -149,21 +149,60 @@ export function updateNewsletterBlockAtPosition(
   return true;
 }
 
-/** Selects the structured block that owns a clicked DOM element. */
-export function selectNewsletterBlockFromDom(editor: Editor | null, target: EventTarget | null): boolean {
-  if (!editor || !(target instanceof Element)) return false;
-  const section = target.closest('section[data-email-studio-block]');
-  if (!section) return false;
+/**
+ * Resolves a clicked rendered block to its top-level ProseMirror document
+ * position. React Email may wrap custom nodes, so selection cannot depend on
+ * nodeDOM(position) being exactly the element carrying the block data attr.
+ */
+export function resolveNewsletterBlockPositionFromDom(
+  editor: Editor | null,
+  target: EventTarget | null,
+): number | null {
+  if (!editor || !(target instanceof Element)) return null;
+  const blockElement = target.closest('[data-email-studio-block]');
+  if (!blockElement) return null;
+
   const doc = editor.state.doc;
   let pos = 0;
   for (let index = 0; index < doc.childCount; index += 1) {
     const child = doc.child(index);
-    if (editor.view.nodeDOM(pos) === section) {
-      return editor.commands.setNodeSelection(pos);
+    if (child.type.name === 'emailStudioBlock') {
+      const nodeDom = editor.view.nodeDOM(pos);
+      if (
+        nodeDom instanceof Element
+        && (
+          nodeDom === blockElement
+          || nodeDom.contains(blockElement)
+          || blockElement.contains(nodeDom)
+        )
+      ) {
+        return pos;
+      }
     }
     pos += child.nodeSize;
   }
-  return false;
+  return null;
+}
+
+/**
+ * Selects the structured block that owns a clicked DOM element. This helper is
+ * currently called from a capture-phase mousedown in the newsletter composer.
+ * ProseMirror then handles the same mousedown and can replace the NodeSelection,
+ * so re-assert the block selection once the current event stack has completed.
+ */
+export function selectNewsletterBlockFromDom(editor: Editor | null, target: EventTarget | null): boolean {
+  if (!editor) return false;
+  const position = resolveNewsletterBlockPositionFromDom(editor, target);
+  if (position === null) return false;
+  if (!editor.commands.setNodeSelection(position)) return false;
+
+  queueMicrotask(() => {
+    if (!editor.isDestroyed && getNewsletterBlockAtPosition(editor, position)) {
+      editor.commands.setNodeSelection(position);
+    }
+  });
+
+  return true;
 }
 
 export function duplicateSelectedNewsletterBlock(editor: Editor | null): boolean {
