@@ -24,6 +24,15 @@ export type NewsletterSelectedBlock = {
   canMoveDown: boolean;
 };
 
+type ProseMirrorNode = Editor['state']['doc'];
+
+type NewsletterBlockLocation = {
+  node: ProseMirrorNode;
+  parent: ProseMirrorNode;
+  position: number;
+  index: number;
+};
+
 const IMAGE_BLOCK_KINDS: readonly EmailStudioBlockKind[] = [
   'hero',
   'story',
@@ -56,30 +65,9 @@ export function getSelectedNewsletterBlock(editor: Editor | null): NewsletterSel
   const selected = getSelectedBlockNode(editor);
   if (!selected) return null;
 
-  const { selection, node } = selected;
-  if (selection.$from.depth !== 0) return null;
-
-  const rawKind = String(node.attrs.kind || 'text');
-  const kind = (EMAIL_STUDIO_BLOCK_KINDS as readonly string[]).includes(rawKind)
-    ? rawKind as EmailStudioBlockKind
-    : 'text';
-  const index = selection.$from.index(0);
-  const locked = Boolean(node.attrs.locked);
-
-  return {
-    kind,
-    title: String(node.attrs.title || ''),
-    body: String(node.attrs.body || ''),
-    href: String(node.attrs.href || ''),
-    imageUrl: String(node.attrs.imageUrl || ''),
-    altText: String(node.attrs.altText || ''),
-    locked,
-    from: selection.from,
-    to: selection.to,
-    index,
-    canMoveUp: !locked && index > 0,
-    canMoveDown: !locked && index < editor.state.doc.childCount - 1,
-  };
+  const location = getNewsletterBlockLocationAtPosition(editor, selected.selection.from);
+  if (!location) return null;
+  return selectedBlockFromLocation(location);
 }
 
 export function updateSelectedNewsletterBlock(editor: Editor | null, patch: NewsletterBlockPatch): boolean {
@@ -89,43 +77,17 @@ export function updateSelectedNewsletterBlock(editor: Editor | null, patch: News
 }
 
 /**
- * Reads the structured block stored at an absolute document position, so the
- * inspector keeps working after the editor loses focus or selection moves.
+ * Reads a structured block at an absolute ProseMirror document position.
+ * React Email wraps authored content in a container node, so blocks are not
+ * guaranteed to be direct children of the document.
  */
 export function getNewsletterBlockAtPosition(
   editor: Editor | null,
   position: number,
 ): NewsletterSelectedBlock | null {
   if (!editor) return null;
-  const doc = editor.state.doc;
-  let pos = 0;
-  for (let index = 0; index < doc.childCount; index += 1) {
-    const child = doc.child(index);
-    if (pos === position) {
-      if (child.type.name !== 'emailStudioBlock') return null;
-      const rawKind = String(child.attrs.kind || 'text');
-      const kind = (EMAIL_STUDIO_BLOCK_KINDS as readonly string[]).includes(rawKind)
-        ? rawKind as EmailStudioBlockKind
-        : 'text';
-      const locked = Boolean(child.attrs.locked);
-      return {
-        kind,
-        title: String(child.attrs.title || ''),
-        body: String(child.attrs.body || ''),
-        href: String(child.attrs.href || ''),
-        imageUrl: String(child.attrs.imageUrl || ''),
-        altText: String(child.attrs.altText || ''),
-        locked,
-        from: pos,
-        to: pos + child.nodeSize,
-        index,
-        canMoveUp: !locked && index > 0,
-        canMoveDown: !locked && index < doc.childCount - 1,
-      };
-    }
-    pos += child.nodeSize;
-  }
-  return null;
+  const location = getNewsletterBlockLocationAtPosition(editor, position);
+  return location ? selectedBlockFromLocation(location) : null;
 }
 
 /**
@@ -150,9 +112,10 @@ export function updateNewsletterBlockAtPosition(
 }
 
 /**
- * Resolves a clicked rendered block to its top-level ProseMirror document
- * position. React Email may wrap custom nodes, so selection cannot depend on
- * nodeDOM(position) being exactly the element carrying the block data attr.
+ * Resolves a clicked rendered block to its absolute ProseMirror position.
+ * @react-email/editor inserts a container around authored blocks, and may also
+ * wrap a node in DOM chrome, so neither document depth nor exact DOM identity
+ * is stable enough to use as the lookup contract.
  */
 export function resolveNewsletterBlockPositionFromDom(
   editor: Editor | null,
@@ -162,33 +125,32 @@ export function resolveNewsletterBlockPositionFromDom(
   const blockElement = target.closest('[data-email-studio-block]');
   if (!blockElement) return null;
 
-  const doc = editor.state.doc;
-  let pos = 0;
-  for (let index = 0; index < doc.childCount; index += 1) {
-    const child = doc.child(index);
-    if (child.type.name === 'emailStudioBlock') {
-      const nodeDom = editor.view.nodeDOM(pos);
-      if (
-        nodeDom instanceof Element
-        && (
-          nodeDom === blockElement
-          || nodeDom.contains(blockElement)
-          || blockElement.contains(nodeDom)
-        )
-      ) {
-        return pos;
-      }
+  let matchedPosition: number | null = null;
+  editor.state.doc.descendants((node, position) => {
+    if (matchedPosition !== null) return false;
+    if (node.type.name !== 'emailStudioBlock') return true;
+
+    const nodeDom = editor.view.nodeDOM(position);
+    if (
+      nodeDom instanceof Element
+      && (
+        nodeDom === blockElement
+        || nodeDom.contains(blockElement)
+        || blockElement.contains(nodeDom)
+      )
+    ) {
+      matchedPosition = position;
     }
-    pos += child.nodeSize;
-  }
-  return null;
+    return false;
+  });
+
+  return matchedPosition;
 }
 
 /**
- * Selects the structured block that owns a clicked DOM element. This helper is
- * currently called from a capture-phase mousedown in the newsletter composer.
- * ProseMirror then handles the same mousedown and can replace the NodeSelection,
- * so re-assert the block selection once the current event stack has completed.
+ * Selects the structured block that owns a clicked DOM element. The composer
+ * currently calls this during capture-phase mousedown, so re-assert the same
+ * NodeSelection after ProseMirror finishes handling that event.
  */
 export function selectNewsletterBlockFromDom(editor: Editor | null, target: EventTarget | null): boolean {
   if (!editor) return false;
@@ -230,7 +192,11 @@ export function moveSelectedNewsletterBlock(editor: Editor | null, direction: 'u
   if (direction === 'up' && !selected.canMoveUp) return false;
   if (direction === 'down' && !selected.canMoveDown) return false;
 
-  const sibling = editor.state.doc.child(selected.index + (direction === 'up' ? -1 : 1));
+  const location = getNewsletterBlockLocationAtPosition(editor, selected.from);
+  if (!location) return false;
+  const siblingIndex = location.index + (direction === 'up' ? -1 : 1);
+  if (siblingIndex < 0 || siblingIndex >= location.parent.childCount) return false;
+  const sibling = location.parent.child(siblingIndex);
   const targetPosition = direction === 'up'
     ? selected.from - sibling.nodeSize
     : selected.from + sibling.nodeSize;
@@ -240,6 +206,50 @@ export function moveSelectedNewsletterBlock(editor: Editor | null, direction: 'u
     .insert(targetPosition, selectedNode.node);
   editor.view.dispatch(transaction);
   return editor.commands.setNodeSelection(targetPosition);
+}
+
+function getNewsletterBlockLocationAtPosition(
+  editor: Editor,
+  position: number,
+): NewsletterBlockLocation | null {
+  const node = editor.state.doc.nodeAt(position);
+  if (!node || node.type.name !== 'emailStudioBlock') return null;
+
+  const resolved = editor.state.doc.resolve(position);
+  const parent = resolved.parent;
+  const index = resolved.index();
+  if (index >= parent.childCount || parent.child(index) !== node) return null;
+
+  return {
+    node,
+    parent,
+    position,
+    index,
+  };
+}
+
+function selectedBlockFromLocation(location: NewsletterBlockLocation): NewsletterSelectedBlock {
+  const { node, parent, position, index } = location;
+  const rawKind = String(node.attrs.kind || 'text');
+  const kind = (EMAIL_STUDIO_BLOCK_KINDS as readonly string[]).includes(rawKind)
+    ? rawKind as EmailStudioBlockKind
+    : 'text';
+  const locked = Boolean(node.attrs.locked);
+
+  return {
+    kind,
+    title: String(node.attrs.title || ''),
+    body: String(node.attrs.body || ''),
+    href: String(node.attrs.href || ''),
+    imageUrl: String(node.attrs.imageUrl || ''),
+    altText: String(node.attrs.altText || ''),
+    locked,
+    from: position,
+    to: position + node.nodeSize,
+    index,
+    canMoveUp: !locked && index > 0,
+    canMoveDown: !locked && index < parent.childCount - 1,
+  };
 }
 
 function getSelectedBlockNode(editor: Editor) {
