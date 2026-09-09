@@ -1,4 +1,7 @@
+import { Editor as CoreEditor } from '@tiptap/core';
 import type { Editor } from '@tiptap/react';
+import { StarterKit } from '@react-email/editor/extensions';
+import { EmailTheming } from '@react-email/editor/plugins';
 import { describe, expect, it, vi } from 'vitest';
 import {
   getNewsletterBlockAtPosition,
@@ -10,6 +13,7 @@ import {
   updateNewsletterBlockAtPosition,
   updateSelectedNewsletterBlock,
 } from '@/features/email-studio/newsletter/newsletterVisualEditing';
+import { EmailStudioBlock } from '@/features/email-studio/studio/extensions';
 
 function selectedEditor(
   attrs: Record<string, unknown>,
@@ -18,19 +22,28 @@ function selectedEditor(
   const index = options.index ?? 1;
   const childCount = options.childCount ?? 3;
   const depth = options.depth ?? 0;
+  const node = {
+    type: { name: 'emailStudioBlock' },
+    attrs,
+    nodeSize: 2,
+  };
+  const parent = {
+    childCount,
+    child: () => node,
+  };
   return {
     state: {
       selection: {
         from: 10,
         to: 12,
         $from: { depth, index: () => index },
-        node: {
-          type: { name: 'emailStudioBlock' },
-          attrs,
-          nodeSize: 2,
-        },
+        node,
       },
-      doc: { childCount },
+      doc: {
+        childCount,
+        nodeAt: () => node,
+        resolve: () => ({ parent, index: () => index }),
+      },
     },
   } as unknown as Editor;
 }
@@ -87,19 +100,25 @@ describe('newsletter visual editing', () => {
     const updateAttributes = vi.fn(() => ({ run }));
     const focus = vi.fn(() => ({ updateAttributes }));
     const chain = vi.fn(() => ({ focus }));
+    const node = {
+      type: { name: 'emailStudioBlock' },
+      attrs: { kind: 'story', locked: false },
+      nodeSize: 2,
+    };
+    const parent = { childCount: 3, child: () => node };
     const editor = {
       state: {
         selection: {
           from: 10,
           to: 12,
           $from: { depth: 0, index: () => 1 },
-          node: {
-            type: { name: 'emailStudioBlock' },
-            attrs: { kind: 'story', locked: false },
-            nodeSize: 2,
-          },
+          node,
         },
-        doc: { childCount: 3 },
+        doc: {
+          childCount: 3,
+          nodeAt: () => node,
+          resolve: () => ({ parent, index: () => 1 }),
+        },
       },
       chain,
     } as unknown as Editor;
@@ -109,20 +128,20 @@ describe('newsletter visual editing', () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
-  it('ignores non-block and nested selections instead of exposing destructive controls', () => {
-    const nested = selectedEditor({ kind: 'story', locked: false }, { depth: 1 });
+  it('accepts container-nested NodeSelections and still ignores plain text selections', () => {
+    const nested = selectedEditor({ kind: 'story', title: 'Nested story', locked: false }, { depth: 1 });
     const textSelection = {
       state: {
         selection: {
           from: 4,
           to: 4,
-          $from: { depth: 0, index: () => 0 },
+          $from: { depth: 1, index: () => 0 },
         },
         doc: { childCount: 1 },
       },
     } as unknown as Editor;
 
-    expect(getSelectedNewsletterBlock(nested)).toBeNull();
+    expect(getSelectedNewsletterBlock(nested)).toMatchObject({ kind: 'story', title: 'Nested story' });
     expect(getSelectedNewsletterBlock(textSelection)).toBeNull();
   });
 });
@@ -134,6 +153,7 @@ describe('newsletter block editing by stored position', () => {
       attrs,
       nodeSize: 2,
     };
+    const parent = { childCount: 1, child: () => node };
     const dispatch = vi.fn();
     const setNodeMarkup = vi.fn(() => 'tr');
     return {
@@ -146,6 +166,7 @@ describe('newsletter block editing by stored position', () => {
             childCount: 1,
             child: () => node,
             nodeAt: () => node,
+            resolve: () => ({ parent, index: () => 0 }),
           },
           tr: { setNodeMarkup },
         },
@@ -181,7 +202,7 @@ describe('newsletter block editing by stored position', () => {
 });
 
 describe('newsletter block DOM selection bridge', () => {
-  function domEditor(nodeDom: Element) {
+  function domEditor(nodeDom: Element, position = 1) {
     const node = {
       type: { name: 'emailStudioBlock' },
       attrs: {
@@ -195,6 +216,7 @@ describe('newsletter block DOM selection bridge', () => {
       },
       nodeSize: 2,
     };
+    const parent = { childCount: 1, child: () => node };
     const setNodeSelection = vi.fn(() => true);
     return {
       setNodeSelection,
@@ -202,8 +224,11 @@ describe('newsletter block DOM selection bridge', () => {
         state: {
           doc: {
             childCount: 1,
-            child: () => node,
             nodeAt: () => node,
+            resolve: () => ({ parent, index: () => 0 }),
+            descendants: (callback: (child: typeof node, pos: number) => boolean | void) => {
+              callback(node, position);
+            },
           },
         },
         view: {
@@ -224,7 +249,7 @@ describe('newsletter block DOM selection bridge', () => {
     nodeWrapper.appendChild(renderedBlock);
 
     const { editor } = domEditor(nodeWrapper);
-    expect(resolveNewsletterBlockPositionFromDom(editor, clickedChild)).toBe(0);
+    expect(resolveNewsletterBlockPositionFromDom(editor, clickedChild)).toBe(1);
   });
 
   it('does not require the rendered structured block to be a section element', () => {
@@ -234,7 +259,7 @@ describe('newsletter block DOM selection bridge', () => {
     renderedBlock.appendChild(clickedChild);
 
     const { editor } = domEditor(renderedBlock);
-    expect(resolveNewsletterBlockPositionFromDom(editor, clickedChild)).toBe(0);
+    expect(resolveNewsletterBlockPositionFromDom(editor, clickedChild)).toBe(1);
   });
 
   it('reasserts the block selection after the capture-phase event stack completes', async () => {
@@ -252,7 +277,7 @@ describe('newsletter block DOM selection bridge', () => {
     await Promise.resolve();
 
     expect(setNodeSelection).toHaveBeenCalledTimes(2);
-    expect(setNodeSelection).toHaveBeenLastCalledWith(0);
+    expect(setNodeSelection).toHaveBeenLastCalledWith(1);
   });
 
   it('ignores clicks outside structured newsletter blocks', () => {
@@ -263,5 +288,95 @@ describe('newsletter block DOM selection bridge', () => {
     expect(resolveNewsletterBlockPositionFromDom(editor, outside)).toBeNull();
     expect(selectNewsletterBlockFromDom(editor, outside)).toBe(false);
     expect(setNodeSelection).not.toHaveBeenCalled();
+  });
+});
+
+describe('real @react-email/editor container behavior', () => {
+  it('selects, resolves, and updates a block nested inside the real container wrapper', async () => {
+    const element = document.createElement('div');
+    document.body.appendChild(element);
+    const editor = new CoreEditor({
+      element,
+      extensions: [
+        StarterKit,
+        EmailTheming.configure({ theme: 'basic' }),
+        EmailStudioBlock,
+      ],
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'emailStudioBlock',
+            attrs: {
+              kind: 'text',
+              title: 'The bottleneck now is therapists',
+              body: 'The infrastructure is in place.',
+              href: '',
+              imageUrl: '',
+              altText: '',
+              themeKey: 'valorwell',
+              locked: false,
+            },
+          },
+          {
+            type: 'emailStudioBlock',
+            attrs: {
+              kind: 'story',
+              title: 'Second block',
+              body: 'Second body',
+              href: '',
+              imageUrl: '',
+              altText: '',
+              themeKey: 'valorwell',
+              locked: false,
+            },
+          },
+        ],
+      },
+    });
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(editor.state.doc.childCount).toBe(1);
+      expect(editor.state.doc.firstChild?.type.name).toBe('container');
+
+      let blockPosition: number | null = null;
+      editor.state.doc.descendants((node, position) => {
+        if (blockPosition === null && node.type.name === 'emailStudioBlock') {
+          blockPosition = position;
+          return false;
+        }
+        return true;
+      });
+      expect(blockPosition).toBe(1);
+
+      const newsletterEditor = editor as unknown as Editor;
+      expect(editor.commands.setNodeSelection(blockPosition!)).toBe(true);
+      expect(editor.state.selection.$from.depth).toBe(1);
+      expect(getSelectedNewsletterBlock(newsletterEditor)).toMatchObject({
+        kind: 'text',
+        title: 'The bottleneck now is therapists',
+        body: 'The infrastructure is in place.',
+        from: 1,
+        index: 0,
+        canMoveUp: false,
+        canMoveDown: true,
+      });
+
+      const renderedBlock = element.querySelector<HTMLElement>('[data-email-studio-block="text"]');
+      expect(renderedBlock).not.toBeNull();
+      const clickTarget = renderedBlock?.querySelector('h2') ?? renderedBlock;
+      expect(resolveNewsletterBlockPositionFromDom(newsletterEditor, clickTarget)).toBe(1);
+      expect(selectNewsletterBlockFromDom(newsletterEditor, clickTarget)).toBe(true);
+      await Promise.resolve();
+      expect(getSelectedNewsletterBlock(newsletterEditor)?.title).toBe('The bottleneck now is therapists');
+
+      expect(updateNewsletterBlockAtPosition(newsletterEditor, 1, { title: 'Updated title' })).toBe(true);
+      expect(editor.state.doc.nodeAt(1)?.attrs.title).toBe('Updated title');
+    } finally {
+      editor.destroy();
+      element.remove();
+    }
   });
 });
