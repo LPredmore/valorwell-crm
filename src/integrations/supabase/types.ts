@@ -18049,6 +18049,117 @@ export type Database = {
           },
         ]
       }
+      relationship_institutional_recruiting_targets: {
+        Row: {
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          contact_title: string | null
+          created_at: string
+          general_office_email: string | null
+          id: string
+          organization_name: string
+          organization_type: string | null
+          relationship_contact_id: string | null
+          relationship_organization_id: string | null
+          research_cycle: number
+          researched_at: string
+          source_url: string | null
+          specific_office: string | null
+          state_code: string
+          state_name: string
+          state_order: number
+          tenant_id: string
+          updated_at: string
+          website: string | null
+          why_worth_time: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_title?: string | null
+          created_at?: string
+          general_office_email?: string | null
+          id?: string
+          organization_name: string
+          organization_type?: string | null
+          relationship_contact_id?: string | null
+          relationship_organization_id?: string | null
+          research_cycle?: number
+          researched_at?: string
+          source_url?: string | null
+          specific_office?: string | null
+          state_code: string
+          state_name: string
+          state_order: number
+          tenant_id: string
+          updated_at?: string
+          website?: string | null
+          why_worth_time?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_title?: string | null
+          created_at?: string
+          general_office_email?: string | null
+          id?: string
+          organization_name?: string
+          organization_type?: string | null
+          relationship_contact_id?: string | null
+          relationship_organization_id?: string | null
+          research_cycle?: number
+          researched_at?: string
+          source_url?: string | null
+          specific_office?: string | null
+          state_code?: string
+          state_name?: string
+          state_order?: number
+          tenant_id?: string
+          updated_at?: string
+          website?: string | null
+          why_worth_time?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_institutional_re_relationship_organization_id_fkey"
+            columns: ["relationship_organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organization_directory_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_institutional_re_relationship_organization_id_fkey"
+            columns: ["relationship_organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_institutional_recruit_relationship_contact_id_fkey"
+            columns: ["relationship_contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contact_directory_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_institutional_recruit_relationship_contact_id_fkey"
+            columns: ["relationship_contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationship_institutional_recruiting_targets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       relationship_interactions: {
         Row: {
           contact_id: string | null
@@ -19767,6 +19878,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "relationship_suppressions"
             referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      research_state_rotations: {
+        Row: {
+          claimed_at: string | null
+          created_at: string
+          current_state_order: number | null
+          cycle_number: number
+          id: string
+          last_completed_at: string | null
+          last_completed_state_order: number | null
+          last_error: Json
+          last_failed_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          workflow_key: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          created_at?: string
+          current_state_order?: number | null
+          cycle_number?: number
+          id?: string
+          last_completed_at?: string | null
+          last_completed_state_order?: number | null
+          last_error?: Json
+          last_failed_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          workflow_key: string
+        }
+        Update: {
+          claimed_at?: string | null
+          created_at?: string
+          current_state_order?: number | null
+          cycle_number?: number
+          id?: string
+          last_completed_at?: string | null
+          last_completed_state_order?: number | null
+          last_error?: Json
+          last_failed_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          workflow_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "research_state_rotations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
           },
         ]
       }
