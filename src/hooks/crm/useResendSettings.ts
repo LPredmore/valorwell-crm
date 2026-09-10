@@ -7,6 +7,9 @@ export interface ResendSettings {
   tenant_id: string;
   from_name: string | null;
   from_email: string | null;
+  /** Newsletters send from this verified marketing subdomain when set. */
+  marketing_from_email: string | null;
+  marketing_from_name: string | null;
   reply_to_email: string | null;
   inbound_email: string | null;
   postal_address: string | null;
@@ -28,7 +31,13 @@ interface TestConnectionResult {
 
 type ResendSettingsUpdate = Pick<
   ResendSettings,
-  'from_name' | 'from_email' | 'reply_to_email' | 'inbound_email' | 'postal_address'
+  | 'from_name'
+  | 'from_email'
+  | 'marketing_from_email'
+  | 'marketing_from_name'
+  | 'reply_to_email'
+  | 'inbound_email'
+  | 'postal_address'
 >;
 
 type UntypedQueryResult = {

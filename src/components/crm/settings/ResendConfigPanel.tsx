@@ -14,6 +14,8 @@ export function ResendConfigPanel() {
   const { toast } = useToast();
   const [fromName, setFromName] = useState('');
   const [fromEmail, setFromEmail] = useState('');
+  const [marketingFromName, setMarketingFromName] = useState('');
+  const [marketingFromEmail, setMarketingFromEmail] = useState('');
   const [replyToEmail, setReplyToEmail] = useState('');
   const [inboundEmail, setInboundEmail] = useState('');
   const [postalAddress, setPostalAddress] = useState('');
@@ -21,6 +23,8 @@ export function ResendConfigPanel() {
   useEffect(() => {
     setFromName(settings?.from_name ?? '');
     setFromEmail(settings?.from_email ?? '');
+    setMarketingFromName(settings?.marketing_from_name ?? '');
+    setMarketingFromEmail(settings?.marketing_from_email ?? '');
     setReplyToEmail(settings?.reply_to_email ?? '');
     setInboundEmail(settings?.inbound_email ?? '');
     setPostalAddress(settings?.postal_address ?? '');
@@ -47,6 +51,8 @@ export function ResendConfigPanel() {
       await updateSettings.mutateAsync({
         from_name: fromName.trim() || null,
         from_email: fromEmail.trim().toLowerCase() || null,
+        marketing_from_name: marketingFromName.trim() || null,
+        marketing_from_email: marketingFromEmail.trim().toLowerCase() || null,
         reply_to_email: replyToEmail.trim().toLowerCase() || null,
         inbound_email: inboundEmail.trim().toLowerCase() || null,
         postal_address: postalAddress.trim() || null,
@@ -117,6 +123,29 @@ export function ResendConfigPanel() {
             <Label htmlFor="resend-from-email">From email</Label>
             <Input id="resend-from-email" type="email" placeholder="support@valorwell.org" value={fromEmail} onChange={(event) => setFromEmail(event.target.value)} />
             <p className="text-xs text-muted-foreground">The domain must be verified in Resend.</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="resend-marketing-from-name">Marketing from name</Label>
+            <Input
+              id="resend-marketing-from-name"
+              placeholder="ValorWell News"
+              value={marketingFromName}
+              onChange={(event) => setMarketingFromName(event.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="resend-marketing-from-email">Marketing from email (newsletters)</Label>
+            <Input
+              id="resend-marketing-from-email"
+              type="email"
+              placeholder="news@news.valorwell.org"
+              value={marketingFromEmail}
+              onChange={(event) => setMarketingFromEmail(event.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Newsletters send from this address so marketing reputation stays separate from transactional email. Use a
+              dedicated subdomain and verify it in Resend first. Leave empty to keep sending newsletters from the From email above.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="resend-reply-to">Reply-to email</Label>
