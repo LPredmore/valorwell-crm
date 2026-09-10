@@ -175,24 +175,28 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     onDirty?.();
   };
 
+  const applySelectedBlock = (next: NewsletterSelectedBlock | null) => {
+    setSelectedBlock((current) => (areNewsletterBlocksEqual(current, next) ? current : next));
+  };
+
   const syncEditorControls = () => {
     const editor = editorRef.current?.editor ?? null;
     const nextSelectedBlock = getSelectedNewsletterBlock(editor);
     if (nextSelectedBlock) {
       selectedPositionRef.current = nextSelectedBlock.from;
-      setSelectedBlock(nextSelectedBlock);
+      applySelectedBlock(nextSelectedBlock);
       setInspectorTab('block');
     } else if (editor?.isFocused) {
       // Caret moved into free text inside the canvas: no structured block is selected.
       selectedPositionRef.current = null;
-      setSelectedBlock(null);
+      applySelectedBlock(null);
     } else if (selectedPositionRef.current !== null) {
       // Editor lost focus (e.g. typing in the inspector): keep the logical block.
       const stored = getNewsletterBlockAtPosition(editor, selectedPositionRef.current);
-      if (stored) setSelectedBlock(stored);
+      if (stored) applySelectedBlock(stored);
       else {
         selectedPositionRef.current = null;
-        setSelectedBlock(null);
+        applySelectedBlock(null);
       }
     }
     setCanUndo(Boolean(editor?.can().undo()));
@@ -312,7 +316,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     if (position === null) return;
     if (updateNewsletterBlockAtPosition(editor, position, patch)) {
       const updated = getNewsletterBlockAtPosition(editor, position);
-      if (updated) setSelectedBlock(updated);
+      if (updated) applySelectedBlock(updated);
     }
   };
 
@@ -806,4 +810,30 @@ function normalizeThemeKey(value: string | undefined): EmailStudioThemeKey {
     return value;
   }
   return 'valorwell';
+}
+
+// syncEditorControls rebuilds a fresh block object on every transaction/
+// selectionUpdate, so an unconditional setState here never lets React bail via
+// reference equality. Confirmed via a real-editor repro (a single attrs-only
+// dispatch, no typing involved) that this specific composer's re-render
+// re-triggers another transaction/selectionUpdate event indefinitely — root
+// cause not fully bisected, but comparing by value before setState breaks the
+// loop, since a no-op sync then leaves selectedBlock referentially unchanged.
+function areNewsletterBlocksEqual(a: NewsletterSelectedBlock | null, b: NewsletterSelectedBlock | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.kind === b.kind
+    && a.title === b.title
+    && a.body === b.body
+    && a.href === b.href
+    && a.imageUrl === b.imageUrl
+    && a.altText === b.altText
+    && a.locked === b.locked
+    && a.from === b.from
+    && a.to === b.to
+    && a.index === b.index
+    && a.canMoveUp === b.canMoveUp
+    && a.canMoveDown === b.canMoveDown
+  );
 }
