@@ -63,6 +63,7 @@ import {
   cloneEmailStudioDocument,
   createEmailStudioBlockNode,
   createEmailStudioDocument,
+  normalizeEmailStudioComplianceFooters,
 } from '../studio/documents';
 import { EmailStudioBlock, EmailStudioVariable } from '../studio/extensions';
 import {
@@ -136,9 +137,12 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
   const toolbarRef = useRef<HTMLDivElement>(null);
   const settingsPanelRef = useRef<HTMLElement>(null);
   const initialThemeKey = normalizeThemeKey(initialContent?.themeKey);
-  const initialDocument = initialContent?.mode === 'newsletter' && initialContent.editorDocument
+  const loadedDocument = initialContent?.mode === 'newsletter' && initialContent.editorDocument
     ? initialContent.editorDocument
     : createEmailStudioDocument({ mode: 'newsletter', scope, themeKey: initialThemeKey });
+  const normalizedInitial = normalizeEmailStudioComplianceFooters(loadedDocument);
+  const initialDocument = normalizedInitial.document;
+  const repairedOnLoadRef = useRef(normalizedInitial.changed);
 
   const [themeKey, setThemeKey] = useState<EmailStudioThemeKey>(initialThemeKey);
   const [content, setContent] = useState<EmailEditorDocument>(() => cloneEmailStudioDocument(initialDocument));
@@ -158,6 +162,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
   const [assetContext, setAssetContext] = useState<EmailStudioAccessContext | null>(null);
   const [assetError, setAssetError] = useState<string | null>(null);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('block');
+  const [hasComplianceFooter, setHasComplianceFooter] = useState(false);
 
   const blocks = useMemo(() => getEmailStudioBlocksForMode('newsletter'), []);
   const variables = useMemo(() => getEmailVariablesForScope(scope), [scope]);
@@ -177,6 +182,14 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     };
   }, []);
 
+  useEffect(() => {
+    // The loaded draft carried duplicate or stale compliance footers. Mark it
+    // dirty so autosave rewrites the stored document, HTML, and render hash
+    // through the normal export path instead of leaving the repair unsaved.
+    if (repairedOnLoadRef.current) onDirty?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const markDirty = () => {
     setSnapshot(null);
     setStatus('dirty');
@@ -189,6 +202,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
 
   const syncEditorControls = () => {
     const editor = editorRef.current?.editor ?? null;
+    setHasComplianceFooter(documentHasComplianceFooter(editor));
     const nextSelectedBlock = getSelectedNewsletterBlock(editor);
     if (nextSelectedBlock) {
       selectedPositionRef.current = nextSelectedBlock.from;
@@ -313,6 +327,9 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     if (readOnly) return;
     const editor = editorRef.current?.editor;
     if (!editor) return;
+    // A second compliance footer cannot be removed afterwards, because locked
+    // blocks disable the inspector's delete control.
+    if (definition.kind === 'compliance-footer' && documentHasComplianceFooter(editor)) return;
     const node = createEmailStudioBlockNode(definition, themeKey);
     const selected = selectedPositionRef.current !== null
       ? getNewsletterBlockAtPosition(editor, selectedPositionRef.current)
@@ -383,15 +400,17 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
           <p className="text-xs text-muted-foreground">Add an email-safe section.</p>
         </div>
         <div className="space-y-1.5">
-          {blocks.map((block) => (
+          {blocks.map((block) => {
+            const alreadyPresent = block.kind === 'compliance-footer' && hasComplianceFooter;
+            return (
             <Button
               key={block.kind}
               type="button"
               variant="ghost"
               className="h-auto w-full justify-start whitespace-normal rounded-md border px-2.5 py-2 text-left"
               onClick={() => insertBlock(block)}
-              disabled={readOnly}
-              title={block.description}
+              disabled={readOnly || alreadyPresent}
+              title={alreadyPresent ? 'This newsletter already has a compliance footer.' : block.description}
             >
               <span>
                 <span className="block text-sm font-medium">{block.label}</span>
@@ -400,7 +419,8 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
                 </span>
               </span>
             </Button>
-          ))}
+            );
+          })}
         </div>
       </aside>
 
@@ -841,6 +861,20 @@ function applyTheme(document: EmailEditorDocument, themeKey: EmailStudioThemeKey
     content: node.content?.map(visit),
   });
   return visit(document) as EmailEditorDocument;
+}
+
+function documentHasComplianceFooter(editor: EmailEditorRef['editor']): boolean {
+  if (!editor) return false;
+  let found = false;
+  editor.state.doc.descendants((node) => {
+    if (found) return false;
+    if (node.type.name === 'emailStudioBlock' && node.attrs?.kind === 'compliance-footer') {
+      found = true;
+      return false;
+    }
+    return true;
+  });
+  return found;
 }
 
 function normalizeThemeKey(value: string | undefined): EmailStudioThemeKey {

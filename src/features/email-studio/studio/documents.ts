@@ -23,6 +23,54 @@ const variable = (key: string, label: string): EmailEditorNode => ({
   attrs: { key, label },
 });
 
+/**
+ * Compliance footers are locked, so the inspector disables their text fields
+ * and their delete control. That leaves two states a user cannot repair on
+ * their own: a document holding more than one footer, and a footer still
+ * carrying body text from an older canonical definition. Both are resolved
+ * here, on load, because the block is system-managed rather than authored.
+ * Walks nested content because @react-email/editor stores blocks inside a
+ * container node.
+ */
+export function normalizeEmailStudioComplianceFooters(
+  document: EmailEditorDocument,
+): { document: EmailEditorDocument; changed: boolean } {
+  const definition = EMAIL_STUDIO_BLOCKS.find((entry) => entry.kind === 'compliance-footer');
+  if (!definition) return { document, changed: false };
+
+  let changed = false;
+  let keptFooter = false;
+
+  const visit = (node: EmailEditorNode): EmailEditorNode | null => {
+    if (node.type === 'emailStudioBlock' && node.attrs?.kind === 'compliance-footer') {
+      if (keptFooter) {
+        changed = true;
+        return null;
+      }
+      keptFooter = true;
+      const title = String(node.attrs?.title ?? '');
+      const body = String(node.attrs?.body ?? '');
+      if (title === definition.title && body === definition.body) return node;
+      changed = true;
+      return { ...node, attrs: { ...node.attrs, title: definition.title, body: definition.body } };
+    }
+
+    if (!node.content) return node;
+    return {
+      ...node,
+      content: node.content
+        .map(visit)
+        .filter((child): child is EmailEditorNode => child !== null),
+    };
+  };
+
+  const content = (document.content ?? [])
+    .map(visit)
+    .filter((child): child is EmailEditorNode => child !== null);
+
+  return { document: changed ? { ...document, content } : document, changed };
+}
+
 export function createEmailStudioBlockNode(
   definition: EmailStudioBlockDefinition,
   themeKey: EmailStudioThemeKey,
