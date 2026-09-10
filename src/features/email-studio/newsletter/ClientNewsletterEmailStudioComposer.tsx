@@ -115,6 +115,11 @@ export type ClientNewsletterEmailStudioComposerProps = {
 
 type InspectorTab = 'block' | 'email' | 'checks';
 
+type EditorFocusScopeStorage = {
+  registerScope?: (element: HTMLElement) => void;
+  unregisterScope?: (element: HTMLElement) => void;
+};
+
 export const ClientNewsletterEmailStudioComposer = forwardRef<
   ClientNewsletterEmailStudioHandle,
   ClientNewsletterEmailStudioComposerProps
@@ -127,7 +132,9 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
   const editorRef = useRef<EmailEditorRef>(null);
   const selectionCleanupRef = useRef<(() => void) | null>(null);
   const selectedPositionRef = useRef<number | null>(null);
-  const inspectorFocusedRef = useRef(false);
+  const blockLibraryRef = useRef<HTMLElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const settingsPanelRef = useRef<HTMLElement>(null);
   const initialThemeKey = normalizeThemeKey(initialContent?.themeKey);
   const initialDocument = initialContent?.mode === 'newsletter' && initialContent.editorDocument
     ? initialContent.editorDocument
@@ -182,31 +189,6 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
 
   const syncEditorControls = () => {
     const editor = editorRef.current?.editor ?? null;
-
-    if (inspectorFocusedRef.current) {
-      // Focus is inside our own Title/Body/etc. fields, not the canvas. A
-      // NodeSelection click doesn't reliably focus @react-email/editor's
-      // contenteditable (it's rendered contenteditable="false"), so
-      // editor.isFocused can't tell "user clicked a block" apart from "focus
-      // moved to the inspector." And once focus does leave the editor,
-      // ProseMirror's own selection handling resets it — often landing back
-      // on the first block, since @react-email/editor wraps content in a
-      // container node. Trusting that live selection here would silently
-      // swap the block being edited out from under the user. Resolve by the
-      // last known position instead.
-      if (selectedPositionRef.current !== null) {
-        const stored = getNewsletterBlockAtPosition(editor, selectedPositionRef.current);
-        if (stored) applySelectedBlock(stored);
-        else {
-          selectedPositionRef.current = null;
-          applySelectedBlock(null);
-        }
-      }
-      setCanUndo(Boolean(editor?.can().undo()));
-      setCanRedo(Boolean(editor?.can().redo()));
-      return;
-    }
-
     const nextSelectedBlock = getSelectedNewsletterBlock(editor);
     if (nextSelectedBlock) {
       selectedPositionRef.current = nextSelectedBlock.from;
@@ -236,9 +218,24 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     const sync = () => syncEditorControls();
     editor.on('selectionUpdate', sync);
     editor.on('transaction', sync);
+
+    // @react-email/editor's FocusScopes extension (bundled in its StarterKit)
+    // defaults to clearSelectionOnBlur, so focus leaving the canvas resets the
+    // selection to Selection.atStart — which, because authored content sits
+    // inside a container node, lands on the FIRST block. Every control outside
+    // the canvas (block library, formatting toolbar, block inspector) would
+    // therefore silently retarget edits, duplicates, and inserts at block one.
+    // Registering them as focus scopes is the extension's supported way to say
+    // "focus moving here is still editing", so the selection survives.
+    const focusScope = editor.extensionStorage?.focusScope as EditorFocusScopeStorage | undefined;
+    const scopes = [blockLibraryRef.current, toolbarRef.current, settingsPanelRef.current]
+      .filter((element): element is HTMLElement => Boolean(element));
+    scopes.forEach((element) => focusScope?.registerScope?.(element));
+
     selectionCleanupRef.current = () => {
       editor.off('selectionUpdate', sync);
       editor.off('transaction', sync);
+      scopes.forEach((element) => focusScope?.unregisterScope?.(element));
     };
     sync();
   };
@@ -314,11 +311,23 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
 
   const insertBlock = (definition: EmailStudioBlockDefinition) => {
     if (readOnly) return;
-    editorRef.current?.editor
-      ?.chain()
-      .focus()
-      .insertContent(createEmailStudioBlockNode(definition, themeKey))
-      .run();
+    const editor = editorRef.current?.editor;
+    if (!editor) return;
+    const node = createEmailStudioBlockNode(definition, themeKey);
+    const selected = selectedPositionRef.current !== null
+      ? getNewsletterBlockAtPosition(editor, selectedPositionRef.current)
+      : null;
+
+    if (selected) {
+      // insertContent replaces the current selection, so with a structured
+      // block selected it would delete that block instead of adding one.
+      // Place the new block after it and move the selection onto it.
+      editor.chain().insertContentAt(selected.to, node).run();
+      editor.commands.setNodeSelection(selected.to);
+      return;
+    }
+
+    editor.chain().focus().insertContent(node).run();
   };
 
   const insertVariable = (key: string) => {
@@ -367,6 +376,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
       <aside
         className="min-h-0 overflow-y-auto border-r bg-background p-3"
         data-testid="newsletter-block-library"
+        ref={blockLibraryRef}
       >
         <div className="mb-3">
           <p className="text-sm font-semibold">Blocks</p>
@@ -401,6 +411,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
         <div
           className="sticky top-0 z-20 flex min-h-12 items-center gap-1 border-b bg-background/95 px-3 shadow-sm backdrop-blur"
           data-testid="newsletter-formatting-toolbar"
+          ref={toolbarRef}
         >
           <Button
             type="button"
@@ -508,15 +519,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
       <aside
         className="min-h-0 overflow-y-auto border-l bg-background"
         data-testid="newsletter-settings-panel"
-        onFocus={() => {
-          inspectorFocusedRef.current = true;
-        }}
-        onBlur={(event) => {
-          const next = event.relatedTarget as Node | null;
-          if (!next || !event.currentTarget.contains(next)) {
-            inspectorFocusedRef.current = false;
-          }
-        }}
+        ref={settingsPanelRef}
       >
         <Tabs value={inspectorTab} onValueChange={(value) => setInspectorTab(value as InspectorTab)} className="min-h-full">
           <div className="sticky top-0 z-10 border-b bg-background p-3">
