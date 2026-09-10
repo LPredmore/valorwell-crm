@@ -383,10 +383,10 @@ export const EMAIL_STUDIO_BLOCKS: readonly EmailStudioBlockDefinition[] = [
   {
     kind: 'compliance-footer',
     label: 'Compliance footer',
-    description: 'Add required preference and postal-address tokens.',
+    description: 'Add the required unsubscribe preference token.',
     modes: CAMPAIGN_AND_UP,
     title: 'Email preferences',
-    body: 'Manage preferences: {{unsubscribe_url}} • {{postal_address}}',
+    body: 'Manage preferences: {{unsubscribe_url}}',
     locked: true,
   },
 ];

@@ -73,7 +73,7 @@ describe('N3 ValorWell newsletter design system', () => {
     const compliance = newsletterBlocks.find((node) => node.attrs?.kind === 'compliance-footer');
     expect(compliance?.attrs?.locked).toBe(true);
     expect(String(compliance?.attrs?.body)).toContain('{{unsubscribe_url}}');
-    expect(String(compliance?.attrs?.body)).toContain('{{postal_address}}');
+    expect(String(compliance?.attrs?.body)).not.toContain('{{postal_address}}');
   });
 
   it('registers one first-class ValorWell Weekly preset and reproduces the canonical weekly document', () => {
