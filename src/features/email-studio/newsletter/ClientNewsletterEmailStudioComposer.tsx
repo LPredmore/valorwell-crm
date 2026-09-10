@@ -127,6 +127,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
   const editorRef = useRef<EmailEditorRef>(null);
   const selectionCleanupRef = useRef<(() => void) | null>(null);
   const selectedPositionRef = useRef<number | null>(null);
+  const inspectorFocusedRef = useRef(false);
   const initialThemeKey = normalizeThemeKey(initialContent?.themeKey);
   const initialDocument = initialContent?.mode === 'newsletter' && initialContent.editorDocument
     ? initialContent.editorDocument
@@ -181,6 +182,31 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
 
   const syncEditorControls = () => {
     const editor = editorRef.current?.editor ?? null;
+
+    if (inspectorFocusedRef.current) {
+      // Focus is inside our own Title/Body/etc. fields, not the canvas. A
+      // NodeSelection click doesn't reliably focus @react-email/editor's
+      // contenteditable (it's rendered contenteditable="false"), so
+      // editor.isFocused can't tell "user clicked a block" apart from "focus
+      // moved to the inspector." And once focus does leave the editor,
+      // ProseMirror's own selection handling resets it — often landing back
+      // on the first block, since @react-email/editor wraps content in a
+      // container node. Trusting that live selection here would silently
+      // swap the block being edited out from under the user. Resolve by the
+      // last known position instead.
+      if (selectedPositionRef.current !== null) {
+        const stored = getNewsletterBlockAtPosition(editor, selectedPositionRef.current);
+        if (stored) applySelectedBlock(stored);
+        else {
+          selectedPositionRef.current = null;
+          applySelectedBlock(null);
+        }
+      }
+      setCanUndo(Boolean(editor?.can().undo()));
+      setCanRedo(Boolean(editor?.can().redo()));
+      return;
+    }
+
     const nextSelectedBlock = getSelectedNewsletterBlock(editor);
     if (nextSelectedBlock) {
       selectedPositionRef.current = nextSelectedBlock.from;
@@ -482,6 +508,15 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
       <aside
         className="min-h-0 overflow-y-auto border-l bg-background"
         data-testid="newsletter-settings-panel"
+        onFocus={() => {
+          inspectorFocusedRef.current = true;
+        }}
+        onBlur={(event) => {
+          const next = event.relatedTarget as Node | null;
+          if (!next || !event.currentTarget.contains(next)) {
+            inspectorFocusedRef.current = false;
+          }
+        }}
       >
         <Tabs value={inspectorTab} onValueChange={(value) => setInspectorTab(value as InspectorTab)} className="min-h-full">
           <div className="sticky top-0 z-10 border-b bg-background p-3">
