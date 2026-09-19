@@ -810,6 +810,84 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_operations_youtube_videos: {
+        Row: {
+          channel_id: string
+          created_at: string
+          description: string
+          duration_seconds: number | null
+          id: string
+          last_synced_at: string
+          original_filename: string | null
+          playlist_ids: string[]
+          playlist_names: string[]
+          privacy_status: string
+          published_at: string | null
+          tenant_id: string
+          title: string
+          transcript: string | null
+          transcript_attempts: number
+          transcript_error: string | null
+          transcript_language: string | null
+          transcript_last_attempt_at: string | null
+          transcript_source: string | null
+          transcript_status: string
+          updated_at: string
+          url: string
+          video_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          description?: string
+          duration_seconds?: number | null
+          id?: string
+          last_synced_at?: string
+          original_filename?: string | null
+          playlist_ids?: string[]
+          playlist_names?: string[]
+          privacy_status?: string
+          published_at?: string | null
+          tenant_id: string
+          title?: string
+          transcript?: string | null
+          transcript_attempts?: number
+          transcript_error?: string | null
+          transcript_language?: string | null
+          transcript_last_attempt_at?: string | null
+          transcript_source?: string | null
+          transcript_status?: string
+          updated_at?: string
+          url: string
+          video_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          description?: string
+          duration_seconds?: number | null
+          id?: string
+          last_synced_at?: string
+          original_filename?: string | null
+          playlist_ids?: string[]
+          playlist_names?: string[]
+          privacy_status?: string
+          published_at?: string | null
+          tenant_id?: string
+          title?: string
+          transcript?: string | null
+          transcript_attempts?: number
+          transcript_error?: string | null
+          transcript_language?: string | null
+          transcript_last_attempt_at?: string | null
+          transcript_source?: string | null
+          transcript_status?: string
+          updated_at?: string
+          url?: string
+          video_id?: string
+        }
+        Relationships: []
+      }
       appointment_clinical_note_revisions: {
         Row: {
           actor_profile_id: string | null
@@ -2438,6 +2516,240 @@ export type Database = {
           },
         ]
       }
+      claim_clearinghouse_events: {
+        Row: {
+          claim_id: string
+          clearinghouse: string
+          created_at: string
+          event_type: string
+          external_claim_id: string | null
+          external_event_key: string
+          external_submission_id: string | null
+          id: string
+          payload_sha256: string | null
+          processed_at: string | null
+          remote_status: string | null
+          reported_by: string | null
+          sanitized_payload: Json
+          tenant_id: string
+        }
+        Insert: {
+          claim_id: string
+          clearinghouse: string
+          created_at?: string
+          event_type: string
+          external_claim_id?: string | null
+          external_event_key: string
+          external_submission_id?: string | null
+          id?: string
+          payload_sha256?: string | null
+          processed_at?: string | null
+          remote_status?: string | null
+          reported_by?: string | null
+          sanitized_payload?: Json
+          tenant_id: string
+        }
+        Update: {
+          claim_id?: string
+          clearinghouse?: string
+          created_at?: string
+          event_type?: string
+          external_claim_id?: string | null
+          external_event_key?: string
+          external_submission_id?: string | null
+          id?: string
+          payload_sha256?: string | null
+          processed_at?: string | null
+          remote_status?: string | null
+          reported_by?: string | null
+          sanitized_payload?: Json
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_clearinghouse_events_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_clearinghouse_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claim_clearinghouse_lifecycle: {
+        Row: {
+          claim_id: string
+          clearinghouse: string
+          created_at: string
+          external_claim_id: string | null
+          id: string
+          identity_status: string
+          last_reconciled_at: string | null
+          last_sync_error: string | null
+          last_synced_at: string | null
+          last_timeline_synced_at: string | null
+          latest_external_submission_id: string | null
+          next_sync_at: string | null
+          remote_status: string | null
+          remote_status_reported_by: string | null
+          remote_submitted_at: string | null
+          remote_total_charge: number | null
+          remote_total_paid: number | null
+          sync_error_count: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          claim_id: string
+          clearinghouse: string
+          created_at?: string
+          external_claim_id?: string | null
+          id?: string
+          identity_status?: string
+          last_reconciled_at?: string | null
+          last_sync_error?: string | null
+          last_synced_at?: string | null
+          last_timeline_synced_at?: string | null
+          latest_external_submission_id?: string | null
+          next_sync_at?: string | null
+          remote_status?: string | null
+          remote_status_reported_by?: string | null
+          remote_submitted_at?: string | null
+          remote_total_charge?: number | null
+          remote_total_paid?: number | null
+          sync_error_count?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          claim_id?: string
+          clearinghouse?: string
+          created_at?: string
+          external_claim_id?: string | null
+          id?: string
+          identity_status?: string
+          last_reconciled_at?: string | null
+          last_sync_error?: string | null
+          last_synced_at?: string | null
+          last_timeline_synced_at?: string | null
+          latest_external_submission_id?: string | null
+          next_sync_at?: string | null
+          remote_status?: string | null
+          remote_status_reported_by?: string | null
+          remote_submitted_at?: string | null
+          remote_total_charge?: number | null
+          remote_total_paid?: number | null
+          sync_error_count?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_clearinghouse_lifecycle_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_clearinghouse_lifecycle_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claim_clearinghouse_routes: {
+        Row: {
+          clearinghouse: string
+          client_id: string
+          client_insurance_id: string
+          created_at: string
+          created_by_profile_id: string | null
+          effective_from: string
+          effective_to: string | null
+          enabled: boolean
+          id: string
+          metadata: Json
+          routing_reason: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          clearinghouse: string
+          client_id: string
+          client_insurance_id: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          enabled?: boolean
+          id?: string
+          metadata?: Json
+          routing_reason?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          clearinghouse?: string
+          client_id?: string
+          client_insurance_id?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          enabled?: boolean
+          id?: string
+          metadata?: Json
+          routing_reason?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_clearinghouse_routes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_clearinghouse_routes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "claim_clearinghouse_routes_client_insurance_id_fkey"
+            columns: ["client_insurance_id"]
+            isOneToOne: false
+            referencedRelation: "client_insurance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_clearinghouse_routes_client_insurance_id_fkey"
+            columns: ["client_insurance_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_operations"
+            referencedColumns: ["current_insurance_id"]
+          },
+          {
+            foreignKeyName: "claim_clearinghouse_routes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       claim_diagnoses: {
         Row: {
           claim_id: string
@@ -2548,6 +2860,7 @@ export type Database = {
       }
       claim_lines: {
         Row: {
+          adjudication_disposition: string | null
           adjusted_amount: number | null
           allowed_amount: number | null
           appointment_id: string | null
@@ -2573,6 +2886,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          adjudication_disposition?: string | null
           adjusted_amount?: number | null
           allowed_amount?: number | null
           appointment_id?: string | null
@@ -2598,6 +2912,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          adjudication_disposition?: string | null
           adjusted_amount?: number | null
           allowed_amount?: number | null
           appointment_id?: string | null
@@ -2774,6 +3089,7 @@ export type Database = {
           old_status: string | null
           raw_payload: Json | null
           status_message: string | null
+          submission_attempt_id: string | null
           tenant_id: string
         }
         Insert: {
@@ -2786,6 +3102,7 @@ export type Database = {
           old_status?: string | null
           raw_payload?: Json | null
           status_message?: string | null
+          submission_attempt_id?: string | null
           tenant_id: string
         }
         Update: {
@@ -2798,6 +3115,7 @@ export type Database = {
           old_status?: string | null
           raw_payload?: Json | null
           status_message?: string | null
+          submission_attempt_id?: string | null
           tenant_id?: string
         }
         Relationships: [
@@ -2809,10 +3127,126 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "claim_status_events_submission_attempt_id_fkey"
+            columns: ["submission_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "claim_submission_attempts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "claim_status_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claim_submission_attempts: {
+        Row: {
+          attempt_ordinal: number
+          batch_id: string | null
+          claim_id: string
+          claimmd_batch_id: string | null
+          claimmd_claim_id: string | null
+          claimmd_file_id: string | null
+          clearinghouse: string
+          client_action_id: string | null
+          created_at: string
+          external_claim_id: string | null
+          external_submission_id: string | null
+          frequency_code: string | null
+          id: string
+          idempotency_key: string | null
+          original_claim_id: string | null
+          outcome: string
+          pcn: string
+          remote_claim_id: string | null
+          replacement_reason: string | null
+          request_payload: Json | null
+          submission_mode: string
+          submission_request_id: string | null
+          submitted_at: string
+          sync_result: Json
+          sync_status: string | null
+          tenant_id: string
+        }
+        Insert: {
+          attempt_ordinal: number
+          batch_id?: string | null
+          claim_id: string
+          claimmd_batch_id?: string | null
+          claimmd_claim_id?: string | null
+          claimmd_file_id?: string | null
+          clearinghouse?: string
+          client_action_id?: string | null
+          created_at?: string
+          external_claim_id?: string | null
+          external_submission_id?: string | null
+          frequency_code?: string | null
+          id?: string
+          idempotency_key?: string | null
+          original_claim_id?: string | null
+          outcome: string
+          pcn: string
+          remote_claim_id?: string | null
+          replacement_reason?: string | null
+          request_payload?: Json | null
+          submission_mode: string
+          submission_request_id?: string | null
+          submitted_at: string
+          sync_result?: Json
+          sync_status?: string | null
+          tenant_id: string
+        }
+        Update: {
+          attempt_ordinal?: number
+          batch_id?: string | null
+          claim_id?: string
+          claimmd_batch_id?: string | null
+          claimmd_claim_id?: string | null
+          claimmd_file_id?: string | null
+          clearinghouse?: string
+          client_action_id?: string | null
+          created_at?: string
+          external_claim_id?: string | null
+          external_submission_id?: string | null
+          frequency_code?: string | null
+          id?: string
+          idempotency_key?: string | null
+          original_claim_id?: string | null
+          outcome?: string
+          pcn?: string
+          remote_claim_id?: string | null
+          replacement_reason?: string | null
+          request_payload?: Json | null
+          submission_mode?: string
+          submission_request_id?: string | null
+          submitted_at?: string
+          sync_result?: Json
+          sync_status?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_submission_attempts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "claim_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_submission_attempts_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_submission_attempts_submission_request_id_fkey"
+            columns: ["submission_request_id"]
+            isOneToOne: false
+            referencedRelation: "claim_submission_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -11317,6 +11751,8 @@ export type Database = {
           from_name: string | null
           inbound_email: string | null
           last_verified_at: string | null
+          marketing_from_email: string | null
+          marketing_from_name: string | null
           postal_address: string | null
           reply_to_email: string | null
           tenant_id: string
@@ -11329,6 +11765,8 @@ export type Database = {
           from_name?: string | null
           inbound_email?: string | null
           last_verified_at?: string | null
+          marketing_from_email?: string | null
+          marketing_from_name?: string | null
           postal_address?: string | null
           reply_to_email?: string | null
           tenant_id: string
@@ -11341,6 +11779,8 @@ export type Database = {
           from_name?: string | null
           inbound_email?: string | null
           last_verified_at?: string | null
+          marketing_from_email?: string | null
+          marketing_from_name?: string | null
           postal_address?: string | null
           reply_to_email?: string | null
           tenant_id?: string
@@ -11711,34 +12151,82 @@ export type Database = {
       }
       edge_function_executions: {
         Row: {
+          attempted_source_ids: string[]
+          cursor_end: string | null
+          cursor_start: string | null
           duration_ms: number | null
+          error_count: number
           error_message: string | null
+          errors: Json
           executed_at: string | null
+          failed_source_ids: string[]
           function_name: string
           id: string
           items_processed: number | null
+          metrics: Json
+          requested_cursor: string | null
+          returned_cursor: string | null
+          run_mode: string | null
+          skipped_source_ids: string[]
+          source_ids: string[]
+          source_record_count: number
           status: string
+          succeeded_source_ids: string[]
           tenant_id: string | null
+          timeout_reached: boolean
+          truncated: boolean
         }
         Insert: {
+          attempted_source_ids?: string[]
+          cursor_end?: string | null
+          cursor_start?: string | null
           duration_ms?: number | null
+          error_count?: number
           error_message?: string | null
+          errors?: Json
           executed_at?: string | null
+          failed_source_ids?: string[]
           function_name: string
           id?: string
           items_processed?: number | null
+          metrics?: Json
+          requested_cursor?: string | null
+          returned_cursor?: string | null
+          run_mode?: string | null
+          skipped_source_ids?: string[]
+          source_ids?: string[]
+          source_record_count?: number
           status: string
+          succeeded_source_ids?: string[]
           tenant_id?: string | null
+          timeout_reached?: boolean
+          truncated?: boolean
         }
         Update: {
+          attempted_source_ids?: string[]
+          cursor_end?: string | null
+          cursor_start?: string | null
           duration_ms?: number | null
+          error_count?: number
           error_message?: string | null
+          errors?: Json
           executed_at?: string | null
+          failed_source_ids?: string[]
           function_name?: string
           id?: string
           items_processed?: number | null
+          metrics?: Json
+          requested_cursor?: string | null
+          returned_cursor?: string | null
+          run_mode?: string | null
+          skipped_source_ids?: string[]
+          source_ids?: string[]
+          source_record_count?: number
           status?: string
+          succeeded_source_ids?: string[]
           tenant_id?: string | null
+          timeout_reached?: boolean
+          truncated?: boolean
         }
         Relationships: [
           {
@@ -16376,6 +16864,72 @@ export type Database = {
           },
         ]
       }
+      reddit_authority_activity: {
+        Row: {
+          canonical_topic_key: string
+          created_at: string
+          external_action_status: string
+          external_comment_url: string | null
+          external_subreddit: string | null
+          external_thread_url: string | null
+          id: string
+          notes: string | null
+          researched_at: string
+          resource_action: string
+          resource_id: string | null
+          tenant_id: string
+          valorwell_post_status: string
+          valorwell_subreddit_post_url: string | null
+        }
+        Insert: {
+          canonical_topic_key: string
+          created_at?: string
+          external_action_status?: string
+          external_comment_url?: string | null
+          external_subreddit?: string | null
+          external_thread_url?: string | null
+          id?: string
+          notes?: string | null
+          researched_at?: string
+          resource_action: string
+          resource_id?: string | null
+          tenant_id?: string
+          valorwell_post_status?: string
+          valorwell_subreddit_post_url?: string | null
+        }
+        Update: {
+          canonical_topic_key?: string
+          created_at?: string
+          external_action_status?: string
+          external_comment_url?: string | null
+          external_subreddit?: string | null
+          external_thread_url?: string | null
+          id?: string
+          notes?: string | null
+          researched_at?: string
+          resource_action?: string
+          resource_id?: string | null
+          tenant_id?: string
+          valorwell_post_status?: string
+          valorwell_subreddit_post_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reddit_authority_resource_fk"
+            columns: ["tenant_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "reddit_authority_resource_fk"
+            columns: ["tenant_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources_public"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       referrals: {
         Row: {
           client_id: string
@@ -19892,6 +20446,7 @@ export type Database = {
           last_completed_state_order: number | null
           last_error: Json
           last_failed_at: string | null
+          progress: Json
           status: string
           tenant_id: string
           updated_at: string
@@ -19907,6 +20462,7 @@ export type Database = {
           last_completed_state_order?: number | null
           last_error?: Json
           last_failed_at?: string | null
+          progress?: Json
           status?: string
           tenant_id: string
           updated_at?: string
@@ -19922,6 +20478,7 @@ export type Database = {
           last_completed_state_order?: number | null
           last_error?: Json
           last_failed_at?: string | null
+          progress?: Json
           status?: string
           tenant_id?: string
           updated_at?: string
@@ -19930,6 +20487,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "research_state_rotations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      research_state_search_progress: {
+        Row: {
+          created_at: string
+          id: string
+          progress: Json
+          state_code: string
+          state_order: number
+          tenant_id: string
+          updated_at: string
+          workflow_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          progress?: Json
+          state_code: string
+          state_order: number
+          tenant_id: string
+          updated_at?: string
+          workflow_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          progress?: Json
+          state_code?: string
+          state_order?: number
+          tenant_id?: string
+          updated_at?: string
+          workflow_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "research_state_search_progress_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -21768,6 +22366,51 @@ export type Database = {
         }
         Relationships: []
       }
+      therapist_outreach_prospects: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          license_type: string | null
+          linkedin_profile: string | null
+          outreach_contactable: boolean
+          outreach_exclusion_reason: string | null
+          phone: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          license_type?: string | null
+          linkedin_profile?: string | null
+          outreach_contactable?: boolean
+          outreach_exclusion_reason?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          license_type?: string | null
+          linkedin_profile?: string | null
+          outreach_contactable?: boolean
+          outreach_exclusion_reason?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       training_videos: {
         Row: {
           cover_image_url: string | null
@@ -22449,6 +23092,221 @@ export type Database = {
         }
         Relationships: []
       }
+      website_resource_relations: {
+        Row: {
+          created_at: string
+          display_order: number
+          related_resource_id: string
+          relation_type: string
+          resource_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          related_resource_id: string
+          relation_type?: string
+          resource_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          related_resource_id?: string
+          relation_type?: string
+          resource_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_resource_relations_related_resource_fkey"
+            columns: ["tenant_id", "related_resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "website_resource_relations_related_resource_fkey"
+            columns: ["tenant_id", "related_resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources_public"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "website_resource_relations_resource_fkey"
+            columns: ["tenant_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "website_resource_relations_resource_fkey"
+            columns: ["tenant_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources_public"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      website_resource_sources: {
+        Row: {
+          citation_key: string
+          created_at: string
+          display_order: number
+          id: string
+          is_public: boolean
+          organization: string | null
+          resource_id: string
+          source_published_at: string | null
+          source_type: string
+          tenant_id: string
+          title: string | null
+          updated_at: string
+          url: string
+          verified_at: string | null
+        }
+        Insert: {
+          citation_key: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_public?: boolean
+          organization?: string | null
+          resource_id: string
+          source_published_at?: string | null
+          source_type?: string
+          tenant_id: string
+          title?: string | null
+          updated_at?: string
+          url: string
+          verified_at?: string | null
+        }
+        Update: {
+          citation_key?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_public?: boolean
+          organization?: string | null
+          resource_id?: string
+          source_published_at?: string | null
+          source_type?: string
+          tenant_id?: string
+          title?: string | null
+          updated_at?: string
+          url?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_resource_sources_resource_fkey"
+            columns: ["tenant_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "website_resource_sources_resource_fkey"
+            columns: ["tenant_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources_public"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      website_resources: {
+        Row: {
+          audience_tags: string[]
+          body_markdown: string
+          canonical_topic_key: string
+          category_slug: string | null
+          content_schema_version: number
+          coverage_status: string
+          created_at: string
+          editorial_type: string
+          faq: Json
+          featured: boolean
+          id: string
+          last_researched_at: string | null
+          live_url: string | null
+          primary_question: string
+          public_updated_at: string | null
+          published_at: string | null
+          resource_kind: string
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          sort_order: number
+          source_urls: string[]
+          status: string
+          summary: string
+          tenant_id: string
+          title: string
+          topic_aliases: string[]
+          updated_at: string
+        }
+        Insert: {
+          audience_tags?: string[]
+          body_markdown: string
+          canonical_topic_key: string
+          category_slug?: string | null
+          content_schema_version?: number
+          coverage_status?: string
+          created_at?: string
+          editorial_type?: string
+          faq?: Json
+          featured?: boolean
+          id?: string
+          last_researched_at?: string | null
+          live_url?: string | null
+          primary_question: string
+          public_updated_at?: string | null
+          published_at?: string | null
+          resource_kind?: string
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          sort_order?: number
+          source_urls?: string[]
+          status?: string
+          summary: string
+          tenant_id?: string
+          title: string
+          topic_aliases?: string[]
+          updated_at?: string
+        }
+        Update: {
+          audience_tags?: string[]
+          body_markdown?: string
+          canonical_topic_key?: string
+          category_slug?: string | null
+          content_schema_version?: number
+          coverage_status?: string
+          created_at?: string
+          editorial_type?: string
+          faq?: Json
+          featured?: boolean
+          id?: string
+          last_researched_at?: string | null
+          live_url?: string | null
+          primary_question?: string
+          public_updated_at?: string | null
+          published_at?: string | null
+          resource_kind?: string
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          sort_order?: number
+          source_urls?: string[]
+          status?: string
+          summary?: string
+          tenant_id?: string
+          title?: string
+          topic_aliases?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       website_submissions: {
         Row: {
           consent: boolean | null
@@ -22625,11 +23483,13 @@ export type Database = {
         Row: {
           ambiguous_rows: number | null
           discrepant_rows: number | null
+          dismissed_rows: number | null
           era_paid_total: number | null
           period_month: string | null
           posted_rows: number | null
           report_paid_total: number | null
           tenant_id: string | null
+          total_rows: number | null
           unmatched_rows: number | null
         }
         Relationships: []
@@ -23922,6 +24782,78 @@ export type Database = {
         }
         Relationships: []
       }
+      website_resources_public: {
+        Row: {
+          audience_tags: string[] | null
+          body_markdown: string | null
+          category_slug: string | null
+          content_schema_version: number | null
+          editorial_type: string | null
+          faq: Json | null
+          featured: boolean | null
+          id: string | null
+          primary_question: string | null
+          public_updated_at: string | null
+          published_at: string | null
+          resource_kind: string | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string | null
+          sort_order: number | null
+          status: string | null
+          summary: string | null
+          tenant_id: string | null
+          title: string | null
+          topic_aliases: string[] | null
+        }
+        Insert: {
+          audience_tags?: string[] | null
+          body_markdown?: string | null
+          category_slug?: string | null
+          content_schema_version?: number | null
+          editorial_type?: string | null
+          faq?: Json | null
+          featured?: boolean | null
+          id?: string | null
+          primary_question?: string | null
+          public_updated_at?: string | null
+          published_at?: string | null
+          resource_kind?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string | null
+          sort_order?: number | null
+          status?: string | null
+          summary?: string | null
+          tenant_id?: string | null
+          title?: string | null
+          topic_aliases?: string[] | null
+        }
+        Update: {
+          audience_tags?: string[] | null
+          body_markdown?: string | null
+          category_slug?: string | null
+          content_schema_version?: number | null
+          editorial_type?: string | null
+          faq?: Json | null
+          featured?: boolean | null
+          id?: string | null
+          primary_question?: string | null
+          public_updated_at?: string | null
+          published_at?: string | null
+          resource_kind?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string | null
+          sort_order?: number | null
+          status?: string | null
+          summary?: string | null
+          tenant_id?: string | null
+          title?: string | null
+          topic_aliases?: string[] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _authorize_staff_calendar_access: {
@@ -24628,6 +25560,10 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_era_claim_summary_state_v1: {
+        Args: { p_era_claim_id: string }
+        Returns: Json
+      }
       apply_relationship_activity: {
         Args: {
           p_activity_type: string
@@ -24653,6 +25589,42 @@ export type Database = {
       apply_relationship_suppression: {
         Args: { p_idempotency_key: string; p_payload: Json }
         Returns: Json
+      }
+      apply_stedi_claim_status_v1: {
+        Args: {
+          p_claim_id: string
+          p_external_claim_id: string
+          p_external_submission_id: string
+          p_remote_status: string
+          p_reported_by: string
+          p_sanitized_payload?: Json
+          p_status_message?: string
+        }
+        Returns: {
+          canonical_after: string
+          canonical_before: string
+          canonical_changed: boolean
+        }[]
+      }
+      apply_stedi_lifecycle_snapshot_v1: {
+        Args: {
+          p_claim_id: string
+          p_external_claim_id: string
+          p_external_submission_id: string
+          p_next_sync_at?: string
+          p_remote_status: string
+          p_remote_submitted_at: string
+          p_reported_by: string
+          p_sanitized_snapshot?: Json
+          p_total_charge: number
+          p_total_paid: number
+        }
+        Returns: {
+          canonical_after: string
+          canonical_before: string
+          canonical_changed: boolean
+          lifecycle_id: string
+        }[]
       }
       appointment_provisioning_worker_token_valid: {
         Args: { p_token: string }
@@ -24687,6 +25659,14 @@ export type Database = {
           p_prior_version: number
         }
         Returns: Json
+      }
+      assign_opaque_claim_numbers_v1: {
+        Args: { p_claim_ids: string[] }
+        Returns: {
+          assigned: boolean
+          claim_id: string
+          claim_number: string
+        }[]
       }
       autocreate_copay_for_appointment: {
         Args: { p_appointment_id: string }
@@ -24728,6 +25708,10 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: Json
+      }
+      billing_invoke_cron_function_v1: {
+        Args: { p_body?: Json; p_function: string }
+        Returns: number
       }
       book_client_appointment: {
         Args: { p_slot_end_utc?: string; p_slot_start_utc: string }
@@ -24785,6 +25769,10 @@ export type Database = {
         }
         Returns: Json
       }
+      canonical_payment_source_system: {
+        Args: { p_value: string }
+        Returns: string
+      }
       check_assessments_due:
         | {
             Args: never
@@ -24812,6 +25800,14 @@ export type Database = {
         Args: { p_end: string; p_staff_id: string; p_start: string }
         Returns: boolean
       }
+      checkpoint_claimmd_response_inbox_v1: {
+        Args: {
+          p_inbox_id: string
+          p_progress_ordinal: number
+          p_tenant_id: string
+        }
+        Returns: boolean
+      }
       claim_appointment_provisioning_work: {
         Args: {
           p_appointment_id?: string
@@ -24830,6 +25826,31 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      claim_claimmd_era_inbox_v1: {
+        Args: { p_limit?: number; p_tenant_id: string }
+        Returns: {
+          attempt_count: number
+          inbox_id: string
+          payload: Json
+          source_document_id: string
+          source_era_id: string
+          source_metadata: Json
+        }[]
+      }
+      claim_claimmd_response_inbox_v1: {
+        Args: { p_limit?: number; p_tenant_id: string }
+        Returns: {
+          attempt_count: number
+          inbox_id: string
+          payload: Json
+          progress_ordinal: number
+          requested_cursor: string
+          returned_cursor: string
+          source_document_id: string
+          source_key: string
+          source_metadata: Json
+        }[]
+      }
       claim_google_ads_donations: {
         Args: { p_limit?: number }
         Returns: {
@@ -24843,6 +25864,10 @@ export type Database = {
           transaction_id: string
           wbraid: string
         }[]
+      }
+      claim_is_externally_submitted_v1: {
+        Args: { p_claim_id: string }
+        Returns: boolean
       }
       claim_pending_campaign_steps: {
         Args: { p_limit?: number }
@@ -25053,6 +26078,27 @@ export type Database = {
           p_import_id: string
         }
         Returns: Json
+      }
+      complete_claimmd_era_inbox_v1: {
+        Args: {
+          p_error?: string
+          p_inbox_id: string
+          p_retryable?: boolean
+          p_success: boolean
+          p_tenant_id: string
+        }
+        Returns: boolean
+      }
+      complete_claimmd_response_inbox_v1: {
+        Args: {
+          p_error?: string
+          p_inbox_id: string
+          p_progress_ordinal?: number
+          p_retryable?: boolean
+          p_success: boolean
+          p_tenant_id: string
+        }
+        Returns: boolean
       }
       complete_client_registration:
         | {
@@ -26081,6 +27127,7 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_draft_claim_v1: { Args: { p_claim_id: string }; Returns: Json }
       dismiss_champva_row: {
         Args: { p_reason: string; p_row_id: string }
         Returns: undefined
@@ -26096,6 +27143,14 @@ export type Database = {
       enqueue_appointment_provisioning: {
         Args: { p_action?: string; p_appointment_id: string }
         Returns: string
+      }
+      enqueue_claimmd_era_inbox_v1: {
+        Args: { p_source_document_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      enqueue_claimmd_response_inbox_v1: {
+        Args: { p_source_document_id: string; p_tenant_id: string }
+        Returns: Json
       }
       enroll_relationship_targets: {
         Args: {
@@ -26149,6 +27204,18 @@ export type Database = {
           p_note_id: string
         }
         Returns: Json
+      }
+      finalize_stedi_submission_attempt_v2: {
+        Args: {
+          p_attempt_id: string
+          p_external_claim_id: string
+          p_external_submission_id: string
+          p_mark_submitted: boolean
+          p_outcome: string
+          p_sync_result: Json
+          p_sync_status: string
+        }
+        Returns: string
       }
       find_clients_by_emails_insensitive: {
         Args: { p_emails: string[]; p_tenant_id: string }
@@ -26501,6 +27568,14 @@ export type Database = {
               scheduling_branch: string
             }[]
           }
+      get_homepage_documented_monthly_impact: {
+        Args: never
+        Returns: {
+          displayed_value: number
+          documented_appointments: number
+          month: string
+        }[]
+      }
       get_legacy_financial_reconciliation_v1: {
         Args: { p_status?: string }
         Returns: {
@@ -26828,6 +27903,63 @@ export type Database = {
           }
       get_staff_id_for_user: { Args: { p_user_id: string }; Returns: string }
       get_staff_operating_context: { Args: never; Returns: Json }
+      get_stedi_lifecycle_sync_candidates_v1: {
+        Args: { p_claim_ids?: string[]; p_limit?: number }
+        Returns: {
+          attempt_external_claim_id: string
+          attempt_external_submission_id: string
+          attempt_submitted_at: string
+          claim_id: string
+          claim_number: string
+          claim_status: string
+          external_claim_id: string
+          identity_status: string
+          last_timeline_synced_at: string
+          latest_external_submission_id: string
+          remote_status: string
+          tenant_id: string
+          total_charge: number
+        }[]
+      }
+      get_stedi_lifecycle_targeted_candidates_v1: {
+        Args: { p_claim_ids: string[] }
+        Returns: {
+          attempt_external_claim_id: string
+          attempt_external_submission_id: string
+          attempt_submitted_at: string
+          claim_id: string
+          claim_number: string
+          claim_status: string
+          external_claim_id: string
+          identity_status: string
+          last_timeline_synced_at: string
+          latest_external_submission_id: string
+          remote_status: string
+          tenant_id: string
+          total_charge: number
+        }[]
+      }
+      get_stedi_submission_candidates_v1: {
+        Args: never
+        Returns: {
+          claim_id: string
+          claim_number: string
+          tenant_id: string
+        }[]
+      }
+      get_stedi_uncertain_requests_v1: {
+        Args: { p_limit?: number }
+        Returns: {
+          claim_id: string
+          claim_number: string
+          claim_status: string
+          external_started_at: string
+          last_reconciled_at: string
+          request_id: string
+          tenant_id: string
+          total_charge: number
+        }[]
+      }
       get_stripe_billing_integrity_report: { Args: never; Returns: Json }
       has_billing_role: {
         Args: { _tenant_id: string; _user_id: string }
@@ -26901,6 +28033,10 @@ export type Database = {
         }
         Returns: Json
       }
+      is_public_website_resource: {
+        Args: { p_resource_id: string; p_tenant_id: string }
+        Returns: boolean
+      }
       is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
@@ -26939,6 +28075,18 @@ export type Database = {
         Returns: Json
       }
       mark_at_risk_clients: { Args: { p_tenant_id: string }; Returns: number }
+      mark_stedi_lifecycle_sync_success_v1: {
+        Args: {
+          p_claim_id: string
+          p_last_synced_at?: string
+          p_next_sync_at?: string
+        }
+        Returns: undefined
+      }
+      mark_stedi_submission_started_v1: {
+        Args: { p_request_id: string }
+        Returns: boolean
+      }
       match_champva_payment_rows: {
         Args: { p_document_id: string }
         Returns: Json
@@ -27086,6 +28234,10 @@ export type Database = {
       }
       payroll_system_auto_approve_expired_v1: { Args: never; Returns: Json }
       payroll_system_auto_approve_expired_v2: { Args: never; Returns: Json }
+      payroll_system_auto_approve_friday_admin_v1: {
+        Args: never
+        Returns: Json
+      }
       payroll_system_prepare_friday_finalization_v1: {
         Args: never
         Returns: Json
@@ -27096,6 +28248,10 @@ export type Database = {
       }
       post_champva_report_evidence: {
         Args: { p_document_id: string }
+        Returns: Json
+      }
+      prepare_claim_submission_external_v1: {
+        Args: { p_request_id: string; p_sent_claim_ids: string[] }
         Returns: Json
       }
       prepare_relationship_campaign_delivery: {
@@ -27181,6 +28337,65 @@ export type Database = {
         }
         Returns: Json
       }
+      record_billing_integration_execution_v1: {
+        Args: {
+          p_attempted_source_ids?: string[]
+          p_cursor_end?: string
+          p_cursor_start?: string
+          p_duration_ms: number
+          p_errors?: Json
+          p_failed_source_ids?: string[]
+          p_fatal_error?: string
+          p_function_name: string
+          p_items_processed?: number
+          p_metrics?: Json
+          p_requested_cursor?: string
+          p_returned_cursor?: string
+          p_run_mode?: string
+          p_skipped_source_ids?: string[]
+          p_source_ids?: string[]
+          p_source_record_count?: number
+          p_succeeded_source_ids?: string[]
+          p_tenant_id: string
+          p_timeout_reached?: boolean
+          p_truncated?: boolean
+        }
+        Returns: string
+      }
+      record_claim_submission_attempt_v1: {
+        Args: {
+          p_batch_id: string
+          p_claim_id: string
+          p_claimmd_batch_id: string
+          p_claimmd_claim_id: string
+          p_claimmd_file_id: string
+          p_client_action_id: string
+          p_pcn: string
+          p_remote_claim_id: string
+          p_replacement_reason?: string
+          p_request_payload: Json
+          p_submission_mode: string
+          p_submission_request_id: string
+          p_sync_result: Json
+          p_sync_status: string
+        }
+        Returns: Json
+      }
+      record_claimmd_source_evidence_v1: {
+        Args: {
+          p_endpoint: string
+          p_payload: Json
+          p_records?: Json
+          p_requested_cursor?: string
+          p_returned_cursor?: string
+          p_source_era_id?: string
+          p_source_key: string
+          p_source_kind: string
+          p_source_metadata?: Json
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       record_client_eligibility_result: {
         Args: {
           p_claimmd_eligibility_id?: string
@@ -27218,6 +28433,18 @@ export type Database = {
         }
         Returns: Json
       }
+      record_relationship_campaign_work_result: {
+        Args: {
+          p_claim_token: string
+          p_error_code?: string
+          p_error_message?: string
+          p_idempotency_key: string
+          p_outcome: string
+          p_retry_at?: string
+          p_work_item_id: string
+        }
+        Returns: Json
+      }
       record_relationship_delivery_result: {
         Args: {
           p_claim_token: string
@@ -27240,6 +28467,58 @@ export type Database = {
           p_opportunity_id: string
         }
         Returns: Json
+      }
+      record_stedi_lifecycle_event_v1: {
+        Args: {
+          p_claim_id: string
+          p_event_type: string
+          p_external_claim_id: string
+          p_external_event_id: string
+          p_external_submission_id: string
+          p_payload_sha256?: string
+          p_processed_at: string
+          p_remote_status: string
+          p_reported_by: string
+          p_sanitized_payload?: Json
+        }
+        Returns: {
+          event_id: string
+          inserted: boolean
+        }[]
+      }
+      record_stedi_lifecycle_events_v1: {
+        Args: {
+          p_claim_id: string
+          p_events: Json
+          p_external_claim_id: string
+          p_mark_timeline_synced?: boolean
+        }
+        Returns: number
+      }
+      record_stedi_lifecycle_sync_error_v1: {
+        Args: { p_claim_id: string; p_error: string; p_next_sync_at: string }
+        Returns: undefined
+      }
+      record_stedi_reconciliation_v1: {
+        Args: {
+          p_evidence?: Json
+          p_external_claim_id?: string
+          p_found: boolean
+          p_request_id: string
+        }
+        Returns: undefined
+      }
+      record_stedi_submission_result_v1: {
+        Args: {
+          p_external_claim_id: string
+          p_external_submission_id: string
+          p_mark_submitted: boolean
+          p_outcome: string
+          p_request_id: string
+          p_sync_result: Json
+          p_sync_status: string
+        }
+        Returns: string
       }
       record_therapist_match_outbox_result: {
         Args: {
@@ -27297,6 +28576,15 @@ export type Database = {
           p_reason: string
         }
         Returns: Json
+      }
+      release_stedi_submission_request_v1: {
+        Args: {
+          p_evidence?: Json
+          p_reason?: string
+          p_request_id: string
+          p_state: string
+        }
+        Returns: boolean
       }
       reopen_client_journey_exception: {
         Args: {
@@ -27376,6 +28664,34 @@ export type Database = {
           p_total_payment_amount: number
         }
         Returns: Json
+      }
+      reserve_stedi_submission_attempt_v1: {
+        Args: {
+          p_claim_id: string
+          p_idempotency_key: string
+          p_submission_mode?: string
+        }
+        Returns: {
+          attempt_id: string
+          reason: string
+          reserved: boolean
+        }[]
+      }
+      reserve_stedi_submission_request_v1: {
+        Args: {
+          p_claim_id: string
+          p_idempotency_key: string
+          p_submission_mode?: string
+        }
+        Returns: {
+          reason: string
+          request_id: string
+          reserved: boolean
+        }[]
+      }
+      resolve_claim_clearinghouse: {
+        Args: { p_claim_id: string }
+        Returns: string
       }
       resolve_client_journey_exception: {
         Args: {
@@ -27918,6 +29234,18 @@ export type Database = {
         }
         Returns: Json
       }
+      stedi_map_canonical_status_v1: {
+        Args: { p_current: string; p_remote_status: string }
+        Returns: string
+      }
+      stedi_next_sync_at_v1: {
+        Args: {
+          p_canonical_status: string
+          p_remote_status: string
+          p_remote_submitted_at: string
+        }
+        Returns: string
+      }
       store_relationship_calendar_channel: {
         Args: {
           p_channel_id: string
@@ -28270,6 +29598,32 @@ export type Database = {
             }
             Returns: Json
           }
+      upsert_stedi_lifecycle_identity_v1: {
+        Args: {
+          p_claim_id: string
+          p_external_claim_id?: string
+          p_identity_status: string
+          p_latest_external_submission_id?: string
+          p_next_sync_at?: string
+          p_sync_error?: string
+        }
+        Returns: string
+      }
+      upsert_stedi_lifecycle_snapshot_v1: {
+        Args: {
+          p_claim_id: string
+          p_external_claim_id: string
+          p_last_synced_at?: string
+          p_latest_external_submission_id: string
+          p_next_sync_at?: string
+          p_remote_status: string
+          p_remote_submitted_at: string
+          p_remote_total_charge: number
+          p_remote_total_paid: number
+          p_reported_by: string
+        }
+        Returns: string
+      }
       validate_relationship_calendar_channel: {
         Args: {
           p_channel_id: string
@@ -28429,6 +29783,8 @@ export type Database = {
         | "unpaid"
         | "payment_reported"
         | "partially_paid"
+        | "zero_paid"
+        | "denied"
         | "paid_pending_adjudication"
         | "paid"
         | "overpaid"
@@ -28968,6 +30324,8 @@ export const Constants = {
         "unpaid",
         "payment_reported",
         "partially_paid",
+        "zero_paid",
+        "denied",
         "paid_pending_adjudication",
         "paid",
         "overpaid",
