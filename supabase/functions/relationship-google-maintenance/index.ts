@@ -24,8 +24,16 @@ Deno.serve(async (request: Request) => {
   }
   if (!authorized) return json({ error: "Relationship worker authorization is required." }, 403);
   try {
+    const input = await request.json().catch(() => ({})) as { mode?: string };
     const flags = await observationFlags(admin);
     const results: Record<string, unknown> = {};
+
+    if (input.mode === "gmail_watch_only") {
+      if (flags.gmail) results.gmailWatch = await renewGmailWatch(admin);
+      console.log(JSON.stringify({ component: "relationship-google-maintenance", event: "complete", mode: input.mode, flags }));
+      return json({ mode: input.mode, flags, results });
+    }
+
     if (flags.gmail) {
       results.gmailSync = await syncGmail(admin);
       results.gmailWatch = await renewGmailWatch(admin);
@@ -34,8 +42,8 @@ Deno.serve(async (request: Request) => {
       results.calendarSync = await syncCalendar(admin);
       results.calendarWatch = await renewCalendarWatch(admin);
     }
-    console.log(JSON.stringify({ component: "relationship-google-maintenance", event: "complete", flags }));
-    return json({ flags, results });
+    console.log(JSON.stringify({ component: "relationship-google-maintenance", event: "complete", mode: input.mode ?? "scheduled", flags }));
+    return json({ mode: input.mode ?? "scheduled", flags, results });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
