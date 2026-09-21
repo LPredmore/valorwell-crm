@@ -2,7 +2,6 @@ import "jsr:@supabase/functions-js@2.4.5/edge-runtime.d.ts";
 import {
   adminClient,
   GOOGLE_OAUTH_CALLBACK,
-  json,
   randomToken,
   requireCrmOperator,
   sha256Base64Url,
@@ -14,16 +13,33 @@ const scopes = {
   calendar: ["openid", "email", "https://www.googleapis.com/auth/calendar.events.readonly"],
 } as const;
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const jsonResponse = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  status,
+  headers: {
+    ...corsHeaders,
+    "content-type": "application/json",
+    "cache-control": "no-store",
+  },
+});
+
 Deno.serve(async (request: Request) => {
-  if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
   try {
     const { actorId, tenantId } = await requireCrmOperator(request);
     const input = await request.json().catch(() => ({})) as { connectionType?: string };
     if (input.connectionType !== "gmail" && input.connectionType !== "calendar") {
-      return json({ error: "connectionType must be gmail or calendar." }, 400);
+      return jsonResponse({ error: "connectionType must be gmail or calendar." }, 400);
     }
     const clientId = Deno.env.get("GOOGLE_RELATIONSHIPS_CLIENT_ID") ?? "";
-    if (!clientId) return json({ error: "Google OAuth client is not configured." }, 503);
+    if (!clientId) return jsonResponse({ error: "Google OAuth client is not configured." }, 503);
     const state = randomToken(32);
     const verifier = randomToken(64);
     const stateHash = await sha256Hex(state);
@@ -53,9 +69,9 @@ Deno.serve(async (request: Request) => {
       code_challenge: challenge,
       code_challenge_method: "S256",
     }).toString();
-    return json({ authorizationUrl: authorization.toString(), expiresAt });
+    return jsonResponse({ authorizationUrl: authorization.toString(), expiresAt });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : String(error) }, 403);
+    return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 403);
   }
 });
 
