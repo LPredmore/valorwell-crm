@@ -97,7 +97,23 @@ Deno.serve(async (request: Request) => {
     });
 
     if (prepareError) {
-      results.push({ workItemId: work.workItemId, outcome: "prepare_failed", error: prepareError.message });
+      const exhausted = work.attemptCount >= work.maxAttempts;
+      const outcome = exhausted ? "failed" : "retry";
+      const retryAt = outcome === "retry"
+        ? new Date(Date.now() + Math.min(60, 2 ** work.attemptCount) * 60_000).toISOString()
+        : null;
+      const { data, error } = await admin.rpc("record_relationship_campaign_work_result", {
+        p_work_item_id: work.workItemId,
+        p_claim_token: work.claimToken,
+        p_outcome: outcome,
+        p_idempotency_key: `${prepareKey}:failure`,
+        p_retry_at: retryAt,
+        p_error_code: "prepare_error",
+        p_error_message: prepareError.message,
+      });
+      results.push(error
+        ? { workItemId: work.workItemId, outcome: "prepare_failure_record_failed", error: error.message, prepareError: prepareError.message }
+        : { workItemId: work.workItemId, outcome: `prepare_${outcome}`, result: data });
       continue;
     }
 
@@ -219,7 +235,7 @@ Deno.serve(async (request: Request) => {
         p_outcome: "sent",
         p_idempotency_key: `worker:${work.workItemId}:attempt:${work.attemptCount}:result`,
         p_provider_message_id: providerBody.id,
-        p_provider_thread_id: sentMessageId ?? rootMessageId,
+        p_provider_thread_id: sentMessageId,
         p_retry_at: null,
         p_error_code: null,
         p_error_message: null,

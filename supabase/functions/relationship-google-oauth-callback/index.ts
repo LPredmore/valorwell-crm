@@ -9,8 +9,19 @@ import {
 } from "../_shared/relationship-google.ts";
 
 function redirectResult(connectionType: string, status: "connected" | "error", message?: string) {
+  if (connectionType === "drive") {
+    const ok = status === "connected";
+    const title = ok ? "Google Drive connected" : "Google Drive connection failed";
+    const detail = ok
+      ? "ValorWell video transcription now has read-only access to the Beyond The Yellow source folder. You can close this window."
+      : (message || "The Drive authorization could not be stored.");
+    return new Response(
+      "<!doctype html><html><head><meta charset=\"utf-8\"><title>"+title+"</title></head><body style=\"font-family:system-ui;padding:40px;max-width:760px\"><h1>"+title+"</h1><p>"+detail.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")+"</p></body></html>",
+      { status: ok ? 200 : 500, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } }
+    );
+  }
   const appUrl = Deno.env.get("RELATIONSHIP_CRM_URL") ?? "https://crm.valorwell.org";
-  const target = new URL("/crm/business-development/integrity", appUrl);
+  const target = new URL("/crm/business-development/orchestration", appUrl);
   target.searchParams.set("google", status);
   target.searchParams.set("connection", connectionType || "unknown");
   if (message) target.searchParams.set("reason", message.slice(0, 180));
@@ -65,12 +76,28 @@ Deno.serve(async (request: Request) => {
       const calendar = await googleJson("https://www.googleapis.com/calendar/v3/calendars/primary", accessToken);
       calendarId = String(calendar.id ?? "");
       if (!calendarId) throw new Error("Google primary Calendar could not be resolved.");
+    } else if (connectionType === "drive") {
+      accountEmail = String(userInfo.email ?? "").toLowerCase();
+      if (accountEmail !== GMAIL_MAILBOX) throw new Error("Drive connection must authenticate exactly info@valorwell.org.");
+      const driveResponse = await fetch(
+        "https://www.googleapis.com/drive/v3/files?pageSize=1&fields=files(id,name)",
+        { headers: { authorization: `Bearer ${accessToken}` } }
+      );
+      if (!driveResponse.ok) {
+        const driveBody = await driveResponse.json().catch(() => ({})) as Record<string, any>;
+        const gMessage = String(driveBody?.error?.message ?? "Unknown Google Drive API error");
+        const gReason = String(driveBody?.error?.errors?.[0]?.reason ?? driveBody?.error?.status ?? "unknown");
+        const gDetails = JSON.stringify(driveBody?.error?.details ?? []).slice(0, 800);
+        throw new Error(`Google Drive API failed (${driveResponse.status}) [${gReason}]: ${gMessage}${gDetails && gDetails !== "[]" ? " | " + gDetails : ""}`);
+      }
     } else {
       throw new Error("OAuth connection type is invalid.");
     }
     const scopeSet = String(token.scope ?? "").split(/\s+/).filter(Boolean);
     const required = connectionType === "gmail"
       ? "https://www.googleapis.com/auth/gmail.readonly"
+      : connectionType === "drive"
+      ? "https://www.googleapis.com/auth/drive.readonly"
       : "https://www.googleapis.com/auth/calendar.events.readonly";
     if (!scopeSet.includes(required)) throw new Error("Google did not grant the required read-only scope.");
     const { error: storeError } = await admin.rpc("store_relationship_google_connection", {
@@ -84,9 +111,25 @@ Deno.serve(async (request: Request) => {
       p_actor_profile_id: oauthState.actorProfileId,
     });
     if (storeError) throw new Error(storeError.message);
+    if (connectionType === "drive") {
+      await admin.from("ai_operations_video_oauth_events").insert({
+        connection_type: "drive",
+        status: "success",
+        message: "Drive OAuth connection stored successfully."
+      });
+    }
     return redirectResult(connectionType, "connected");
   } catch (error) {
-    return redirectResult(connectionType, "error", error instanceof Error ? error.message : String(error));
+    const message = error instanceof Error ? error.message : String(error);
+    try {
+      const admin = adminClient();
+      await admin.from("ai_operations_video_oauth_events").insert({
+        connection_type: connectionType || "unknown",
+        status: "error",
+        message: message.slice(0, 4000)
+      });
+    } catch {}
+    return redirectResult(connectionType, "error", message);
   }
 });
 
