@@ -112,7 +112,7 @@ async function runUploadStage(db: Db, job: Job, pub: Publication): Promise<Respo
 
   // YouTube's own reported offset is authoritative -- never trust our own bytes_uploaded
   // bookkeeping across a job restart.
-  let nextByte = await queryUploadOffset(sessionUrl, totalBytes);
+  const nextByte = await queryUploadOffset(sessionUrl, totalBytes);
   if (nextByte >= totalBytes) {
     // Upload already finished on a prior tick but we never recorded it (e.g. crash right
     // after YouTube accepted the final chunk). We cannot recover the video id from here --
