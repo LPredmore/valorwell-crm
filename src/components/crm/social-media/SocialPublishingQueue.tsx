@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { fetchSocialPublications, type PublicationStatus } from '@/lib/crm/social-media';
 import { SocialPublishingQueueItem } from './SocialPublishingQueueItem';
 import { SocialPublicationEditor } from './SocialPublicationEditor';
+import { SocialMediaErrorState } from './SocialMediaErrorState';
 
 const SECTIONS: { value: string; label: string; statuses: PublicationStatus[] }[] = [
   { value: 'draft', label: 'Draft', statuses: ['draft'] },
@@ -19,14 +20,18 @@ export function SocialPublishingQueue() {
   const [section, setSection] = useState('approved');
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['social-media', 'publications', {}],
     queryFn: () => fetchSocialPublications(),
-    refetchInterval: 15000,
+    retry: 1,
+    // Don't keep re-triggering a failing request every 15s -- once it's erroring, stop
+    // polling until the user retries (React Query refetch) rather than looping silently.
+    refetchInterval: (query) => (query.state.error ? false : 15000),
   });
 
   return (
     <div className="pt-4 space-y-4">
+      {error && <SocialMediaErrorState error={error} />}
       <Tabs value={section} onValueChange={setSection}>
         <TabsList className="flex-wrap h-auto">
           {SECTIONS.map((sectionDef) => (

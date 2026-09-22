@@ -3,19 +3,31 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { fetchSocialMediaSettings, verifyYouTubeConnection } from '@/lib/crm/social-media';
 import { YouTubeConnectionStatus } from './YouTubeConnectionStatus';
+import { SocialMediaErrorState } from './SocialMediaErrorState';
 
 export function SocialMediaSettings() {
-  const { data: settings, isLoading } = useQuery({ queryKey: ['social-media', 'settings'], queryFn: fetchSocialMediaSettings });
-  const { data: connection } = useQuery({ queryKey: ['social-media', 'youtube-connection'], queryFn: verifyYouTubeConnection });
+  const { data: settings, isLoading, error } = useQuery({
+    queryKey: ['social-media', 'settings'],
+    queryFn: fetchSocialMediaSettings,
+    retry: 1,
+  });
+  // Query errors don't block rendering connection status separately -- Settings should show
+  // whatever it has, not go fully blank because one of two independent requests failed.
+  const { data: connection, error: connectionError } = useQuery({
+    queryKey: ['social-media', 'youtube-connection'],
+    queryFn: verifyYouTubeConnection,
+    retry: 1,
+  });
 
   if (isLoading) return <p className="pt-4 text-sm text-muted-foreground">Loading…</p>;
-  if (!settings) return null;
+  if (error) return <div className="pt-4"><SocialMediaErrorState error={error} /></div>;
+  if (!settings) return <p className="pt-4 text-sm text-muted-foreground">No settings returned.</p>;
 
   const defaults = settings.defaults as Record<string, unknown> | null;
 
   return (
     <div className="pt-4 space-y-4 max-w-2xl">
-      <YouTubeConnectionStatus status={connection} />
+      {connectionError ? <SocialMediaErrorState error={connectionError} /> : <YouTubeConnectionStatus status={connection} />}
 
       <Card>
         <CardHeader><CardTitle className="text-sm">Account</CardTitle></CardHeader>

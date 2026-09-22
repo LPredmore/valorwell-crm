@@ -25,7 +25,7 @@ export function SocialPublicationScheduleForm({
   onChange: (next: { deliveryMode: DeliveryMode; desiredPrivacyStatus: PrivacyStatus; scheduledFor: string | null }) => void;
   disabled?: boolean;
 }) {
-  const { data: connection } = useQuery({ queryKey: ['social-media', 'youtube-connection'], queryFn: verifyYouTubeConnection });
+  const { data: connection } = useQuery({ queryKey: ['social-media', 'youtube-connection'], queryFn: verifyYouTubeConnection, retry: 1 });
   const connected = connection?.state === 'connected';
   const mode = modeFor(deliveryMode, privacyStatus);
   const parts = scheduledFor ? utcIsoToCentralParts(scheduledFor) : { date: '', time: '' };

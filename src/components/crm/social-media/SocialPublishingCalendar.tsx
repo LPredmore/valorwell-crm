@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { fetchSocialPublications, STATUS_LABELS, type SocialPublication } from '@/lib/crm/social-media';
 import { SocialPublicationEditor } from './SocialPublicationEditor';
+import { SocialMediaErrorState } from './SocialMediaErrorState';
 
 function startOfWeek(date: Date): Date {
   const result = new Date(date);
@@ -23,9 +24,10 @@ export function SocialPublishingCalendar() {
   const [anchor, setAnchor] = useState(new Date());
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const { data } = useQuery({
+  const { data, error } = useQuery({
     queryKey: ['social-media', 'publications', { scheduledOnly: true }],
     queryFn: () => fetchSocialPublications({ scheduledOnly: true }),
+    retry: 1,
   });
 
   const byDay = useMemo(() => {
@@ -57,6 +59,7 @@ export function SocialPublishingCalendar() {
 
   return (
     <div className="pt-4 space-y-3">
+      {error && <SocialMediaErrorState error={error} />}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button size="icon" variant="outline" onClick={() => shift(-1)}><ChevronLeft className="h-4 w-4" /></Button>

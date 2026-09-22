@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchPublicationEvents } from '@/lib/crm/social-media';
+import { SocialMediaErrorState } from './SocialMediaErrorState';
 
 const EVENT_LABELS: Record<string, string> = {
   created: 'Created',
@@ -12,12 +13,14 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 export function SocialPublicationHistory({ publicationId }: { publicationId: string }) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['social-media', 'publication-events', publicationId],
     queryFn: () => fetchPublicationEvents(publicationId),
+    retry: 1,
   });
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading history…</p>;
+  if (error) return <SocialMediaErrorState error={error} />;
   if (!data?.length) return <p className="text-sm text-muted-foreground">No history yet.</p>;
 
   return (

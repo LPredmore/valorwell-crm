@@ -13,7 +13,7 @@ export function SocialPublicationPlaylistPicker({
   onChange: (playlistIds: string[]) => void;
   disabled?: boolean;
 }) {
-  const { data: settings } = useQuery({ queryKey: ['social-media', 'settings'], queryFn: fetchSocialMediaSettings });
+  const { data: settings } = useQuery({ queryKey: ['social-media', 'settings'], queryFn: fetchSocialMediaSettings, retry: 1 });
   const selectedIds = new Set(publication.playlists.map((playlist) => playlist.playlistId));
   const defaultIds = new Set(publication.playlists.filter((playlist) => playlist.isDefault).map((playlist) => playlist.playlistId));
 

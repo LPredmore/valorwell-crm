@@ -16,6 +16,21 @@ export type AuthContext = {
 };
 
 /**
+ * Races a promise against a hard deadline so a stuck upstream call (Postgres lock,
+ * network stall, etc.) fails fast with a clear error instead of hanging until the
+ * platform's own execution limit kills the isolate with no useful log entry.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`TIMEOUT:${label}`)), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); },
+    );
+  });
+}
+
+/**
  * Authenticates the caller and resolves their CRM operating context server-side via the
  * same get_crm_operating_context() RPC the frontend's CrmAuthContext uses -- the tenant id
  * and capabilities returned here are authoritative and never taken from the request body.
@@ -34,7 +49,11 @@ export async function authenticate(request: Request): Promise<AuthContext> {
     auth: { persistSession: false },
   });
 
-  const { data, error } = await userDb.rpc("get_crm_operating_context");
+  const { data, error } = await withTimeout(
+    userDb.rpc("get_crm_operating_context"),
+    8000,
+    "get_crm_operating_context",
+  );
   if (error || !data || typeof data !== "object") throw new Error("UNAUTHORIZED");
 
   const context = data as Record<string, unknown>;

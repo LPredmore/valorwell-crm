@@ -102,17 +102,36 @@ Deno.serve(async (request: Request) => {
     auth = await authenticate(request);
   } catch (error) {
     const message = error instanceof Error ? error.message : "UNAUTHORIZED";
-    return json({ error: message, requestId }, message === "FORBIDDEN" ? 403 : 401, requestId);
+    const isTimeout = message.startsWith("TIMEOUT:");
+    safeLog("error", "auth_failed", { requestId, action, message });
+    return json(
+      { error: isTimeout ? "AUTH_TIMEOUT" : message, action, requestId },
+      isTimeout ? 504 : message === "FORBIDDEN" ? 403 : 401,
+      requestId,
+    );
   }
 
   try {
     if (MUTATE_ACTIONS.has(action)) requireMutate(auth);
     const { action: _omit, ...params } = body;
-    const data = await dispatch(auth, action, params);
+    // A hung DB/network call inside a handler fails fast here instead of running until the
+    // platform kills the isolate with no useful log entry to correlate against.
+    const data = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`TIMEOUT:${action}`)), 20000);
+      dispatch(auth, action, params).then(
+        (value) => { clearTimeout(timer); resolve(value); },
+        (error) => { clearTimeout(timer); reject(error); },
+      );
+    });
     return json({ data, requestId }, 200, requestId);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const isTimeout = message.startsWith("TIMEOUT:");
     safeLog("error", "request_failed", { requestId, action, tenantId: auth.tenantId, message });
-    return json({ error: message, requestId }, message === "FORBIDDEN" ? 403 : 500, requestId);
+    return json(
+      { error: isTimeout ? "REQUEST_TIMEOUT" : message, action, requestId },
+      isTimeout ? 504 : message === "FORBIDDEN" ? 403 : 500,
+      requestId,
+    );
   }
 });

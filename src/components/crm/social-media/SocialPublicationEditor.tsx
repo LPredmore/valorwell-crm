@@ -15,6 +15,7 @@ import { SocialPublicationPlaylistPicker } from './SocialPublicationPlaylistPick
 import { SocialPublicationScheduleForm } from './SocialPublicationScheduleForm';
 import { SocialPublicationPreflight } from './SocialPublicationPreflight';
 import { SocialPublicationHistory } from './SocialPublicationHistory';
+import { SocialMediaErrorState } from './SocialMediaErrorState';
 
 const POLLING_STATUSES = new Set(['upload_queued', 'uploading', 'uploaded', 'scheduled']);
 const LOCKED_STATUSES = new Set(['upload_queued', 'uploading', 'uploaded', 'scheduled', 'published']);
@@ -50,10 +51,11 @@ export function SocialPublicationEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, id, createFrom]);
 
-  const { data: publication, isLoading } = useQuery({
+  const { data: publication, isLoading, error: publicationError } = useQuery({
     queryKey: ['social-media', 'publication', id],
     queryFn: () => fetchSocialPublication(id as string),
     enabled: Boolean(id),
+    retry: 1,
     refetchInterval: (query) => (query.state.data && POLLING_STATUSES.has(query.state.data.status) ? 15000 : false),
   });
 
@@ -61,6 +63,7 @@ export function SocialPublicationEditor({
     queryKey: ['social-media', 'validation', id],
     queryFn: () => validateSocialPublication(id as string),
     enabled: Boolean(id),
+    retry: 1,
   });
 
   const invalidate = () => {
@@ -115,6 +118,8 @@ export function SocialPublicationEditor({
         </DialogHeader>
 
         {(createMutation.isPending || isLoading) && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {createMutation.error && <SocialMediaErrorState error={createMutation.error} />}
+        {publicationError && <SocialMediaErrorState error={publicationError} />}
 
         {merged && (
           <div className="space-y-4">

@@ -116,10 +116,53 @@ export type LibraryFilters = {
   publicationState?: "all" | "unscheduled" | "scheduled" | "published" | "failed";
 };
 
+const INVOKE_TIMEOUT_MS = 15000;
+
+/** Carries enough detail (action, HTTP status, server requestId) to render an actionable
+ * error in the UI instead of a bare message, and to correlate against Edge Function logs. */
+export class SocialMediaError extends Error {
+  action: string;
+  status: number | null;
+  requestId: string | null;
+  constructor(message: string, action: string, status: number | null, requestId: string | null) {
+    super(message);
+    this.name = "SocialMediaError";
+    this.action = action;
+    this.status = status;
+    this.requestId = requestId;
+  }
+}
+
 async function invoke<T>(action: string, body: Record<string, unknown> = {}): Promise<T> {
-  const { data, error } = await supabase.functions.invoke("social-media-manager", { body: { action, ...body } });
-  if (error) throw new Error(error.message);
-  if (data && typeof data === "object" && "error" in data) throw new Error(String((data as { error: string }).error));
+  const { data, error } = await supabase.functions.invoke("social-media-manager", {
+    body: { action, ...body },
+    timeout: INVOKE_TIMEOUT_MS,
+  });
+
+  if (error) {
+    // FunctionsHttpError carries the raw Response in .context -- read the {error, action,
+    // requestId} body social-media-manager actually returned, rather than collapsing to a
+    // generic "Edge Function returned a non-2xx status code".
+    const context = (error as { context?: unknown }).context;
+    if (context instanceof Response) {
+      const requestId = context.headers.get("x-request-id");
+      let serverMessage: string | null = null;
+      try {
+        const payload = await context.clone().json();
+        serverMessage = typeof payload?.error === "string" ? payload.error : null;
+      } catch {
+        // response body wasn't JSON -- fall through with just the status
+      }
+      throw new SocialMediaError(serverMessage ?? `HTTP ${context.status}`, action, context.status, requestId);
+    }
+    const isTimeout = error.name === "AbortError" || /abort/i.test(error.message);
+    throw new SocialMediaError(isTimeout ? `Request timed out after ${INVOKE_TIMEOUT_MS / 1000}s` : error.message, action, null, null);
+  }
+
+  if (data && typeof data === "object" && "error" in data) {
+    const payload = data as { error: string; requestId?: string };
+    throw new SocialMediaError(payload.error, action, null, payload.requestId ?? null);
+  }
   return (data as { data: T }).data;
 }
 

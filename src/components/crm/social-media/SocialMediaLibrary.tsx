@@ -4,6 +4,7 @@ import { fetchSocialMediaLibrary, type LibraryFilters, type SocialMediaLibraryIt
 import { SocialMediaFilters } from './SocialMediaFilters';
 import { SocialMediaLibraryCard } from './SocialMediaLibraryCard';
 import { SocialPublicationEditor } from './SocialPublicationEditor';
+import { SocialMediaErrorState } from './SocialMediaErrorState';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function SocialMediaLibrary() {
@@ -13,6 +14,7 @@ export function SocialMediaLibrary() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['social-media', 'library', filters],
     queryFn: () => fetchSocialMediaLibrary(filters),
+    retry: 1,
   });
 
   return (
@@ -24,7 +26,7 @@ export function SocialMediaLibrary() {
           {Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-56" />)}
         </div>
       )}
-      {error && <p className="text-sm text-destructive">{(error as Error).message}</p>}
+      {error && <SocialMediaErrorState error={error} />}
       {!isLoading && !error && data?.length === 0 && (
         <p className="text-sm text-muted-foreground">No content matches the current filters.</p>
       )}
