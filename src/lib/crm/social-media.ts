@@ -156,7 +156,14 @@ async function invoke<T>(action: string, body: Record<string, unknown> = {}): Pr
       throw new SocialMediaError(serverMessage ?? `HTTP ${context.status}`, action, context.status, requestId);
     }
     const isTimeout = error.name === "AbortError" || /abort/i.test(error.message);
-    throw new SocialMediaError(isTimeout ? `Request timed out after ${INVOKE_TIMEOUT_MS / 1000}s` : error.message, action, null, null);
+    if (isTimeout) throw new SocialMediaError(`Request timed out after ${INVOKE_TIMEOUT_MS / 1000}s`, action, null, null);
+    // FunctionsFetchError/FunctionsRelayError wrap the real underlying failure (often thrown
+    // before the network call ever happens, e.g. inside supabase-js's own auth/session
+    // resolution) in .context -- surface that instead of the generic wrapper message, which
+    // is identical ("Failed to send a request to the Edge Function") no matter the real cause.
+    const underlying = context as { name?: string; message?: string } | undefined;
+    const detail = underlying?.message ? `${error.message}: [${underlying.name ?? "Error"}] ${underlying.message}` : error.message;
+    throw new SocialMediaError(detail, action, null, null);
   }
 
   if (data && typeof data === "object" && "error" in data) {
