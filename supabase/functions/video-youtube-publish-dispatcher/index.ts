@@ -1,0 +1,249 @@
+import "jsr:@supabase/functions-js@2.4.5/edge-runtime.d.ts";
+import { adminClient, authorizeWorker, json, logEvent, safeError, classifyModelFailure, backoffSeconds } from "../_shared/ai-ops.ts";
+import { youtubeAccessToken } from "../_shared/ai-ops-youtube.ts";
+import { driveAccessToken, driveFileMetadata, driveFileRange } from "./drive.ts";
+import {
+  addToPlaylist, createResumableUploadSession, isVideoInPlaylist, queryUploadOffset,
+  setThumbnail, uploadChunk, PermanentYoutubeError, TransientYoutubeError, type VideoSnippetStatus,
+} from "./youtube.ts";
+
+type Db = ReturnType<typeof adminClient>;
+type Job = Record<string, unknown>;
+type Publication = Record<string, unknown>;
+
+const CHUNK_BYTES = 32 * 1024 * 1024; // 32MB, a multiple of 256KB as YouTube's resumable protocol requires
+
+async function insertEvent(db: Db, publicationId: string, tenantId: string, eventType: string, detail: Record<string, unknown> = {}) {
+  await db.from("ai_operations_social_publication_events").insert({
+    tenant_id: tenantId, publication_id: publicationId, event_type: eventType, detail,
+  });
+}
+
+function buildDescriptionWithHashtags(description: string, hashtags: string[]): string {
+  if (!hashtags.length) return description;
+  const alreadyPresent = hashtags.every((tag) => description.includes(tag));
+  if (alreadyPresent) return description;
+  const block = hashtags.map((tag) => (tag.startsWith("#") ? tag : `#${tag}`)).join(" ");
+  return description ? `${description}\n\n${block}` : block;
+}
+
+async function resolveSourceFileId(db: Db, pub: Publication): Promise<string> {
+  if (pub.source_type === "clip") {
+    const { data, error } = await db.from("ai_operations_video_clips").select("drive_file_id").eq("id", pub.clip_id as string).maybeSingle();
+    if (error || !data?.drive_file_id) throw new PermanentYoutubeError("Source clip has no rendered Drive file.");
+    return data.drive_file_id as string;
+  }
+  const { data, error } = await db.from("ai_operations_video_projects").select("source_file_id").eq("id", pub.project_id as string).maybeSingle();
+  if (error || !data?.source_file_id) throw new PermanentYoutubeError("Source project has no Drive file.");
+  return data.source_file_id as string;
+}
+
+async function markFailed(db: Db, job: Job, pub: Publication, error: unknown) {
+  const message = safeError(error);
+  const status = error instanceof Error && "status" in error ? Number((error as { status?: number }).status) : null;
+  const classification = classifyModelFailure(status, message);
+  const retryable = classification.retryable && !(error instanceof PermanentYoutubeError);
+
+  if (retryable) {
+    const attempts = Number(job.attempts ?? 0);
+    await db.from("ai_operations_video_jobs").update({
+      status: "queued", error_message: message.slice(0, 4000),
+    }).eq("id", job.id as number);
+    await db.from("ai_operations_social_publications").update({
+      next_attempt_at: new Date(Date.now() + backoffSeconds(attempts) * 1000).toISOString(),
+      error_code: classification.kind, error_message: message.slice(0, 4000),
+    }).eq("id", pub.id as string);
+    logEvent("video-youtube-publish-dispatcher", "transient_failure", { jobId: job.id, publicationId: pub.id, message });
+  } else {
+    await db.from("ai_operations_video_jobs").update({ status: "error", error_message: message.slice(0, 4000) }).eq("id", job.id as number);
+    await db.from("ai_operations_social_publications").update({
+      status: "failed", error_code: classification.kind, error_message: message.slice(0, 4000),
+    }).eq("id", pub.id as string);
+    logEvent("video-youtube-publish-dispatcher", "permanent_failure", { jobId: job.id, publicationId: pub.id, message });
+  }
+}
+
+async function runUploadStage(db: Db, job: Job, pub: Publication): Promise<Response> {
+  const youtubeToken = await youtubeAccessToken();
+  const driveToken = await driveAccessToken(db);
+  const payload = (job.payload ?? {}) as Record<string, unknown>;
+
+  let fileId = payload.drive_file_id as string | undefined;
+  let totalBytes = payload.total_bytes as number | undefined;
+  let mimeType = payload.mime_type as string | undefined;
+
+  if (!fileId || !totalBytes) {
+    fileId = await resolveSourceFileId(db, pub);
+    const meta = await driveFileMetadata(driveToken, fileId);
+    if (!meta.size) throw new PermanentYoutubeError("Source Drive file has no known size.");
+    totalBytes = meta.size;
+    mimeType = meta.mimeType || "video/mp4";
+    await db.from("ai_operations_video_jobs").update({
+      payload: { ...payload, drive_file_id: fileId, total_bytes: totalBytes, mime_type: mimeType },
+    }).eq("id", job.id as number);
+  }
+
+  let sessionUrl = payload.upload_session_url as string | undefined;
+  if (!sessionUrl) {
+    const isScheduledOrPrivate = pub.delivery_mode === "scheduled" || pub.desired_privacy_status === "private";
+    const body: VideoSnippetStatus = {
+      snippet: {
+        title: String(pub.title ?? "").slice(0, 100),
+        description: buildDescriptionWithHashtags(String(pub.description ?? ""), (pub.hashtags as string[]) ?? []),
+        tags: (pub.tags as string[]) ?? [],
+        categoryId: String(pub.category_id ?? "29"),
+        defaultLanguage: String(pub.default_language ?? "en"),
+      },
+      status: {
+        privacyStatus: isScheduledOrPrivate ? "private" : (pub.desired_privacy_status as "public" | "unlisted" | "private"),
+        ...(pub.delivery_mode === "scheduled" ? { publishAt: pub.scheduled_for as string } : {}),
+        license: (pub.license as "youtube" | "creativeCommon") ?? "youtube",
+        embeddable: Boolean(pub.embeddable),
+        publicStatsViewable: Boolean(pub.public_stats_viewable),
+        selfDeclaredMadeForKids: Boolean(pub.made_for_kids),
+        containsSyntheticMedia: Boolean(pub.contains_synthetic_media),
+      },
+    };
+    sessionUrl = await createResumableUploadSession(youtubeToken, body, totalBytes, mimeType ?? "video/mp4");
+    await db.from("ai_operations_video_jobs").update({
+      payload: { ...payload, drive_file_id: fileId, total_bytes: totalBytes, mime_type: mimeType, upload_session_url: sessionUrl },
+    }).eq("id", job.id as number);
+  }
+
+  // YouTube's own reported offset is authoritative -- never trust our own bytes_uploaded
+  // bookkeeping across a job restart.
+  let nextByte = await queryUploadOffset(sessionUrl, totalBytes);
+  if (nextByte >= totalBytes) {
+    // Upload already finished on a prior tick but we never recorded it (e.g. crash right
+    // after YouTube accepted the final chunk). We cannot recover the video id from here --
+    // surface as a permanent failure so a human can reconcile via YouTube Studio rather than
+    // silently re-uploading.
+    throw new PermanentYoutubeError("Upload session reports complete but no video id was recorded. Manual reconciliation required.");
+  }
+
+  const chunkEnd = Math.min(nextByte + CHUNK_BYTES, totalBytes) - 1;
+  const bytes = await driveFileRange(driveToken, fileId, nextByte, chunkEnd);
+  const result = await uploadChunk(sessionUrl, bytes, nextByte, totalBytes);
+
+  if (!result.done) {
+    await db.from("ai_operations_video_jobs").update({
+      payload: { ...payload, drive_file_id: fileId, total_bytes: totalBytes, mime_type: mimeType, upload_session_url: sessionUrl, bytes_uploaded: result.nextByte },
+    }).eq("id", job.id as number);
+    return json({ ok: true, action: "chunk_uploaded", publicationId: pub.id, bytesUploaded: result.nextByte, totalBytes });
+  }
+
+  // Video created -- persist immediately, before anything else, per the idempotency rule.
+  await db.from("ai_operations_social_publications").update({
+    external_video_id: result.videoId,
+    external_url: `https://www.youtube.com/watch?v=${result.videoId}`,
+    uploaded_at: new Date().toISOString(),
+    platform_response: result.response,
+  }).eq("id", pub.id as string);
+  await insertEvent(db, pub.id as string, pub.tenant_id as string, "youtube_video_created", { videoId: result.videoId });
+
+  return json({ ok: true, action: "video_created", publicationId: pub.id, videoId: result.videoId });
+}
+
+async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Response> {
+  const youtubeToken = await youtubeAccessToken();
+  const videoId = pub.external_video_id as string;
+  const payload = (job.payload ?? {}) as Record<string, unknown>;
+
+  if (pub.thumbnail_file_id && !payload.thumbnail_applied) {
+    try {
+      const driveToken = await driveAccessToken(db);
+      const meta = await driveFileMetadata(driveToken, pub.thumbnail_file_id as string);
+      const bytes = await driveFileRange(driveToken, pub.thumbnail_file_id as string, 0, Math.max(meta.size - 1, 0));
+      await setThumbnail(youtubeToken, videoId, bytes, meta.mimeType || "image/jpeg");
+      await db.from("ai_operations_video_jobs").update({ payload: { ...payload, thumbnail_applied: true } }).eq("id", job.id as number);
+      await insertEvent(db, pub.id as string, pub.tenant_id as string, "thumbnail_applied", {});
+    } catch (error) {
+      // Thumbnail failure is a warning, not a fatal error -- record distinctly and continue.
+      await db.from("ai_operations_video_jobs").update({ payload: { ...payload, thumbnail_error: safeError(error) } }).eq("id", job.id as number);
+      await insertEvent(db, pub.id as string, pub.tenant_id as string, "thumbnail_failed", { error: safeError(error) });
+    }
+  }
+
+  const { data: playlistLinks } = await db
+    .from("ai_operations_social_publication_playlists")
+    .select("playlist_id, ai_operations_social_playlists(external_playlist_id, display_name)")
+    .eq("publication_id", pub.id as string);
+  const applied = new Set<string>((payload.playlists_applied as string[] | undefined) ?? []);
+  for (const link of playlistLinks ?? []) {
+    const externalId = (link.ai_operations_social_playlists as { external_playlist_id: string } | null)?.external_playlist_id;
+    if (!externalId || applied.has(externalId)) continue;
+    const already = await isVideoInPlaylist(youtubeToken, externalId, videoId);
+    if (!already) await addToPlaylist(youtubeToken, externalId, videoId);
+    applied.add(externalId);
+    await insertEvent(db, pub.id as string, pub.tenant_id as string, "playlist_attached", { playlistId: externalId });
+  }
+  await db.from("ai_operations_video_jobs").update({ payload: { ...payload, playlists_applied: [...applied] } }).eq("id", job.id as number);
+
+  const finalStatus = pub.delivery_mode === "scheduled"
+    ? "scheduled"
+    : pub.desired_privacy_status === "private"
+    ? "uploaded"
+    : "published";
+  const update: Record<string, unknown> = { status: finalStatus };
+  if (finalStatus === "published") update.published_at = new Date().toISOString();
+  await db.from("ai_operations_social_publications").update(update).eq("id", pub.id as string);
+  await db.from("ai_operations_video_jobs").update({ status: "complete", completed_at: new Date().toISOString() }).eq("id", job.id as number);
+
+  return json({ ok: true, action: "finalized", publicationId: pub.id, status: finalStatus });
+}
+
+Deno.serve(async (request: Request) => {
+  if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (!authorizeWorker(request)) return json({ error: "Unauthorized." }, 401);
+
+  const db = adminClient();
+  let job: Job | null = null;
+  let pub: Publication | null = null;
+  try {
+    const { data: running } = await db.from("ai_operations_video_jobs")
+      .select("*").eq("job_type", "publish_youtube").eq("status", "running").order("started_at", { ascending: true }).limit(1);
+    job = (running?.[0] as Job) ?? null;
+    if (!job) {
+      const { data: queued } = await db.from("ai_operations_video_jobs")
+        .select("*").eq("job_type", "publish_youtube").eq("status", "queued").order("created_at", { ascending: true }).limit(5);
+      for (const candidate of (queued ?? []) as Job[]) {
+        const { data: pubRow } = await db.from("ai_operations_social_publications").select("next_attempt_at").eq("id", candidate.social_publication_id as string).maybeSingle();
+        if (pubRow?.next_attempt_at && new Date(pubRow.next_attempt_at) > new Date()) continue;
+        job = candidate;
+        break;
+      }
+    }
+    if (!job) return json({ ok: true, action: "idle" });
+
+    const { data: pubRow, error: pubError } = await db.from("ai_operations_social_publications").select("*").eq("id", job.social_publication_id as string).maybeSingle();
+    if (pubError || !pubRow) throw new Error("Publication not found for job.");
+    pub = pubRow as Publication;
+
+    if (pub.status === "cancelled") {
+      await db.from("ai_operations_video_jobs").update({ status: "cancelled" }).eq("id", job.id as number);
+      return json({ ok: true, action: "cancelled", publicationId: pub.id });
+    }
+
+    if (job.status === "queued") {
+      await db.from("ai_operations_video_jobs").update({
+        status: "running", started_at: new Date().toISOString(), attempts: Number(job.attempts ?? 0) + 1,
+      }).eq("id", job.id as number);
+      if (pub.status !== "uploading") {
+        await db.from("ai_operations_social_publications").update({
+          status: "uploading", upload_started_at: new Date().toISOString(),
+          attempt_count: Number(pub.attempt_count ?? 0) + 1, last_attempt_at: new Date().toISOString(),
+        }).eq("id", pub.id as string);
+        await insertEvent(db, pub.id as string, pub.tenant_id as string, "upload_started", {});
+      }
+    }
+
+    // Idempotency: never call videos.insert again once a video id exists -- resume
+    // whatever remains (thumbnail / playlists / finalize).
+    if (pub.external_video_id) return await runFinishingSteps(db, job, pub);
+    return await runUploadStage(db, job, pub);
+  } catch (error) {
+    if (job && pub) await markFailed(db, job, pub, error);
+    else logEvent("video-youtube-publish-dispatcher", "dispatch_failed", { error: safeError(error) });
+    return json({ ok: false, error: safeError(error) }, 500);
+  }
+});

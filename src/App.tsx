@@ -39,6 +39,7 @@ import NewsletterManagementPage from "./pages/crm/NewsletterManagementPage";
 import CampaignManagementPage from "./pages/crm/CampaignManagementPage";
 import CommunicationsObservabilityPage from "./pages/crm/CommunicationsObservabilityPage";
 import AiOperationsPage from "./pages/crm/AiOperationsPage";
+import SocialMediaManagerPage from "./pages/crm/SocialMediaManagerPage";
 import CommandCenterPage from "./pages/crm/CommandCenterPage";
 
 import RelationshipBulkEnrollmentPage from "./pages/crm/business-development/campaigns/RelationshipBulkEnrollmentPage";
@@ -91,6 +92,7 @@ const App = () => (
             <Route path="communications/observability" element={<CommunicationsObservabilityPage />} />
             <Route path="tasks" element={<CanonicalTasks />} />
             <Route path="ai-operations" element={<AiOperationsPage />} />
+            <Route path="social-media" element={<SocialMediaManagerPage />} />
             <Route path="command-center" element={<Navigate replace to="/command-center" />} />
 
             <Route path="exceptions" element={<CanonicalExceptions />} />

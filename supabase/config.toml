@@ -34,3 +34,13 @@ verify_jwt = false
 [functions.ai-operations-model-worker]
 # Scheduled AI Operations model queue worker; authorizes the service-role bearer in code.
 verify_jwt = false
+
+[functions.social-media-manager]
+# The function verifies the user JWT and CRM capability internally before reading or
+# mutating social publishing data.
+verify_jwt = false
+
+[functions.video-youtube-publish-dispatcher]
+# Scheduled worker that uploads approved publications to YouTube; authorizes the
+# service-role bearer or X-Cron-Secret in code.
+verify_jwt = false

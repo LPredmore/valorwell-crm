@@ -19,6 +19,7 @@ import { Activity,
   CircleHelp,
   Mail,
   UserPlus,
+  Share2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -63,6 +64,7 @@ const clinicalNavItems: NavItem[] = [
   { label: 'Newsletters', href: '/crm/communications/newsletters', icon: Mail },
   { label: 'Comms Observability', href: '/crm/communications/observability', icon: Activity },
   { label: 'AI Operations', href: '/crm/ai-operations', icon: Sparkles },
+  { label: 'Social Media Manager', href: '/crm/social-media', icon: Share2 },
 
   { label: 'Email Studio', href: '/crm/email-studio', icon: Mail },
   { label: 'Staff', href: '/crm/staff', icon: UserCog },

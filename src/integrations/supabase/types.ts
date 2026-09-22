@@ -568,6 +568,539 @@ export type Database = {
           },
         ]
       }
+      ai_operations_social_accounts: {
+        Row: {
+          auth_status: string
+          connection_type: string
+          created_at: string
+          display_name: string | null
+          external_account_id: string
+          id: string
+          is_default: boolean
+          last_verified_at: string | null
+          metadata: Json
+          platform: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          auth_status?: string
+          connection_type?: string
+          created_at?: string
+          display_name?: string | null
+          external_account_id: string
+          id?: string
+          is_default?: boolean
+          last_verified_at?: string | null
+          metadata?: Json
+          platform: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          auth_status?: string
+          connection_type?: string
+          created_at?: string
+          display_name?: string | null
+          external_account_id?: string
+          id?: string
+          is_default?: boolean
+          last_verified_at?: string | null
+          metadata?: Json
+          platform?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_social_accounts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_social_playlists: {
+        Row: {
+          account_id: string
+          canonical_key: string
+          created_at: string
+          display_name: string
+          external_playlist_id: string
+          id: string
+          is_active: boolean
+          last_known_external_name: string | null
+          last_verified_at: string | null
+          metadata: Json
+          platform: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          canonical_key: string
+          created_at?: string
+          display_name: string
+          external_playlist_id: string
+          id?: string
+          is_active?: boolean
+          last_known_external_name?: string | null
+          last_verified_at?: string | null
+          metadata?: Json
+          platform?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          canonical_key?: string
+          created_at?: string
+          display_name?: string
+          external_playlist_id?: string
+          id?: string
+          is_active?: boolean
+          last_known_external_name?: string | null
+          last_verified_at?: string | null
+          metadata?: Json
+          platform?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_social_playlists_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_social_playlists_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_social_publication_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          detail: Json
+          event_type: string
+          from_status: string | null
+          id: number
+          publication_id: string
+          tenant_id: string
+          to_status: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          detail?: Json
+          event_type: string
+          from_status?: string | null
+          id?: never
+          publication_id: string
+          tenant_id: string
+          to_status?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          detail?: Json
+          event_type?: string
+          from_status?: string | null
+          id?: never
+          publication_id?: string
+          tenant_id?: string
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_social_publication_events_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_social_publication_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_social_publication_playlists: {
+        Row: {
+          created_at: string
+          is_default: boolean
+          playlist_id: string
+          publication_id: string
+        }
+        Insert: {
+          created_at?: string
+          is_default?: boolean
+          playlist_id: string
+          publication_id: string
+        }
+        Update: {
+          created_at?: string
+          is_default?: boolean
+          playlist_id?: string
+          publication_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_social_publication_playlists_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_playlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_social_publication_playlists_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_publications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_social_publications: {
+        Row: {
+          account_id: string
+          approved_at: string | null
+          approved_by: string | null
+          attempt_count: number
+          category_id: string
+          category_name: string
+          clip_id: string | null
+          contains_synthetic_media: boolean
+          content_format: string
+          created_at: string
+          created_by: string | null
+          default_language: string
+          delivery_mode: string
+          description: string
+          desired_privacy_status: string
+          embeddable: boolean
+          error_code: string | null
+          error_message: string | null
+          external_url: string | null
+          external_video_id: string | null
+          hashtags: string[]
+          id: string
+          last_attempt_at: string | null
+          license: string
+          made_for_kids: boolean
+          next_attempt_at: string | null
+          notify_subscribers: boolean
+          platform: string
+          platform_payload: Json
+          platform_processing_status: string | null
+          platform_response: Json
+          platform_upload_status: string | null
+          project_id: string
+          public_stats_viewable: boolean
+          published_at: string | null
+          scheduled_for: string | null
+          source_type: string
+          status: string
+          tags: string[]
+          tenant_id: string
+          thumbnail_file_id: string | null
+          thumbnail_url: string | null
+          timezone: string
+          title: string | null
+          updated_at: string
+          upload_started_at: string | null
+          uploaded_at: string | null
+        }
+        Insert: {
+          account_id: string
+          approved_at?: string | null
+          approved_by?: string | null
+          attempt_count?: number
+          category_id?: string
+          category_name?: string
+          clip_id?: string | null
+          contains_synthetic_media?: boolean
+          content_format: string
+          created_at?: string
+          created_by?: string | null
+          default_language?: string
+          delivery_mode?: string
+          description?: string
+          desired_privacy_status?: string
+          embeddable?: boolean
+          error_code?: string | null
+          error_message?: string | null
+          external_url?: string | null
+          external_video_id?: string | null
+          hashtags?: string[]
+          id?: string
+          last_attempt_at?: string | null
+          license?: string
+          made_for_kids?: boolean
+          next_attempt_at?: string | null
+          notify_subscribers?: boolean
+          platform?: string
+          platform_payload?: Json
+          platform_processing_status?: string | null
+          platform_response?: Json
+          platform_upload_status?: string | null
+          project_id: string
+          public_stats_viewable?: boolean
+          published_at?: string | null
+          scheduled_for?: string | null
+          source_type: string
+          status?: string
+          tags?: string[]
+          tenant_id: string
+          thumbnail_file_id?: string | null
+          thumbnail_url?: string | null
+          timezone?: string
+          title?: string | null
+          updated_at?: string
+          upload_started_at?: string | null
+          uploaded_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          attempt_count?: number
+          category_id?: string
+          category_name?: string
+          clip_id?: string | null
+          contains_synthetic_media?: boolean
+          content_format?: string
+          created_at?: string
+          created_by?: string | null
+          default_language?: string
+          delivery_mode?: string
+          description?: string
+          desired_privacy_status?: string
+          embeddable?: boolean
+          error_code?: string | null
+          error_message?: string | null
+          external_url?: string | null
+          external_video_id?: string | null
+          hashtags?: string[]
+          id?: string
+          last_attempt_at?: string | null
+          license?: string
+          made_for_kids?: boolean
+          next_attempt_at?: string | null
+          notify_subscribers?: boolean
+          platform?: string
+          platform_payload?: Json
+          platform_processing_status?: string | null
+          platform_response?: Json
+          platform_upload_status?: string | null
+          project_id?: string
+          public_stats_viewable?: boolean
+          published_at?: string | null
+          scheduled_for?: string | null
+          source_type?: string
+          status?: string
+          tags?: string[]
+          tenant_id?: string
+          thumbnail_file_id?: string | null
+          thumbnail_url?: string | null
+          timezone?: string
+          title?: string | null
+          updated_at?: string
+          upload_started_at?: string | null
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_social_publications_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_social_publications_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_clips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_social_publications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_social_publications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_social_routing_rules: {
+        Row: {
+          account_id: string
+          content_format: string
+          created_at: string
+          default_playlist_id: string
+          enabled: boolean
+          id: string
+          metadata: Json
+          platform: string
+          priority: number
+          source_clip_type: string | null
+          source_type: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          content_format: string
+          created_at?: string
+          default_playlist_id: string
+          enabled?: boolean
+          id?: string
+          metadata?: Json
+          platform?: string
+          priority?: number
+          source_clip_type?: string | null
+          source_type: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          content_format?: string
+          created_at?: string
+          default_playlist_id?: string
+          enabled?: boolean
+          id?: string
+          metadata?: Json
+          platform?: string
+          priority?: number
+          source_clip_type?: string | null
+          source_type?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_social_routing_rules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_social_routing_rules_default_playlist_id_fkey"
+            columns: ["default_playlist_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_playlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_social_routing_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_social_settings: {
+        Row: {
+          account_id: string
+          created_at: string
+          default_category_id: string
+          default_category_name: string
+          default_contains_synthetic_media: boolean
+          default_embeddable: boolean
+          default_immediate_privacy_status: string
+          default_language: string
+          default_license: string
+          default_made_for_kids: boolean
+          default_notify_subscribers: boolean
+          default_public_stats_viewable: boolean
+          default_use_custom_thumbnail: boolean
+          metadata: Json
+          require_review_before_publish: boolean
+          schedule_strategy: string
+          tenant_id: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          default_category_id?: string
+          default_category_name?: string
+          default_contains_synthetic_media?: boolean
+          default_embeddable?: boolean
+          default_immediate_privacy_status?: string
+          default_language?: string
+          default_license?: string
+          default_made_for_kids?: boolean
+          default_notify_subscribers?: boolean
+          default_public_stats_viewable?: boolean
+          default_use_custom_thumbnail?: boolean
+          metadata?: Json
+          require_review_before_publish?: boolean
+          schedule_strategy?: string
+          tenant_id: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          default_category_id?: string
+          default_category_name?: string
+          default_contains_synthetic_media?: boolean
+          default_embeddable?: boolean
+          default_immediate_privacy_status?: string
+          default_language?: string
+          default_license?: string
+          default_made_for_kids?: boolean
+          default_notify_subscribers?: boolean
+          default_public_stats_viewable?: boolean
+          default_use_custom_thumbnail?: boolean
+          metadata?: Json
+          require_review_before_publish?: boolean
+          schedule_strategy?: string
+          tenant_id?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_social_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "ai_operations_social_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_social_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_operations_sop_controls: {
         Row: {
           control_key: string
@@ -645,6 +1178,559 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: []
+      }
+      ai_operations_video_clips: {
+        Row: {
+          clip_type: string
+          cover_image_file_id: string | null
+          cover_image_url: string | null
+          created_at: string
+          drive_file_id: string | null
+          drive_file_url: string | null
+          end_seconds: number
+          error_message: string | null
+          facebook_description: string | null
+          hashtags: string[] | null
+          id: string
+          linkedin_description: string | null
+          output_mime_type: string
+          output_size_bytes: number | null
+          parent_file_id: string
+          project_id: string
+          rendered_at: string | null
+          start_seconds: number
+          status: string
+          tiktok_description: string | null
+          transcript_text: string
+          updated_at: string
+          uploaded_at: string | null
+          youtube_description: string | null
+          youtube_playlist_ids: string[]
+          youtube_title: string | null
+          youtube_url: string | null
+          youtube_video_id: string | null
+        }
+        Insert: {
+          clip_type?: string
+          cover_image_file_id?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          drive_file_id?: string | null
+          drive_file_url?: string | null
+          end_seconds: number
+          error_message?: string | null
+          facebook_description?: string | null
+          hashtags?: string[] | null
+          id?: string
+          linkedin_description?: string | null
+          output_mime_type?: string
+          output_size_bytes?: number | null
+          parent_file_id: string
+          project_id: string
+          rendered_at?: string | null
+          start_seconds: number
+          status?: string
+          tiktok_description?: string | null
+          transcript_text: string
+          updated_at?: string
+          uploaded_at?: string | null
+          youtube_description?: string | null
+          youtube_playlist_ids?: string[]
+          youtube_title?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+        }
+        Update: {
+          clip_type?: string
+          cover_image_file_id?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          drive_file_id?: string | null
+          drive_file_url?: string | null
+          end_seconds?: number
+          error_message?: string | null
+          facebook_description?: string | null
+          hashtags?: string[] | null
+          id?: string
+          linkedin_description?: string | null
+          output_mime_type?: string
+          output_size_bytes?: number | null
+          parent_file_id?: string
+          project_id?: string
+          rendered_at?: string | null
+          start_seconds?: number
+          status?: string
+          tiktok_description?: string | null
+          transcript_text?: string
+          updated_at?: string
+          uploaded_at?: string | null
+          youtube_description?: string | null
+          youtube_playlist_ids?: string[]
+          youtube_title?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_video_clips_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_video_jobs: {
+        Row: {
+          attempts: number
+          claimed_at: string | null
+          claimed_by: string | null
+          clip_id: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: number
+          job_type: string
+          payload: Json
+          project_id: string
+          social_publication_id: string | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          claimed_at?: string | null
+          claimed_by?: string | null
+          clip_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: number
+          job_type: string
+          payload?: Json
+          project_id: string
+          social_publication_id?: string | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          claimed_at?: string | null
+          claimed_by?: string | null
+          clip_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: number
+          job_type?: string
+          payload?: Json
+          project_id?: string
+          social_publication_id?: string | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_video_jobs_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_clips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_video_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_video_jobs_social_publication_id_fkey"
+            columns: ["social_publication_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_video_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_video_oauth_events: {
+        Row: {
+          connection_type: string
+          created_at: string
+          id: number
+          message: string | null
+          status: string
+        }
+        Insert: {
+          connection_type: string
+          created_at?: string
+          id?: never
+          message?: string | null
+          status: string
+        }
+        Update: {
+          connection_type?: string
+          created_at?: string
+          id?: never
+          message?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      ai_operations_video_project_social_links: {
+        Row: {
+          created_at: string
+          display_label: string | null
+          id: string
+          platform: string
+          project_id: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          display_label?: string | null
+          id?: string
+          platform: string
+          project_id: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          display_label?: string | null
+          id?: string
+          platform?: string
+          project_id?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_video_project_social_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_video_projects: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          guest_image_url: string | null
+          guest_name: string | null
+          id: string
+          last_processed_at: string | null
+          metadata: Json
+          organization_name: string | null
+          processing_error: string | null
+          source_file_id: string
+          source_file_name: string
+          source_file_path: string | null
+          source_folder_id: string | null
+          source_mime_type: string | null
+          source_modified_time: string | null
+          source_provider: string
+          source_size_bytes: number | null
+          source_web_url: string | null
+          status: string
+          tenant_id: string
+          transcript_completed_at: string | null
+          transcript_engine: string | null
+          transcript_error: string | null
+          transcript_language: string | null
+          transcript_model: string | null
+          transcript_source: string | null
+          transcript_text: string | null
+          transcript_word_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          guest_image_url?: string | null
+          guest_name?: string | null
+          id?: string
+          last_processed_at?: string | null
+          metadata?: Json
+          organization_name?: string | null
+          processing_error?: string | null
+          source_file_id: string
+          source_file_name: string
+          source_file_path?: string | null
+          source_folder_id?: string | null
+          source_mime_type?: string | null
+          source_modified_time?: string | null
+          source_provider?: string
+          source_size_bytes?: number | null
+          source_web_url?: string | null
+          status?: string
+          tenant_id: string
+          transcript_completed_at?: string | null
+          transcript_engine?: string | null
+          transcript_error?: string | null
+          transcript_language?: string | null
+          transcript_model?: string | null
+          transcript_source?: string | null
+          transcript_text?: string | null
+          transcript_word_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          guest_image_url?: string | null
+          guest_name?: string | null
+          id?: string
+          last_processed_at?: string | null
+          metadata?: Json
+          organization_name?: string | null
+          processing_error?: string | null
+          source_file_id?: string
+          source_file_name?: string
+          source_file_path?: string | null
+          source_folder_id?: string | null
+          source_mime_type?: string | null
+          source_modified_time?: string | null
+          source_provider?: string
+          source_size_bytes?: number | null
+          source_web_url?: string | null
+          status?: string
+          tenant_id?: string
+          transcript_completed_at?: string | null
+          transcript_engine?: string | null
+          transcript_error?: string | null
+          transcript_language?: string | null
+          transcript_model?: string | null
+          transcript_source?: string | null
+          transcript_text?: string | null
+          transcript_word_count?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_video_projects_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_video_settings: {
+        Row: {
+          cover_image_folder_id: string | null
+          cover_image_folder_url: string | null
+          created_at: string
+          default_min_clip_seconds: number
+          default_target_max_clip_seconds: number
+          drive_account_label: string | null
+          drive_folder_id: string | null
+          drive_folder_url: string | null
+          long_clip_folder_id: string | null
+          long_clip_folder_url: string | null
+          output_provider: string
+          output_storage_bucket: string | null
+          require_review_before_render: boolean
+          require_review_before_youtube_upload: boolean
+          short_clip_folder_id: string | null
+          short_clip_folder_url: string | null
+          short_clip_threshold_seconds: number
+          source_poll_interval_seconds: number
+          source_provider: string
+          tenant_id: string
+          transcription_engine: string
+          transcription_model: string
+          updated_at: string
+        }
+        Insert: {
+          cover_image_folder_id?: string | null
+          cover_image_folder_url?: string | null
+          created_at?: string
+          default_min_clip_seconds?: number
+          default_target_max_clip_seconds?: number
+          drive_account_label?: string | null
+          drive_folder_id?: string | null
+          drive_folder_url?: string | null
+          long_clip_folder_id?: string | null
+          long_clip_folder_url?: string | null
+          output_provider?: string
+          output_storage_bucket?: string | null
+          require_review_before_render?: boolean
+          require_review_before_youtube_upload?: boolean
+          short_clip_folder_id?: string | null
+          short_clip_folder_url?: string | null
+          short_clip_threshold_seconds?: number
+          source_poll_interval_seconds?: number
+          source_provider?: string
+          tenant_id: string
+          transcription_engine?: string
+          transcription_model?: string
+          updated_at?: string
+        }
+        Update: {
+          cover_image_folder_id?: string | null
+          cover_image_folder_url?: string | null
+          created_at?: string
+          default_min_clip_seconds?: number
+          default_target_max_clip_seconds?: number
+          drive_account_label?: string | null
+          drive_folder_id?: string | null
+          drive_folder_url?: string | null
+          long_clip_folder_id?: string | null
+          long_clip_folder_url?: string | null
+          output_provider?: string
+          output_storage_bucket?: string | null
+          require_review_before_render?: boolean
+          require_review_before_youtube_upload?: boolean
+          short_clip_folder_id?: string | null
+          short_clip_folder_url?: string | null
+          short_clip_threshold_seconds?: number
+          source_poll_interval_seconds?: number
+          source_provider?: string
+          tenant_id?: string
+          transcription_engine?: string
+          transcription_model?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_video_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_video_transcript_segments: {
+        Row: {
+          created_at: string
+          end_seconds: number
+          id: number
+          project_id: string
+          segment_index: number
+          speaker_label: string | null
+          start_seconds: number
+          text: string
+          words: Json
+        }
+        Insert: {
+          created_at?: string
+          end_seconds: number
+          id?: number
+          project_id: string
+          segment_index: number
+          speaker_label?: string | null
+          start_seconds: number
+          text: string
+          words?: Json
+        }
+        Update: {
+          created_at?: string
+          end_seconds?: number
+          id?: number
+          project_id?: string
+          segment_index?: number
+          speaker_label?: string | null
+          start_seconds?: number
+          text?: string
+          words?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_video_transcript_segments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_video_worker_heartbeats: {
+        Row: {
+          created_at: string
+          current_job_id: number | null
+          current_project_id: string | null
+          hostname: string | null
+          last_error: string | null
+          last_scan_at: string | null
+          last_seen_at: string
+          metadata: Json
+          status: string
+          tenant_id: string
+          updated_at: string
+          worker_id: string
+          worker_version: string | null
+        }
+        Insert: {
+          created_at?: string
+          current_job_id?: number | null
+          current_project_id?: string | null
+          hostname?: string | null
+          last_error?: string | null
+          last_scan_at?: string | null
+          last_seen_at?: string
+          metadata?: Json
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          worker_id: string
+          worker_version?: string | null
+        }
+        Update: {
+          created_at?: string
+          current_job_id?: number | null
+          current_project_id?: string | null
+          hostname?: string | null
+          last_error?: string | null
+          last_scan_at?: string | null
+          last_seen_at?: string
+          metadata?: Json
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          worker_id?: string
+          worker_version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_video_worker_heartbeats_current_job_id_fkey"
+            columns: ["current_job_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_video_worker_heartbeats_current_project_id_fkey"
+            columns: ["current_project_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_video_worker_heartbeats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_operations_weekly_reviews: {
         Row: {
@@ -807,6 +1893,84 @@ export type Database = {
           video_id?: string
           video_title?: string | null
           view_count?: number | null
+        }
+        Relationships: []
+      }
+      ai_operations_youtube_videos: {
+        Row: {
+          channel_id: string
+          created_at: string
+          description: string
+          duration_seconds: number | null
+          id: string
+          last_synced_at: string
+          original_filename: string | null
+          playlist_ids: string[]
+          playlist_names: string[]
+          privacy_status: string
+          published_at: string | null
+          tenant_id: string
+          title: string
+          transcript: string | null
+          transcript_attempts: number
+          transcript_error: string | null
+          transcript_language: string | null
+          transcript_last_attempt_at: string | null
+          transcript_source: string | null
+          transcript_status: string
+          updated_at: string
+          url: string
+          video_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          description?: string
+          duration_seconds?: number | null
+          id?: string
+          last_synced_at?: string
+          original_filename?: string | null
+          playlist_ids?: string[]
+          playlist_names?: string[]
+          privacy_status?: string
+          published_at?: string | null
+          tenant_id: string
+          title?: string
+          transcript?: string | null
+          transcript_attempts?: number
+          transcript_error?: string | null
+          transcript_language?: string | null
+          transcript_last_attempt_at?: string | null
+          transcript_source?: string | null
+          transcript_status?: string
+          updated_at?: string
+          url: string
+          video_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          description?: string
+          duration_seconds?: number | null
+          id?: string
+          last_synced_at?: string
+          original_filename?: string | null
+          playlist_ids?: string[]
+          playlist_names?: string[]
+          privacy_status?: string
+          published_at?: string | null
+          tenant_id?: string
+          title?: string
+          transcript?: string | null
+          transcript_attempts?: number
+          transcript_error?: string | null
+          transcript_language?: string | null
+          transcript_last_attempt_at?: string | null
+          transcript_source?: string | null
+          transcript_status?: string
+          updated_at?: string
+          url?: string
+          video_id?: string
         }
         Relationships: []
       }
@@ -2438,6 +3602,240 @@ export type Database = {
           },
         ]
       }
+      claim_clearinghouse_events: {
+        Row: {
+          claim_id: string
+          clearinghouse: string
+          created_at: string
+          event_type: string
+          external_claim_id: string | null
+          external_event_key: string
+          external_submission_id: string | null
+          id: string
+          payload_sha256: string | null
+          processed_at: string | null
+          remote_status: string | null
+          reported_by: string | null
+          sanitized_payload: Json
+          tenant_id: string
+        }
+        Insert: {
+          claim_id: string
+          clearinghouse: string
+          created_at?: string
+          event_type: string
+          external_claim_id?: string | null
+          external_event_key: string
+          external_submission_id?: string | null
+          id?: string
+          payload_sha256?: string | null
+          processed_at?: string | null
+          remote_status?: string | null
+          reported_by?: string | null
+          sanitized_payload?: Json
+          tenant_id: string
+        }
+        Update: {
+          claim_id?: string
+          clearinghouse?: string
+          created_at?: string
+          event_type?: string
+          external_claim_id?: string | null
+          external_event_key?: string
+          external_submission_id?: string | null
+          id?: string
+          payload_sha256?: string | null
+          processed_at?: string | null
+          remote_status?: string | null
+          reported_by?: string | null
+          sanitized_payload?: Json
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_clearinghouse_events_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_clearinghouse_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claim_clearinghouse_lifecycle: {
+        Row: {
+          claim_id: string
+          clearinghouse: string
+          created_at: string
+          external_claim_id: string | null
+          id: string
+          identity_status: string
+          last_reconciled_at: string | null
+          last_sync_error: string | null
+          last_synced_at: string | null
+          last_timeline_synced_at: string | null
+          latest_external_submission_id: string | null
+          next_sync_at: string | null
+          remote_status: string | null
+          remote_status_reported_by: string | null
+          remote_submitted_at: string | null
+          remote_total_charge: number | null
+          remote_total_paid: number | null
+          sync_error_count: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          claim_id: string
+          clearinghouse: string
+          created_at?: string
+          external_claim_id?: string | null
+          id?: string
+          identity_status?: string
+          last_reconciled_at?: string | null
+          last_sync_error?: string | null
+          last_synced_at?: string | null
+          last_timeline_synced_at?: string | null
+          latest_external_submission_id?: string | null
+          next_sync_at?: string | null
+          remote_status?: string | null
+          remote_status_reported_by?: string | null
+          remote_submitted_at?: string | null
+          remote_total_charge?: number | null
+          remote_total_paid?: number | null
+          sync_error_count?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          claim_id?: string
+          clearinghouse?: string
+          created_at?: string
+          external_claim_id?: string | null
+          id?: string
+          identity_status?: string
+          last_reconciled_at?: string | null
+          last_sync_error?: string | null
+          last_synced_at?: string | null
+          last_timeline_synced_at?: string | null
+          latest_external_submission_id?: string | null
+          next_sync_at?: string | null
+          remote_status?: string | null
+          remote_status_reported_by?: string | null
+          remote_submitted_at?: string | null
+          remote_total_charge?: number | null
+          remote_total_paid?: number | null
+          sync_error_count?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_clearinghouse_lifecycle_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_clearinghouse_lifecycle_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claim_clearinghouse_routes: {
+        Row: {
+          clearinghouse: string
+          client_id: string
+          client_insurance_id: string
+          created_at: string
+          created_by_profile_id: string | null
+          effective_from: string
+          effective_to: string | null
+          enabled: boolean
+          id: string
+          metadata: Json
+          routing_reason: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          clearinghouse: string
+          client_id: string
+          client_insurance_id: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          enabled?: boolean
+          id?: string
+          metadata?: Json
+          routing_reason?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          clearinghouse?: string
+          client_id?: string
+          client_insurance_id?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          enabled?: boolean
+          id?: string
+          metadata?: Json
+          routing_reason?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_clearinghouse_routes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_clearinghouse_routes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_canonical_state"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "claim_clearinghouse_routes_client_insurance_id_fkey"
+            columns: ["client_insurance_id"]
+            isOneToOne: false
+            referencedRelation: "client_insurance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_clearinghouse_routes_client_insurance_id_fkey"
+            columns: ["client_insurance_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_operations"
+            referencedColumns: ["current_insurance_id"]
+          },
+          {
+            foreignKeyName: "claim_clearinghouse_routes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       claim_diagnoses: {
         Row: {
           claim_id: string
@@ -2548,6 +3946,7 @@ export type Database = {
       }
       claim_lines: {
         Row: {
+          adjudication_disposition: string | null
           adjusted_amount: number | null
           allowed_amount: number | null
           appointment_id: string | null
@@ -2573,6 +3972,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          adjudication_disposition?: string | null
           adjusted_amount?: number | null
           allowed_amount?: number | null
           appointment_id?: string | null
@@ -2598,6 +3998,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          adjudication_disposition?: string | null
           adjusted_amount?: number | null
           allowed_amount?: number | null
           appointment_id?: string | null
@@ -2700,6 +4101,115 @@ export type Database = {
         }
         Relationships: []
       }
+      claim_realtime_status_checks: {
+        Row: {
+          checkpoint_key: string
+          claim_id: string
+          clearinghouse: string
+          clearinghouse_claim_number: string | null
+          completed_at: string | null
+          created_at: string
+          entity_code: string | null
+          external_started_at: string | null
+          http_status: number | null
+          id: string
+          informational_amount_paid: number | null
+          informational_check_date: string | null
+          last_error: string | null
+          match_count: number | null
+          payer_claim_number: string | null
+          request_mode: string
+          response_sha256: string | null
+          sanitized_result: Json
+          semantic_class: string | null
+          state: string
+          status_category_code: string | null
+          status_code: string | null
+          stedi_check_id: string | null
+          submission_attempt_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          checkpoint_key: string
+          claim_id: string
+          clearinghouse?: string
+          clearinghouse_claim_number?: string | null
+          completed_at?: string | null
+          created_at?: string
+          entity_code?: string | null
+          external_started_at?: string | null
+          http_status?: number | null
+          id?: string
+          informational_amount_paid?: number | null
+          informational_check_date?: string | null
+          last_error?: string | null
+          match_count?: number | null
+          payer_claim_number?: string | null
+          request_mode: string
+          response_sha256?: string | null
+          sanitized_result?: Json
+          semantic_class?: string | null
+          state?: string
+          status_category_code?: string | null
+          status_code?: string | null
+          stedi_check_id?: string | null
+          submission_attempt_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          checkpoint_key?: string
+          claim_id?: string
+          clearinghouse?: string
+          clearinghouse_claim_number?: string | null
+          completed_at?: string | null
+          created_at?: string
+          entity_code?: string | null
+          external_started_at?: string | null
+          http_status?: number | null
+          id?: string
+          informational_amount_paid?: number | null
+          informational_check_date?: string | null
+          last_error?: string | null
+          match_count?: number | null
+          payer_claim_number?: string | null
+          request_mode?: string
+          response_sha256?: string | null
+          sanitized_result?: Json
+          semantic_class?: string | null
+          state?: string
+          status_category_code?: string | null
+          status_code?: string | null
+          stedi_check_id?: string | null
+          submission_attempt_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_realtime_status_checks_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_realtime_status_checks_submission_attempt_id_fkey"
+            columns: ["submission_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "claim_submission_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_realtime_status_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       claim_resubmission_repair_audit: {
         Row: {
           claim_id: string
@@ -2774,6 +4284,7 @@ export type Database = {
           old_status: string | null
           raw_payload: Json | null
           status_message: string | null
+          submission_attempt_id: string | null
           tenant_id: string
         }
         Insert: {
@@ -2786,6 +4297,7 @@ export type Database = {
           old_status?: string | null
           raw_payload?: Json | null
           status_message?: string | null
+          submission_attempt_id?: string | null
           tenant_id: string
         }
         Update: {
@@ -2798,6 +4310,7 @@ export type Database = {
           old_status?: string | null
           raw_payload?: Json | null
           status_message?: string | null
+          submission_attempt_id?: string | null
           tenant_id?: string
         }
         Relationships: [
@@ -2809,10 +4322,126 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "claim_status_events_submission_attempt_id_fkey"
+            columns: ["submission_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "claim_submission_attempts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "claim_status_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claim_submission_attempts: {
+        Row: {
+          attempt_ordinal: number
+          batch_id: string | null
+          claim_id: string
+          claimmd_batch_id: string | null
+          claimmd_claim_id: string | null
+          claimmd_file_id: string | null
+          clearinghouse: string
+          client_action_id: string | null
+          created_at: string
+          external_claim_id: string | null
+          external_submission_id: string | null
+          frequency_code: string | null
+          id: string
+          idempotency_key: string | null
+          original_claim_id: string | null
+          outcome: string
+          pcn: string
+          remote_claim_id: string | null
+          replacement_reason: string | null
+          request_payload: Json | null
+          submission_mode: string
+          submission_request_id: string | null
+          submitted_at: string
+          sync_result: Json
+          sync_status: string | null
+          tenant_id: string
+        }
+        Insert: {
+          attempt_ordinal: number
+          batch_id?: string | null
+          claim_id: string
+          claimmd_batch_id?: string | null
+          claimmd_claim_id?: string | null
+          claimmd_file_id?: string | null
+          clearinghouse?: string
+          client_action_id?: string | null
+          created_at?: string
+          external_claim_id?: string | null
+          external_submission_id?: string | null
+          frequency_code?: string | null
+          id?: string
+          idempotency_key?: string | null
+          original_claim_id?: string | null
+          outcome: string
+          pcn: string
+          remote_claim_id?: string | null
+          replacement_reason?: string | null
+          request_payload?: Json | null
+          submission_mode: string
+          submission_request_id?: string | null
+          submitted_at: string
+          sync_result?: Json
+          sync_status?: string | null
+          tenant_id: string
+        }
+        Update: {
+          attempt_ordinal?: number
+          batch_id?: string | null
+          claim_id?: string
+          claimmd_batch_id?: string | null
+          claimmd_claim_id?: string | null
+          claimmd_file_id?: string | null
+          clearinghouse?: string
+          client_action_id?: string | null
+          created_at?: string
+          external_claim_id?: string | null
+          external_submission_id?: string | null
+          frequency_code?: string | null
+          id?: string
+          idempotency_key?: string | null
+          original_claim_id?: string | null
+          outcome?: string
+          pcn?: string
+          remote_claim_id?: string | null
+          replacement_reason?: string | null
+          request_payload?: Json | null
+          submission_mode?: string
+          submission_request_id?: string | null
+          submitted_at?: string
+          sync_result?: Json
+          sync_status?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_submission_attempts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "claim_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_submission_attempts_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_submission_attempts_submission_request_id_fkey"
+            columns: ["submission_request_id"]
+            isOneToOne: false
+            referencedRelation: "claim_submission_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -11317,6 +12946,8 @@ export type Database = {
           from_name: string | null
           inbound_email: string | null
           last_verified_at: string | null
+          marketing_from_email: string | null
+          marketing_from_name: string | null
           postal_address: string | null
           reply_to_email: string | null
           tenant_id: string
@@ -11329,6 +12960,8 @@ export type Database = {
           from_name?: string | null
           inbound_email?: string | null
           last_verified_at?: string | null
+          marketing_from_email?: string | null
+          marketing_from_name?: string | null
           postal_address?: string | null
           reply_to_email?: string | null
           tenant_id: string
@@ -11341,6 +12974,8 @@ export type Database = {
           from_name?: string | null
           inbound_email?: string | null
           last_verified_at?: string | null
+          marketing_from_email?: string | null
+          marketing_from_name?: string | null
           postal_address?: string | null
           reply_to_email?: string | null
           tenant_id?: string
@@ -11711,34 +13346,82 @@ export type Database = {
       }
       edge_function_executions: {
         Row: {
+          attempted_source_ids: string[]
+          cursor_end: string | null
+          cursor_start: string | null
           duration_ms: number | null
+          error_count: number
           error_message: string | null
+          errors: Json
           executed_at: string | null
+          failed_source_ids: string[]
           function_name: string
           id: string
           items_processed: number | null
+          metrics: Json
+          requested_cursor: string | null
+          returned_cursor: string | null
+          run_mode: string | null
+          skipped_source_ids: string[]
+          source_ids: string[]
+          source_record_count: number
           status: string
+          succeeded_source_ids: string[]
           tenant_id: string | null
+          timeout_reached: boolean
+          truncated: boolean
         }
         Insert: {
+          attempted_source_ids?: string[]
+          cursor_end?: string | null
+          cursor_start?: string | null
           duration_ms?: number | null
+          error_count?: number
           error_message?: string | null
+          errors?: Json
           executed_at?: string | null
+          failed_source_ids?: string[]
           function_name: string
           id?: string
           items_processed?: number | null
+          metrics?: Json
+          requested_cursor?: string | null
+          returned_cursor?: string | null
+          run_mode?: string | null
+          skipped_source_ids?: string[]
+          source_ids?: string[]
+          source_record_count?: number
           status: string
+          succeeded_source_ids?: string[]
           tenant_id?: string | null
+          timeout_reached?: boolean
+          truncated?: boolean
         }
         Update: {
+          attempted_source_ids?: string[]
+          cursor_end?: string | null
+          cursor_start?: string | null
           duration_ms?: number | null
+          error_count?: number
           error_message?: string | null
+          errors?: Json
           executed_at?: string | null
+          failed_source_ids?: string[]
           function_name?: string
           id?: string
           items_processed?: number | null
+          metrics?: Json
+          requested_cursor?: string | null
+          returned_cursor?: string | null
+          run_mode?: string | null
+          skipped_source_ids?: string[]
+          source_ids?: string[]
+          source_record_count?: number
           status?: string
+          succeeded_source_ids?: string[]
           tenant_id?: string | null
+          timeout_reached?: boolean
+          truncated?: boolean
         }
         Relationships: [
           {
@@ -16376,6 +18059,72 @@ export type Database = {
           },
         ]
       }
+      reddit_authority_activity: {
+        Row: {
+          canonical_topic_key: string
+          created_at: string
+          external_action_status: string
+          external_comment_url: string | null
+          external_subreddit: string | null
+          external_thread_url: string | null
+          id: string
+          notes: string | null
+          researched_at: string
+          resource_action: string
+          resource_id: string | null
+          tenant_id: string
+          valorwell_post_status: string
+          valorwell_subreddit_post_url: string | null
+        }
+        Insert: {
+          canonical_topic_key: string
+          created_at?: string
+          external_action_status?: string
+          external_comment_url?: string | null
+          external_subreddit?: string | null
+          external_thread_url?: string | null
+          id?: string
+          notes?: string | null
+          researched_at?: string
+          resource_action: string
+          resource_id?: string | null
+          tenant_id?: string
+          valorwell_post_status?: string
+          valorwell_subreddit_post_url?: string | null
+        }
+        Update: {
+          canonical_topic_key?: string
+          created_at?: string
+          external_action_status?: string
+          external_comment_url?: string | null
+          external_subreddit?: string | null
+          external_thread_url?: string | null
+          id?: string
+          notes?: string | null
+          researched_at?: string
+          resource_action?: string
+          resource_id?: string | null
+          tenant_id?: string
+          valorwell_post_status?: string
+          valorwell_subreddit_post_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reddit_authority_resource_fk"
+            columns: ["tenant_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "reddit_authority_resource_fk"
+            columns: ["tenant_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources_public"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       referrals: {
         Row: {
           client_id: string
@@ -19892,6 +21641,7 @@ export type Database = {
           last_completed_state_order: number | null
           last_error: Json
           last_failed_at: string | null
+          progress: Json
           status: string
           tenant_id: string
           updated_at: string
@@ -19907,6 +21657,7 @@ export type Database = {
           last_completed_state_order?: number | null
           last_error?: Json
           last_failed_at?: string | null
+          progress?: Json
           status?: string
           tenant_id: string
           updated_at?: string
@@ -19922,6 +21673,7 @@ export type Database = {
           last_completed_state_order?: number | null
           last_error?: Json
           last_failed_at?: string | null
+          progress?: Json
           status?: string
           tenant_id?: string
           updated_at?: string
@@ -19930,6 +21682,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "research_state_rotations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      research_state_search_progress: {
+        Row: {
+          created_at: string
+          id: string
+          progress: Json
+          state_code: string
+          state_order: number
+          tenant_id: string
+          updated_at: string
+          workflow_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          progress?: Json
+          state_code: string
+          state_order: number
+          tenant_id: string
+          updated_at?: string
+          workflow_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          progress?: Json
+          state_code?: string
+          state_order?: number
+          tenant_id?: string
+          updated_at?: string
+          workflow_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "research_state_search_progress_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -21768,6 +23561,51 @@ export type Database = {
         }
         Relationships: []
       }
+      therapist_outreach_prospects: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          license_type: string | null
+          linkedin_profile: string | null
+          outreach_contactable: boolean
+          outreach_exclusion_reason: string | null
+          phone: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          license_type?: string | null
+          linkedin_profile?: string | null
+          outreach_contactable?: boolean
+          outreach_exclusion_reason?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          license_type?: string | null
+          linkedin_profile?: string | null
+          outreach_contactable?: boolean
+          outreach_exclusion_reason?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       training_videos: {
         Row: {
           cover_image_url: string | null
@@ -22449,6 +24287,221 @@ export type Database = {
         }
         Relationships: []
       }
+      website_resource_relations: {
+        Row: {
+          created_at: string
+          display_order: number
+          related_resource_id: string
+          relation_type: string
+          resource_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          related_resource_id: string
+          relation_type?: string
+          resource_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          related_resource_id?: string
+          relation_type?: string
+          resource_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_resource_relations_related_resource_fkey"
+            columns: ["tenant_id", "related_resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "website_resource_relations_related_resource_fkey"
+            columns: ["tenant_id", "related_resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources_public"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "website_resource_relations_resource_fkey"
+            columns: ["tenant_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "website_resource_relations_resource_fkey"
+            columns: ["tenant_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources_public"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      website_resource_sources: {
+        Row: {
+          citation_key: string
+          created_at: string
+          display_order: number
+          id: string
+          is_public: boolean
+          organization: string | null
+          resource_id: string
+          source_published_at: string | null
+          source_type: string
+          tenant_id: string
+          title: string | null
+          updated_at: string
+          url: string
+          verified_at: string | null
+        }
+        Insert: {
+          citation_key: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_public?: boolean
+          organization?: string | null
+          resource_id: string
+          source_published_at?: string | null
+          source_type?: string
+          tenant_id: string
+          title?: string | null
+          updated_at?: string
+          url: string
+          verified_at?: string | null
+        }
+        Update: {
+          citation_key?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_public?: boolean
+          organization?: string | null
+          resource_id?: string
+          source_published_at?: string | null
+          source_type?: string
+          tenant_id?: string
+          title?: string | null
+          updated_at?: string
+          url?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_resource_sources_resource_fkey"
+            columns: ["tenant_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "website_resource_sources_resource_fkey"
+            columns: ["tenant_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "website_resources_public"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      website_resources: {
+        Row: {
+          audience_tags: string[]
+          body_markdown: string
+          canonical_topic_key: string
+          category_slug: string | null
+          content_schema_version: number
+          coverage_status: string
+          created_at: string
+          editorial_type: string
+          faq: Json
+          featured: boolean
+          id: string
+          last_researched_at: string | null
+          live_url: string | null
+          primary_question: string
+          public_updated_at: string | null
+          published_at: string | null
+          resource_kind: string
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          sort_order: number
+          source_urls: string[]
+          status: string
+          summary: string
+          tenant_id: string
+          title: string
+          topic_aliases: string[]
+          updated_at: string
+        }
+        Insert: {
+          audience_tags?: string[]
+          body_markdown: string
+          canonical_topic_key: string
+          category_slug?: string | null
+          content_schema_version?: number
+          coverage_status?: string
+          created_at?: string
+          editorial_type?: string
+          faq?: Json
+          featured?: boolean
+          id?: string
+          last_researched_at?: string | null
+          live_url?: string | null
+          primary_question: string
+          public_updated_at?: string | null
+          published_at?: string | null
+          resource_kind?: string
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          sort_order?: number
+          source_urls?: string[]
+          status?: string
+          summary: string
+          tenant_id?: string
+          title: string
+          topic_aliases?: string[]
+          updated_at?: string
+        }
+        Update: {
+          audience_tags?: string[]
+          body_markdown?: string
+          canonical_topic_key?: string
+          category_slug?: string | null
+          content_schema_version?: number
+          coverage_status?: string
+          created_at?: string
+          editorial_type?: string
+          faq?: Json
+          featured?: boolean
+          id?: string
+          last_researched_at?: string | null
+          live_url?: string | null
+          primary_question?: string
+          public_updated_at?: string | null
+          published_at?: string | null
+          resource_kind?: string
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          sort_order?: number
+          source_urls?: string[]
+          status?: string
+          summary?: string
+          tenant_id?: string
+          title?: string
+          topic_aliases?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       website_submissions: {
         Row: {
           consent: boolean | null
@@ -22625,11 +24678,13 @@ export type Database = {
         Row: {
           ambiguous_rows: number | null
           discrepant_rows: number | null
+          dismissed_rows: number | null
           era_paid_total: number | null
           period_month: string | null
           posted_rows: number | null
           report_paid_total: number | null
           tenant_id: string | null
+          total_rows: number | null
           unmatched_rows: number | null
         }
         Relationships: []
@@ -23922,6 +25977,78 @@ export type Database = {
         }
         Relationships: []
       }
+      website_resources_public: {
+        Row: {
+          audience_tags: string[] | null
+          body_markdown: string | null
+          category_slug: string | null
+          content_schema_version: number | null
+          editorial_type: string | null
+          faq: Json | null
+          featured: boolean | null
+          id: string | null
+          primary_question: string | null
+          public_updated_at: string | null
+          published_at: string | null
+          resource_kind: string | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string | null
+          sort_order: number | null
+          status: string | null
+          summary: string | null
+          tenant_id: string | null
+          title: string | null
+          topic_aliases: string[] | null
+        }
+        Insert: {
+          audience_tags?: string[] | null
+          body_markdown?: string | null
+          category_slug?: string | null
+          content_schema_version?: number | null
+          editorial_type?: string | null
+          faq?: Json | null
+          featured?: boolean | null
+          id?: string | null
+          primary_question?: string | null
+          public_updated_at?: string | null
+          published_at?: string | null
+          resource_kind?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string | null
+          sort_order?: number | null
+          status?: string | null
+          summary?: string | null
+          tenant_id?: string | null
+          title?: string | null
+          topic_aliases?: string[] | null
+        }
+        Update: {
+          audience_tags?: string[] | null
+          body_markdown?: string | null
+          category_slug?: string | null
+          content_schema_version?: number | null
+          editorial_type?: string | null
+          faq?: Json | null
+          featured?: boolean | null
+          id?: string | null
+          primary_question?: string | null
+          public_updated_at?: string | null
+          published_at?: string | null
+          resource_kind?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string | null
+          sort_order?: number | null
+          status?: string | null
+          summary?: string | null
+          tenant_id?: string | null
+          title?: string | null
+          topic_aliases?: string[] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _authorize_staff_calendar_access: {
@@ -24628,6 +26755,10 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_era_claim_summary_state_v1: {
+        Args: { p_era_claim_id: string }
+        Returns: Json
+      }
       apply_relationship_activity: {
         Args: {
           p_activity_type: string
@@ -24653,6 +26784,42 @@ export type Database = {
       apply_relationship_suppression: {
         Args: { p_idempotency_key: string; p_payload: Json }
         Returns: Json
+      }
+      apply_stedi_claim_status_v1: {
+        Args: {
+          p_claim_id: string
+          p_external_claim_id: string
+          p_external_submission_id: string
+          p_remote_status: string
+          p_reported_by: string
+          p_sanitized_payload?: Json
+          p_status_message?: string
+        }
+        Returns: {
+          canonical_after: string
+          canonical_before: string
+          canonical_changed: boolean
+        }[]
+      }
+      apply_stedi_lifecycle_snapshot_v1: {
+        Args: {
+          p_claim_id: string
+          p_external_claim_id: string
+          p_external_submission_id: string
+          p_next_sync_at?: string
+          p_remote_status: string
+          p_remote_submitted_at: string
+          p_reported_by: string
+          p_sanitized_snapshot?: Json
+          p_total_charge: number
+          p_total_paid: number
+        }
+        Returns: {
+          canonical_after: string
+          canonical_before: string
+          canonical_changed: boolean
+          lifecycle_id: string
+        }[]
       }
       appointment_provisioning_worker_token_valid: {
         Args: { p_token: string }
@@ -24687,6 +26854,14 @@ export type Database = {
           p_prior_version: number
         }
         Returns: Json
+      }
+      assign_opaque_claim_numbers_v1: {
+        Args: { p_claim_ids: string[] }
+        Returns: {
+          assigned: boolean
+          claim_id: string
+          claim_number: string
+        }[]
       }
       autocreate_copay_for_appointment: {
         Args: { p_appointment_id: string }
@@ -24728,6 +26903,10 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: Json
+      }
+      billing_invoke_cron_function_v1: {
+        Args: { p_body?: Json; p_function: string }
+        Returns: number
       }
       book_client_appointment: {
         Args: { p_slot_end_utc?: string; p_slot_start_utc: string }
@@ -24785,6 +26964,10 @@ export type Database = {
         }
         Returns: Json
       }
+      canonical_payment_source_system: {
+        Args: { p_value: string }
+        Returns: string
+      }
       check_assessments_due:
         | {
             Args: never
@@ -24812,6 +26995,14 @@ export type Database = {
         Args: { p_end: string; p_staff_id: string; p_start: string }
         Returns: boolean
       }
+      checkpoint_claimmd_response_inbox_v1: {
+        Args: {
+          p_inbox_id: string
+          p_progress_ordinal: number
+          p_tenant_id: string
+        }
+        Returns: boolean
+      }
       claim_appointment_provisioning_work: {
         Args: {
           p_appointment_id?: string
@@ -24830,6 +27021,31 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      claim_claimmd_era_inbox_v1: {
+        Args: { p_limit?: number; p_tenant_id: string }
+        Returns: {
+          attempt_count: number
+          inbox_id: string
+          payload: Json
+          source_document_id: string
+          source_era_id: string
+          source_metadata: Json
+        }[]
+      }
+      claim_claimmd_response_inbox_v1: {
+        Args: { p_limit?: number; p_tenant_id: string }
+        Returns: {
+          attempt_count: number
+          inbox_id: string
+          payload: Json
+          progress_ordinal: number
+          requested_cursor: string
+          returned_cursor: string
+          source_document_id: string
+          source_key: string
+          source_metadata: Json
+        }[]
+      }
       claim_google_ads_donations: {
         Args: { p_limit?: number }
         Returns: {
@@ -24843,6 +27059,14 @@ export type Database = {
           transaction_id: string
           wbraid: string
         }[]
+      }
+      claim_has_valid_acceptance_evidence_v1: {
+        Args: { p_claim_id: string }
+        Returns: boolean
+      }
+      claim_is_externally_submitted_v1: {
+        Args: { p_claim_id: string }
+        Returns: boolean
       }
       claim_pending_campaign_steps: {
         Args: { p_limit?: number }
@@ -25053,6 +27277,27 @@ export type Database = {
           p_import_id: string
         }
         Returns: Json
+      }
+      complete_claimmd_era_inbox_v1: {
+        Args: {
+          p_error?: string
+          p_inbox_id: string
+          p_retryable?: boolean
+          p_success: boolean
+          p_tenant_id: string
+        }
+        Returns: boolean
+      }
+      complete_claimmd_response_inbox_v1: {
+        Args: {
+          p_error?: string
+          p_inbox_id: string
+          p_progress_ordinal?: number
+          p_retryable?: boolean
+          p_success: boolean
+          p_tenant_id: string
+        }
+        Returns: boolean
       }
       complete_client_registration:
         | {
@@ -26081,6 +28326,7 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_draft_claim_v1: { Args: { p_claim_id: string }; Returns: Json }
       dismiss_champva_row: {
         Args: { p_reason: string; p_row_id: string }
         Returns: undefined
@@ -26096,6 +28342,14 @@ export type Database = {
       enqueue_appointment_provisioning: {
         Args: { p_action?: string; p_appointment_id: string }
         Returns: string
+      }
+      enqueue_claimmd_era_inbox_v1: {
+        Args: { p_source_document_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      enqueue_claimmd_response_inbox_v1: {
+        Args: { p_source_document_id: string; p_tenant_id: string }
+        Returns: Json
       }
       enroll_relationship_targets: {
         Args: {
@@ -26149,6 +28403,43 @@ export type Database = {
           p_note_id: string
         }
         Returns: Json
+      }
+      finalize_stedi_realtime_status_check_v1: {
+        Args: {
+          p_check_id: string
+          p_clearinghouse_claim_number?: string
+          p_entity_code?: string
+          p_error?: string
+          p_http_status?: number
+          p_informational_amount_paid?: number
+          p_informational_check_date?: string
+          p_match_count?: number
+          p_payer_claim_number?: string
+          p_response_sha256?: string
+          p_sanitized_result?: Json
+          p_semantic_class?: string
+          p_state: string
+          p_status_category_code?: string
+          p_status_code?: string
+          p_stedi_check_id?: string
+        }
+        Returns: {
+          canonical_after: string
+          canonical_before: string
+          canonical_changed: boolean
+        }[]
+      }
+      finalize_stedi_submission_attempt_v2: {
+        Args: {
+          p_attempt_id: string
+          p_external_claim_id: string
+          p_external_submission_id: string
+          p_mark_submitted: boolean
+          p_outcome: string
+          p_sync_result: Json
+          p_sync_status: string
+        }
+        Returns: string
       }
       find_clients_by_emails_insensitive: {
         Args: { p_emails: string[]; p_tenant_id: string }
@@ -26501,6 +28792,14 @@ export type Database = {
               scheduling_branch: string
             }[]
           }
+      get_homepage_documented_monthly_impact: {
+        Args: never
+        Returns: {
+          displayed_value: number
+          documented_appointments: number
+          month: string
+        }[]
+      }
       get_legacy_financial_reconciliation_v1: {
         Args: { p_status?: string }
         Returns: {
@@ -26828,6 +29127,80 @@ export type Database = {
           }
       get_staff_id_for_user: { Args: { p_user_id: string }; Returns: string }
       get_staff_operating_context: { Args: never; Returns: Json }
+      get_stedi_lifecycle_sync_candidates_v1: {
+        Args: { p_claim_ids?: string[]; p_limit?: number }
+        Returns: {
+          attempt_external_claim_id: string
+          attempt_external_submission_id: string
+          attempt_submitted_at: string
+          claim_id: string
+          claim_number: string
+          claim_status: string
+          external_claim_id: string
+          identity_status: string
+          last_timeline_synced_at: string
+          latest_external_submission_id: string
+          remote_status: string
+          tenant_id: string
+          total_charge: number
+        }[]
+      }
+      get_stedi_lifecycle_targeted_candidates_v1: {
+        Args: { p_claim_ids: string[] }
+        Returns: {
+          attempt_external_claim_id: string
+          attempt_external_submission_id: string
+          attempt_submitted_at: string
+          claim_id: string
+          claim_number: string
+          claim_status: string
+          external_claim_id: string
+          identity_status: string
+          last_timeline_synced_at: string
+          latest_external_submission_id: string
+          remote_status: string
+          tenant_id: string
+          total_charge: number
+        }[]
+      }
+      get_stedi_realtime_status_candidates_v1: {
+        Args: { p_claim_ids?: string[]; p_limit?: number; p_manual?: boolean }
+        Returns: {
+          checkpoint_key: string
+          claim_id: string
+          claim_number: string
+          claim_status: string
+          external_claim_id: string
+          external_submission_id: string
+          lifecycle_last_synced_at: string
+          request_mode: string
+          submission_attempt_id: string
+          submitted_at: string
+          tenant_id: string
+          total_charge: number
+        }[]
+      }
+      get_stedi_submission_candidates_v1: {
+        Args: never
+        Returns: {
+          claim_id: string
+          claim_number: string
+          tenant_id: string
+        }[]
+      }
+      get_stedi_uncertain_requests_v1: {
+        Args: { p_limit?: number }
+        Returns: {
+          claim_id: string
+          claim_number: string
+          claim_status: string
+          external_started_at: string
+          last_reconciled_at: string
+          request_id: string
+          tenant_id: string
+          total_charge: number
+        }[]
+      }
       get_stripe_billing_integrity_report: { Args: never; Returns: Json }
       has_billing_role: {
         Args: { _tenant_id: string; _user_id: string }
@@ -26901,6 +29274,10 @@ export type Database = {
         }
         Returns: Json
       }
+      is_public_website_resource: {
+        Args: { p_resource_id: string; p_tenant_id: string }
+        Returns: boolean
+      }
       is_staff_or_admin: { Args: { _user_id: string }; Returns: boolean }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
@@ -26939,6 +29316,25 @@ export type Database = {
         Returns: Json
       }
       mark_at_risk_clients: { Args: { p_tenant_id: string }; Returns: number }
+      mark_stedi_lifecycle_sync_success_v1: {
+        Args: {
+          p_claim_id: string
+          p_last_synced_at?: string
+          p_next_sync_at?: string
+        }
+        Returns: undefined
+      }
+      mark_stedi_realtime_status_started_v1: {
+        Args: { p_check_id: string }
+        Returns: {
+          reason: string
+          started: boolean
+        }[]
+      }
+      mark_stedi_submission_started_v1: {
+        Args: { p_request_id: string }
+        Returns: boolean
+      }
       match_champva_payment_rows: {
         Args: { p_document_id: string }
         Returns: Json
@@ -27086,6 +29482,10 @@ export type Database = {
       }
       payroll_system_auto_approve_expired_v1: { Args: never; Returns: Json }
       payroll_system_auto_approve_expired_v2: { Args: never; Returns: Json }
+      payroll_system_auto_approve_friday_admin_v1: {
+        Args: never
+        Returns: Json
+      }
       payroll_system_prepare_friday_finalization_v1: {
         Args: never
         Returns: Json
@@ -27096,6 +29496,10 @@ export type Database = {
       }
       post_champva_report_evidence: {
         Args: { p_document_id: string }
+        Returns: Json
+      }
+      prepare_claim_submission_external_v1: {
+        Args: { p_request_id: string; p_sent_claim_ids: string[] }
         Returns: Json
       }
       prepare_relationship_campaign_delivery: {
@@ -27181,6 +29585,65 @@ export type Database = {
         }
         Returns: Json
       }
+      record_billing_integration_execution_v1: {
+        Args: {
+          p_attempted_source_ids?: string[]
+          p_cursor_end?: string
+          p_cursor_start?: string
+          p_duration_ms: number
+          p_errors?: Json
+          p_failed_source_ids?: string[]
+          p_fatal_error?: string
+          p_function_name: string
+          p_items_processed?: number
+          p_metrics?: Json
+          p_requested_cursor?: string
+          p_returned_cursor?: string
+          p_run_mode?: string
+          p_skipped_source_ids?: string[]
+          p_source_ids?: string[]
+          p_source_record_count?: number
+          p_succeeded_source_ids?: string[]
+          p_tenant_id: string
+          p_timeout_reached?: boolean
+          p_truncated?: boolean
+        }
+        Returns: string
+      }
+      record_claim_submission_attempt_v1: {
+        Args: {
+          p_batch_id: string
+          p_claim_id: string
+          p_claimmd_batch_id: string
+          p_claimmd_claim_id: string
+          p_claimmd_file_id: string
+          p_client_action_id: string
+          p_pcn: string
+          p_remote_claim_id: string
+          p_replacement_reason?: string
+          p_request_payload: Json
+          p_submission_mode: string
+          p_submission_request_id: string
+          p_sync_result: Json
+          p_sync_status: string
+        }
+        Returns: Json
+      }
+      record_claimmd_source_evidence_v1: {
+        Args: {
+          p_endpoint: string
+          p_payload: Json
+          p_records?: Json
+          p_requested_cursor?: string
+          p_returned_cursor?: string
+          p_source_era_id?: string
+          p_source_key: string
+          p_source_kind: string
+          p_source_metadata?: Json
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       record_client_eligibility_result: {
         Args: {
           p_claimmd_eligibility_id?: string
@@ -27218,6 +29681,18 @@ export type Database = {
         }
         Returns: Json
       }
+      record_relationship_campaign_work_result: {
+        Args: {
+          p_claim_token: string
+          p_error_code?: string
+          p_error_message?: string
+          p_idempotency_key: string
+          p_outcome: string
+          p_retry_at?: string
+          p_work_item_id: string
+        }
+        Returns: Json
+      }
       record_relationship_delivery_result: {
         Args: {
           p_claim_token: string
@@ -27240,6 +29715,58 @@ export type Database = {
           p_opportunity_id: string
         }
         Returns: Json
+      }
+      record_stedi_lifecycle_event_v1: {
+        Args: {
+          p_claim_id: string
+          p_event_type: string
+          p_external_claim_id: string
+          p_external_event_id: string
+          p_external_submission_id: string
+          p_payload_sha256?: string
+          p_processed_at: string
+          p_remote_status: string
+          p_reported_by: string
+          p_sanitized_payload?: Json
+        }
+        Returns: {
+          event_id: string
+          inserted: boolean
+        }[]
+      }
+      record_stedi_lifecycle_events_v1: {
+        Args: {
+          p_claim_id: string
+          p_events: Json
+          p_external_claim_id: string
+          p_mark_timeline_synced?: boolean
+        }
+        Returns: number
+      }
+      record_stedi_lifecycle_sync_error_v1: {
+        Args: { p_claim_id: string; p_error: string; p_next_sync_at: string }
+        Returns: undefined
+      }
+      record_stedi_reconciliation_v1: {
+        Args: {
+          p_evidence?: Json
+          p_external_claim_id?: string
+          p_found: boolean
+          p_request_id: string
+        }
+        Returns: undefined
+      }
+      record_stedi_submission_result_v1: {
+        Args: {
+          p_external_claim_id: string
+          p_external_submission_id: string
+          p_mark_submitted: boolean
+          p_outcome: string
+          p_request_id: string
+          p_sync_result: Json
+          p_sync_status: string
+        }
+        Returns: string
       }
       record_therapist_match_outbox_result: {
         Args: {
@@ -27297,6 +29824,19 @@ export type Database = {
           p_reason: string
         }
         Returns: Json
+      }
+      release_stedi_realtime_status_check_v1: {
+        Args: { p_check_id: string; p_error: string }
+        Returns: undefined
+      }
+      release_stedi_submission_request_v1: {
+        Args: {
+          p_evidence?: Json
+          p_reason?: string
+          p_request_id: string
+          p_state: string
+        }
+        Returns: boolean
       }
       reopen_client_journey_exception: {
         Args: {
@@ -27376,6 +29916,47 @@ export type Database = {
           p_total_payment_amount: number
         }
         Returns: Json
+      }
+      reserve_stedi_realtime_status_check_v1: {
+        Args: {
+          p_checkpoint_key: string
+          p_claim_id: string
+          p_request_mode: string
+          p_submission_attempt_id: string
+        }
+        Returns: {
+          check_id: string
+          reason: string
+          reserved: boolean
+        }[]
+      }
+      reserve_stedi_submission_attempt_v1: {
+        Args: {
+          p_claim_id: string
+          p_idempotency_key: string
+          p_submission_mode?: string
+        }
+        Returns: {
+          attempt_id: string
+          reason: string
+          reserved: boolean
+        }[]
+      }
+      reserve_stedi_submission_request_v1: {
+        Args: {
+          p_claim_id: string
+          p_idempotency_key: string
+          p_submission_mode?: string
+        }
+        Returns: {
+          reason: string
+          request_id: string
+          reserved: boolean
+        }[]
+      }
+      resolve_claim_clearinghouse: {
+        Args: { p_claim_id: string }
+        Returns: string
       }
       resolve_client_journey_exception: {
         Args: {
@@ -27720,6 +30301,10 @@ export type Database = {
         }
         Returns: string
       }
+      social_queue_publish: {
+        Args: { p_publication_id: string }
+        Returns: number
+      }
       staff_complete_provider_applicant_followup: {
         Args: {
           p_client_action_id: string
@@ -27917,6 +30502,18 @@ export type Database = {
           p_prior_version: number
         }
         Returns: Json
+      }
+      stedi_map_canonical_status_v1: {
+        Args: { p_current: string; p_remote_status: string }
+        Returns: string
+      }
+      stedi_next_sync_at_v1: {
+        Args: {
+          p_canonical_status: string
+          p_remote_status: string
+          p_remote_submitted_at: string
+        }
+        Returns: string
       }
       store_relationship_calendar_channel: {
         Args: {
@@ -28270,6 +30867,32 @@ export type Database = {
             }
             Returns: Json
           }
+      upsert_stedi_lifecycle_identity_v1: {
+        Args: {
+          p_claim_id: string
+          p_external_claim_id?: string
+          p_identity_status: string
+          p_latest_external_submission_id?: string
+          p_next_sync_at?: string
+          p_sync_error?: string
+        }
+        Returns: string
+      }
+      upsert_stedi_lifecycle_snapshot_v1: {
+        Args: {
+          p_claim_id: string
+          p_external_claim_id: string
+          p_last_synced_at?: string
+          p_latest_external_submission_id: string
+          p_next_sync_at?: string
+          p_remote_status: string
+          p_remote_submitted_at: string
+          p_remote_total_charge: number
+          p_remote_total_paid: number
+          p_reported_by: string
+        }
+        Returns: string
+      }
       validate_relationship_calendar_channel: {
         Args: {
           p_channel_id: string
@@ -28429,6 +31052,8 @@ export type Database = {
         | "unpaid"
         | "payment_reported"
         | "partially_paid"
+        | "zero_paid"
+        | "denied"
         | "paid_pending_adjudication"
         | "paid"
         | "overpaid"
@@ -28968,6 +31593,8 @@ export const Constants = {
         "unpaid",
         "payment_reported",
         "partially_paid",
+        "zero_paid",
+        "denied",
         "paid_pending_adjudication",
         "paid",
         "overpaid",
