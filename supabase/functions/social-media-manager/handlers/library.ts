@@ -168,8 +168,11 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
       contentFormat: "full_episode",
       title: null,
       description: null,
-      thumbnailUrl: project.guest_image_url,
-      thumbnailFileId: null,
+      // Full episodes show ONLY an explicitly configured episode cover. guest_image_url is a
+      // guest portrait, not cover art, and is deliberately not used as a fallback: a project
+      // without cover_image_file_id renders a blank neutral thumbnail area.
+      thumbnailUrl: null,
+      thumbnailFileId: project.cover_image_file_id,
       guestName: project.guest_name,
       organizationName: project.organization_name,
       durationSeconds: project.duration_seconds,
