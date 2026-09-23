@@ -8,6 +8,7 @@ import {
 } from "./handlers/publications.ts";
 import { getSettings } from "./handlers/settings.ts";
 import { getThumbnailUrl } from "./handlers/thumbnails.ts";
+import { replaceLibraryThumbnail } from "./handlers/thumbnail-edit.ts";
 import { verifyYoutubeConnection } from "./handlers/youtube.ts";
 import { resolveAllowHeaders } from "./cors.ts";
 
@@ -57,7 +58,7 @@ const VIEW_ACTIONS = new Set([
 const MUTATE_ACTIONS = new Set([
   "create_publication", "update_publication", "validate_publication", "approve_publication",
   "set_publication_playlists", "queue_publish", "reschedule_publication",
-  "cancel_publication", "retry_publication",
+  "cancel_publication", "retry_publication", "replace_thumbnail",
 ]);
 
 async function dispatch(auth: AuthContext, action: string, params: Record<string, unknown>) {
@@ -76,6 +77,8 @@ async function dispatch(auth: AuthContext, action: string, params: Record<string
       return getSettings(auth);
     case "get_thumbnail_url":
       return getThumbnailUrl(auth, params as { sourceType?: unknown; sourceId?: unknown });
+    case "replace_thumbnail":
+      return replaceLibraryThumbnail(auth, params);
     case "verify_youtube_connection":
       return verifyYoutubeConnection(auth);
     case "create_publication":
@@ -116,7 +119,18 @@ Deno.serve(async (request: Request) => {
 
   let body: { action?: string } & Record<string, unknown>;
   try {
-    body = await request.json();
+    if ((request.headers.get("content-type") ?? "").startsWith("multipart/form-data")) {
+      const form = await request.formData();
+      body = {
+        action: String(form.get("action") ?? ""),
+        sourceType: form.get("sourceType"),
+        sourceId: form.get("sourceId"),
+        updateYouTube: form.get("updateYouTube"),
+        file: form.get("file"),
+      };
+    } else {
+      body = await request.json();
+    }
   } catch {
     return json({ error: "Invalid request body", requestId }, 400, requestId);
   }
@@ -145,7 +159,7 @@ Deno.serve(async (request: Request) => {
     // A hung DB/network call inside a handler fails fast here instead of running until the
     // platform kills the isolate with no useful log entry to correlate against.
     const data = await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`TIMEOUT:${action}`)), 20000);
+      const timer = setTimeout(() => reject(new Error(`TIMEOUT:${action}`)), action === "replace_thumbnail" ? 60000 : 20000);
       dispatch(auth, action, params).then(
         (value) => { clearTimeout(timer); resolve(value); },
         (error) => { clearTimeout(timer); reject(error); },
