@@ -73,8 +73,12 @@ function summarize(row: PublicationRow): SocialPublicationSummary {
 export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {}): Promise<SocialMediaLibraryItem[]> {
   const { db, tenantId } = auth;
 
-  const [{ data: clips, error: clipsError }, { data: projects, error: projectsError }, { data: publications, error: pubError }] =
-    await Promise.all([
+  const [
+    { data: clips, error: clipsError },
+    { data: projects, error: projectsError },
+    { data: publications, error: pubError },
+    { data: renderJobs, error: renderJobsError },
+  ] = await Promise.all([
       db.from("ai_operations_video_clips")
         .select(`
           id, project_id, clip_type, youtube_title, youtube_description,
@@ -93,11 +97,26 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
       db.from("ai_operations_social_publications")
         .select("id, status, delivery_mode, scheduled_for, desired_privacy_status, external_video_id, external_url, clip_id, project_id, content_format")
         .eq("tenant_id", tenantId),
+      db.from("ai_operations_video_jobs")
+        .select("clip_id, payload, completed_at")
+        .eq("tenant_id", tenantId)
+        .eq("job_type", "render_clip")
+        .eq("status", "complete")
+        .order("completed_at", { ascending: false })
+        .limit(1000),
     ]);
 
   if (clipsError) throw new Error(clipsError.message);
   if (projectsError) throw new Error(projectsError.message);
   if (pubError) throw new Error(pubError.message);
+  if (renderJobsError) throw new Error(renderJobsError.message);
+
+  const renderProfileByClip = new Map<string, Record<string, unknown>>();
+  for (const renderJob of renderJobs ?? []) {
+    const clipId = String((renderJob as { clip_id?: string }).clip_id ?? "");
+    if (!clipId || renderProfileByClip.has(clipId)) continue;
+    renderProfileByClip.set(clipId, ((renderJob as { payload?: Record<string, unknown> }).payload ?? {}));
+  }
 
   const pubsByClip = new Map<string, PublicationRow[]>();
   const pubsByProject = new Map<string, PublicationRow[]>();
@@ -129,6 +148,16 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
     const readinessReasons: string[] = [];
     if (!clip.drive_file_id) readinessReasons.push("Rendered clip is not yet available in Drive.");
     if (clip.status !== "rendered") readinessReasons.push(`Clip status is "${clip.status}", not rendered.`);
+    if (contentFormat === "short") {
+      const renderPayload = renderProfileByClip.get(clip.id) ?? {};
+      if (
+        String(renderPayload.render_profile ?? "") !== "youtube_short_9x16" ||
+        Number(renderPayload.render_width ?? 0) !== 1080 ||
+        Number(renderPayload.render_height ?? 0) !== 1920
+      ) {
+        readinessReasons.push("Short has not been verified as a 1080x1920 (9:16) render.");
+      }
+    }
 
     items.push({
       sourceType: "clip",
