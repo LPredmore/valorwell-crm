@@ -1,4 +1,5 @@
 import type { AuthContext } from "../auth.ts";
+import { isVerifiedCurrentShortRender } from "../../_shared/short-render-profile.ts";
 import type { SocialPublication, ValidationResult } from "../types.ts";
 
 const ACTIVE_STATUSES = ["draft", "ready", "approved", "upload_queued", "uploading", "uploaded", "scheduled"];
@@ -202,10 +203,7 @@ export async function validatePublication(auth: AuthContext, params: { id: strin
         if (renderError) errors.push("Could not verify the Short render profile.");
         else {
           const renderPayload = (renderJob?.payload ?? {}) as Record<string, unknown>;
-          const width = Number(renderPayload.render_width ?? 0);
-          const height = Number(renderPayload.render_height ?? 0);
-          const profile = String(renderPayload.render_profile ?? "");
-          if (String(renderPayload.drive_file_id ?? "") !== String(clip.drive_file_id ?? "") || profile !== "youtube_short_9x16" || width !== 1080 || height !== 1920) {
+          if (!isVerifiedCurrentShortRender(renderPayload, clip.drive_file_id)) {
             errors.push("Current Short file must have a verified 1080x1920 (9:16) render before approval.");
           }
         }
