@@ -8,6 +8,7 @@ const EVENT_LABELS: Record<string, string> = {
   upload_started: 'Upload started',
   youtube_video_created: 'YouTube video created',
   thumbnail_applied: 'Thumbnail applied',
+  thumbnail_api_accepted: 'Thumbnail API accepted upload (Shorts display unverified)',
   thumbnail_failed: 'Thumbnail failed',
   playlist_attached: 'Playlist attached',
 };
