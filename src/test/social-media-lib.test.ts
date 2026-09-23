@@ -29,6 +29,7 @@ describe('social-media data layer', () => {
     const file = new File(['sample bytes'], 'cover.png', { type: 'image/png' });
     const result = await replaceSocialLibraryPhoto({
       sourceType: 'clip', sourceId: 'clip-1', file, updateYouTube: true,
+      publishedPublicationId: 'pub-1',
     });
     expect(result.fileId).toBe('drive-2');
     expect(invokeMock).toHaveBeenCalledWith('social-media-manager', {
@@ -39,6 +40,7 @@ describe('social-media data layer', () => {
     expect(form.get('sourceType')).toBe('clip');
     expect(form.get('sourceId')).toBe('clip-1');
     expect(form.get('updateYouTube')).toBe('true');
+    expect(form.get('publishedPublicationId')).toBe('pub-1');
     expect((form.get('file') as File).name).toBe('cover.png');
   });
 
