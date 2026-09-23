@@ -38,6 +38,30 @@ async function resolveSourceFileId(db: Db, pub: Publication): Promise<string> {
   return data.source_file_id as string;
 }
 
+async function assertShortRenderProfile(db: Db, pub: Publication) {
+  if (pub.content_format !== "short" || pub.source_type !== "clip" || !pub.clip_id) return;
+
+  const { data, error } = await db
+    .from("ai_operations_video_jobs")
+    .select("payload,status,completed_at")
+    .eq("job_type", "render_clip")
+    .eq("clip_id", pub.clip_id as string)
+    .eq("status", "complete")
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new PermanentYoutubeError(`Could not verify the Short render profile: ${error.message}`);
+  const payload = (data?.payload ?? {}) as Record<string, unknown>;
+  const width = Number(payload.render_width ?? 0);
+  const height = Number(payload.render_height ?? 0);
+  const profile = String(payload.render_profile ?? "");
+
+  if (profile !== "youtube_short_9x16" || width !== 1080 || height !== 1920) {
+    throw new PermanentYoutubeError("Short upload blocked: the rendered media is not verified as 1080x1920 (9:16). Re-render the clip before publishing.");
+  }
+}
+
 async function markFailed(db: Db, job: Job, pub: Publication, error: unknown) {
   const message = safeError(error);
   const status = error instanceof Error && "status" in error ? Number((error as { status?: number }).status) : null;
@@ -64,6 +88,7 @@ async function markFailed(db: Db, job: Job, pub: Publication, error: unknown) {
 }
 
 async function runUploadStage(db: Db, job: Job, pub: Publication): Promise<Response> {
+  await assertShortRenderProfile(db, pub);
   const youtubeToken = await youtubeAccessToken();
   const driveToken = await driveAccessToken(db);
   const payload = (job.payload ?? {}) as Record<string, unknown>;
@@ -149,7 +174,7 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
   const videoId = pub.external_video_id as string;
   const payload = (job.payload ?? {}) as Record<string, unknown>;
 
-  if (pub.thumbnail_file_id && !payload.thumbnail_applied) {
+  if (pub.content_format !== "short" && pub.thumbnail_file_id && !payload.thumbnail_applied) {
     try {
       const driveToken = await driveAccessToken(db);
       const meta = await driveFileMetadata(driveToken, pub.thumbnail_file_id as string);
