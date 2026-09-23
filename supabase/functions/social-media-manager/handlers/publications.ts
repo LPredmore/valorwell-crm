@@ -187,6 +187,26 @@ export async function validatePublication(auth: AuthContext, params: { id: strin
       if (clip.clip_type === "short") {
         const duration = Number(clip.end_seconds) - Number(clip.start_seconds);
         if (duration > 180) warnings.push(`Short duration is ${Math.round(duration)}s, which exceeds YouTube's typical 180s Shorts window.`);
+
+        const { data: renderJob, error: renderError } = await auth.db
+          .from("ai_operations_video_jobs")
+          .select("payload,status,completed_at")
+          .eq("job_type", "render_clip")
+          .eq("clip_id", row.clip_id as string)
+          .eq("status", "complete")
+          .order("completed_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (renderError) errors.push("Could not verify the Short render profile.");
+        else {
+          const renderPayload = (renderJob?.payload ?? {}) as Record<string, unknown>;
+          const width = Number(renderPayload.render_width ?? 0);
+          const height = Number(renderPayload.render_height ?? 0);
+          const profile = String(renderPayload.render_profile ?? "");
+          if (profile !== "youtube_short_9x16" || width !== 1080 || height !== 1920) {
+            errors.push("Short media must be re-rendered as 1080x1920 (9:16) before it can be approved.");
+          }
+        }
       }
     }
   } else {
@@ -199,7 +219,7 @@ export async function validatePublication(auth: AuthContext, params: { id: strin
     else if (!project.source_file_id) errors.push("Source video file is not available.");
   }
 
-  if (!row.thumbnail_file_id) warnings.push("No custom thumbnail is set.");
+  if (row.content_format !== "short" && !row.thumbnail_file_id) warnings.push("No custom thumbnail is set.");
 
   const { data: playlistLinks, error: playlistError } = await auth.db
     .from("ai_operations_social_publication_playlists")
