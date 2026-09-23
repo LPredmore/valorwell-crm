@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js@2.4.5/edge-runtime.d.ts";
 import { adminClient, authorizeWorker, json, logEvent, safeError, classifyModelFailure, backoffSeconds } from "../_shared/ai-ops.ts";
 import { youtubeAccessToken } from "../_shared/ai-ops-youtube.ts";
 import { driveAccessToken, driveFileMetadata, driveFileRange } from "./drive.ts";
+import { shortsGeometryIssue } from "../_shared/shorts-geometry.ts";
 import {
   addToPlaylist, createResumableUploadSession, isVideoInPlaylist, queryUploadOffset,
   setThumbnail, uploadChunk, PermanentYoutubeError, TransientYoutubeError, type VideoSnippetStatus,
@@ -66,21 +67,28 @@ async function markFailed(db: Db, job: Job, pub: Publication, error: unknown) {
 async function runUploadStage(db: Db, job: Job, pub: Publication): Promise<Response> {
   const youtubeToken = await youtubeAccessToken();
   const driveToken = await driveAccessToken(db);
-  const payload = (job.payload ?? {}) as Record<string, unknown>;
+  const payload = { ...((job.payload ?? {}) as Record<string, unknown>) };
 
   let fileId = payload.drive_file_id as string | undefined;
   let totalBytes = payload.total_bytes as number | undefined;
   let mimeType = payload.mime_type as string | undefined;
 
-  if (!fileId || !totalBytes) {
-    fileId = await resolveSourceFileId(db, pub);
+  // Fail CLOSED before YouTube creates a resumable upload session. A publication
+  // labeled "short" is only a metadata label: YouTube classifies the actual MP4.
+  // Never silently upload a landscape file as a regular video.
+  if (!fileId || !totalBytes || (pub.content_format === "short" && !payload.shorts_geometry_verified)) {
+    fileId = fileId || await resolveSourceFileId(db, pub);
     const meta = await driveFileMetadata(driveToken, fileId);
     if (!meta.size) throw new PermanentYoutubeError("Source Drive file has no known size.");
+    if (pub.content_format === "short") {
+      const issue = shortsGeometryIssue(meta.videoMediaMetadata);
+      if (issue) throw new PermanentYoutubeError(`Short upload blocked: ${issue}`);
+      payload.shorts_geometry_verified = true;
+    }
     totalBytes = meta.size;
     mimeType = meta.mimeType || "video/mp4";
-    await db.from("ai_operations_video_jobs").update({
-      payload: { ...payload, drive_file_id: fileId, total_bytes: totalBytes, mime_type: mimeType },
-    }).eq("id", job.id as number);
+    Object.assign(payload, { drive_file_id: fileId, total_bytes: totalBytes, mime_type: mimeType });
+    await db.from("ai_operations_video_jobs").update({ payload }).eq("id", job.id as number);
   }
 
   let sessionUrl = payload.upload_session_url as string | undefined;
