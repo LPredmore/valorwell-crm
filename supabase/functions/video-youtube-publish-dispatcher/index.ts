@@ -3,10 +3,11 @@ import { adminClient, authorizeWorker, json, logEvent, safeError, classifyModelF
 import { youtubeAccessToken } from "../_shared/ai-ops-youtube.ts";
 import { isVerifiedCurrentShortRender } from "../_shared/short-render-profile.ts";
 import { thumbnailProcessingDecision } from "./thumbnail-readiness.ts";
+import { verifyScheduledDelivery } from "./schedule-verification.ts";
 import { driveAccessToken, driveFileMetadata, driveFileRange } from "./drive.ts";
 import {
   addToPlaylist, createResumableUploadSession, isVideoInPlaylist, queryUploadOffset,
-  setThumbnail, getYoutubeThumbnailStatus, uploadChunk, PermanentYoutubeError, TransientYoutubeError, type VideoSnippetStatus,
+  setThumbnail, getYoutubeThumbnailStatus, getYoutubeDeliveryStatus, uploadChunk, PermanentYoutubeError, TransientYoutubeError, type VideoSnippetStatus,
 } from "./youtube.ts";
 
 type Db = ReturnType<typeof adminClient>;
@@ -181,14 +182,21 @@ async function runUploadStage(db: Db, job: Job, pub: Publication): Promise<Respo
 async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Response> {
   const youtubeToken = await youtubeAccessToken();
   const videoId = pub.external_video_id as string;
-  // Keep thumbnail result in the same payload as playlists. The previous implementation
-  // used a stale copy of payload and overwrote thumbnail_applied when saving playlists.
   const payload = { ...((job.payload ?? {}) as Record<string, unknown>) };
-  // Read-only verification of an already published Short. This does not re-upload
-  // the video or thumbnail and does not change publication status or playlists.
+  const platformPayload = { ...((pub.platform_payload ?? {}) as Record<string, unknown>) };
+
+  const saveThumbnailState = async (thumbnail: Record<string, unknown>) => {
+    const result = await db.from("ai_operations_social_publications").update({
+      platform_payload: { ...platformPayload, thumbnail },
+    }).eq("id", pub.id as string);
+    if (result.error) throw new Error(result.error.message);
+  };
+
+  // Read-only diagnostic for an already published video. It never inserts or
+  // re-uploads a video, changes visibility, or changes playlists.
   if (payload.thumbnail_verify_only === true) {
     const verification = await getYoutubeThumbnailStatus(youtubeToken, videoId);
-    const existing = ((pub.platform_payload ?? {}) as Record<string, unknown>).thumbnail;
+    const existing = platformPayload.thumbnail;
     const oldThumbnail = existing && typeof existing === "object"
       ? existing as Record<string, unknown> : {};
     const verifiedAt = new Date().toISOString();
@@ -202,10 +210,7 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
         ? "confirmed_by_youtube" : verification.hasCustomThumbnail === false
         ? "not_applied" : "accepted_unverified",
     };
-    const publicationUpdate = await db.from("ai_operations_social_publications").update({
-      platform_payload: { ...((pub.platform_payload ?? {}) as Record<string, unknown>), thumbnail },
-    }).eq("id", pub.id as string);
-    if (publicationUpdate.error) throw new Error(publicationUpdate.error.message);
+    await saveThumbnailState(thumbnail);
     await insertEvent(db, pub.id as string, pub.tenant_id as string, "thumbnail_verification_checked", {
       hasCustomThumbnail: verification.hasCustomThumbnail,
       processingStatus: verification.processingStatus,
@@ -230,100 +235,206 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
     });
   }
 
+  const scheduled = pub.delivery_mode === "scheduled";
+  const scheduledShort = scheduled && pub.content_format === "short";
 
-  // YouTube's media-upload endpoint can be used for videos. For Shorts, attempt the
-  // same official API but record API acceptance separately from visible application:
-  // account eligibility and Shorts support may limit whether YouTube uses the image.
-  // The upload API reported video creation, not video processing completion.
-  // Submit thumbnails on *new* Shorts only after YouTube says processing succeeded.
-  // A successful thumbnails.set call alone does not prove Shorts UI placement.
+  // A scheduled CRM publication is not considered Scheduled until YouTube itself
+  // confirms: private visibility + the requested future publishAt value.
+  if (scheduled) {
+    const actual = await getYoutubeDeliveryStatus(youtubeToken, videoId);
+    const decision = verifyScheduledDelivery(
+      actual,
+      typeof pub.scheduled_for === "string" ? pub.scheduled_for : null,
+      typeof pub.uploaded_at === "string" ? pub.uploaded_at : null,
+      Date.now(),
+    );
+    const checkedAt = new Date().toISOString();
+    const scheduleState = {
+      apiStatus: decision.state === "verified" ? "verified" : decision.state,
+      expectedPublishAt: pub.scheduled_for ?? null,
+      youtubePublishAt: actual.publishAt,
+      privacyStatus: actual.privacyStatus,
+      uploadStatus: actual.uploadStatus,
+      processingStatus: actual.processingStatus,
+      checkedAt,
+      reason: "reason" in decision ? decision.reason : null,
+    };
+    const scheduleSave = await db.from("ai_operations_social_publications").update({
+      platform_upload_status: actual.uploadStatus,
+      platform_processing_status: actual.processingStatus,
+      platform_payload: { ...platformPayload, youtubeSchedule: scheduleState },
+    }).eq("id", pub.id as string);
+    if (scheduleSave.error) throw new Error(scheduleSave.error.message);
+
+    if (decision.state === "wait") {
+      return json({
+        ok: true,
+        action: "waiting_for_youtube_schedule_confirmation",
+        publicationId: pub.id,
+        videoId,
+        expectedPublishAt: pub.scheduled_for,
+      });
+    }
+    if (decision.state === "failed") {
+      throw new PermanentYoutubeError(decision.reason);
+    }
+    if (!payload.youtube_schedule_verified) {
+      payload.youtube_schedule_verified = true;
+      payload.youtube_schedule_verified_at = checkedAt;
+      await insertEvent(db, pub.id as string, pub.tenant_id as string, "youtube_schedule_verified", {
+        expectedPublishAt: pub.scheduled_for,
+        youtubePublishAt: actual.publishAt,
+        privacyStatus: actual.privacyStatus,
+      });
+    }
+  }
+
+  // Custom Shorts thumbnail display has not been reliable through thumbnails.set
+  // for this channel. Scheduled Shorts deliberately skip the thumbnail API:
+  // upload/schedule the video now, then let the operator use YouTube Studio while
+  // it is private. This is a manual finishing step, not a publishing failure.
+  if (scheduledShort) {
+    const existing = platformPayload.thumbnail;
+    const previous = existing && typeof existing === "object"
+      ? existing as Record<string, unknown> : {};
+    const alreadyConfirmed = previous.apiStatus === "manual_confirmed";
+    if (!alreadyConfirmed) {
+      await saveThumbnailState({
+        ...previous,
+        apiStatus: "manual_required",
+        manualRequired: true,
+        fileId: pub.thumbnail_file_id ?? null,
+        attemptedAt: null,
+        error: null,
+        studioUrl: `https://studio.youtube.com/video/${encodeURIComponent(videoId)}/edit`,
+      });
+      if (previous.apiStatus !== "manual_required") {
+        await insertEvent(db, pub.id as string, pub.tenant_id as string, "thumbnail_manual_required", {
+          videoId,
+          thumbnailFileId: pub.thumbnail_file_id ?? null,
+        });
+      }
+    }
+
+    // If Change Photo queued a thumbnail-only API job for a scheduled Short, complete
+    // it safely without sending thumbnails.set. The saved photo remains available for
+    // the operator in Studio and future publications.
+    if (payload.thumbnail_only) {
+      const jobUpdate = await db.from("ai_operations_video_jobs").update({
+        payload: {
+          ...payload,
+          thumbnail_api_status: "skipped_scheduled_short_manual",
+          thumbnail_error: null,
+        },
+        status: "complete",
+        completed_at: new Date().toISOString(),
+        error_message: null,
+      }).eq("id", job.id as number);
+      if (jobUpdate.error) throw new Error(jobUpdate.error.message);
+      return json({
+        ok: true,
+        action: "scheduled_short_thumbnail_manual",
+        publicationId: pub.id,
+        videoId,
+      });
+    }
+  }
+
+  // For immediate Shorts, keep the existing best-effort API behavior. Wait for
+  // YouTube processing so we do not send thumbnails.set while the video is still
+  // being assembled. Full-length videos continue using the standard thumbnail API.
   let thumbnailProcessingStatus: string | null = null;
   let processingLookupError: string | null = null;
   let preexistingCustomThumbnail = false;
-  if (pub.content_format === "short" && pub.thumbnail_file_id &&
+  if (!scheduledShort && pub.content_format === "short" && pub.thumbnail_file_id &&
       !payload.thumbnail_applied && !payload.thumbnail_only) {
     try {
       const details = await getYoutubeThumbnailStatus(youtubeToken, videoId);
       thumbnailProcessingStatus = details.processingStatus;
       preexistingCustomThumbnail = details.hasCustomThumbnail === true;
     } catch (error) {
-      // A temporary failure to read owner-only processing details must never
-      // cause a duplicate video upload or indefinitely block publication.
       processingLookupError = safeError(error);
     }
 
-    // If an operator manually selected a thumbnail in Studio while the Short
-    // was processing, preserve it rather than overwriting it on the next tick.
     if (preexistingCustomThumbnail) {
-      const thumbnailState = ((pub.platform_payload ?? {}) as Record<string, unknown>).thumbnail;
-      const previous = thumbnailState && typeof thumbnailState === "object"
-        ? thumbnailState as Record<string, unknown> : {};
+      const existing = platformPayload.thumbnail;
+      const previous = existing && typeof existing === "object"
+        ? existing as Record<string, unknown> : {};
       payload.thumbnail_applied = true;
       payload.thumbnail_api_status = "already_present_not_overwritten";
       payload.thumbnail_manual_or_preexisting_detected_at = new Date().toISOString();
-      const save = await db.from("ai_operations_social_publications").update({
-        platform_payload: {
-          ...((pub.platform_payload ?? {}) as Record<string, unknown>),
-          thumbnail: { ...previous, apiStatus: "already_present_not_overwritten",
-            attemptedAt: null, error: null,
-            note: "YouTube already reported a custom thumbnail; no API overwrite attempted." },
-        },
-      }).eq("id", pub.id as string);
-      if (save.error) throw new Error(save.error.message);
+      await saveThumbnailState({
+        ...previous,
+        apiStatus: "already_present_not_overwritten",
+        attemptedAt: null,
+        error: null,
+        note: "YouTube already reported a custom thumbnail; no API overwrite attempted.",
+      });
       await insertEvent(db, pub.id as string, pub.tenant_id as string,
         "thumbnail_preexisting_preserved", { videoId });
     } else {
-    const decision = thumbnailProcessingDecision(
-      thumbnailProcessingStatus,
-      typeof pub.uploaded_at === "string" ? pub.uploaded_at : null,
-      Date.now(),
-    );
-    if (decision === "processing_failed") {
-      throw new PermanentYoutubeError(
-        "YouTube reports that video processing failed. The video already exists; no duplicate upload was attempted.",
+      const decision = thumbnailProcessingDecision(
+        thumbnailProcessingStatus,
+        typeof pub.uploaded_at === "string" ? pub.uploaded_at : null,
+        Date.now(),
       );
-    }
-    if (decision === "wait") {
-      const checkedAt = new Date().toISOString();
-      const thumbnailState = ((pub.platform_payload ?? {}) as Record<string, unknown>).thumbnail;
-      const previous = thumbnailState && typeof thumbnailState === "object"
-        ? thumbnailState as Record<string, unknown> : {};
-      const [savedJob, savedPublication] = await Promise.all([
-        db.from("ai_operations_video_jobs").update({
-          payload: { ...payload, thumbnail_processing_last_status: thumbnailProcessingStatus,
-            thumbnail_processing_last_checked_at: checkedAt,
-            thumbnail_processing_lookup_error: processingLookupError },
-        }).eq("id", job.id as number),
-        db.from("ai_operations_social_publications").update({
-          platform_payload: {
-            ...((pub.platform_payload ?? {}) as Record<string, unknown>),
-            thumbnail: { ...previous, apiStatus: "waiting_processing",
-              processingStatus: thumbnailProcessingStatus,
-              processingLookupError,
-              checkedAt },
-          },
-        }).eq("id", pub.id as string),
-      ]);
-      if (savedJob.error || savedPublication.error) {
-        throw new Error(savedJob.error?.message ?? savedPublication.error?.message);
+      if (decision === "processing_failed") {
+        throw new PermanentYoutubeError(
+          "YouTube reports that video processing failed. The video already exists; no duplicate upload was attempted.",
+        );
       }
-      return json({ ok: true, action: "waiting_for_youtube_processing",
-        publicationId: pub.id, videoId, processingStatus: thumbnailProcessingStatus });
-    }
-    payload.thumbnail_processing_last_status = thumbnailProcessingStatus;
-    payload.thumbnail_processing_lookup_error = processingLookupError;
-    payload.thumbnail_processing_verified = decision === "ready";
+      if (decision === "wait") {
+        const checkedAt = new Date().toISOString();
+        const existing = platformPayload.thumbnail;
+        const previous = existing && typeof existing === "object"
+          ? existing as Record<string, unknown> : {};
+        const [savedJob, savedPublication] = await Promise.all([
+          db.from("ai_operations_video_jobs").update({
+            payload: {
+              ...payload,
+              thumbnail_processing_last_status: thumbnailProcessingStatus,
+              thumbnail_processing_last_checked_at: checkedAt,
+              thumbnail_processing_lookup_error: processingLookupError,
+            },
+          }).eq("id", job.id as number),
+          db.from("ai_operations_social_publications").update({
+            platform_payload: {
+              ...platformPayload,
+              thumbnail: {
+                ...previous,
+                apiStatus: "waiting_processing",
+                processingStatus: thumbnailProcessingStatus,
+                processingLookupError,
+                checkedAt,
+              },
+            },
+          }).eq("id", pub.id as string),
+        ]);
+        if (savedJob.error || savedPublication.error) {
+          throw new Error(savedJob.error?.message ?? savedPublication.error?.message);
+        }
+        return json({
+          ok: true,
+          action: "waiting_for_youtube_processing",
+          publicationId: pub.id,
+          videoId,
+          processingStatus: thumbnailProcessingStatus,
+        });
+      }
+      payload.thumbnail_processing_last_status = thumbnailProcessingStatus;
+      payload.thumbnail_processing_lookup_error = processingLookupError;
+      payload.thumbnail_processing_verified = decision === "ready";
     }
   }
 
-  if (pub.thumbnail_file_id && !payload.thumbnail_applied) {
+  if (!scheduledShort && pub.thumbnail_file_id && !payload.thumbnail_applied) {
     try {
       const driveToken = await driveAccessToken(db);
       const meta = await driveFileMetadata(driveToken, pub.thumbnail_file_id as string);
       if (!meta.size || meta.size <= 0) throw new Error("Thumbnail Drive file is empty.");
       const bytes = await driveFileRange(driveToken, pub.thumbnail_file_id as string, 0, meta.size - 1);
       await setThumbnail(youtubeToken, videoId, bytes, meta.mimeType || "image/png");
-      payload.thumbnail_applied = true; // API accepted; Shorts UI result still needs confirmation.
+      payload.thumbnail_applied = true;
       payload.thumbnail_api_status = "accepted_unverified";
       payload.thumbnail_error = null;
       payload.thumbnail_attempted_at = new Date().toISOString();
@@ -337,36 +448,35 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
       payload.thumbnail_api_status = "failed";
       payload.thumbnail_error = safeError(error);
       payload.thumbnail_attempted_at = new Date().toISOString();
-      // Thumbnail failure is nonfatal: never duplicate or unpublish the already uploaded video.
       await insertEvent(db, pub.id as string, pub.tenant_id as string, "thumbnail_failed", {
-        error: safeError(error), contentFormat: pub.content_format,
+        error: safeError(error),
+        contentFormat: pub.content_format,
       });
     }
-    await db.from("ai_operations_social_publications").update({
-      platform_payload: {
-        ...((pub.platform_payload ?? {}) as Record<string, unknown>),
-        thumbnail: {
-          apiStatus: payload.thumbnail_api_status,
-          attemptedAt: payload.thumbnail_attempted_at,
-          error: payload.thumbnail_error ?? null,
-          fileId: pub.thumbnail_file_id,
-          processingStatusAtUpload: payload.thumbnail_processing_status_at_upload ?? null,
-          processingVerifiedAtUpload: payload.thumbnail_processing_verified === true,
-        },
-      },
-    }).eq("id", pub.id as string);
+    await saveThumbnailState({
+      apiStatus: payload.thumbnail_api_status,
+      attemptedAt: payload.thumbnail_attempted_at,
+      error: payload.thumbnail_error ?? null,
+      fileId: pub.thumbnail_file_id,
+      processingStatusAtUpload: payload.thumbnail_processing_status_at_upload ?? null,
+      processingVerifiedAtUpload: payload.thumbnail_processing_verified === true,
+    });
   }
 
-  // Safe one-off repair for an existing, already published video. Never call videos.insert,
-  // change published_at or visibility, or touch playlists for thumbnail-only work.
   if (payload.thumbnail_only) {
-    await db.from("ai_operations_video_jobs").update({
-      payload, status: "complete", completed_at: new Date().toISOString(),
+    const jobUpdate = await db.from("ai_operations_video_jobs").update({
+      payload,
+      status: "complete",
+      completed_at: new Date().toISOString(),
       error_message: payload.thumbnail_error ? String(payload.thumbnail_error).slice(0, 4000) : null,
     }).eq("id", job.id as number);
+    if (jobUpdate.error) throw new Error(jobUpdate.error.message);
     return json({
-      ok: !payload.thumbnail_error, action: "thumbnail_only_complete",
-      publicationId: pub.id, videoId, thumbnailApiStatus: payload.thumbnail_api_status ?? "not_requested",
+      ok: !payload.thumbnail_error,
+      action: "thumbnail_only_complete",
+      publicationId: pub.id,
+      videoId,
+      thumbnailApiStatus: payload.thumbnail_api_status ?? "not_requested",
     });
   }
 
@@ -383,17 +493,25 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
     applied.add(externalId);
     await insertEvent(db, pub.id as string, pub.tenant_id as string, "playlist_attached", { playlistId: externalId });
   }
-  await db.from("ai_operations_video_jobs").update({ payload: { ...payload, playlists_applied: [...applied] } }).eq("id", job.id as number);
+  const saveJobPayload = await db.from("ai_operations_video_jobs").update({
+    payload: { ...payload, playlists_applied: [...applied] },
+  }).eq("id", job.id as number);
+  if (saveJobPayload.error) throw new Error(saveJobPayload.error.message);
 
-  const finalStatus = pub.delivery_mode === "scheduled"
+  const finalStatus = scheduled
     ? "scheduled"
     : pub.desired_privacy_status === "private"
     ? "uploaded"
     : "published";
   const update: Record<string, unknown> = { status: finalStatus };
   if (finalStatus === "published" && !pub.published_at) update.published_at = new Date().toISOString();
-  await db.from("ai_operations_social_publications").update(update).eq("id", pub.id as string);
-  await db.from("ai_operations_video_jobs").update({ status: "complete", completed_at: new Date().toISOString() }).eq("id", job.id as number);
+  const publicationUpdate = await db.from("ai_operations_social_publications").update(update).eq("id", pub.id as string);
+  if (publicationUpdate.error) throw new Error(publicationUpdate.error.message);
+  const finishJob = await db.from("ai_operations_video_jobs").update({
+    status: "complete",
+    completed_at: new Date().toISOString(),
+  }).eq("id", job.id as number);
+  if (finishJob.error) throw new Error(finishJob.error.message);
 
   return json({ ok: true, action: "finalized", publicationId: pub.id, status: finalStatus });
 }
