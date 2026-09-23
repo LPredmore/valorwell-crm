@@ -205,8 +205,8 @@ export async function validatePublication(auth: AuthContext, params: { id: strin
           const width = Number(renderPayload.render_width ?? 0);
           const height = Number(renderPayload.render_height ?? 0);
           const profile = String(renderPayload.render_profile ?? "");
-          if (profile !== "youtube_short_9x16" || width !== 1080 || height !== 1920) {
-            errors.push("Short media must be re-rendered as 1080x1920 (9:16) before it can be approved.");
+          if (String(renderPayload.drive_file_id ?? "") !== String(clip.drive_file_id ?? "") || profile !== "youtube_short_9x16" || width !== 1080 || height !== 1920) {
+            errors.push("Current Short file must have a verified 1080x1920 (9:16) render before approval.");
           }
         }
       }
