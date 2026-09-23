@@ -4,7 +4,7 @@ import { youtubeAccessToken } from "../_shared/ai-ops-youtube.ts";
 import { driveAccessToken, driveFileMetadata, driveFileRange } from "./drive.ts";
 import {
   addToPlaylist, createResumableUploadSession, isVideoInPlaylist, queryUploadOffset,
-  setThumbnail, uploadChunk, PermanentYoutubeError, TransientYoutubeError, type VideoSnippetStatus,
+  setThumbnail, getYoutubeThumbnailStatus, uploadChunk, PermanentYoutubeError, TransientYoutubeError, type VideoSnippetStatus,
 } from "./youtube.ts";
 
 type Db = ReturnType<typeof adminClient>;
@@ -175,6 +175,52 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
   // Keep thumbnail result in the same payload as playlists. The previous implementation
   // used a stale copy of payload and overwrote thumbnail_applied when saving playlists.
   const payload = { ...((job.payload ?? {}) as Record<string, unknown>) };
+  // Read-only verification of an already published Short. This does not re-upload
+  // the video or thumbnail and does not change publication status or playlists.
+  if (payload.thumbnail_verify_only === true) {
+    const verification = await getYoutubeThumbnailStatus(youtubeToken, videoId);
+    const existing = ((pub.platform_payload ?? {}) as Record<string, unknown>).thumbnail;
+    const oldThumbnail = existing && typeof existing === "object"
+      ? existing as Record<string, unknown> : {};
+    const verifiedAt = new Date().toISOString();
+    const thumbnail = {
+      ...oldThumbnail,
+      verifiedAt,
+      hasCustomThumbnail: verification.hasCustomThumbnail,
+      processingStatus: verification.processingStatus,
+      reportedThumbnailUrl: verification.thumbnails?.high?.url ?? verification.thumbnails?.default?.url ?? null,
+      apiStatus: verification.hasCustomThumbnail === true
+        ? "confirmed_by_youtube" : verification.hasCustomThumbnail === false
+        ? "not_applied" : "accepted_unverified",
+    };
+    const publicationUpdate = await db.from("ai_operations_social_publications").update({
+      platform_payload: { ...((pub.platform_payload ?? {}) as Record<string, unknown>), thumbnail },
+    }).eq("id", pub.id as string);
+    if (publicationUpdate.error) throw new Error(publicationUpdate.error.message);
+    await insertEvent(db, pub.id as string, pub.tenant_id as string, "thumbnail_verification_checked", {
+      hasCustomThumbnail: verification.hasCustomThumbnail,
+      processingStatus: verification.processingStatus,
+    });
+    const jobUpdate = await db.from("ai_operations_video_jobs").update({
+      payload: {
+        ...payload,
+        verified_at: verifiedAt,
+        youtube_has_custom_thumbnail: verification.hasCustomThumbnail,
+        youtube_processing_status: verification.processingStatus,
+      },
+      status: "complete",
+      completed_at: verifiedAt,
+    }).eq("id", job.id as number);
+    if (jobUpdate.error) throw new Error(jobUpdate.error.message);
+    return json({
+      ok: true,
+      action: "thumbnail_verification_complete",
+      videoId,
+      hasCustomThumbnail: verification.hasCustomThumbnail,
+      processingStatus: verification.processingStatus,
+    });
+  }
+
 
   // YouTube's media-upload endpoint can be used for videos. For Shorts, attempt the
   // same official API but record API acceptance separately from visible application:
