@@ -52,7 +52,7 @@ export function SocialMediaThumbnail({ item }: { item: SocialMediaLibraryItem })
           src={signedUrl}
           alt=""
           loading="lazy"
-          className="h-full w-full object-cover"
+          className="h-full w-full object-contain"
           onError={() => setImageFailed(true)}
         />
       )}
