@@ -172,21 +172,60 @@ async function runUploadStage(db: Db, job: Job, pub: Publication): Promise<Respo
 async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Response> {
   const youtubeToken = await youtubeAccessToken();
   const videoId = pub.external_video_id as string;
-  const payload = (job.payload ?? {}) as Record<string, unknown>;
+  // Keep thumbnail result in the same payload as playlists. The previous implementation
+  // used a stale copy of payload and overwrote thumbnail_applied when saving playlists.
+  const payload = { ...((job.payload ?? {}) as Record<string, unknown>) };
 
-  if (pub.content_format !== "short" && pub.thumbnail_file_id && !payload.thumbnail_applied) {
+  // YouTube's media-upload endpoint can be used for videos. For Shorts, attempt the
+  // same official API but record API acceptance separately from visible application:
+  // account eligibility and Shorts support may limit whether YouTube uses the image.
+  if (pub.thumbnail_file_id && !payload.thumbnail_applied) {
     try {
       const driveToken = await driveAccessToken(db);
       const meta = await driveFileMetadata(driveToken, pub.thumbnail_file_id as string);
-      const bytes = await driveFileRange(driveToken, pub.thumbnail_file_id as string, 0, Math.max(meta.size - 1, 0));
-      await setThumbnail(youtubeToken, videoId, bytes, meta.mimeType || "image/jpeg");
-      await db.from("ai_operations_video_jobs").update({ payload: { ...payload, thumbnail_applied: true } }).eq("id", job.id as number);
-      await insertEvent(db, pub.id as string, pub.tenant_id as string, "thumbnail_applied", {});
+      if (!meta.size || meta.size <= 0) throw new Error("Thumbnail Drive file is empty.");
+      const bytes = await driveFileRange(driveToken, pub.thumbnail_file_id as string, 0, meta.size - 1);
+      await setThumbnail(youtubeToken, videoId, bytes, meta.mimeType || "image/png");
+      payload.thumbnail_applied = true; // API accepted; Shorts UI result still needs confirmation.
+      payload.thumbnail_api_status = "accepted_unverified";
+      payload.thumbnail_error = null;
+      payload.thumbnail_attempted_at = new Date().toISOString();
+      await insertEvent(db, pub.id as string, pub.tenant_id as string, "thumbnail_api_accepted", {
+        contentFormat: pub.content_format,
+        note: "YouTube accepted thumbnail media upload; visible Shorts thumbnail is not independently verified.",
+      });
     } catch (error) {
-      // Thumbnail failure is a warning, not a fatal error -- record distinctly and continue.
-      await db.from("ai_operations_video_jobs").update({ payload: { ...payload, thumbnail_error: safeError(error) } }).eq("id", job.id as number);
-      await insertEvent(db, pub.id as string, pub.tenant_id as string, "thumbnail_failed", { error: safeError(error) });
+      payload.thumbnail_api_status = "failed";
+      payload.thumbnail_error = safeError(error);
+      payload.thumbnail_attempted_at = new Date().toISOString();
+      // Thumbnail failure is nonfatal: never duplicate or unpublish the already uploaded video.
+      await insertEvent(db, pub.id as string, pub.tenant_id as string, "thumbnail_failed", {
+        error: safeError(error), contentFormat: pub.content_format,
+      });
     }
+    await db.from("ai_operations_social_publications").update({
+      platform_payload: {
+        ...((pub.platform_payload ?? {}) as Record<string, unknown>),
+        thumbnail: {
+          apiStatus: payload.thumbnail_api_status,
+          attemptedAt: payload.thumbnail_attempted_at,
+          error: payload.thumbnail_error ?? null,
+        },
+      },
+    }).eq("id", pub.id as string);
+  }
+
+  // Safe one-off repair for an existing, already published video. Never call videos.insert,
+  // change published_at or visibility, or touch playlists for thumbnail-only work.
+  if (payload.thumbnail_only) {
+    await db.from("ai_operations_video_jobs").update({
+      payload, status: "complete", completed_at: new Date().toISOString(),
+      error_message: payload.thumbnail_error ? String(payload.thumbnail_error).slice(0, 4000) : null,
+    }).eq("id", job.id as number);
+    return json({
+      ok: !payload.thumbnail_error, action: "thumbnail_only_complete",
+      publicationId: pub.id, videoId, thumbnailApiStatus: payload.thumbnail_api_status ?? "not_requested",
+    });
   }
 
   const { data: playlistLinks } = await db
@@ -210,7 +249,7 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
     ? "uploaded"
     : "published";
   const update: Record<string, unknown> = { status: finalStatus };
-  if (finalStatus === "published") update.published_at = new Date().toISOString();
+  if (finalStatus === "published" && !pub.published_at) update.published_at = new Date().toISOString();
   await db.from("ai_operations_social_publications").update(update).eq("id", pub.id as string);
   await db.from("ai_operations_video_jobs").update({ status: "complete", completed_at: new Date().toISOString() }).eq("id", job.id as number);
 
@@ -253,7 +292,7 @@ Deno.serve(async (request: Request) => {
       await db.from("ai_operations_video_jobs").update({
         status: "running", started_at: new Date().toISOString(), attempts: Number(job.attempts ?? 0) + 1,
       }).eq("id", job.id as number);
-      if (pub.status !== "uploading") {
+      if (!pub.external_video_id && pub.status !== "uploading") {
         await db.from("ai_operations_social_publications").update({
           status: "uploading", upload_started_at: new Date().toISOString(),
           attempt_count: Number(pub.attempt_count ?? 0) + 1, last_attempt_at: new Date().toISOString(),
