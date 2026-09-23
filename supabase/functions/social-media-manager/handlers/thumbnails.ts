@@ -62,7 +62,7 @@ async function resolveSourceFileId(
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("NOT_FOUND");
-  // Deliberately never falls back to guest_image_url: a guest portrait is not an episode cover.
+  // Deliberately no fallback to the guest portrait field: a guest photo is not an episode cover.
   return (data as { cover_image_file_id: string | null }).cover_image_file_id ?? null;
 }
 
