@@ -23,6 +23,12 @@ export function SocialMediaLibraryCard({ item, onSelect, onChangePhoto }: { item
           <Badge variant="secondary">{CONTENT_FORMAT_LABELS[item.contentFormat]}</Badge>
           {!item.readiness.ready && <Badge variant="destructive">Not Ready</Badge>}
           {publication && <Badge variant="outline">{STATUS_LABELS[publication.status]}</Badge>}
+          {publication?.thumbnailStatus === 'manual_required' && (
+            <Badge variant="outline" className="border-amber-500 text-amber-700">Thumbnail needed</Badge>
+          )}
+          {publication?.thumbnailStatus === 'manual_confirmed' && (
+            <Badge variant="outline" className="border-emerald-500 text-emerald-700">Thumbnail done</Badge>
+          )}
         </div>
         <p className="text-sm font-medium line-clamp-2">{item.title ?? '(untitled)'}</p>
         <p className="text-xs text-muted-foreground">
