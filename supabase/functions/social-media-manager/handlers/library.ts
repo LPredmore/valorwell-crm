@@ -39,7 +39,8 @@ type ProjectRow = {
   source_web_url: string | null;
   source_file_name: string | null;
   status: string;
-  guest_image_url: string | null;
+  cover_image_file_id: string | null;
+  cover_image_url: string | null;
 };
 
 type PublicationRow = {
@@ -85,7 +86,7 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
         .order("created_at", { ascending: false })
         .limit(500),
       db.from("ai_operations_video_projects")
-        .select("id, guest_name, organization_name, duration_seconds, source_file_id, source_web_url, source_file_name, status, guest_image_url")
+        .select("id, guest_name, organization_name, duration_seconds, source_file_id, source_web_url, source_file_name, status, cover_image_file_id, cover_image_url")
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(500),
