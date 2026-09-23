@@ -1,4 +1,5 @@
 import type { AuthContext } from "../auth.ts";
+import { isVerifiedCurrentShortRender } from "../../_shared/short-render-profile.ts";
 import type { ContentFormat, SocialMediaLibraryItem, SocialPublicationSummary } from "../types.ts";
 
 export type LibraryFilters = {
@@ -150,12 +151,7 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
     if (clip.status !== "rendered") readinessReasons.push(`Clip status is "${clip.status}", not rendered.`);
     if (contentFormat === "short") {
       const renderPayload = renderProfileByClip.get(clip.id) ?? {};
-      if (
-        String(renderPayload.drive_file_id ?? "") !== String(clip.drive_file_id ?? "") ||
-        String(renderPayload.render_profile ?? "") !== "youtube_short_9x16" ||
-        Number(renderPayload.render_width ?? 0) !== 1080 ||
-        Number(renderPayload.render_height ?? 0) !== 1920
-      ) {
+      if (!isVerifiedCurrentShortRender(renderPayload, clip.drive_file_id)) {
         readinessReasons.push("Current clip file is not verified as a 1080x1920 (9:16) render. Older landscape clips need conversion.");
       }
     }
