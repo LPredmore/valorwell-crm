@@ -38,6 +38,7 @@ export type SocialPublicationSummary = {
   desiredPrivacyStatus: PrivacyStatus;
   externalVideoId: string | null;
   externalUrl: string | null;
+  thumbnailStatus: string | null;
 };
 
 export type SocialPublication = SocialPublicationSummary & {
@@ -62,6 +63,15 @@ export type SocialPublication = SocialPublicationSummary & {
   notifySubscribers: boolean;
   thumbnailFileId: string | null;
   thumbnailUrl: string | null;
+  thumbnailDelivery: {
+    apiStatus: string;
+    error?: string | null;
+    attemptedAt?: string | null;
+    manualRequired?: boolean;
+    manualConfirmedAt?: string | null;
+    fileId?: string | null;
+    studioUrl?: string | null;
+  } | null;
   platformUploadStatus: string | null;
   platformProcessingStatus: string | null;
   approvedAt: string | null;
