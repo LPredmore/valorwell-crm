@@ -160,6 +160,36 @@ export function SocialPublicationEditor({
 
             <SocialPublicationPreflight validation={validation} />
 
+            {merged.contentFormat === 'short' && merged.thumbnailUrl && (
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2 text-sm dark:border-amber-800 dark:bg-amber-950/30">
+                <h4 className="font-semibold">Short thumbnail: upload in YouTube Studio</h4>
+                <p className="text-muted-foreground">
+                  Your vertical cover image is saved, but publishing a Short through the CRM
+                  does not apply its custom thumbnail. Open the image, save it to your
+                  computer, then open YouTube Studio &rarr; Content &rarr; Shorts and select
+                  Upload file under Thumbnail. Availability depends on your channel.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={merged.thumbnailUrl} target="_blank" rel="noopener noreferrer">
+                      Open cover image in Drive
+                    </a>
+                  </Button>
+                  {merged.externalVideoId && (
+                    <Button size="sm" variant="outline" asChild>
+                      <a
+                        href={`https://studio.youtube.com/video/${encodeURIComponent(merged.externalVideoId)}/edit`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Edit Short in YouTube Studio
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div>
               <h4 className="text-sm font-medium mb-2">History</h4>
               <SocialPublicationHistory publicationId={publication!.id} />
