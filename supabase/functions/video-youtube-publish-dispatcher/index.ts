@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js@2.4.5/edge-runtime.d.ts";
 import { adminClient, authorizeWorker, json, logEvent, safeError, classifyModelFailure, backoffSeconds } from "../_shared/ai-ops.ts";
 import { youtubeAccessToken } from "../_shared/ai-ops-youtube.ts";
+import { isVerifiedCurrentShortRender } from "../_shared/short-render-profile.ts";
 import { driveAccessToken, driveFileMetadata, driveFileRange } from "./drive.ts";
 import {
   addToPlaylist, createResumableUploadSession, isVideoInPlaylist, queryUploadOffset,
@@ -53,9 +54,6 @@ async function assertShortRenderProfile(db: Db, pub: Publication) {
 
   if (error) throw new PermanentYoutubeError(`Could not verify the Short render profile: ${error.message}`);
   const payload = (data?.payload ?? {}) as Record<string, unknown>;
-  const width = Number(payload.render_width ?? 0);
-  const height = Number(payload.render_height ?? 0);
-  const profile = String(payload.render_profile ?? "");
   // A correct profile on an older render is not proof that the CURRENT Drive
   // object is vertical. Match the artifact id to the source file being uploaded.
   const { data: currentClip, error: clipError } = await db
@@ -67,8 +65,7 @@ async function assertShortRenderProfile(db: Db, pub: Publication) {
     throw new PermanentYoutubeError("Could not verify the current Short file.");
   }
 
-  if (String(payload.drive_file_id ?? "") !== String(currentClip.drive_file_id) ||
-      profile !== "youtube_short_9x16" || width !== 1080 || height !== 1920) {
+  if (!isVerifiedCurrentShortRender(payload, currentClip.drive_file_id)) {
     throw new PermanentYoutubeError("Short upload blocked: the rendered media is not verified as 1080x1920 (9:16). Re-render the clip before publishing.");
   }
 }
