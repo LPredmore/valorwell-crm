@@ -16,6 +16,7 @@ export type SocialPublicationSummary = {
   desiredPrivacyStatus: PrivacyStatus;
   externalVideoId: string | null;
   externalUrl: string | null;
+  thumbnailStatus: string | null;
 };
 
 export type SocialMediaLibraryItem = {
@@ -61,7 +62,15 @@ export type SocialPublication = SocialPublicationSummary & {
   notifySubscribers: boolean;
   thumbnailFileId: string | null;
   thumbnailUrl: string | null;
-  thumbnailDelivery: { apiStatus: string; error: string | null; attemptedAt: string | null } | null;
+  thumbnailDelivery: {
+    apiStatus: string;
+    error?: string | null;
+    attemptedAt?: string | null;
+    manualRequired?: boolean;
+    manualConfirmedAt?: string | null;
+    fileId?: string | null;
+    studioUrl?: string | null;
+  } | null;
   platformUploadStatus: string | null;
   platformProcessingStatus: string | null;
   approvedAt: string | null;
@@ -283,6 +292,9 @@ export const cancelSocialPublication = (id: string) => invoke<SocialPublication>
 
 export const retrySocialPublication = (id: string) =>
   invoke<{ jobId: number; publication: SocialPublication }>("retry_publication", { id });
+
+export const markThumbnailManualDone = (id: string) =>
+  invoke<SocialPublication>("mark_thumbnail_manual_done", { id });
 
 export const STATUS_LABELS: Record<PublicationStatus, string> = {
   draft: "Draft",
