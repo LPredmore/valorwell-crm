@@ -8,17 +8,35 @@ import {
 } from "./handlers/publications.ts";
 import { getSettings } from "./handlers/settings.ts";
 import { verifyYoutubeConnection } from "./handlers/youtube.ts";
+import { resolveAllowHeaders } from "./cors.ts";
 
+// Root cause of the "TypeError: Failed to fetch" bug: supabase-js 2.93.1's browser build
+// (dist/index.mjs, what Vite actually bundles -- confirmed by reading the installed package,
+// not just the changelog) unconditionally adds X-Supabase-Client-Platform and
+// X-Supabase-Client-Platform-Version headers whenever navigator.userAgentData is available
+// (every Chromium browser). A static allow-list here will always eventually miss a header
+// the SDK adds in a future point release, so instead of hand-maintaining one, echo back
+// whatever the browser's preflight actually asked for. Safe for a public, wildcard-origin,
+// non-credentialed API -- equivalent in exposure to Access-Control-Allow-Headers: *, and
+// this endpoint's real authorization boundary is the JWT check inside the handler, not CORS.
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Max-Age": "86400",
 };
+const FALLBACK_ALLOW_HEADERS = "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, x-region";
 
 const json = (body: unknown, status = 200, requestId?: string) => new Response(
   JSON.stringify(body),
-  { status, headers: { ...corsHeaders, "content-type": "application/json", ...(requestId ? { "x-request-id": requestId } : {}) } },
+  {
+    status,
+    headers: {
+      ...corsHeaders,
+      "Access-Control-Allow-Headers": FALLBACK_ALLOW_HEADERS,
+      "content-type": "application/json",
+      ...(requestId ? { "x-request-id": requestId } : {}),
+    },
+  },
 );
 
 function safeLog(level: "info" | "warn" | "error", event: string, fields: Record<string, unknown> = {}) {
@@ -82,7 +100,13 @@ async function dispatch(auth: AuthContext, action: string, params: Record<string
 Deno.serve(async (request: Request) => {
   const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
   if (request.method === "OPTIONS") {
-    return new Response("ok", { headers: { ...corsHeaders, "x-request-id": requestId } });
+    return new Response("ok", {
+      headers: {
+        ...corsHeaders,
+        "Access-Control-Allow-Headers": resolveAllowHeaders(request.headers.get("access-control-request-headers"), FALLBACK_ALLOW_HEADERS),
+        "x-request-id": requestId,
+      },
+    });
   }
   if (request.method !== "POST") return json({ error: "Method not allowed", requestId }, 405, requestId);
 
