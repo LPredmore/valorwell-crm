@@ -61,13 +61,17 @@ export function SocialPublicationScheduleForm({
         <div className="flex items-center gap-2">
           <RadioGroupItem value="scheduled" id="mode-scheduled" disabled={disabled || !connected} />
           <Label htmlFor="mode-scheduled" className="font-normal text-muted-foreground">
-            Schedule {!connected && '(enabled after YouTube connection is verified)'}
+            Schedule on YouTube {!connected && '(enabled after YouTube connection is verified)'}
           </Label>
         </div>
       </RadioGroup>
 
       {mode === 'scheduled' && (
-        <div className="flex items-center gap-2 pl-6">
+        <div className="space-y-2 pl-6">
+          <p className="text-xs text-muted-foreground">
+            The CRM uploads the video to YouTube immediately as Private and sets the date/time below as YouTube's public publish time. For Shorts, add the custom thumbnail manually in YouTube Studio before that time.
+          </p>
+          <div className="flex items-center gap-2">
           <Input
             type="date"
             value={parts.date}
@@ -87,6 +91,7 @@ export function SocialPublicationScheduleForm({
             }}
           />
           <span className="text-xs text-muted-foreground">Central Time</span>
+          </div>
         </div>
       )}
     </div>
