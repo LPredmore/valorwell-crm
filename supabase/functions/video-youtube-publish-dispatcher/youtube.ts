@@ -138,6 +138,30 @@ export async function getYoutubeThumbnailStatus(accessToken: string, videoId: st
   };
 }
 
+export async function getYoutubeDeliveryStatus(accessToken: string, videoId: string): Promise<{
+  privacyStatus: string | null;
+  publishAt: string | null;
+  uploadStatus: string | null;
+  processingStatus: string | null;
+  rejectionReason: string | null;
+  failureReason: string | null;
+}> {
+  const url = `${API}/videos?part=status,processingDetails&id=${encodeURIComponent(videoId)}`;
+  const response = await fetch(url, { headers: { authorization: `Bearer ${accessToken}` } });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) classify(response.status, body?.error?.message ?? `Video status verification failed (${response.status}).`);
+  const video = body?.items?.[0];
+  if (!video) throw new PermanentYoutubeError("YouTube returned no matching video during schedule verification.");
+  return {
+    privacyStatus: video.status?.privacyStatus ?? null,
+    publishAt: video.status?.publishAt ?? null,
+    uploadStatus: video.status?.uploadStatus ?? null,
+    processingStatus: video.processingDetails?.processingStatus ?? null,
+    rejectionReason: video.status?.rejectionReason ?? null,
+    failureReason: video.processingDetails?.processingFailureReason ?? null,
+  };
+}
+
 export async function isVideoInPlaylist(accessToken: string, playlistId: string, videoId: string): Promise<boolean> {
   const url = `${API}/playlistItems?part=snippet&playlistId=${encodeURIComponent(playlistId)}&videoId=${encodeURIComponent(videoId)}&maxResults=1`;
   const response = await fetch(url, { headers: { authorization: `Bearer ${accessToken}` } });
