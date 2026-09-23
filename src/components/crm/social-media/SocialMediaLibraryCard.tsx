@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CONTENT_FORMAT_LABELS, STATUS_LABELS, type SocialMediaLibraryItem } from '@/lib/crm/social-media';
+import { SocialMediaThumbnail } from './SocialMediaThumbnail';
 
 function formatDuration(seconds: number | null): string {
   if (seconds === null) return '—';
@@ -15,13 +16,7 @@ export function SocialMediaLibraryCard({ item, onSelect }: { item: SocialMediaLi
 
   return (
     <Card className="overflow-hidden">
-      <div className="aspect-video bg-muted flex items-center justify-center">
-        {item.thumbnailUrl ? (
-          <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <span className="text-xs text-muted-foreground">No thumbnail</span>
-        )}
-      </div>
+      <SocialMediaThumbnail item={item} />
       <CardContent className="p-3 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="secondary">{CONTENT_FORMAT_LABELS[item.contentFormat]}</Badge>

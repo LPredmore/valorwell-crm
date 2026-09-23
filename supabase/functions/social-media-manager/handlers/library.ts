@@ -39,7 +39,8 @@ type ProjectRow = {
   source_web_url: string | null;
   source_file_name: string | null;
   status: string;
-  guest_image_url: string | null;
+  cover_image_file_id: string | null;
+  cover_image_url: string | null;
 };
 
 type PublicationRow = {
@@ -85,7 +86,7 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
         .order("created_at", { ascending: false })
         .limit(500),
       db.from("ai_operations_video_projects")
-        .select("id, guest_name, organization_name, duration_seconds, source_file_id, source_web_url, source_file_name, status, guest_image_url")
+        .select("id, guest_name, organization_name, duration_seconds, source_file_id, source_web_url, source_file_name, status, cover_image_file_id, cover_image_url")
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(500),
@@ -137,7 +138,10 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
       contentFormat,
       title: clip.youtube_title,
       description: clip.youtube_description,
-      thumbnailUrl: clip.cover_image_url,
+      // cover_image_url is a Drive /file/d/<id>/view page on a PRIVATE file -- never image
+      // bytes, so it must not be handed to an <img>. The browser asks get_thumbnail_url for a
+      // short-lived signed URL against the server-side cache instead.
+      thumbnailUrl: null,
       thumbnailFileId: clip.cover_image_file_id,
       guestName: project?.guest_name ?? null,
       organizationName: project?.organization_name ?? null,
@@ -164,8 +168,11 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
       contentFormat: "full_episode",
       title: null,
       description: null,
-      thumbnailUrl: project.guest_image_url,
-      thumbnailFileId: null,
+      // Full episodes show ONLY an explicitly configured episode cover. The separate guest
+      // portrait field is not cover art and is never used as a fallback: a project
+      // without cover_image_file_id renders a blank neutral thumbnail area.
+      thumbnailUrl: null,
+      thumbnailFileId: project.cover_image_file_id,
       guestName: project.guest_name,
       organizationName: project.organization_name,
       durationSeconds: project.duration_seconds,

@@ -190,6 +190,14 @@ export const fetchPublicationEvents = (id: string) =>
 
 export const fetchSocialMediaSettings = () => invoke<SocialSettings>("get_settings");
 
+export type SocialThumbnail = { fileId: string | null; signedUrl: string | null; expiresInSeconds: number | null };
+
+/** Asks the server for a short-lived signed URL to the cached copy of a private Drive cover
+ * image. The source Drive file id is resolved server-side from the tenant's own record -- the
+ * browser only names which library row it wants. */
+export const fetchSocialThumbnailUrl = (sourceType: SourceType, sourceId: string) =>
+  invoke<SocialThumbnail>("get_thumbnail_url", { sourceType, sourceId });
+
 export const verifyYouTubeConnection = () => invoke<YouTubeConnectionStatus>("verify_youtube_connection");
 
 export const createSocialPublication = (params: {

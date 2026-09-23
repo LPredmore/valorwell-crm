@@ -7,6 +7,7 @@ import {
   retryPublication, setPublicationPlaylists, updatePublication, validatePublication,
 } from "./handlers/publications.ts";
 import { getSettings } from "./handlers/settings.ts";
+import { getThumbnailUrl } from "./handlers/thumbnails.ts";
 import { verifyYoutubeConnection } from "./handlers/youtube.ts";
 import { resolveAllowHeaders } from "./cors.ts";
 
@@ -50,6 +51,7 @@ function safeLog(level: "info" | "warn" | "error", event: string, fields: Record
 const VIEW_ACTIONS = new Set([
   "bootstrap", "list_library", "list_publications", "get_publication",
   "list_publication_events", "get_settings", "verify_youtube_connection",
+  "get_thumbnail_url",
 ]);
 // Mutation actions: require capabilities.mutate (crm_admin/crm_operator today).
 const MUTATE_ACTIONS = new Set([
@@ -72,6 +74,8 @@ async function dispatch(auth: AuthContext, action: string, params: Record<string
       return listPublicationEvents(auth, params as { id: string });
     case "get_settings":
       return getSettings(auth);
+    case "get_thumbnail_url":
+      return getThumbnailUrl(auth, params as { sourceType?: unknown; sourceId?: unknown });
     case "verify_youtube_connection":
       return verifyYoutubeConnection(auth);
     case "create_publication":
