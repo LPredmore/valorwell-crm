@@ -32,6 +32,7 @@ export function SocialMediaPhotoEditor({
       sourceId: item.sourceId,
       file: prepared!.file,
       updateYouTube: applyToYoutube,
+      publishedPublicationId: item.publishedPublication?.id ?? undefined,
     }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['social-media', 'library'] });
