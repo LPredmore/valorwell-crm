@@ -169,6 +169,12 @@ export function SocialPublicationEditor({
                     If your channel supports custom Shorts thumbnails, open the saved cover image
                     and add it manually in desktop YouTube Studio.
                   </p>
+                ) : merged.thumbnailDelivery?.apiStatus === 'waiting_processing' ? (
+                  <p className="text-muted-foreground">
+                    YouTube is still processing this Short. The CRM is waiting to submit the
+                    thumbnail until processing finishes. A successful API submission may
+                    still require confirmation in YouTube Studio for Shorts.
+                  </p>
                 ) : merged.thumbnailDelivery?.apiStatus === 'not_applied' ? (
                   <p className="text-muted-foreground">
                     YouTube accepted the uploaded image, but its owner-only video status still reports
@@ -179,9 +185,9 @@ export function SocialPublicationEditor({
                   </p>
                 ) : merged.thumbnailDelivery?.apiStatus === 'confirmed_by_youtube' ? (
                   <p className="text-muted-foreground">
-                    YouTube confirms that this video has a custom thumbnail. The Short feed may
-                    still display a different selected frame; verify the appearance on the
-                    channel rather than relying only on API acceptance.
+                    YouTube reports a custom-thumbnail flag for this video, but that flag
+                    does not prove the cover you selected appears in Shorts. Compare the
+                    published thumbnail with your Library photo in YouTube Studio.
                   </p>
                 ) : merged.thumbnailDelivery?.apiStatus === 'accepted_unverified' ? (
                   <p className="text-muted-foreground">
