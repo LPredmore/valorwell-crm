@@ -148,9 +148,11 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
   }).eq("id", sourceId);
   if (sourceUpdateError) throw new Error("COVER_SAVE_FAILED:" + sourceUpdateError.message);
 
-  const editableIds = linked.filter((p) => [
-    "draft", "ready", "approved", "uploaded", "scheduled", "published",
-  ].includes(p.status)).map((p) => p.id);
+  // Preserve the thumbnail snapshot for already published videos unless the
+  // operator explicitly requested updating that exact live YouTube publication.
+  const editableIds = linked.filter((p) => ["draft", "ready", "approved"].includes(p.status))
+    .map((p) => p.id);
+  if (updateYoutube && targetPublishedId) editableIds.push(targetPublishedId);
   if (editableIds.length) {
     const { error: pubUpdateError } = await db.from("ai_operations_social_publications").update({
       thumbnail_file_id: cover.fileId,
