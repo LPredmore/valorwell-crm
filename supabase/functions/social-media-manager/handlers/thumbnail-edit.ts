@@ -93,6 +93,7 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
   const sourceId = typeof params.sourceId === "string" ? params.sourceId.trim() : "";
   const file = params.file;
   const updateYoutube = params.updateYouTube === true || params.updateYouTube === "true";
+  const targetPublishedId = typeof params.publishedPublicationId === "string" ? params.publishedPublicationId : "";
   if (!sourceType || !/^[a-f0-9-]{36}$/i.test(sourceId) || !(file instanceof File)) {
     throw new Error("INVALID_THUMBNAIL_REQUEST");
   }
@@ -128,6 +129,9 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
   const { data: pubs, error: pubError } = await pubQuery;
   if (pubError) throw new Error(pubError.message);
   const linked = (pubs ?? []) as LinkedPublication[];
+  if (updateYoutube && !linked.some((p) => p.id === targetPublishedId && p.external_video_id && ["published", "uploaded", "scheduled"].includes(p.status))) {
+    throw new Error("Select a published video before requesting a YouTube thumbnail update.");
+  }
   if (linked.some((p) => p.status === "uploading" || p.status === "upload_queued")) {
     throw new Error("Wait for the current upload to finish before replacing its cover.");
   }
@@ -169,7 +173,7 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
   let youtubeQueued = 0;
   const warnings: string[] = [];
   if (updateYoutube) {
-    const published = linked.filter((p) => p.external_video_id &&
+    const published = linked.filter((p) => p.id === targetPublishedId && p.external_video_id &&
       ["published", "uploaded", "scheduled"].includes(p.status));
     for (const pub of published) {
       const { error: jobError } = await db.from("ai_operations_video_jobs").insert({
