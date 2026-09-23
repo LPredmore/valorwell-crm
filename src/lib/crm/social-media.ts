@@ -174,6 +174,62 @@ async function invoke<T>(action: string, body: Record<string, unknown> = {}): Pr
   return (data as { data: T }).data;
 }
 
+export type ThumbnailReplaceResult = {
+  fileId: string;
+  thumbnailUrl: string;
+  youtubeQueued: number;
+  warnings: string[];
+  message: string;
+};
+
+/** Upload the selected local artwork through the authenticated CRM Edge Function.
+ * Unlike a raw Drive link, this copies the exact selected image into our existing
+ * YouTube Cover Images folder, then updates the tenant-scoped video and publications.
+ */
+export async function replaceSocialLibraryPhoto(params: {
+  sourceType: SourceType;
+  sourceId: string;
+  file: File;
+  updateYouTube: boolean;
+}): Promise<ThumbnailReplaceResult> {
+  const form = new FormData();
+  form.set('action', 'replace_thumbnail');
+  form.set('sourceType', params.sourceType);
+  form.set('sourceId', params.sourceId);
+  form.set('updateYouTube', String(params.updateYouTube));
+  form.set('file', params.file, params.file.name);
+
+  const { data, error } = await supabase.functions.invoke('social-media-manager', {
+    body: form,
+    timeout: 90000,
+  });
+  if (error) {
+    const context = (error as { context?: unknown }).context;
+    if (context instanceof Response) {
+      let detail: string | null = null;
+      try {
+        const payload = await context.clone().json();
+        detail = typeof payload?.error === 'string' ? payload.error : null;
+      } catch {
+        // Use status when the gateway returns a non-JSON failure.
+      }
+      throw new SocialMediaError(
+        detail ?? 'Photo upload failed (HTTP ' + context.status + ')',
+        'replace_thumbnail',
+        context.status,
+        context.headers.get('x-request-id'),
+      );
+    }
+    const underlying = context as { message?: string } | undefined;
+    throw new SocialMediaError(underlying?.message ?? error.message, 'replace_thumbnail', null, null);
+  }
+  if (data && typeof data === 'object' && 'error' in data) {
+    const payload = data as { error: string; requestId?: string };
+    throw new SocialMediaError(payload.error, 'replace_thumbnail', null, payload.requestId ?? null);
+  }
+  return (data as { data: ThumbnailReplaceResult }).data;
+}
+
 export const fetchSocialMediaBootstrap = () =>
   invoke<{ auth: { userId: string; tenantId: string; crmRole: string; capabilities: Record<string, boolean> } }>("bootstrap");
 
