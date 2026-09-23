@@ -191,12 +191,14 @@ export async function replaceSocialLibraryPhoto(params: {
   sourceId: string;
   file: File;
   updateYouTube: boolean;
+  publishedPublicationId?: string;
 }): Promise<ThumbnailReplaceResult> {
   const form = new FormData();
   form.set('action', 'replace_thumbnail');
   form.set('sourceType', params.sourceType);
   form.set('sourceId', params.sourceId);
   form.set('updateYouTube', String(params.updateYouTube));
+  if (params.publishedPublicationId) form.set('publishedPublicationId', params.publishedPublicationId);
   form.set('file', params.file, params.file.name);
 
   const { data, error } = await supabase.functions.invoke('social-media-manager', {
