@@ -118,6 +118,26 @@ export async function setThumbnail(accessToken: string, videoId: string, bytes: 
   }
 }
 
+/** Read back the owner-only custom thumbnail flag after a media upload. */
+export async function getYoutubeThumbnailStatus(accessToken: string, videoId: string): Promise<{
+  hasCustomThumbnail: boolean | null;
+  processingStatus: string | null;
+  thumbnails: Record<string, { url?: string }> | null;
+}> {
+  const url = `${API}/videos?part=snippet,contentDetails,processingDetails&id=${encodeURIComponent(videoId)}`;
+  const response = await fetch(url, { headers: { authorization: `Bearer ${accessToken}` } });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) classify(response.status, body?.error?.message ?? `Thumbnail verification failed (${response.status}).`);
+  const video = body?.items?.[0];
+  if (!video) throw new PermanentYoutubeError("YouTube returned no matching video during thumbnail verification.");
+  return {
+    hasCustomThumbnail: typeof video.contentDetails?.hasCustomThumbnail === "boolean"
+      ? video.contentDetails.hasCustomThumbnail : null,
+    processingStatus: video.processingDetails?.processingStatus ?? null,
+    thumbnails: video.snippet?.thumbnails ?? null,
+  };
+}
+
 export async function isVideoInPlaylist(accessToken: string, playlistId: string, videoId: string): Promise<boolean> {
   const url = `${API}/playlistItems?part=snippet&playlistId=${encodeURIComponent(playlistId)}&videoId=${encodeURIComponent(videoId)}&maxResults=1`;
   const response = await fetch(url, { headers: { authorization: `Bearer ${accessToken}` } });
