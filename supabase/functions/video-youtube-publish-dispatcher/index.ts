@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js@2.4.5/edge-runtime.d.ts";
 import { adminClient, authorizeWorker, json, logEvent, safeError, classifyModelFailure, backoffSeconds } from "../_shared/ai-ops.ts";
 import { youtubeAccessToken } from "../_shared/ai-ops-youtube.ts";
 import { isVerifiedCurrentShortRender } from "../_shared/short-render-profile.ts";
+import { thumbnailProcessingDecision } from "./thumbnail-readiness.ts";
 import { driveAccessToken, driveFileMetadata, driveFileRange } from "./drive.ts";
 import {
   addToPlaylist, createResumableUploadSession, isVideoInPlaylist, queryUploadOffset,
@@ -233,6 +234,64 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
   // YouTube's media-upload endpoint can be used for videos. For Shorts, attempt the
   // same official API but record API acceptance separately from visible application:
   // account eligibility and Shorts support may limit whether YouTube uses the image.
+  // The upload API reported video creation, not video processing completion.
+  // Submit thumbnails on *new* Shorts only after YouTube says processing succeeded.
+  // A successful thumbnails.set call alone does not prove Shorts UI placement.
+  let thumbnailProcessingStatus: string | null = null;
+  let processingLookupError: string | null = null;
+  if (pub.content_format === "short" && pub.thumbnail_file_id &&
+      !payload.thumbnail_applied && !payload.thumbnail_only) {
+    try {
+      const details = await getYoutubeThumbnailStatus(youtubeToken, videoId);
+      thumbnailProcessingStatus = details.processingStatus;
+    } catch (error) {
+      // A temporary failure to read owner-only processing details must never
+      // cause a duplicate video upload or indefinitely block publication.
+      processingLookupError = safeError(error);
+    }
+
+    const decision = thumbnailProcessingDecision(
+      thumbnailProcessingStatus,
+      typeof pub.uploaded_at === "string" ? pub.uploaded_at : null,
+      Date.now(),
+    );
+    if (decision === "processing_failed") {
+      throw new PermanentYoutubeError(
+        "YouTube reports that video processing failed. The video already exists; no duplicate upload was attempted.",
+      );
+    }
+    if (decision === "wait") {
+      const checkedAt = new Date().toISOString();
+      const thumbnailState = ((pub.platform_payload ?? {}) as Record<string, unknown>).thumbnail;
+      const previous = thumbnailState && typeof thumbnailState === "object"
+        ? thumbnailState as Record<string, unknown> : {};
+      const [savedJob, savedPublication] = await Promise.all([
+        db.from("ai_operations_video_jobs").update({
+          payload: { ...payload, thumbnail_processing_last_status: thumbnailProcessingStatus,
+            thumbnail_processing_last_checked_at: checkedAt,
+            thumbnail_processing_lookup_error: processingLookupError },
+        }).eq("id", job.id as number),
+        db.from("ai_operations_social_publications").update({
+          platform_payload: {
+            ...((pub.platform_payload ?? {}) as Record<string, unknown>),
+            thumbnail: { ...previous, apiStatus: "waiting_processing",
+              processingStatus: thumbnailProcessingStatus,
+              processingLookupError,
+              checkedAt },
+          },
+        }).eq("id", pub.id as string),
+      ]);
+      if (savedJob.error || savedPublication.error) {
+        throw new Error(savedJob.error?.message ?? savedPublication.error?.message);
+      }
+      return json({ ok: true, action: "waiting_for_youtube_processing",
+        publicationId: pub.id, videoId, processingStatus: thumbnailProcessingStatus });
+    }
+    payload.thumbnail_processing_last_status = thumbnailProcessingStatus;
+    payload.thumbnail_processing_lookup_error = processingLookupError;
+    payload.thumbnail_processing_verified = decision === "ready";
+  }
+
   if (pub.thumbnail_file_id && !payload.thumbnail_applied) {
     try {
       const driveToken = await driveAccessToken(db);
@@ -244,6 +303,8 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
       payload.thumbnail_api_status = "accepted_unverified";
       payload.thumbnail_error = null;
       payload.thumbnail_attempted_at = new Date().toISOString();
+      payload.thumbnail_uploaded_file_id = pub.thumbnail_file_id;
+      payload.thumbnail_processing_status_at_upload = thumbnailProcessingStatus;
       await insertEvent(db, pub.id as string, pub.tenant_id as string, "thumbnail_api_accepted", {
         contentFormat: pub.content_format,
         note: "YouTube accepted thumbnail media upload; visible Shorts thumbnail is not independently verified.",
@@ -264,6 +325,9 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
           apiStatus: payload.thumbnail_api_status,
           attemptedAt: payload.thumbnail_attempted_at,
           error: payload.thumbnail_error ?? null,
+          fileId: pub.thumbnail_file_id,
+          processingStatusAtUpload: payload.thumbnail_processing_status_at_upload ?? null,
+          processingVerifiedAtUpload: payload.thumbnail_processing_verified === true,
         },
       },
     }).eq("id", pub.id as string);
