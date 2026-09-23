@@ -12,6 +12,7 @@ type LinkedPublication = {
   id: string;
   status: string;
   external_video_id: string | null;
+  platform_payload: Record<string, unknown> | null;
 };
 
 function validImageSignature(data: Uint8Array, type: string): boolean {
@@ -120,7 +121,7 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
   if (!source) throw new Error("Source video not found in your CRM tenant.");
 
   let pubQuery = db.from("ai_operations_social_publications")
-    .select("id,status,external_video_id")
+    .select("id,status,external_video_id,platform_payload")
     .eq("tenant_id", tenantId).eq("source_type", sourceType);
   pubQuery = sourceType === "clip" ? pubQuery.eq("clip_id", sourceId) :
     pubQuery.eq("project_id", sourceId).is("clip_id", null);
@@ -184,8 +185,18 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
           source: "crm_library_cover_editor",
         },
       });
-      if (jobError) warnings.push("Could not queue a YouTube thumbnail refresh: " + jobError.message);
-      else youtubeQueued += 1;
+      if (jobError) {
+        warnings.push("Could not queue a YouTube thumbnail refresh: " + jobError.message);
+      } else {
+        youtubeQueued += 1;
+        const { error: stateError } = await db.from("ai_operations_social_publications").update({
+          platform_payload: {
+            ...(pub.platform_payload ?? {}),
+            thumbnail: { apiStatus: "queued", fileId: cover.fileId, attemptedAt: null, error: null },
+          },
+        }).eq("id", pub.id).eq("tenant_id", tenantId);
+        if (stateError) warnings.push("YouTube update queued, but its status display may be delayed.");
+      }
     }
   }
   return {
