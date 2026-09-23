@@ -239,17 +239,40 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
   // A successful thumbnails.set call alone does not prove Shorts UI placement.
   let thumbnailProcessingStatus: string | null = null;
   let processingLookupError: string | null = null;
+  let preexistingCustomThumbnail = false;
   if (pub.content_format === "short" && pub.thumbnail_file_id &&
       !payload.thumbnail_applied && !payload.thumbnail_only) {
     try {
       const details = await getYoutubeThumbnailStatus(youtubeToken, videoId);
       thumbnailProcessingStatus = details.processingStatus;
+      preexistingCustomThumbnail = details.hasCustomThumbnail === true;
     } catch (error) {
       // A temporary failure to read owner-only processing details must never
       // cause a duplicate video upload or indefinitely block publication.
       processingLookupError = safeError(error);
     }
 
+    // If an operator manually selected a thumbnail in Studio while the Short
+    // was processing, preserve it rather than overwriting it on the next tick.
+    if (preexistingCustomThumbnail) {
+      const thumbnailState = ((pub.platform_payload ?? {}) as Record<string, unknown>).thumbnail;
+      const previous = thumbnailState && typeof thumbnailState === "object"
+        ? thumbnailState as Record<string, unknown> : {};
+      payload.thumbnail_applied = true;
+      payload.thumbnail_api_status = "already_present_not_overwritten";
+      payload.thumbnail_manual_or_preexisting_detected_at = new Date().toISOString();
+      const save = await db.from("ai_operations_social_publications").update({
+        platform_payload: {
+          ...((pub.platform_payload ?? {}) as Record<string, unknown>),
+          thumbnail: { ...previous, apiStatus: "already_present_not_overwritten",
+            attemptedAt: null, error: null,
+            note: "YouTube already reported a custom thumbnail; no API overwrite attempted." },
+        },
+      }).eq("id", pub.id as string);
+      if (save.error) throw new Error(save.error.message);
+      await insertEvent(db, pub.id as string, pub.tenant_id as string,
+        "thumbnail_preexisting_preserved", { videoId });
+    } else {
     const decision = thumbnailProcessingDecision(
       thumbnailProcessingStatus,
       typeof pub.uploaded_at === "string" ? pub.uploaded_at : null,
@@ -290,6 +313,7 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
     payload.thumbnail_processing_last_status = thumbnailProcessingStatus;
     payload.thumbnail_processing_lookup_error = processingLookupError;
     payload.thumbnail_processing_verified = decision === "ready";
+    }
   }
 
   if (pub.thumbnail_file_id && !payload.thumbnail_applied) {
