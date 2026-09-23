@@ -36,6 +36,7 @@ function toApiShape(row: Record<string, unknown>): SocialPublication {
     desiredPrivacyStatus: row.desired_privacy_status as SocialPublication["desiredPrivacyStatus"],
     externalVideoId: row.external_video_id as string | null,
     externalUrl: row.external_url as string | null,
+    thumbnailStatus: String((((row.platform_payload as Record<string, unknown> | null) ?? {}).thumbnail as Record<string, unknown> | undefined)?.apiStatus ?? "") || null,
     title: row.title as string | null,
     description: String(row.description ?? ""),
     tags: (row.tags as string[]) ?? [],
@@ -52,7 +53,15 @@ function toApiShape(row: Record<string, unknown>): SocialPublication {
     thumbnailFileId: row.thumbnail_file_id as string | null,
     thumbnailUrl: row.thumbnail_url as string | null,
     thumbnailDelivery: ((row.platform_payload as Record<string, unknown> | null)?.thumbnail as
-      { apiStatus: string; error: string | null; attemptedAt: string | null } | undefined) ?? null,
+      {
+        apiStatus: string;
+        error?: string | null;
+        attemptedAt?: string | null;
+        manualRequired?: boolean;
+        manualConfirmedAt?: string | null;
+        fileId?: string | null;
+        studioUrl?: string | null;
+      } | undefined) ?? null,
     platformUploadStatus: row.platform_upload_status as string | null,
     platformProcessingStatus: row.platform_processing_status as string | null,
     approvedAt: row.approved_at as string | null,
@@ -174,7 +183,17 @@ export async function validatePublication(auth: AuthContext, params: { id: strin
 
   if (!row.title || String(row.title).trim().length === 0) errors.push("Title is required.");
   if (!["public", "unlisted", "private"].includes(String(row.desired_privacy_status))) errors.push("Visibility is invalid.");
-  if (row.delivery_mode === "scheduled" && !row.scheduled_for) errors.push("A scheduled publish time is required.");
+  if (row.delivery_mode === "scheduled" && !row.scheduled_for) {
+    errors.push("A scheduled publish time is required.");
+  } else if (row.delivery_mode === "scheduled") {
+    const scheduledMs = Date.parse(String(row.scheduled_for));
+    if (!Number.isFinite(scheduledMs) || scheduledMs <= Date.now() + 60_000) {
+      errors.push("Scheduled publish time must be at least 1 minute in the future.");
+    }
+    if (row.content_format === "short" && !row.thumbnail_file_id) {
+      errors.push("Choose a thumbnail before scheduling this Short so it is ready for the manual YouTube Studio step.");
+    }
+  }
 
   if (row.source_type === "clip") {
     const { data: clip, error: clipError } = await auth.db
@@ -220,6 +239,9 @@ export async function validatePublication(auth: AuthContext, params: { id: strin
   }
 
   if (row.content_format !== "short" && !row.thumbnail_file_id) warnings.push("No custom thumbnail is set.");
+  if (row.content_format === "short" && row.delivery_mode === "scheduled") {
+    warnings.push("This Short will upload to YouTube immediately as private with the scheduled public time. Add its thumbnail manually in YouTube Studio before it publishes.");
+  }
 
   const { data: playlistLinks, error: playlistError } = await auth.db
     .from("ai_operations_social_publication_playlists")
@@ -302,6 +324,46 @@ export async function retryPublication(auth: AuthContext, params: { id: string }
     .eq("tenant_id", auth.tenantId);
   if (error) throw new Error(error.message);
   return queuePublish(auth, { id: params.id });
+}
+
+export async function markThumbnailManualDone(auth: AuthContext, params: { id: string }) {
+  const current = await loadPublication(auth, params.id) as Record<string, unknown>;
+  if (current.content_format !== "short") throw new Error("Manual thumbnail confirmation is only used for Shorts.");
+  if (!current.external_video_id) throw new Error("This Short has not been uploaded to YouTube yet.");
+  if (!["scheduled", "uploaded", "published"].includes(String(current.status))) {
+    throw new Error(`Cannot confirm a thumbnail while status is "${current.status}".`);
+  }
+
+  const platformPayload = { ...((current.platform_payload ?? {}) as Record<string, unknown>) };
+  const existing = platformPayload.thumbnail && typeof platformPayload.thumbnail === "object"
+    ? platformPayload.thumbnail as Record<string, unknown> : {};
+  const confirmedAt = new Date().toISOString();
+  const thumbnail = {
+    ...existing,
+    apiStatus: "manual_confirmed",
+    manualRequired: false,
+    manualConfirmedAt: confirmedAt,
+    studioUrl: `https://studio.youtube.com/video/${encodeURIComponent(String(current.external_video_id))}/edit`,
+  };
+
+  const { error } = await auth.db
+    .from("ai_operations_social_publications")
+    .update({ platform_payload: { ...platformPayload, thumbnail } })
+    .eq("id", params.id)
+    .eq("tenant_id", auth.tenantId);
+  if (error) throw new Error(error.message);
+
+  const { error: eventError } = await auth.db
+    .from("ai_operations_social_publication_events")
+    .insert({
+      tenant_id: auth.tenantId,
+      publication_id: params.id,
+      event_type: "thumbnail_manual_confirmed",
+      detail: { confirmedAt },
+    });
+  if (eventError) throw new Error(eventError.message);
+
+  return getPublication(auth, { id: params.id });
 }
 
 export async function listPublicationEvents(auth: AuthContext, params: { id: string }) {
