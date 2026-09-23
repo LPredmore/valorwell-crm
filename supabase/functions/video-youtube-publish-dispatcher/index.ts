@@ -56,8 +56,19 @@ async function assertShortRenderProfile(db: Db, pub: Publication) {
   const width = Number(payload.render_width ?? 0);
   const height = Number(payload.render_height ?? 0);
   const profile = String(payload.render_profile ?? "");
+  // A correct profile on an older render is not proof that the CURRENT Drive
+  // object is vertical. Match the artifact id to the source file being uploaded.
+  const { data: currentClip, error: clipError } = await db
+    .from("ai_operations_video_clips")
+    .select("drive_file_id")
+    .eq("id", pub.clip_id as string)
+    .maybeSingle();
+  if (clipError || !currentClip?.drive_file_id) {
+    throw new PermanentYoutubeError("Could not verify the current Short file.");
+  }
 
-  if (profile !== "youtube_short_9x16" || width !== 1080 || height !== 1920) {
+  if (String(payload.drive_file_id ?? "") !== String(currentClip.drive_file_id) ||
+      profile !== "youtube_short_9x16" || width !== 1080 || height !== 1920) {
     throw new PermanentYoutubeError("Short upload blocked: the rendered media is not verified as 1080x1920 (9:16). Re-render the clip before publishing.");
   }
 }
