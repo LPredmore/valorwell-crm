@@ -169,6 +169,12 @@ export function SocialPublicationEditor({
                     If your channel supports custom Shorts thumbnails, open the saved cover image
                     and add it manually in desktop YouTube Studio.
                   </p>
+                ) : merged.thumbnailDelivery?.apiStatus === 'already_present_not_overwritten' ? (
+                  <p className="text-muted-foreground">
+                    YouTube already reported a custom thumbnail before the CRM's delayed
+                    submission. Your existing thumbnail was preserved, so an image selected
+                    manually in Studio will not be overwritten.
+                  </p>
                 ) : merged.thumbnailDelivery?.apiStatus === 'waiting_processing' ? (
                   <p className="text-muted-foreground">
                     YouTube is still processing this Short. The CRM is waiting to submit the
