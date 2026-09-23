@@ -10,6 +10,9 @@ const EVENT_LABELS: Record<string, string> = {
   thumbnail_applied: 'Thumbnail applied',
   thumbnail_api_accepted: 'Thumbnail API accepted upload (Shorts display unverified)',
   thumbnail_failed: 'Thumbnail failed',
+  thumbnail_manual_required: 'Manual Short thumbnail needed',
+  thumbnail_manual_confirmed: 'Manual Short thumbnail confirmed',
+  youtube_schedule_verified: 'YouTube schedule verified',
   playlist_attached: 'Playlist attached',
 };
 
