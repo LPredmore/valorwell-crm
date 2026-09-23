@@ -55,6 +55,7 @@ type PublicationRow = {
   clip_id: string | null;
   project_id: string;
   content_format: string;
+  platform_payload: Record<string, unknown> | null;
 };
 
 const TERMINAL_STATUSES = new Set(["failed", "cancelled"]);
@@ -68,6 +69,7 @@ function summarize(row: PublicationRow): SocialPublicationSummary {
     desiredPrivacyStatus: row.desired_privacy_status as SocialPublicationSummary["desiredPrivacyStatus"],
     externalVideoId: row.external_video_id,
     externalUrl: row.external_url,
+    thumbnailStatus: String(((row.platform_payload ?? {}).thumbnail as Record<string, unknown> | undefined)?.apiStatus ?? "") || null,
   };
 }
 
@@ -96,7 +98,7 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
         .order("created_at", { ascending: false })
         .limit(500),
       db.from("ai_operations_social_publications")
-        .select("id, status, delivery_mode, scheduled_for, desired_privacy_status, external_video_id, external_url, clip_id, project_id, content_format")
+        .select("id, status, delivery_mode, scheduled_for, desired_privacy_status, external_video_id, external_url, clip_id, project_id, content_format, platform_payload")
         .eq("tenant_id", tenantId),
       db.from("ai_operations_video_jobs")
         .select("clip_id, payload, completed_at")
