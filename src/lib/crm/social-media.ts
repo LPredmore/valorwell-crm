@@ -61,6 +61,7 @@ export type SocialPublication = SocialPublicationSummary & {
   notifySubscribers: boolean;
   thumbnailFileId: string | null;
   thumbnailUrl: string | null;
+  thumbnailDelivery: { apiStatus: string; error: string | null; attemptedAt: string | null } | null;
   platformUploadStatus: string | null;
   platformProcessingStatus: string | null;
   approvedAt: string | null;
