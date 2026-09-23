@@ -57,16 +57,16 @@ describe('social media thumbnail access', () => {
   });
 
   it('renders a blank neutral area and makes no request when no cover image is configured', async () => {
-    renderThumbnail(item());
+    const { container } = renderThumbnail(item());
     await waitFor(() => expect(screen.getByTestId('social-thumbnail')).toBeTruthy());
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(container.querySelector('img')).toBeNull();
     expect(invokeMock).not.toHaveBeenCalled();
   });
 
   it('renders the signed URL for a clip that has its own cover image', async () => {
     invokeMock.mockResolvedValue({ data: { data: { fileId: 'clip-cover', signedUrl: 'https://signed/clip', expiresInSeconds: 3600 }, requestId: 'r' }, error: null });
-    renderThumbnail(item({ sourceType: 'clip', sourceId: 'clip-3', clipId: 'clip-3', contentFormat: 'short', thumbnailFileId: 'clip-cover' }));
-    await waitFor(() => expect(screen.getByRole('img').getAttribute('src')).toBe('https://signed/clip'));
+    const { container } = renderThumbnail(item({ sourceType: 'clip', sourceId: 'clip-3', clipId: 'clip-3', contentFormat: 'short', thumbnailFileId: 'clip-cover' }));
+    await waitFor(() => expect(container.querySelector('img')?.getAttribute('src')).toBe('https://signed/clip'));
     expect(invokeMock).toHaveBeenCalledWith('social-media-manager', expect.objectContaining({
       body: { action: 'get_thumbnail_url', sourceType: 'clip', sourceId: 'clip-3' },
     }));
@@ -74,9 +74,9 @@ describe('social media thumbnail access', () => {
 
   it('keeps the card blank when one thumbnail request fails instead of surfacing an error', async () => {
     invokeMock.mockResolvedValue({ data: { error: 'THUMBNAIL_SIGN_FAILED', requestId: 'r' }, error: null });
-    renderThumbnail(item({ thumbnailFileId: 'file-broken' }));
+    const { container } = renderThumbnail(item({ thumbnailFileId: 'file-broken' }));
     await waitFor(() => expect(invokeMock).toHaveBeenCalled());
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(container.querySelector('img')).toBeNull();
     expect(screen.getByTestId('social-thumbnail')).toBeTruthy();
   });
 });
