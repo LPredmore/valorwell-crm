@@ -72,7 +72,7 @@ export function SocialMediaPhotoEditor({
           <DialogTitle>{item.thumbnailFileId ? 'Replace video photo' : 'Add video photo'}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          {item.title ?? [item.guestName, item.organizationName].filter(Boolean).join(' — ') || 'Full episode'}
+          {item.title ?? ([item.guestName, item.organizationName].filter(Boolean).join(' — ') || 'Full episode')}
         </p>
         <div className="space-y-2">
           <p className="text-sm font-medium">Current library photo</p>
