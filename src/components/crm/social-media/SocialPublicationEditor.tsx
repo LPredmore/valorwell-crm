@@ -7,7 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { CrmMutationGate } from '@/components/crm/auth/CrmMutationGate';
 import {
   approveSocialPublication, cancelSocialPublication, createSocialPublication, fetchSocialPublication,
-  queueSocialPublication, retrySocialPublication, setPublicationPlaylists, updateSocialPublication,
+  markThumbnailManualDone, queueSocialPublication, retrySocialPublication, setPublicationPlaylists, updateSocialPublication,
   validateSocialPublication, STATUS_LABELS, type DeliveryMode, type PrivacyStatus, type SourceType,
 } from '@/lib/crm/social-media';
 import { SocialPublicationMetadataForm } from './SocialPublicationMetadataForm';
@@ -103,6 +103,11 @@ export function SocialPublicationEditor({
     onSuccess: () => { invalidate(); toast({ title: 'Retrying' }); },
     onError: (error: Error) => toast({ title: 'Could not retry', description: error.message, variant: 'destructive' }),
   });
+  const thumbnailDoneMutation = useMutation({
+    mutationFn: () => markThumbnailManualDone(id as string),
+    onSuccess: () => { invalidate(); toast({ title: 'Thumbnail marked done' }); },
+    onError: (error: Error) => toast({ title: 'Could not mark thumbnail done', description: error.message, variant: 'destructive' }),
+  });
 
   const merged = publication ? { ...publication, ...pendingChanges } as typeof publication : publication;
   const locked = publication ? LOCKED_STATUSES.has(publication.status) : false;
@@ -163,7 +168,15 @@ export function SocialPublicationEditor({
             {merged.contentFormat === 'short' && merged.thumbnailUrl && (
               <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2 text-sm dark:border-amber-800 dark:bg-amber-950/30">
                 <h4 className="font-semibold">Short thumbnail</h4>
-                {merged.thumbnailDelivery?.apiStatus === 'failed' ? (
+                {merged.thumbnailDelivery?.apiStatus === 'manual_required' ? (
+                  <p className="text-muted-foreground">
+                    <strong>Thumbnail needed.</strong> This Short is already uploaded to YouTube as Private and its public publish time is scheduled there. Open the saved cover and the YouTube Studio link below, upload the thumbnail manually, save it in Studio, then mark the step done here.
+                  </p>
+                ) : merged.thumbnailDelivery?.apiStatus === 'manual_confirmed' ? (
+                  <p className="text-muted-foreground">
+                    The manual thumbnail step is marked complete. YouTube will publish this Short automatically at the scheduled time.
+                  </p>
+                ) : merged.thumbnailDelivery?.apiStatus === 'failed' ? (
                   <p className="text-muted-foreground">
                     YouTube did not accept the automated thumbnail upload: {merged.thumbnailDelivery.error ?? 'Unknown error'}.
                     If your channel supports custom Shorts thumbnails, open the saved cover image
@@ -226,6 +239,17 @@ export function SocialPublicationEditor({
                       </a>
                     </Button>
                   )}
+                  {merged.thumbnailDelivery?.apiStatus === 'manual_required' && (
+                    <CrmMutationGate>
+                      <Button
+                        size="sm"
+                        onClick={() => thumbnailDoneMutation.mutate()}
+                        disabled={thumbnailDoneMutation.isPending}
+                      >
+                        {thumbnailDoneMutation.isPending ? 'Saving…' : 'Mark thumbnail done'}
+                      </Button>
+                    </CrmMutationGate>
+                  )}
                 </div>
               </div>
             )}
@@ -251,7 +275,9 @@ export function SocialPublicationEditor({
               </Button>
             )}
             {publication?.status === 'approved' && (
-              <Button onClick={() => queueMutation.mutate()} disabled={queueMutation.isPending}>Publish</Button>
+              <Button onClick={() => queueMutation.mutate()} disabled={queueMutation.isPending}>
+                {publication.deliveryMode === 'scheduled' ? 'Upload & Schedule on YouTube' : 'Publish'}
+              </Button>
             )}
           </CrmMutationGate>
           {publication?.externalUrl && (
