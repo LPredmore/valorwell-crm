@@ -138,7 +138,10 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
       contentFormat,
       title: clip.youtube_title,
       description: clip.youtube_description,
-      thumbnailUrl: clip.cover_image_url,
+      // cover_image_url is a Drive /file/d/<id>/view page on a PRIVATE file -- never image
+      // bytes, so it must not be handed to an <img>. The browser asks get_thumbnail_url for a
+      // short-lived signed URL against the server-side cache instead.
+      thumbnailUrl: null,
       thumbnailFileId: clip.cover_image_file_id,
       guestName: project?.guest_name ?? null,
       organizationName: project?.organization_name ?? null,
