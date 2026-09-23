@@ -107,7 +107,7 @@ export async function queryUploadOffset(sessionUrl: string, totalBytes: number):
 }
 
 export async function setThumbnail(accessToken: string, videoId: string, bytes: ArrayBuffer, mimeType: string) {
-  const response = await fetch(`${API}/thumbnails/set?videoId=${encodeURIComponent(videoId)}`, {
+  const response = await fetch(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${encodeURIComponent(videoId)}`, {
     method: "POST",
     headers: { authorization: `Bearer ${accessToken}`, "content-type": mimeType },
     body: bytes,
