@@ -31,12 +31,12 @@ export async function driveAccessToken(db: SupabaseClient): Promise<string> {
   return String(body.access_token);
 }
 
-export async function driveFileMetadata(accessToken: string, fileId: string): Promise<{ size: number; mimeType: string; name: string }> {
-  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=size,mimeType,name`;
+export async function driveFileMetadata(accessToken: string, fileId: string): Promise<{ size: number; mimeType: string; name: string; videoMediaMetadata?: { width?: number | string; height?: number | string; durationMillis?: number | string } }> {
+  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=size,mimeType,name,videoMediaMetadata`;
   const response = await fetch(url, { headers: { authorization: `Bearer ${accessToken}` } });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(`Drive metadata fetch failed (${response.status}): ${body?.error?.message ?? "unknown error"}`);
-  return { size: Number(body.size ?? 0), mimeType: String(body.mimeType ?? "video/mp4"), name: String(body.name ?? "video") };
+  return { size: Number(body.size ?? 0), mimeType: String(body.mimeType ?? "video/mp4"), name: String(body.name ?? "video") , videoMediaMetadata: body.videoMediaMetadata ?? undefined };
 }
 
 /** Fetches an inclusive byte range [start, end] from a Drive file. */
