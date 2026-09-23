@@ -117,9 +117,29 @@ Deno.serve(async (request: Request) => {
   }
   if (request.method !== "POST") return json({ error: "Method not allowed", requestId }, 405, requestId);
 
+  const isMultipart = (request.headers.get("content-type") ?? "").startsWith("multipart/form-data");
+  // Authenticate and authorize before parsing a binary upload. Reject over-limit
+  // bodies before allocating their bytes, so the public function cannot be used
+  // to parse arbitrarily large anonymous multipart requests.
+  let uploadAuth: AuthContext | null = null;
+  if (isMultipart) {
+    const size = Number(request.headers.get("content-length") ?? 0);
+    if (Number.isFinite(size) && size > 2 * 1024 * 1024 + 64 * 1024) {
+      return json({ error: "Thumbnail must be at most 2 MB.", requestId }, 413, requestId);
+    }
+    try {
+      uploadAuth = await authenticate(request);
+      requireMutate(uploadAuth);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "UNAUTHORIZED";
+      return json({ error: message, action: "replace_thumbnail", requestId },
+        message === "FORBIDDEN" ? 403 : 401, requestId);
+    }
+  }
+
   let body: { action?: string } & Record<string, unknown>;
   try {
-    if ((request.headers.get("content-type") ?? "").startsWith("multipart/form-data")) {
+    if (isMultipart) {
       const form = await request.formData();
       body = {
         action: String(form.get("action") ?? ""),
@@ -134,6 +154,9 @@ Deno.serve(async (request: Request) => {
   } catch {
     return json({ error: "Invalid request body", requestId }, 400, requestId);
   }
+  if (isMultipart && body.action !== "replace_thumbnail") {
+    return json({ error: "Invalid upload action", requestId }, 400, requestId);
+  }
   const action = String(body.action ?? "");
   if (!VIEW_ACTIONS.has(action) && !MUTATE_ACTIONS.has(action)) {
     return json({ error: `Invalid action: ${action}`, requestId }, 400, requestId);
@@ -141,7 +164,7 @@ Deno.serve(async (request: Request) => {
 
   let auth: AuthContext;
   try {
-    auth = await authenticate(request);
+    auth = uploadAuth ?? await authenticate(request);
   } catch (error) {
     const message = error instanceof Error ? error.message : "UNAUTHORIZED";
     const isTimeout = message.startsWith("TIMEOUT:");
