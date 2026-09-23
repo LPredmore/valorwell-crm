@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchSocialMediaLibrary, type LibraryFilters, type SocialMediaLibraryItem } from '@/lib/crm/social-media';
 import { SocialMediaFilters } from './SocialMediaFilters';
 import { SocialMediaLibraryCard } from './SocialMediaLibraryCard';
+import { SocialMediaPhotoEditor } from './SocialMediaPhotoEditor';
 import { SocialPublicationEditor } from './SocialPublicationEditor';
 import { SocialMediaErrorState } from './SocialMediaErrorState';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export function SocialMediaLibrary() {
   const [filters, setFilters] = useState<LibraryFilters>({});
   const [selected, setSelected] = useState<SocialMediaLibraryItem | null>(null);
+  const [photoItem, setPhotoItem] = useState<SocialMediaLibraryItem | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['social-media', 'library', filters],
@@ -33,9 +35,13 @@ export function SocialMediaLibrary() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {data?.map((item) => (
-          <SocialMediaLibraryCard key={`${item.sourceType}-${item.sourceId}`} item={item} onSelect={() => setSelected(item)} />
+          <SocialMediaLibraryCard key={`${item.sourceType}-${item.sourceId}`} item={item} onSelect={() => setSelected(item)} onChangePhoto={() => setPhotoItem(item)} />
         ))}
       </div>
+
+      {photoItem && (
+        <SocialMediaPhotoEditor key={`${photoItem.sourceType}-${photoItem.sourceId}`} item={photoItem} onClose={() => setPhotoItem(null)} />
+      )}
 
       {selected && (
         <SocialPublicationEditor
