@@ -169,6 +169,20 @@ export function SocialPublicationEditor({
                     If your channel supports custom Shorts thumbnails, open the saved cover image
                     and add it manually in desktop YouTube Studio.
                   </p>
+                ) : merged.thumbnailDelivery?.apiStatus === 'not_applied' ? (
+                  <p className="text-muted-foreground">
+                    YouTube accepted the uploaded image, but its owner-only video status still reports
+                    no custom thumbnail. Your Short is already published correctly; uploading the
+                    same image again through the API is unlikely to solve channel eligibility.
+                    Check YouTube Studio for custom Shorts thumbnail access. If that option is unavailable,
+                    you can choose a frame from the Short using the YouTube mobile app.
+                  </p>
+                ) : merged.thumbnailDelivery?.apiStatus === 'confirmed_by_youtube' ? (
+                  <p className="text-muted-foreground">
+                    YouTube confirms that this video has a custom thumbnail. The Short feed may
+                    still display a different selected frame; verify the appearance on the
+                    channel rather than relying only on API acceptance.
+                  </p>
                 ) : merged.thumbnailDelivery?.apiStatus === 'accepted_unverified' ? (
                   <p className="text-muted-foreground">
                     The CRM automatically submitted your saved cover to the YouTube thumbnail API.
