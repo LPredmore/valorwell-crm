@@ -3,7 +3,7 @@ import { authenticate, requireMutate, type AuthContext } from "./auth.ts";
 import { listLibrary } from "./handlers/library.ts";
 import {
   approvePublication, cancelPublication, createPublication, getPublication,
-  listPublicationEvents, listPublications, queuePublish, reschedulePublication,
+  listPublicationEvents, listPublications, markThumbnailManualDone, queuePublish, reschedulePublication,
   retryPublication, setPublicationPlaylists, updatePublication, validatePublication,
 } from "./handlers/publications.ts";
 import { getSettings } from "./handlers/settings.ts";
@@ -58,7 +58,7 @@ const VIEW_ACTIONS = new Set([
 const MUTATE_ACTIONS = new Set([
   "create_publication", "update_publication", "validate_publication", "approve_publication",
   "set_publication_playlists", "queue_publish", "reschedule_publication",
-  "cancel_publication", "retry_publication", "replace_thumbnail",
+  "cancel_publication", "retry_publication", "replace_thumbnail", "mark_thumbnail_manual_done",
 ]);
 
 async function dispatch(auth: AuthContext, action: string, params: Record<string, unknown>) {
@@ -99,6 +99,8 @@ async function dispatch(auth: AuthContext, action: string, params: Record<string
       return cancelPublication(auth, params as { id: string });
     case "retry_publication":
       return retryPublication(auth, params as { id: string });
+    case "mark_thumbnail_manual_done":
+      return markThumbnailManualDone(auth, params as { id: string });
     default:
       throw new Error(`Unknown action: ${action}`);
   }
