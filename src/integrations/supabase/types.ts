@@ -14974,6 +14974,27 @@ export type Database = {
           },
         ]
       }
+      oauth_handoff: {
+        Row: {
+          created_at: string
+          id: string
+          payload: Json
+          purpose: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payload: Json
+          purpose: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payload?: Json
+          purpose?: string
+        }
+        Relationships: []
+      }
       overflow_referral_sources: {
         Row: {
           created_at: string

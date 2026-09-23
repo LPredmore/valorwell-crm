@@ -62,6 +62,8 @@ export async function verifyYoutubeConnection(auth: AuthContext) {
 
   const grantedScopes = String(tokenInfo?.scope ?? "").split(" ").filter(Boolean);
   const missingScopes = REQUIRED_SCOPES.filter((scope) => !grantedScopes.includes(scope));
+  // Diagnostic only -- scopes are not secret, the access token itself is never logged.
+  console.log(JSON.stringify({ component: "verify_youtube_connection", grantedScopes, missingScopes, tokenInfoError: tokenInfo?.error ?? null }));
   if (missingScopes.length) {
     await updateAccountStatus(auth, account.id, "needs_reauth");
     return {

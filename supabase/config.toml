@@ -44,3 +44,11 @@ verify_jwt = false
 # Scheduled worker that uploads approved publications to YouTube; authorizes the
 # service-role bearer or X-Cron-Secret in code.
 verify_jwt = false
+
+[functions.youtube-oauth-link]
+# Single-use setup link gated by its own random token, not a CRM session.
+verify_jwt = false
+
+[functions.youtube-oauth-callback]
+# Receives Google's OAuth redirect; authorizes via state/PKCE, not a CRM session.
+verify_jwt = false
