@@ -48,6 +48,24 @@ describe('Social Media Library photo editor access', () => {
     expect(screen.getByRole('button', { name: 'Add photo' })).toBeInTheDocument();
   });
 
+  it('shows Thumbnail needed for a scheduled Short awaiting the manual Studio step', () => {
+    auth.capabilities.mutate = true;
+    render(<SocialMediaLibraryCard item={{
+      ...item,
+      activePublication: {
+        id: 'pub-1',
+        status: 'scheduled',
+        deliveryMode: 'scheduled',
+        scheduledFor: '2026-09-24T18:00:00.000Z',
+        desiredPrivacyStatus: 'public',
+        externalVideoId: 'yt-1',
+        externalUrl: 'https://youtube.com/watch?v=yt-1',
+        thumbnailStatus: 'manual_required',
+      },
+    }} onSelect={vi.fn()} onChangePhoto={vi.fn()} />);
+    expect(screen.getByText('Thumbnail needed')).toBeInTheDocument();
+  });
+
   it('does not offer the mutation to read-only CRM users', () => {
     auth.capabilities.mutate = false;
     render(<SocialMediaLibraryCard item={item} onSelect={vi.fn()} onChangePhoto={vi.fn()} />);
