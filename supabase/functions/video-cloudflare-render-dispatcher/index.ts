@@ -103,6 +103,7 @@ async function transferToDrive(admin:any, job:any, clip:any, project:any, downlo
       const source=await fetch(outputUrl,{headers:{accept:"video/mp4"}});
       if(!source.ok || !source.body){
         const detail=await source.text().catch(()=>"");
+        if(isShort && source.status===404) throw new Error("SHORT_TRANSFORM_UNAVAILABLE: Cloudflare Media Transformations returned 404 for valorwell.org. Enable Media Transformations for the zone before automatic 9:16 rendering.");
         throw new Error((isShort ? "Cloudflare 9:16 transform failed: " : "Cloudflare MP4 download failed: ")+source.status+" "+detail.slice(0,300));
       }
       const contentType=String(source.headers.get("content-type") ?? "").toLowerCase();
@@ -166,15 +167,16 @@ async function transferToDrive(admin:any, job:any, clip:any, project:any, downlo
     try{ await cf("/stream/"+encodeURIComponent(cfClipUid),{method:"DELETE"}); }catch(_){}
   }catch(e){
     const message=e instanceof Error?e.message:String(e);
+    const terminal=message.startsWith("SHORT_TRANSFORM_UNAVAILABLE:");
     await admin.from("ai_operations_video_jobs").update({
-      status:"queued",
+      status:terminal ? "error" : "queued",
       attempts:Number(job.attempts||0)+1,
       error_message:message.slice(0,4000),
       updated_at:new Date().toISOString(),
-      payload:{...(job.payload||{}),cloudflare_stage:"drive_transfer_retry"}
+      payload:{...(job.payload||{}),cloudflare_stage:terminal ? "short_transform_unavailable" : "drive_transfer_retry"}
     }).eq("id",job.id);
     await admin.from("ai_operations_video_clips").update({
-      status:"render_queued",
+      status:terminal ? "error" : "render_queued",
       error_message:message.slice(0,4000),
       updated_at:new Date().toISOString()
     }).eq("id",clip.id);
