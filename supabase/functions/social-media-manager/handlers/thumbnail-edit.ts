@@ -112,7 +112,7 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
   const table = sourceType === "clip" ? "ai_operations_video_clips" : "ai_operations_video_projects";
   const query = sourceType === "clip"
     ? db.from(table)
-      .select("id,cover_image_file_id,ai_operations_video_projects!inner(tenant_id)")
+      .select("id,project_id,cover_image_file_id,ai_operations_video_projects!inner(tenant_id)")
       .eq("id", sourceId).eq("ai_operations_video_projects.tenant_id", tenantId)
     : db.from(table).select("id,cover_image_file_id").eq("id", sourceId).eq("tenant_id", tenantId);
   const { data: source, error: sourceError } = await query.maybeSingle();
@@ -130,6 +130,8 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
   if (linked.some((p) => p.status === "uploading" || p.status === "upload_queued")) {
     throw new Error("Wait for the current upload to finish before replacing its cover.");
   }
+
+  const projectId = sourceType === "clip" ? String((source as { project_id: string }).project_id) : sourceId;
 
   const token = await driveAccessToken(db);
   const folderId = await driveFolderId(token, (source as { cover_image_file_id: string | null }).cover_image_file_id);
@@ -171,7 +173,7 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
     for (const pub of published) {
       const { error: jobError } = await db.from("ai_operations_video_jobs").insert({
         tenant_id: tenantId,
-        project_id: sourceType === "project" ? sourceId : params.projectId ?? undefined,
+        project_id: projectId,
         clip_id: sourceType === "clip" ? sourceId : null,
         social_publication_id: pub.id,
         job_type: "publish_youtube",
