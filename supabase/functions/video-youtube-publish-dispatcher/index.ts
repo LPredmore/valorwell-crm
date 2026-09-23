@@ -186,8 +186,9 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
   const platformPayload = { ...((pub.platform_payload ?? {}) as Record<string, unknown>) };
 
   const saveThumbnailState = async (thumbnail: Record<string, unknown>) => {
+    platformPayload.thumbnail = thumbnail;
     const result = await db.from("ai_operations_social_publications").update({
-      platform_payload: { ...platformPayload, thumbnail },
+      platform_payload: platformPayload,
     }).eq("id", pub.id as string);
     if (result.error) throw new Error(result.error.message);
   };
@@ -259,10 +260,11 @@ async function runFinishingSteps(db: Db, job: Job, pub: Publication): Promise<Re
       checkedAt,
       reason: "reason" in decision ? decision.reason : null,
     };
+    platformPayload.youtubeSchedule = scheduleState;
     const scheduleSave = await db.from("ai_operations_social_publications").update({
       platform_upload_status: actual.uploadStatus,
       platform_processing_status: actual.processingStatus,
-      platform_payload: { ...platformPayload, youtubeSchedule: scheduleState },
+      platform_payload: platformPayload,
     }).eq("id", pub.id as string);
     if (scheduleSave.error) throw new Error(scheduleSave.error.message);
 
