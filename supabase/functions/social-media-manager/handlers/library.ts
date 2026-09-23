@@ -151,11 +151,12 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
     if (contentFormat === "short") {
       const renderPayload = renderProfileByClip.get(clip.id) ?? {};
       if (
+        String(renderPayload.drive_file_id ?? "") !== String(clip.drive_file_id ?? "") ||
         String(renderPayload.render_profile ?? "") !== "youtube_short_9x16" ||
         Number(renderPayload.render_width ?? 0) !== 1080 ||
         Number(renderPayload.render_height ?? 0) !== 1920
       ) {
-        readinessReasons.push("Short has not been verified as a 1080x1920 (9:16) render.");
+        readinessReasons.push("Current clip file is not verified as a 1080x1920 (9:16) render. Older landscape clips need conversion.");
       }
     }
 
