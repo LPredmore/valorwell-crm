@@ -50,6 +50,8 @@ function toApiShape(row: Record<string, unknown>): SocialPublication {
     notifySubscribers: Boolean(row.notify_subscribers),
     thumbnailFileId: row.thumbnail_file_id as string | null,
     thumbnailUrl: row.thumbnail_url as string | null,
+    thumbnailDelivery: ((row.platform_payload as Record<string, unknown> | null)?.thumbnail as
+      { apiStatus: string; error: string | null; attemptedAt: string | null } | undefined) ?? null,
     platformUploadStatus: row.platform_upload_status as string | null,
     platformProcessingStatus: row.platform_processing_status as string | null,
     approvedAt: row.approved_at as string | null,
