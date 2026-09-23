@@ -1430,6 +1430,8 @@ export type Database = {
       }
       ai_operations_video_projects: {
         Row: {
+          cover_image_file_id: string | null
+          cover_image_url: string | null
           created_at: string
           duration_seconds: number | null
           guest_image_url: string | null
@@ -1461,6 +1463,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cover_image_file_id?: string | null
+          cover_image_url?: string | null
           created_at?: string
           duration_seconds?: number | null
           guest_image_url?: string | null
@@ -1492,6 +1496,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cover_image_file_id?: string | null
+          cover_image_url?: string | null
           created_at?: string
           duration_seconds?: number | null
           guest_image_url?: string | null
