@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CONTENT_FORMAT_LABELS, STATUS_LABELS, type SocialMediaLibraryItem } from '@/lib/crm/social-media';
 import { SocialMediaThumbnail } from './SocialMediaThumbnail';
+import { CrmMutationGate } from '@/components/crm/auth/CrmMutationGate';
 
 function formatDuration(seconds: number | null): string {
   if (seconds === null) return '—';
@@ -11,7 +12,7 @@ function formatDuration(seconds: number | null): string {
   return `${minutes}:${String(remaining).padStart(2, '0')}`;
 }
 
-export function SocialMediaLibraryCard({ item, onSelect }: { item: SocialMediaLibraryItem; onSelect: () => void }) {
+export function SocialMediaLibraryCard({ item, onSelect, onChangePhoto }: { item: SocialMediaLibraryItem; onSelect: () => void; onChangePhoto: () => void }) {
   const publication = item.activePublication ?? item.publishedPublication;
 
   return (
@@ -34,6 +35,11 @@ export function SocialMediaLibraryCard({ item, onSelect }: { item: SocialMediaLi
         {!item.readiness.ready && (
           <p className="text-xs text-destructive">{item.readiness.reasons[0]}</p>
         )}
+        <CrmMutationGate>
+          <Button size="sm" variant="secondary" className="w-full" onClick={onChangePhoto}>
+            {item.thumbnailFileId ? 'Change photo' : 'Add photo'}
+          </Button>
+        </CrmMutationGate>
         <Button size="sm" variant="outline" className="w-full" onClick={onSelect}>
           {publication ? 'View / Edit' : 'Create Publication'}
         </Button>
