@@ -146,6 +146,7 @@ Deno.serve(async (request: Request) => {
         sourceType: form.get("sourceType"),
         sourceId: form.get("sourceId"),
         updateYouTube: form.get("updateYouTube"),
+        publishedPublicationId: form.get("publishedPublicationId"),
         file: form.get("file"),
       };
     } else {
