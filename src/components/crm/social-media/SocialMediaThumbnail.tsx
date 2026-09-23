@@ -18,6 +18,9 @@ export function SocialMediaThumbnail({ item }: { item: SocialMediaLibraryItem })
   const [visible, setVisible] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
 
+  // A replacement cover must not inherit the previous image's error state.
+  useEffect(() => setImageFailed(false), [item.thumbnailFileId]);
+
   useEffect(() => {
     const node = containerRef.current;
     if (!node || visible) return;
