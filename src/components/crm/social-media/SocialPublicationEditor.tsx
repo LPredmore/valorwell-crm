@@ -162,13 +162,27 @@ export function SocialPublicationEditor({
 
             {merged.contentFormat === 'short' && merged.thumbnailUrl && (
               <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2 text-sm dark:border-amber-800 dark:bg-amber-950/30">
-                <h4 className="font-semibold">Short thumbnail: upload in YouTube Studio</h4>
-                <p className="text-muted-foreground">
-                  Your vertical cover image is saved, but publishing a Short through the CRM
-                  does not apply its custom thumbnail. Open the image, save it to your
-                  computer, then open YouTube Studio &rarr; Content &rarr; Shorts and select
-                  Upload file under Thumbnail. Availability depends on your channel.
-                </p>
+                <h4 className="font-semibold">Short thumbnail</h4>
+                {merged.thumbnailDelivery?.apiStatus === 'failed' ? (
+                  <p className="text-muted-foreground">
+                    YouTube did not accept the automated thumbnail upload: {merged.thumbnailDelivery.error ?? 'Unknown error'}.
+                    If your channel supports custom Shorts thumbnails, open the saved cover image
+                    and add it manually in desktop YouTube Studio.
+                  </p>
+                ) : merged.thumbnailDelivery?.apiStatus === 'accepted_unverified' ? (
+                  <p className="text-muted-foreground">
+                    The CRM automatically submitted your saved cover to the YouTube thumbnail API.
+                    YouTube accepted the request, but its appearance on your Short has not been verified.
+                    Check the Short in Studio; if YouTube does not display it, use desktop Studio
+                    to upload the saved cover when your channel is eligible.
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    The CRM will automatically attempt to submit this cover after uploading the Short.
+                    YouTube may restrict or ignore API-submitted Shorts thumbnails depending on channel
+                    eligibility. If it remains missing, use desktop Studio to upload the saved cover.
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" asChild>
                     <a href={merged.thumbnailUrl} target="_blank" rel="noopener noreferrer">
