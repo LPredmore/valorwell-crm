@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { verifyYouTubeConnection, type DeliveryMode, type PrivacyStatus } from '@/lib/crm/social-media';
+import { fetchYouTubeConnectionStatus, type DeliveryMode, type PrivacyStatus } from '@/lib/crm/social-media';
 import { centralTimeToUtcIso, utcIsoToCentralParts } from './centralTime';
 
 export type PublishMode = 'private' | 'unlisted' | 'public' | 'scheduled';
@@ -25,7 +25,7 @@ export function SocialPublicationScheduleForm({
   onChange: (next: { deliveryMode: DeliveryMode; desiredPrivacyStatus: PrivacyStatus; scheduledFor: string | null }) => void;
   disabled?: boolean;
 }) {
-  const { data: connection } = useQuery({ queryKey: ['social-media', 'youtube-connection'], queryFn: verifyYouTubeConnection, retry: 1 });
+  const { data: connection } = useQuery({ queryKey: ['social-media', 'youtube-connection'], queryFn: fetchYouTubeConnectionStatus, retry: 1 });
   const connected = connection?.state === 'connected';
   const mode = modeFor(deliveryMode, privacyStatus);
   const parts = scheduledFor ? utcIsoToCentralParts(scheduledFor) : { date: '', time: '' };

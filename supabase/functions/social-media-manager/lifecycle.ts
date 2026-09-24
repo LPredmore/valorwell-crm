@@ -11,6 +11,7 @@ import type { PublicationStatus } from "./types.ts";
  *   approved --metadata edit--> ready
  *   draft/ready/approved/upload_queued --cancel--> cancelled
  *   upload_queued/uploading --permanent failure--> failed --retry--> approved
+ *   failed (never reached YouTube) --metadata edit--> ready
  */
 export const PUBLICATION_TRANSITIONS: Record<PublicationStatus, readonly PublicationStatus[]> = {
   draft: ["approved", "cancelled"],
@@ -21,7 +22,7 @@ export const PUBLICATION_TRANSITIONS: Record<PublicationStatus, readonly Publica
   uploaded: [],
   scheduled: ["published"],
   published: [],
-  failed: ["approved"],
+  failed: ["approved", "ready"],
   cancelled: [],
 };
 

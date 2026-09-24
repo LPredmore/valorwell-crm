@@ -19,6 +19,8 @@ export function YouTubeConnectionStatus({ status }: { status: ConnectionState | 
     mutationFn: verifyYouTubeConnection,
     onSuccess: (result) => {
       queryClient.setQueryData(['social-media', 'youtube-connection'], result);
+      // Verification records auth_status/last_verified_at on the account.
+      queryClient.invalidateQueries({ queryKey: ['social-media', 'settings'] });
       toast({ title: `Connection state: ${result.state}` });
     },
     onError: (error: Error) => toast({ title: 'Verification failed', description: error.message, variant: 'destructive' }),
@@ -31,6 +33,11 @@ export function YouTubeConnectionStatus({ status }: { status: ConnectionState | 
         {status && <Badge variant={STATE_VARIANT[status.state]}>{status.state}</Badge>}
       </div>
       {status?.channelTitle && <p className="text-sm text-muted-foreground">Channel: {status.channelTitle} ({status.channelId})</p>}
+      {status?.source === 'recorded' && (
+        <p className="text-xs text-muted-foreground">
+          {status.lastVerifiedAt ? `As of the last verification (${new Date(status.lastVerifiedAt).toLocaleString()}).` : 'Not verified yet.'}
+        </p>
+      )}
       {status?.reason && <p className="text-sm text-destructive">{status.reason}</p>}
       {status?.missingScopes && status.missingScopes.length > 0 && (
         <p className="text-xs text-muted-foreground">Missing scopes: {status.missingScopes.join(', ')}</p>

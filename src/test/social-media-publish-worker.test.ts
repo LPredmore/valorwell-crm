@@ -5,7 +5,7 @@ import { MAX_STALE_RECOVERIES, runPublishTicks } from '../../supabase/functions/
 import { networkError } from './helpers/fake-youtube';
 import { MB, publishHarness } from './helpers/publish-harness';
 import {
-  PLAYLIST_EPISODES_A, PLAYLIST_OTHER_ACCOUNT_A, PLAYLIST_PARTS_A, PLAYLIST_SHORTS_A,
+  PLAYLIST_EPISODES_A, PLAYLIST_OTHER_ACCOUNT_A, PLAYLIST_SHORTS_A,
 } from './helpers/social-fixtures';
 
 type PayloadSections = Record<string, Record<string, unknown>>;
@@ -165,7 +165,6 @@ describe('YouTube publish worker: content formats and playlists', () => {
     expect(h.youtube.playlistItems.has('PL-second')).toBe(false);
     expect(h.eventsFor(id).map((event) => event.event_type)).toContain('playlist_skipped');
     expect(h.db.table('ai_operations_social_publication_playlists').some((link) => link.playlist_id === PLAYLIST_SHORTS_A)).toBe(true);
-    expect(PLAYLIST_PARTS_A).toBeTruthy();
   });
 });
 

@@ -2,7 +2,19 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { LibraryFilters } from '@/lib/crm/social-media';
 
-export function SocialMediaFilters({ filters, onChange }: { filters: LibraryFilters; onChange: (next: LibraryFilters) => void }) {
+const ANY = '__any__';
+
+export function SocialMediaFilters({
+  filters,
+  onChange,
+  guests = [],
+  organizations = [],
+}: {
+  filters: LibraryFilters;
+  onChange: (next: LibraryFilters) => void;
+  guests?: string[];
+  organizations?: string[];
+}) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Input
@@ -18,6 +30,20 @@ export function SocialMediaFilters({ filters, onChange }: { filters: LibraryFilt
           <SelectItem value="short">Shorts</SelectItem>
           <SelectItem value="long_form">Long Form</SelectItem>
           <SelectItem value="full_episode">Full Episodes</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select value={filters.guest ?? ANY} onValueChange={(value) => onChange({ ...filters, guest: value === ANY ? undefined : value })}>
+        <SelectTrigger className="w-44" aria-label="Guest"><SelectValue placeholder="Guest" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ANY}>All guests</SelectItem>
+          {guests.map((guest) => <SelectItem key={guest} value={guest}>{guest}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={filters.organization ?? ANY} onValueChange={(value) => onChange({ ...filters, organization: value === ANY ? undefined : value })}>
+        <SelectTrigger className="w-48" aria-label="Organization"><SelectValue placeholder="Organization" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ANY}>All organizations</SelectItem>
+          {organizations.map((organization) => <SelectItem key={organization} value={organization}>{organization}</SelectItem>)}
         </SelectContent>
       </Select>
       <Select value={filters.readiness ?? 'all'} onValueChange={(value) => onChange({ ...filters, readiness: value as LibraryFilters['readiness'] })}>

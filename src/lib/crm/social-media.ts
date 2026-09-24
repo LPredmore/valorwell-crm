@@ -35,9 +35,37 @@ export type SocialMediaLibraryItem = {
   sourceFileId: string | null;
   sourceFileUrl: string | null;
   readiness: { ready: boolean; reasons: string[] };
+  /** Holds the source's single active slot (draft through scheduled). */
   activePublication: SocialPublicationSummary | null;
   publishedPublication: SocialPublicationSummary | null;
+  /** The latest publication, when it failed (retryable). */
+  failedPublication: SocialPublicationSummary | null;
+  latestPublication: SocialPublicationSummary | null;
+  /** From the database routing rules; null when no rule routes this format. */
   defaultPlaylistName: string | null;
+};
+
+export type PublicationSource = {
+  guestName: string | null;
+  organizationName: string | null;
+  durationSeconds: number | null;
+  sourceFileId: string | null;
+  sourceFileName: string | null;
+  clipType: string | null;
+  clipStatus: string | null;
+  mediaReady: boolean;
+  renderVerified: boolean | null;
+};
+
+export type YouTubeDeliveryEvidence = {
+  state: string;
+  privacyStatus: string | null;
+  uploadStatus: string | null;
+  processingStatus: string | null;
+  rejectionReason?: string | null;
+  failureReason?: string | null;
+  checkedAt: string;
+  reason?: string | null;
 };
 
 export type SocialPublication = SocialPublicationSummary & {
@@ -71,6 +99,23 @@ export type SocialPublication = SocialPublicationSummary & {
     fileId?: string | null;
     studioUrl?: string | null;
   } | null;
+  youtubeVerification: YouTubeDeliveryEvidence | null;
+  youtubeSchedule: {
+    apiStatus: string;
+    expectedPublishAt: string | null;
+    youtubePublishAt: string | null;
+    privacyStatus: string | null;
+    checkedAt: string;
+    reason?: string | null;
+  } | null;
+  reconciliation: {
+    state: 'healthy' | 'waiting' | 'exception' | 'published';
+    code?: string | null;
+    reason?: string | null;
+    checkedAt: string;
+    privacyStatus?: string | null;
+    publishAt?: string | null;
+  } | null;
   platformUploadStatus: string | null;
   platformProcessingStatus: string | null;
   approvedAt: string | null;
@@ -83,6 +128,8 @@ export type SocialPublication = SocialPublicationSummary & {
   playlists: { playlistId: string; displayName: string; isDefault: boolean }[];
   createdAt: string;
   updatedAt: string;
+  /** Returned by get_publication only. */
+  source?: PublicationSource;
 };
 
 export type PublicationEvent = {
@@ -115,6 +162,9 @@ export type YouTubeConnectionStatus = {
   channelTitle: string | null;
   missingScopes: string[];
   reason: string | null;
+  /** Set on the read-only status (the last recorded verification). */
+  lastVerifiedAt?: string | null;
+  source?: "recorded";
 };
 
 export type LibraryFilters = {
@@ -266,6 +316,10 @@ export type SocialThumbnail = { fileId: string | null; signedUrl: string | null;
 export const fetchSocialThumbnailUrl = (sourceType: SourceType, sourceId: string) =>
   invoke<SocialThumbnail>("get_thumbnail_url", { sourceType, sourceId });
 
+/** Read-only: the state recorded by the last verification. Never calls Google or writes. */
+export const fetchYouTubeConnectionStatus = () => invoke<YouTubeConnectionStatus>("get_youtube_connection_status");
+
+/** Mutation (operators only): verifies against Google and records the result. */
 export const verifyYouTubeConnection = () => invoke<YouTubeConnectionStatus>("verify_youtube_connection");
 
 export const createSocialPublication = (params: {
@@ -285,6 +339,7 @@ export const setPublicationPlaylists = (id: string, playlistIds: string[]) =>
 export const queueSocialPublication = (id: string) =>
   invoke<{ jobId: number; publication: SocialPublication }>("queue_publish", { id });
 
+/** Before upload: CRM-only. After upload: changes YouTube's publishAt first, then the CRM. */
 export const rescheduleSocialPublication = (id: string, scheduledFor: string) =>
   invoke<SocialPublication>("reschedule_publication", { id, scheduledFor });
 
@@ -302,7 +357,7 @@ export const STATUS_LABELS: Record<PublicationStatus, string> = {
   approved: "Approved",
   upload_queued: "Upload Queued",
   uploading: "Uploading",
-  uploaded: "Uploaded",
+  uploaded: "Uploaded (Private)",
   scheduled: "Scheduled",
   published: "Published",
   failed: "Failed",
@@ -314,3 +369,35 @@ export const CONTENT_FORMAT_LABELS: Record<ContentFormat, string> = {
   long_form: "Long Form",
   full_episode: "Full Episode",
 };
+
+export const PRIVACY_LABELS: Record<PrivacyStatus, string> = {
+  public: "Public",
+  unlisted: "Unlisted",
+  private: "Private",
+};
+
+/** The publication a Library card represents and opens: in-flight work first, then a
+ * retryable failure, then the published record. */
+export function primaryPublication(item: SocialMediaLibraryItem): SocialPublicationSummary | null {
+  return item.activePublication ?? item.failedPublication ?? item.publishedPublication ?? null;
+}
+
+const ACTIVE_WORK_STATUSES = new Set<PublicationStatus>(["upload_queued", "uploading"]);
+const RECONCILE_WINDOW_MS = 30 * 60 * 1000;
+
+/**
+ * How often a view of these publications should refresh. Only unstable work is polled:
+ * uploads in flight (15s), and Scheduled videos whose publish time is near or past, while
+ * YouTube reconciliation is expected to change them (60s). Stable states rely on normal
+ * query invalidation after mutations.
+ */
+export function publicationPollInterval(
+  publications: Array<Pick<SocialPublicationSummary, "status" | "scheduledFor">> | undefined,
+  nowMs = Date.now(),
+): number | false {
+  if (!publications?.length) return false;
+  if (publications.some((pub) => ACTIVE_WORK_STATUSES.has(pub.status))) return 15_000;
+  const reconciling = publications.some((pub) => pub.status === "scheduled" && pub.scheduledFor &&
+    Date.parse(pub.scheduledFor) - nowMs < RECONCILE_WINDOW_MS);
+  return reconciling ? 60_000 : false;
+}

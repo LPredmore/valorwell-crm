@@ -5,11 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { CrmMutationGate } from '@/components/crm/auth/CrmMutationGate';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import {
   approveSocialPublication, cancelSocialPublication, createSocialPublication, fetchSocialPublication,
-  markThumbnailManualDone, queueSocialPublication, retrySocialPublication, setPublicationPlaylists, updateSocialPublication,
+  markThumbnailManualDone, publicationPollInterval, queueSocialPublication, rescheduleSocialPublication,
+  retrySocialPublication, setPublicationPlaylists, updateSocialPublication,
   validateSocialPublication, STATUS_LABELS, type DeliveryMode, type PrivacyStatus, type SourceType,
 } from '@/lib/crm/social-media';
+import { SocialPublicationSourceSummary } from './SocialPublicationSourceSummary';
+import { SocialPublicationReschedule } from './SocialPublicationReschedule';
+import { SocialPublicationYouTubeState } from './SocialPublicationYouTubeState';
 import { SocialPublicationMetadataForm } from './SocialPublicationMetadataForm';
 import { SocialPublicationPlaylistPicker } from './SocialPublicationPlaylistPicker';
 import { SocialPublicationScheduleForm } from './SocialPublicationScheduleForm';
@@ -17,8 +22,9 @@ import { SocialPublicationPreflight } from './SocialPublicationPreflight';
 import { SocialPublicationHistory } from './SocialPublicationHistory';
 import { SocialMediaErrorState } from './SocialMediaErrorState';
 
-const POLLING_STATUSES = new Set(['upload_queued', 'uploading', 'uploaded', 'scheduled']);
-const LOCKED_STATUSES = new Set(['upload_queued', 'uploading', 'uploaded', 'scheduled', 'published']);
+const LOCKED_STATUSES = new Set(['upload_queued', 'uploading', 'uploaded', 'scheduled', 'published', 'cancelled']);
+/** Nothing exists on YouTube yet, so cancelling in the CRM is truthful. */
+const CANCELLABLE_STATUSES = new Set(['draft', 'ready', 'approved', 'upload_queued']);
 
 export function SocialPublicationEditor({
   open,
@@ -32,6 +38,8 @@ export function SocialPublicationEditor({
   createFrom?: { sourceType: SourceType; clipId?: string; projectId?: string };
 }) {
   const queryClient = useQueryClient();
+  const { capabilities } = useCrmAuth();
+  const canMutate = Boolean(capabilities?.mutate);
   const [id, setId] = useState(publicationId);
   const [pendingChanges, setPendingChanges] = useState<Record<string, unknown>>({});
 
@@ -47,16 +55,17 @@ export function SocialPublicationEditor({
   });
 
   useEffect(() => {
-    if (open && !id && createFrom && !createMutation.isPending) createMutation.mutate();
+    // Opening the editor for an unpublished source creates a draft -- only for operators.
+    if (canMutate && open && !id && createFrom && !createMutation.isPending && !createMutation.isError) createMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, id, createFrom]);
+  }, [open, id, createFrom, canMutate]);
 
   const { data: publication, isLoading, error: publicationError } = useQuery({
     queryKey: ['social-media', 'publication', id],
     queryFn: () => fetchSocialPublication(id as string),
     enabled: Boolean(id),
     retry: 1,
-    refetchInterval: (query) => (query.state.data && POLLING_STATUSES.has(query.state.data.status) ? 15000 : false),
+    refetchInterval: (query) => (query.state.error ? false : publicationPollInterval(query.state.data ? [query.state.data] : [])),
   });
 
   const { data: validation, refetch: refetchValidation } = useQuery({
@@ -103,6 +112,11 @@ export function SocialPublicationEditor({
     onSuccess: () => { invalidate(); toast({ title: 'Retrying' }); },
     onError: (error: Error) => toast({ title: 'Could not retry', description: error.message, variant: 'destructive' }),
   });
+  const rescheduleMutation = useMutation({
+    mutationFn: (scheduledFor: string) => rescheduleSocialPublication(id as string, scheduledFor),
+    onSuccess: () => { invalidate(); toast({ title: 'Rescheduled on YouTube' }); },
+    onError: (error: Error) => toast({ title: 'Could not reschedule', description: error.message, variant: 'destructive' }),
+  });
   const thumbnailDoneMutation = useMutation({
     mutationFn: () => markThumbnailManualDone(id as string),
     onSuccess: () => { invalidate(); toast({ title: 'Thumbnail marked done' }); },
@@ -110,7 +124,10 @@ export function SocialPublicationEditor({
   });
 
   const merged = publication ? { ...publication, ...pendingChanges } as typeof publication : publication;
-  const locked = publication ? LOCKED_STATUSES.has(publication.status) : false;
+  const onYouTube = Boolean(publication?.externalVideoId);
+  // A failed publication stays editable until it has reached YouTube; saving sends it back to Ready.
+  const locked = publication ? LOCKED_STATUSES.has(publication.status) || (publication.status === 'failed' && onYouTube) : false;
+  const readOnly = locked || !canMutate;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -123,26 +140,33 @@ export function SocialPublicationEditor({
         </DialogHeader>
 
         {(createMutation.isPending || isLoading) && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {!id && createFrom && !canMutate && (
+          <p className="text-sm text-muted-foreground">This video has not been prepared for publishing yet.</p>
+        )}
         {createMutation.error && <SocialMediaErrorState error={createMutation.error} />}
         {publicationError && <SocialMediaErrorState error={publicationError} />}
 
         {merged && (
           <div className="space-y-4">
+            <SocialPublicationSourceSummary publication={merged} />
             {locked && (
               <p className="text-xs text-amber-600">
-                Metadata is locked while status is "{STATUS_LABELS[publication!.status]}" — the worker is using this snapshot.
+                Metadata is locked while status is "{STATUS_LABELS[publication!.status]}"
+                {onYouTube ? ' — it has been sent to YouTube.' : ' — the worker is using this snapshot.'}
               </p>
             )}
+            {!canMutate && <p className="text-xs text-muted-foreground">Read-only access: you can review this publication but not change it.</p>}
+            <SocialPublicationYouTubeState publication={merged} />
             <SocialPublicationMetadataForm
               publication={merged}
-              disabled={locked}
+              disabled={readOnly}
               onChange={(changes) => setPendingChanges((prev) => ({ ...prev, ...changes }))}
             />
             <SocialPublicationScheduleForm
               deliveryMode={merged.deliveryMode}
               privacyStatus={merged.desiredPrivacyStatus}
               scheduledFor={merged.scheduledFor}
-              disabled={locked}
+              disabled={readOnly}
               onChange={(next) => setPendingChanges((prev) => ({
                 ...prev,
                 deliveryMode: next.deliveryMode as DeliveryMode,
@@ -150,9 +174,19 @@ export function SocialPublicationEditor({
                 scheduledFor: next.scheduledFor,
               }))}
             />
+            {publication!.status === 'scheduled' && onYouTube && (
+              <CrmMutationGate>
+                <SocialPublicationReschedule
+                  key={publication!.scheduledFor ?? 'none'}
+                  publication={publication!}
+                  pending={rescheduleMutation.isPending}
+                  onReschedule={(scheduledFor) => rescheduleMutation.mutate(scheduledFor)}
+                />
+              </CrmMutationGate>
+            )}
             <SocialPublicationPlaylistPicker
               publication={publication!}
-              disabled={locked}
+              disabled={readOnly}
               onChange={(ids) => playlistMutation.mutate(ids)}
             />
             <CrmMutationGate>
@@ -261,12 +295,18 @@ export function SocialPublicationEditor({
           </div>
         )}
 
+        {publication && onYouTube && ['uploading', 'uploaded', 'scheduled', 'failed'].includes(publication.status) && canMutate && (
+          <p className="text-xs text-muted-foreground">
+            This video already exists on YouTube, so it cannot be cancelled from the CRM. To stop it, change its
+            visibility or delete it in YouTube Studio.
+          </p>
+        )}
         <DialogFooter className="flex-wrap gap-2">
           <CrmMutationGate>
             {publication?.status === 'failed' && (
               <Button variant="outline" onClick={() => retryMutation.mutate()} disabled={retryMutation.isPending}>Retry</Button>
             )}
-            {publication && !['published', 'cancelled', 'failed'].includes(publication.status) && !locked && (
+            {publication && CANCELLABLE_STATUSES.has(publication.status) && !onYouTube && (
               <Button variant="outline" onClick={() => cancelMutation.mutate()} disabled={cancelMutation.isPending}>Cancel</Button>
             )}
             {publication && ['draft', 'ready'].includes(publication.status) && (

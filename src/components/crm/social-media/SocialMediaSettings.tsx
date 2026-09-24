@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { fetchSocialMediaSettings, verifyYouTubeConnection } from '@/lib/crm/social-media';
+import { fetchSocialMediaSettings, fetchYouTubeConnectionStatus } from '@/lib/crm/social-media';
 import { YouTubeConnectionStatus } from './YouTubeConnectionStatus';
 import { SocialMediaErrorState } from './SocialMediaErrorState';
 
@@ -13,9 +13,10 @@ export function SocialMediaSettings() {
   });
   // Query errors don't block rendering connection status separately -- Settings should show
   // whatever it has, not go fully blank because one of two independent requests failed.
+  // Rendering only reads the recorded state; verifying against Google is an explicit action.
   const { data: connection, error: connectionError } = useQuery({
     queryKey: ['social-media', 'youtube-connection'],
-    queryFn: verifyYouTubeConnection,
+    queryFn: fetchYouTubeConnectionStatus,
     retry: 1,
   });
 

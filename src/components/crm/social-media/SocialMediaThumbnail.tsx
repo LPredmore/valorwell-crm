@@ -13,7 +13,13 @@ const SIGNED_URL_REFRESH_MS = 50 * 60 * 1000;
  * per-card failure, renders a blank neutral area -- never a broken-image icon, and never a
  * failure that escapes to the whole page.
  */
-export function SocialMediaThumbnail({ item }: { item: SocialMediaLibraryItem }) {
+export function SocialMediaThumbnail({
+  item,
+  className = 'aspect-video',
+}: {
+  item: Pick<SocialMediaLibraryItem, 'sourceType' | 'sourceId' | 'thumbnailFileId'>;
+  className?: string;
+}) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
@@ -49,7 +55,7 @@ export function SocialMediaThumbnail({ item }: { item: SocialMediaLibraryItem })
   const signedUrl = imageFailed ? null : data?.signedUrl ?? null;
 
   return (
-    <div ref={containerRef} className="aspect-video bg-muted overflow-hidden" data-testid="social-thumbnail">
+    <div ref={containerRef} className={`${className} bg-muted overflow-hidden`} data-testid="social-thumbnail">
       {signedUrl && (
         <img
           src={signedUrl}

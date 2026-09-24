@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchSocialMediaLibrary, type LibraryFilters, type SocialMediaLibraryItem } from '@/lib/crm/social-media';
+import { fetchSocialMediaLibrary, primaryPublication, type LibraryFilters, type SocialMediaLibraryItem } from '@/lib/crm/social-media';
 import { SocialMediaFilters } from './SocialMediaFilters';
 import { SocialMediaLibraryCard } from './SocialMediaLibraryCard';
 import { SocialMediaPhotoEditor } from './SocialMediaPhotoEditor';
@@ -18,10 +18,26 @@ export function SocialMediaLibrary() {
     queryFn: () => fetchSocialMediaLibrary(filters),
     retry: 1,
   });
+  // Guest/organization options come from the unfiltered library (shared cache entry with
+  // the initial, unfiltered load) so choosing one never hides the others.
+  const { data: allItems } = useQuery({
+    queryKey: ['social-media', 'library', {}],
+    queryFn: () => fetchSocialMediaLibrary({}),
+    retry: 1,
+  });
+  const options = useMemo(() => {
+    const unique = (values: Array<string | null>) =>
+      [...new Set(values.filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b));
+    return {
+      guests: unique((allItems ?? []).map((item) => item.guestName)),
+      organizations: unique((allItems ?? []).map((item) => item.organizationName)),
+    };
+  }, [allItems]);
+  const selectedPublication = selected ? primaryPublication(selected) : null;
 
   return (
     <div className="space-y-4 pt-4">
-      <SocialMediaFilters filters={filters} onChange={setFilters} />
+      <SocialMediaFilters filters={filters} onChange={setFilters} guests={options.guests} organizations={options.organizations} />
 
       {isLoading && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -47,9 +63,9 @@ export function SocialMediaLibrary() {
         <SocialPublicationEditor
           open={Boolean(selected)}
           onOpenChange={(open) => { if (!open) setSelected(null); }}
-          publicationId={selected.activePublication?.id ?? selected.publishedPublication?.id ?? null}
+          publicationId={selectedPublication?.id ?? null}
           createFrom={
-            selected.activePublication || selected.publishedPublication
+            selectedPublication
               ? undefined
               : { sourceType: selected.sourceType, clipId: selected.clipId ?? undefined, projectId: selected.projectId }
           }

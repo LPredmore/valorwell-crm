@@ -14,6 +14,7 @@ import { youtubeAccessToken } from "../_shared/ai-ops-youtube.ts";
 import { getYoutubeDeliveryStatus, updateVideoStatus } from "../_shared/youtube-publish/api.ts";
 import type { YoutubeScheduleClient } from "./handlers/publications.ts";
 import { resolveAllowHeaders } from "./cors.ts";
+import { authorizeAction, MUTATE_ACTIONS, VIEW_ACTIONS } from "./actions.ts";
 
 // Root cause of the "TypeError: Failed to fetch" bug: supabase-js 2.93.1's browser build
 // (dist/index.mjs, what Vite actually bundles -- confirmed by reading the installed package,
@@ -50,20 +51,6 @@ function safeLog(level: "info" | "warn" | "error", event: string, fields: Record
   else if (level === "warn") console.warn(payload);
   else console.log(payload);
 }
-
-// View actions: any authenticated CRM user with a resolved tenant (including crm_readonly).
-const VIEW_ACTIONS = new Set([
-  "bootstrap", "list_library", "list_publications", "get_publication",
-  "list_publication_events", "get_settings", "get_youtube_connection_status",
-  "get_thumbnail_url",
-]);
-// Mutation actions: require capabilities.mutate (crm_admin/crm_operator today).
-const MUTATE_ACTIONS = new Set([
-  "create_publication", "update_publication", "validate_publication", "approve_publication",
-  "set_publication_playlists", "queue_publish", "reschedule_publication",
-  "cancel_publication", "retry_publication", "replace_thumbnail", "mark_thumbnail_manual_done",
-  "verify_youtube_connection",
-]);
 
 const youtubeScheduleClient: YoutubeScheduleClient = {
   getDeliveryStatus: async (videoId) => getYoutubeDeliveryStatus(await youtubeAccessToken(), videoId),
@@ -191,7 +178,7 @@ Deno.serve(async (request: Request) => {
   }
 
   try {
-    if (MUTATE_ACTIONS.has(action)) requireMutate(auth);
+    authorizeAction(auth, action);
     const { action: _omit, ...params } = body;
     // A hung DB/network call inside a handler fails fast here instead of running until the
     // platform kills the isolate with no useful log entry to correlate against.

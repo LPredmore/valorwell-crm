@@ -25,8 +25,15 @@ export type SocialMediaLibraryItem = {
     ready: boolean;
     reasons: string[];
   };
+  /** The publication holding the source's single active slot (draft through scheduled). */
   activePublication: SocialPublicationSummary | null;
+  /** The most recent Published publication, if any. */
   publishedPublication: SocialPublicationSummary | null;
+  /** The latest publication when it Failed (and so can be retried). */
+  failedPublication: SocialPublicationSummary | null;
+  /** The most recent publication of any status. */
+  latestPublication: SocialPublicationSummary | null;
+  /** Resolved from ai_operations_social_routing_rules for the default account. */
   defaultPlaylistName: string | null;
 };
 

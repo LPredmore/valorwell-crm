@@ -291,7 +291,7 @@ const camelToSnake: Record<string, string> = Object.fromEntries(
 export async function updatePublication(auth: AuthContext, params: { id: string; changes: Record<string, unknown> }) {
   const current = await loadPublication(auth, params.id);
   const status = String(current.status) as PublicationStatus;
-  if (LOCKED_STATUSES.has(status) || status === "cancelled" || status === "failed") {
+  if (LOCKED_STATUSES.has(status) || status === "cancelled" || (status === "failed" && current.external_video_id)) {
     throw new Error(`Publication metadata is locked while status is "${current.status}"`);
   }
 
@@ -307,9 +307,11 @@ export async function updatePublication(auth: AuthContext, params: { id: string;
   }
 
   // Editing after approval clears the approval so a stale-but-approved snapshot can't be queued.
-  if (status === "approved") {
+  // Fixing a failed publication (that never reached YouTube) sends it back for re-approval.
+  if (status === "approved" || status === "failed") {
     assertTransition(status, "ready");
     Object.assign(patch, { status: "ready", approved_at: null, approved_by: null });
+    if (status === "failed") Object.assign(patch, { error_code: null, error_message: null, next_attempt_at: null });
   }
 
   const { data, error } = await auth.db
