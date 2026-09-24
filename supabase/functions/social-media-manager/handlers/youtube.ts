@@ -1,4 +1,4 @@
-import type { AuthContext } from "../auth.ts";
+import type { AuthContext } from "../context.ts";
 import { youtubeAccessToken, youtubeOauthConfigured } from "../../_shared/ai-ops-youtube.ts";
 
 const REQUIRED_SCOPES = [
@@ -8,7 +8,9 @@ const REQUIRED_SCOPES = [
 
 export type ConnectionState = "configured" | "connected" | "needs_reauth" | "error" | "disabled";
 
-export async function verifyYoutubeConnection(auth: AuthContext) {
+const KNOWN_STATES = new Set<ConnectionState>(["configured", "connected", "needs_reauth", "error", "disabled"]);
+
+async function loadDefaultAccount(auth: AuthContext) {
   const { data: account, error: accountError } = await auth.db
     .from("ai_operations_social_accounts")
     .select("*")
@@ -18,6 +20,33 @@ export async function verifyYoutubeConnection(auth: AuthContext) {
     .maybeSingle();
   if (accountError) throw new Error(accountError.message);
   if (!account) throw new Error("No default YouTube account is configured.");
+  return account;
+}
+
+/**
+ * Read-only: reports the connection state recorded by the last explicit verification.
+ * Never calls Google and never writes, so it is safe for readonly users and page loads.
+ */
+export async function getYoutubeConnectionStatus(auth: AuthContext) {
+  const account = await loadDefaultAccount(auth);
+  const recorded = String(account.auth_status ?? "configured") as ConnectionState;
+  const state: ConnectionState = KNOWN_STATES.has(recorded) ? recorded : "error";
+  return {
+    state,
+    channelId: state === "connected" ? String(account.external_account_id) : null,
+    channelTitle: state === "connected" ? (account.display_name as string | null) : null,
+    missingScopes: [] as string[],
+    reason: state === "connected" || state === "configured" ? null
+      : state === "disabled" ? "Account is disabled."
+      : "The last verification failed. Verify the connection again for details.",
+    lastVerifiedAt: (account.last_verified_at as string | null) ?? null,
+    source: "recorded" as const,
+  };
+}
+
+/** Mutation: calls Google, checks channel identity and scopes, and records the result. */
+export async function verifyYoutubeConnection(auth: AuthContext) {
+  const account = await loadDefaultAccount(auth);
   if (account.auth_status === "disabled") {
     return { state: "disabled" as ConnectionState, channelId: null, channelTitle: null, missingScopes: [], reason: "Account is disabled." };
   }

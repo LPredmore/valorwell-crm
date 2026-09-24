@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { verifyScheduledDelivery } from "../../supabase/functions/video-youtube-publish-dispatcher/schedule-verification";
+import { verifyScheduledDelivery } from "../../supabase/functions/_shared/youtube-publish/status";
 
 const expected = "2026-09-24T18:00:00.000Z";
 const uploaded = "2026-09-23T21:00:00.000Z";

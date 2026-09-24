@@ -1,19 +1,8 @@
-import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.93.1";
+import { createClient } from "npm:@supabase/supabase-js@2.93.1";
 
-export type CrmCapabilities = {
-  mutate: boolean;
-  communicate: boolean;
-  manage_campaigns: boolean;
-  report: boolean;
-};
+import type { AuthContext, CrmCapabilities } from "./context.ts";
 
-export type AuthContext = {
-  userId: string;
-  tenantId: string;
-  crmRole: string;
-  capabilities: CrmCapabilities;
-  db: SupabaseClient;
-};
+export { requireMutate, type AuthContext, type CrmCapabilities } from "./context.ts";
 
 /**
  * Races a promise against a hard deadline so a stuck upstream call (Postgres lock,
@@ -50,7 +39,7 @@ export async function authenticate(request: Request): Promise<AuthContext> {
   });
 
   const { data, error } = await withTimeout(
-    userDb.rpc("get_crm_operating_context"),
+    (async () => await userDb.rpc("get_crm_operating_context"))(),
     8000,
     "get_crm_operating_context",
   );
@@ -71,8 +60,4 @@ export async function authenticate(request: Request): Promise<AuthContext> {
     capabilities: (context.capabilities ?? {}) as CrmCapabilities,
     db,
   };
-}
-
-export function requireMutate(auth: AuthContext) {
-  if (!auth.capabilities?.mutate) throw new Error("FORBIDDEN");
 }

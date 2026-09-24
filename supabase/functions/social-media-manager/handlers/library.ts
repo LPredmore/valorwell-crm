@@ -1,4 +1,4 @@
-import type { AuthContext } from "../auth.ts";
+import type { AuthContext } from "../context.ts";
 import { isVerifiedCurrentShortRender } from "../../_shared/short-render-profile.ts";
 import type { ContentFormat, SocialMediaLibraryItem, SocialPublicationSummary } from "../types.ts";
 

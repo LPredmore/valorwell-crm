@@ -1,4 +1,4 @@
-import type { AuthContext } from "../auth.ts";
+import type { AuthContext } from "../context.ts";
 import { driveAccessToken } from "../drive.ts";
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -62,7 +62,7 @@ async function uploadToDrive(
     "--" + boundary + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n",
     JSON.stringify(metadata),
     "\r\n--" + boundary + "\r\nContent-Type: " + file.type + "\r\n\r\n",
-    bytes,
+    bytes as Uint8Array<ArrayBuffer>,
     "\r\n--" + boundary + "--\r\n",
   ];
   const response = await fetch(DRIVE_UPLOAD + "?uploadType=multipart&fields=id,name,webViewLink", {
@@ -136,7 +136,7 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
     throw new Error("Wait for the current upload to finish before replacing its cover.");
   }
 
-  const projectId = sourceType === "clip" ? String((source as { project_id: string }).project_id) : sourceId;
+  const projectId = sourceType === "clip" ? String((source as unknown as { project_id: string }).project_id) : sourceId;
 
   const token = await driveAccessToken(db);
   const folderId = await driveFolderId(token, (source as { cover_image_file_id: string | null }).cover_image_file_id);

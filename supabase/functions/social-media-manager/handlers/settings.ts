@@ -1,4 +1,4 @@
-import type { AuthContext } from "../auth.ts";
+import type { AuthContext } from "../context.ts";
 
 export async function getSettings(auth: AuthContext) {
   const { data: account, error: accountError } = await auth.db

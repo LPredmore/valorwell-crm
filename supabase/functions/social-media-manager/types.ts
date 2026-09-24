@@ -72,6 +72,32 @@ export type SocialPublication = SocialPublicationSummary & {
     fileId?: string | null;
     studioUrl?: string | null;
   } | null;
+  youtubeVerification: {
+    state: string;
+    privacyStatus: string | null;
+    uploadStatus: string | null;
+    processingStatus: string | null;
+    rejectionReason?: string | null;
+    failureReason?: string | null;
+    checkedAt: string;
+    reason?: string | null;
+  } | null;
+  youtubeSchedule: {
+    apiStatus: string;
+    expectedPublishAt: string | null;
+    youtubePublishAt: string | null;
+    privacyStatus: string | null;
+    checkedAt: string;
+    reason?: string | null;
+  } | null;
+  reconciliation: {
+    state: "healthy" | "waiting" | "exception" | "published";
+    code?: string | null;
+    reason?: string | null;
+    checkedAt: string;
+    privacyStatus?: string | null;
+    publishAt?: string | null;
+  } | null;
   platformUploadStatus: string | null;
   platformProcessingStatus: string | null;
   approvedAt: string | null;
@@ -84,6 +110,22 @@ export type SocialPublication = SocialPublicationSummary & {
   playlists: { playlistId: string; displayName: string; isDefault: boolean }[];
   createdAt: string;
   updatedAt: string;
+  /** Present on get_publication only. */
+  source?: PublicationSource;
+};
+
+export type PublicationSource = {
+  guestName: string | null;
+  organizationName: string | null;
+  durationSeconds: number | null;
+  sourceFileId: string | null;
+  sourceFileName: string | null;
+  clipType: string | null;
+  clipStatus: string | null;
+  /** The rendered clip / source episode exists in Drive. */
+  mediaReady: boolean;
+  /** Shorts only: the current Drive file has a verified 1080x1920 render. */
+  renderVerified: boolean | null;
 };
 
 export type ValidationResult = {
