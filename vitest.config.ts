@@ -11,6 +11,10 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
+    alias: [
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+      // Edge Function modules import npm packages with Deno's npm: specifier.
+      { find: /^npm:(@supabase\/supabase-js)@.*$/, replacement: "$1" },
+    ],
   },
 });
