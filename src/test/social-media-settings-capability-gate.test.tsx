@@ -21,6 +21,8 @@ vi.mock('@/lib/crm/social-media', async () => {
         default_embeddable: true, default_public_stats_viewable: true, default_notify_subscribers: true,
         default_use_custom_thumbnail: true, default_immediate_privacy_status: 'public', schedule_strategy: 'youtube_native_publish_at',
       },
+      timezone: 'America/Chicago',
+      preferredScheduleTimes: { short: ['12:00', '15:00', '18:00'], longForm: ['08:00', '14:00'] },
       routing: [{ sourceType: 'clip', sourceClipType: 'short', contentFormat: 'short', defaultPlaylistName: 'BTY Shorts' }],
       playlists: [],
     }),
