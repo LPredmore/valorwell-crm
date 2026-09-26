@@ -5,6 +5,15 @@ import { fetchSocialMediaSettings, fetchYouTubeConnectionStatus } from '@/lib/cr
 import { YouTubeConnectionStatus } from './YouTubeConnectionStatus';
 import { SocialMediaErrorState } from './SocialMediaErrorState';
 
+function displayTime(time: string): string {
+  const [hour, minute] = time.split(':').map(Number);
+  return new Date(Date.UTC(2000, 0, 1, hour, minute)).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: minute === 0 ? undefined : '2-digit',
+    timeZone: 'UTC',
+  });
+}
+
 export function SocialMediaSettings() {
   const { data: settings, isLoading, error } = useQuery({
     queryKey: ['social-media', 'settings'],
@@ -60,6 +69,21 @@ export function SocialMediaSettings() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader><CardTitle className="text-sm">Preferred publishing times</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-24 font-medium">Shorts</span>
+            {settings.preferredScheduleTimes.short.map((time) => <Badge key={time} variant="secondary">{displayTime(time)}</Badge>)}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-24 font-medium">Long form</span>
+            {settings.preferredScheduleTimes.longForm.map((time) => <Badge key={time} variant="secondary">{displayTime(time)}</Badge>)}
+          </div>
+          <p className="text-xs text-muted-foreground">Bulk scheduling uses these slots in {settings.timezone}, spreading the first slot across all selected days before moving to the next slot.</p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle className="text-sm">Default routing</CardTitle></CardHeader>
