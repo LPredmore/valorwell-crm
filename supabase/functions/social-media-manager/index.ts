@@ -7,6 +7,7 @@ import {
   retryPublication, setPublicationPlaylists, updatePublication, validatePublication,
 } from "./handlers/publications.ts";
 import { getSettings } from "./handlers/settings.ts";
+import { bulkSchedulePublications, previewBulkSchedule } from "./handlers/bulk-scheduling.ts";
 import { getThumbnailUrl } from "./handlers/thumbnails.ts";
 import { replaceLibraryThumbnail } from "./handlers/thumbnail-edit.ts";
 import { getYoutubeConnectionStatus, verifyYoutubeConnection } from "./handlers/youtube.ts";
@@ -99,6 +100,10 @@ async function dispatch(auth: AuthContext, action: string, params: Record<string
       return retryPublication(auth, params as { id: string });
     case "mark_thumbnail_manual_done":
       return markThumbnailManualDone(auth, params as { id: string });
+    case "preview_bulk_schedule":
+      return previewBulkSchedule(auth, params as never);
+    case "bulk_schedule":
+      return bulkSchedulePublications(auth, params as never);
     default:
       throw new Error(`Unknown action: ${action}`);
   }
@@ -183,7 +188,8 @@ Deno.serve(async (request: Request) => {
     // A hung DB/network call inside a handler fails fast here instead of running until the
     // platform kills the isolate with no useful log entry to correlate against.
     const data = await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`TIMEOUT:${action}`)), action === "replace_thumbnail" ? 60000 : 20000);
+      const timeoutMs = action === "replace_thumbnail" ? 60000 : action === "bulk_schedule" ? 60000 : 20000;
+      const timer = setTimeout(() => reject(new Error(`TIMEOUT:${action}`)), timeoutMs);
       dispatch(auth, action, params).then(
         (value) => { clearTimeout(timer); resolve(value); },
         (error) => { clearTimeout(timer); reject(error); },
