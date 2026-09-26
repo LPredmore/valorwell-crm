@@ -12,7 +12,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
  */
 const root = resolve(__dirname, '../..');
 const fixture = readFileSync(resolve(root, 'src/test/sql/social-publish-claim-fixture.sql'), 'utf8');
-const migration = readFileSync(resolve(root, 'supabase/migrations/20260924120000_social_media_atomic_publish_claim.sql'), 'utf8');
+const migration = readFileSync(resolve(root, 'supabase/migrations/20260924131110_social_media_atomic_publish_claim.sql'), 'utf8');
 
 let db: PGlite;
 

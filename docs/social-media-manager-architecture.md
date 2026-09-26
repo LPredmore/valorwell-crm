@@ -12,7 +12,7 @@ in particular its expectation that scheduled Shorts receive their thumbnail thro
 | Control plane | `supabase/functions/social-media-manager/` | Authenticated CRM API (browser → Edge Function). Tenant-scoped reads and mutations. |
 | Publish worker | `supabase/functions/video-youtube-publish-dispatcher/` (`worker.ts`, `index.ts`) | Every minute (pg_cron `video-youtube-publish-dispatcher-1min`): reconciles Scheduled videos, then claims and advances publish jobs. |
 | YouTube client and rules | `supabase/functions/_shared/youtube-publish/` | `api.ts` (YouTube Data API calls), `errors.ts` (failure classes), `status.ts` (verification rules), `reconciliation.ts` (Scheduled → Published). Shared by the control plane and the worker. |
-| Claim RPCs | `supabase/migrations/20260924120000_social_media_atomic_publish_claim.sql` | `claim_next_youtube_publish_job`, `release_youtube_publish_job`. |
+| Claim RPCs | `supabase/migrations/20260924131110_social_media_atomic_publish_claim.sql` | `claim_next_youtube_publish_job`, `release_youtube_publish_job`. |
 | Queue RPC | `supabase/migrations/20260922190000_social_media_publish_queue.sql` | `social_queue_publish` (approved → upload_queued + one active job). |
 | UI | `src/components/crm/social-media/`, `src/lib/crm/social-media.ts` | Library, Publishing Queue, Calendar, Settings, publication editor. |
 
