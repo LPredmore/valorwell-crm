@@ -10,7 +10,7 @@ export const DEFAULT_PREFERRED_SCHEDULE_TIMES: PreferredScheduleTimes = {
   longForm: ["08:00", "14:00"],
 };
 
-const TIME_PATTERN = /^(?:[01]\\d|2[0-3]):[0-5]\\d$/;
+const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 function validTimes(value: unknown, fallback: string[]): string[] {
   if (!Array.isArray(value)) return [...fallback];
