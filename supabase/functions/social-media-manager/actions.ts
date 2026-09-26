@@ -13,7 +13,7 @@ export const MUTATE_ACTIONS: ReadonlySet<string> = new Set([
   "create_publication", "update_publication", "approve_publication",
   "set_publication_playlists", "queue_publish", "reschedule_publication",
   "cancel_publication", "retry_publication", "replace_thumbnail", "mark_thumbnail_manual_done",
-  "verify_youtube_connection",
+  "verify_youtube_connection", "preview_bulk_schedule", "bulk_schedule",
 ]);
 
 /** Rejects unknown actions and mutations by callers without the mutate capability. */
