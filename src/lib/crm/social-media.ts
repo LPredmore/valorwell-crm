@@ -143,6 +143,42 @@ export type PublicationEvent = {
 
 export type ValidationResult = { ok: boolean; errors: string[]; warnings: string[] };
 
+export type PreferredScheduleTimes = {
+  short: string[];
+  longForm: string[];
+};
+
+export type BulkScheduleSource = {
+  sourceType: SourceType;
+  sourceId: string;
+};
+
+export type BulkScheduleAssignment = BulkScheduleSource & {
+  contentFormat: ContentFormat;
+  title: string;
+  scheduledFor: string;
+  localDate: string;
+  localTime: string;
+};
+
+export type BulkSchedulePreview = {
+  timezone: string;
+  preferredScheduleTimes: PreferredScheduleTimes;
+  selectedCount: number;
+  availableSlotCount: number;
+  assignments: BulkScheduleAssignment[];
+  unassigned: Array<BulkScheduleSource & { title: string; contentFormat: ContentFormat }>;
+};
+
+export type BulkScheduleResult = BulkSchedulePreview & {
+  scheduled: Array<BulkScheduleSource & {
+    title: string;
+    publicationId: string;
+    jobId: number;
+    scheduledFor: string;
+  }>;
+};
+
 export type SocialSettings = {
   account: {
     id: string;
@@ -152,6 +188,8 @@ export type SocialSettings = {
     lastVerifiedAt: string | null;
   };
   defaults: Record<string, unknown> | null;
+  timezone: string;
+  preferredScheduleTimes: PreferredScheduleTimes;
   routing: { sourceType: string; sourceClipType: string | null; contentFormat: string; defaultPlaylistName: string | null }[];
   playlists: { id: string; canonicalKey: string; displayName: string; externalPlaylistId: string }[];
 };
@@ -193,10 +231,10 @@ export class SocialMediaError extends Error {
   }
 }
 
-async function invoke<T>(action: string, body: Record<string, unknown> = {}): Promise<T> {
+async function invoke<T>(action: string, body: Record<string, unknown> = {}, timeoutMs = INVOKE_TIMEOUT_MS): Promise<T> {
   const { data, error } = await supabase.functions.invoke("social-media-manager", {
     body: { action, ...body },
-    timeout: INVOKE_TIMEOUT_MS,
+    timeout: timeoutMs,
   });
 
   if (error) {
@@ -216,7 +254,7 @@ async function invoke<T>(action: string, body: Record<string, unknown> = {}): Pr
       throw new SocialMediaError(serverMessage ?? `HTTP ${context.status}`, action, context.status, requestId);
     }
     const isTimeout = error.name === "AbortError" || /abort/i.test(error.message);
-    if (isTimeout) throw new SocialMediaError(`Request timed out after ${INVOKE_TIMEOUT_MS / 1000}s`, action, null, null);
+    if (isTimeout) throw new SocialMediaError(`Request timed out after ${timeoutMs / 1000}s`, action, null, null);
     // FunctionsFetchError/FunctionsRelayError wrap the real underlying failure (often thrown
     // before the network call ever happens, e.g. inside supabase-js's own auth/session
     // resolution) in .context -- surface that instead of the generic wrapper message, which
@@ -307,6 +345,12 @@ export const fetchPublicationEvents = (id: string) =>
   invoke<PublicationEvent[]>("list_publication_events", { id });
 
 export const fetchSocialMediaSettings = () => invoke<SocialSettings>("get_settings");
+
+export const previewBulkSocialSchedule = (items: BulkScheduleSource[], dates: string[]) =>
+  invoke<BulkSchedulePreview>("preview_bulk_schedule", { items, dates }, 30000);
+
+export const bulkScheduleSocialPublications = (items: BulkScheduleSource[], dates: string[]) =>
+  invoke<BulkScheduleResult>("bulk_schedule", { items, dates }, 75000);
 
 export type SocialThumbnail = { fileId: string | null; signedUrl: string | null; expiresInSeconds: number | null };
 
