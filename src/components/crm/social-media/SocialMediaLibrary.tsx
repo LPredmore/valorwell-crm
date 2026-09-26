@@ -16,7 +16,7 @@ function bulkKey(item: SocialMediaLibraryItem): string {
   return `${item.sourceType}:${item.sourceId}`;
 }
 
-export function bulkScheduleEligibilityReason(item: SocialMediaLibraryItem): string | null {
+function bulkScheduleEligibilityReason(item: SocialMediaLibraryItem): string | null {
   if (!item.readiness.ready) return item.readiness.reasons[0] ?? 'This video is not publish-ready.';
   if (item.activePublication) return 'This video already has an active publication.';
   if (item.failedPublication) return 'This video has a failed publication. Use Retry instead.';
