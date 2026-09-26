@@ -30,6 +30,8 @@ function item(overrides: Partial<SocialMediaLibraryItem> = {}): SocialMediaLibra
     readiness: { ready: true, reasons: [] },
     activePublication: null,
     publishedPublication: null,
+    failedPublication: null,
+    latestPublication: null,
     defaultPlaylistName: null,
     ...overrides,
   };

@@ -1,23 +1,17 @@
-import type { AuthContext } from "../auth.ts";
+import type { AuthContext } from "../context.ts";
 import { youtubeAccessToken, youtubeOauthConfigured } from "../../_shared/ai-ops-youtube.ts";
+import { type ConnectionState, loadDefaultAccount } from "./youtube-status.ts";
+
+export { getYoutubeConnectionStatus, type ConnectionState } from "./youtube-status.ts";
 
 const REQUIRED_SCOPES = [
   "https://www.googleapis.com/auth/youtube.upload",
   "https://www.googleapis.com/auth/youtube.force-ssl",
 ];
 
-export type ConnectionState = "configured" | "connected" | "needs_reauth" | "error" | "disabled";
-
+/** Mutation: calls Google, checks channel identity and scopes, and records the result. */
 export async function verifyYoutubeConnection(auth: AuthContext) {
-  const { data: account, error: accountError } = await auth.db
-    .from("ai_operations_social_accounts")
-    .select("*")
-    .eq("tenant_id", auth.tenantId)
-    .eq("platform", "youtube")
-    .eq("is_default", true)
-    .maybeSingle();
-  if (accountError) throw new Error(accountError.message);
-  if (!account) throw new Error("No default YouTube account is configured.");
+  const account = await loadDefaultAccount(auth);
   if (account.auth_status === "disabled") {
     return { state: "disabled" as ConnectionState, channelId: null, channelTitle: null, missingScopes: [], reason: "Account is disabled." };
   }

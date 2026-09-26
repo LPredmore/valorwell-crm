@@ -27,6 +27,8 @@ const item: SocialMediaLibraryItem = {
   readiness: { ready: true, reasons: [] },
   activePublication: null,
   publishedPublication: null,
+  failedPublication: null,
+  latestPublication: null,
   defaultPlaylistName: 'BTY Shorts',
 };
 
@@ -70,6 +72,23 @@ describe('Social Media Library photo editor access', () => {
     auth.capabilities.mutate = false;
     render(<SocialMediaLibraryCard item={item} onSelect={vi.fn()} onChangePhoto={vi.fn()} />);
     expect(screen.queryByRole('button', { name: 'Change photo' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create Publication' })).toBeInTheDocument();
+    // Opening the editor for an unpublished source creates a draft, so readonly users are not offered it.
+    expect(screen.queryByRole('button', { name: 'Create Publication' })).not.toBeInTheDocument();
+    expect(screen.getByText('Not published yet')).toBeInTheDocument();
+  });
+
+  it('still lets read-only CRM users open an existing publication', () => {
+    auth.capabilities.mutate = false;
+    const onSelect = vi.fn();
+    render(<SocialMediaLibraryCard item={{
+      ...item,
+      failedPublication: {
+        id: 'pub-2', status: 'failed', deliveryMode: 'immediate', scheduledFor: null,
+        desiredPrivacyStatus: 'public', externalVideoId: null, externalUrl: null, thumbnailStatus: null,
+      },
+    }} onSelect={onSelect} onChangePhoto={vi.fn()} />);
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View / Edit' }));
+    expect(onSelect).toHaveBeenCalledOnce();
   });
 });

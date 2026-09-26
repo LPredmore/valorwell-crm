@@ -1,4 +1,4 @@
-import type { AuthContext } from "../auth.ts";
+import type { AuthContext } from "../context.ts";
 import { isVerifiedCurrentShortRender } from "../../_shared/short-render-profile.ts";
 import type { ContentFormat, SocialMediaLibraryItem, SocialPublicationSummary } from "../types.ts";
 
@@ -46,6 +46,7 @@ type ProjectRow = {
 
 type PublicationRow = {
   id: string;
+  created_at: string;
   status: string;
   delivery_mode: string;
   scheduled_for: string | null;
@@ -59,6 +60,42 @@ type PublicationRow = {
 };
 
 const TERMINAL_STATUSES = new Set(["failed", "cancelled"]);
+
+type RoutingRow = { account_id: string; source_type: string; source_clip_type: string | null; default_playlist_id: string; priority: number; enabled: boolean };
+type PlaylistRow = { id: string; display_name: string; is_active: boolean };
+
+/**
+ * Picks a source's publications: the active one (holds the source's single active slot),
+ * the latest Published, and the latest overall. A Failed publication is surfaced only
+ * while it is the latest attempt -- that is what the Failed filter and Retry act on.
+ */
+export function pickPublications(rows: PublicationRow[] | undefined) {
+  if (!rows?.length) return { active: null, published: null, failed: null, latest: null };
+  const sorted = [...rows].sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
+  const active = sorted.find((row) => !TERMINAL_STATUSES.has(row.status) && row.status !== "published") ?? null;
+  const published = sorted.find((row) => row.status === "published") ?? null;
+  const latest = sorted[0];
+  const failed = latest.status === "failed" ? latest : null;
+  return {
+    active: active ? summarize(active) : null,
+    published: published ? summarize(published) : null,
+    failed: failed ? summarize(failed) : null,
+    latest: summarize(latest),
+  };
+}
+
+/** Default playlist names come from the database routing rules, never UI literals. */
+export function defaultPlaylistResolver(accountId: string | null, rules: RoutingRow[], playlists: PlaylistRow[]) {
+  const names = new Map(playlists.filter((playlist) => playlist.is_active).map((playlist) => [playlist.id, playlist.display_name]));
+  const ordered = rules
+    .filter((rule) => rule.enabled && rule.account_id === accountId)
+    .sort((a, b) => a.priority - b.priority);
+  return (sourceType: "clip" | "project", clipType: string | null): string | null => {
+    const rule = ordered.find((candidate) => candidate.source_type === sourceType &&
+      (sourceType === "project" ? candidate.source_clip_type === null : candidate.source_clip_type === clipType));
+    return rule ? names.get(rule.default_playlist_id) ?? null : null;
+  };
+}
 
 function summarize(row: PublicationRow): SocialPublicationSummary {
   return {
@@ -81,6 +118,9 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
     { data: projects, error: projectsError },
     { data: publications, error: pubError },
     { data: renderJobs, error: renderJobsError },
+    { data: accounts, error: accountsError },
+    { data: routingRules, error: routingError },
+    { data: playlists, error: playlistsError },
   ] = await Promise.all([
       db.from("ai_operations_video_clips")
         .select(`
@@ -98,7 +138,7 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
         .order("created_at", { ascending: false })
         .limit(500),
       db.from("ai_operations_social_publications")
-        .select("id, status, delivery_mode, scheduled_for, desired_privacy_status, external_video_id, external_url, clip_id, project_id, content_format, platform_payload")
+        .select("id, created_at, status, delivery_mode, scheduled_for, desired_privacy_status, external_video_id, external_url, clip_id, project_id, content_format, platform_payload")
         .eq("tenant_id", tenantId),
       db.from("ai_operations_video_jobs")
         .select("clip_id, payload, completed_at")
@@ -107,12 +147,34 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
         .eq("status", "complete")
         .order("completed_at", { ascending: false })
         .limit(1000),
+      db.from("ai_operations_social_accounts")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("platform", "youtube")
+        .eq("is_default", true)
+        .limit(1),
+      db.from("ai_operations_social_routing_rules")
+        .select("account_id, source_type, source_clip_type, default_playlist_id, priority, enabled")
+        .eq("tenant_id", tenantId)
+        .eq("platform", "youtube"),
+      db.from("ai_operations_social_playlists")
+        .select("id, display_name, is_active")
+        .eq("tenant_id", tenantId),
     ]);
 
   if (clipsError) throw new Error(clipsError.message);
   if (projectsError) throw new Error(projectsError.message);
   if (pubError) throw new Error(pubError.message);
   if (renderJobsError) throw new Error(renderJobsError.message);
+  if (accountsError) throw new Error(accountsError.message);
+  if (routingError) throw new Error(routingError.message);
+  if (playlistsError) throw new Error(playlistsError.message);
+
+  const defaultPlaylistFor = defaultPlaylistResolver(
+    ((accounts ?? [])[0] as { id?: string } | undefined)?.id ?? null,
+    (routingRules ?? []) as RoutingRow[],
+    (playlists ?? []) as PlaylistRow[],
+  );
 
   const renderProfileByClip = new Map<string, Record<string, unknown>>();
   for (const renderJob of renderJobs ?? []) {
@@ -134,20 +196,12 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
       pubsByProject.set(pub.project_id, list);
     }
   }
-  const pickPublications = (rows: PublicationRow[] | undefined) => {
-    if (!rows?.length) return { active: null, published: null };
-    const sorted = [...rows].sort((a, b) => (a.id < b.id ? 1 : -1));
-    const active = sorted.find((row) => !TERMINAL_STATUSES.has(row.status) && row.status !== "published") ?? null;
-    const published = sorted.find((row) => row.status === "published") ?? null;
-    return { active: active ? summarize(active) : null, published: published ? summarize(published) : null };
-  };
-
   const items: SocialMediaLibraryItem[] = [];
 
   for (const clip of (clips ?? []) as unknown as ClipRow[]) {
     const contentFormat: ContentFormat = clip.clip_type === "short" ? "short" : "long_form";
     const project = clip.ai_operations_video_projects;
-    const { active, published } = pickPublications(pubsByClip.get(clip.id));
+    const { active, published, failed, latest } = pickPublications(pubsByClip.get(clip.id));
     const readinessReasons: string[] = [];
     if (!clip.drive_file_id) readinessReasons.push("Rendered clip is not yet available in Drive.");
     if (clip.status !== "rendered") readinessReasons.push(`Clip status is "${clip.status}", not rendered.`);
@@ -179,12 +233,14 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
       readiness: { ready: readinessReasons.length === 0, reasons: readinessReasons },
       activePublication: active,
       publishedPublication: published,
-      defaultPlaylistName: contentFormat === "short" ? "BTY Shorts" : "Beyond The Yellow - Parts",
+      failedPublication: failed,
+      latestPublication: latest,
+      defaultPlaylistName: defaultPlaylistFor("clip", clip.clip_type),
     });
   }
 
   for (const project of (projects ?? []) as ProjectRow[]) {
-    const { active, published } = pickPublications(pubsByProject.get(project.id));
+    const { active, published, failed, latest } = pickPublications(pubsByProject.get(project.id));
     const readinessReasons: string[] = [];
     if (!project.source_file_id) readinessReasons.push("Source video file is not available.");
 
@@ -209,14 +265,16 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
       readiness: { ready: readinessReasons.length === 0, reasons: readinessReasons },
       activePublication: active,
       publishedPublication: published,
-      defaultPlaylistName: "Beyond The Yellow - Full Episodes",
+      failedPublication: failed,
+      latestPublication: latest,
+      defaultPlaylistName: defaultPlaylistFor("project", null),
     });
   }
 
   return applyFilters(items, filters);
 }
 
-function applyFilters(items: SocialMediaLibraryItem[], filters: LibraryFilters): SocialMediaLibraryItem[] {
+export function applyFilters(items: SocialMediaLibraryItem[], filters: LibraryFilters): SocialMediaLibraryItem[] {
   let result = items;
 
   if (filters.format && filters.format !== "all") {
@@ -243,10 +301,10 @@ function applyFilters(items: SocialMediaLibraryItem[], filters: LibraryFilters):
   if (filters.publicationState && filters.publicationState !== "all") {
     result = result.filter((item) => {
       const state = filters.publicationState;
-      if (state === "unscheduled") return !item.activePublication && !item.publishedPublication;
+      if (state === "unscheduled") return !item.activePublication && !item.publishedPublication && !item.failedPublication;
       if (state === "scheduled") return item.activePublication?.status === "scheduled";
       if (state === "published") return Boolean(item.publishedPublication);
-      if (state === "failed") return item.activePublication?.status === "failed";
+      if (state === "failed") return Boolean(item.failedPublication);
       return true;
     });
   }

@@ -7,10 +7,15 @@ import {
   retryPublication, setPublicationPlaylists, updatePublication, validatePublication,
 } from "./handlers/publications.ts";
 import { getSettings } from "./handlers/settings.ts";
+import { bulkSchedulePublications, previewBulkSchedule } from "./handlers/bulk-scheduling.ts";
 import { getThumbnailUrl } from "./handlers/thumbnails.ts";
 import { replaceLibraryThumbnail } from "./handlers/thumbnail-edit.ts";
-import { verifyYoutubeConnection } from "./handlers/youtube.ts";
+import { getYoutubeConnectionStatus, verifyYoutubeConnection } from "./handlers/youtube.ts";
+import { youtubeAccessToken } from "../_shared/ai-ops-youtube.ts";
+import { getYoutubeDeliveryStatus, updateVideoStatus } from "../_shared/youtube-publish/api.ts";
+import type { YoutubeScheduleClient } from "./handlers/publications.ts";
 import { resolveAllowHeaders } from "./cors.ts";
+import { authorizeAction, MUTATE_ACTIONS, VIEW_ACTIONS } from "./actions.ts";
 
 // Root cause of the "TypeError: Failed to fetch" bug: supabase-js 2.93.1's browser build
 // (dist/index.mjs, what Vite actually bundles -- confirmed by reading the installed package,
@@ -48,18 +53,10 @@ function safeLog(level: "info" | "warn" | "error", event: string, fields: Record
   else console.log(payload);
 }
 
-// View actions: any authenticated CRM user with a resolved tenant (including crm_readonly).
-const VIEW_ACTIONS = new Set([
-  "bootstrap", "list_library", "list_publications", "get_publication",
-  "list_publication_events", "get_settings", "verify_youtube_connection",
-  "get_thumbnail_url",
-]);
-// Mutation actions: require capabilities.mutate (crm_admin/crm_operator today).
-const MUTATE_ACTIONS = new Set([
-  "create_publication", "update_publication", "validate_publication", "approve_publication",
-  "set_publication_playlists", "queue_publish", "reschedule_publication",
-  "cancel_publication", "retry_publication", "replace_thumbnail", "mark_thumbnail_manual_done",
-]);
+const youtubeScheduleClient: YoutubeScheduleClient = {
+  getDeliveryStatus: async (videoId) => getYoutubeDeliveryStatus(await youtubeAccessToken(), videoId),
+  updateStatus: async (videoId, status) => updateVideoStatus(await youtubeAccessToken(), videoId, status),
+};
 
 async function dispatch(auth: AuthContext, action: string, params: Record<string, unknown>) {
   switch (action) {
@@ -79,6 +76,8 @@ async function dispatch(auth: AuthContext, action: string, params: Record<string
       return getThumbnailUrl(auth, params as { sourceType?: unknown; sourceId?: unknown });
     case "replace_thumbnail":
       return replaceLibraryThumbnail(auth, params);
+    case "get_youtube_connection_status":
+      return getYoutubeConnectionStatus(auth);
     case "verify_youtube_connection":
       return verifyYoutubeConnection(auth);
     case "create_publication":
@@ -94,13 +93,17 @@ async function dispatch(auth: AuthContext, action: string, params: Record<string
     case "queue_publish":
       return queuePublish(auth, params as { id: string });
     case "reschedule_publication":
-      return reschedulePublication(auth, params as { id: string; scheduledFor: string });
+      return reschedulePublication(auth, params as { id: string; scheduledFor: string }, youtubeScheduleClient);
     case "cancel_publication":
       return cancelPublication(auth, params as { id: string });
     case "retry_publication":
       return retryPublication(auth, params as { id: string });
     case "mark_thumbnail_manual_done":
       return markThumbnailManualDone(auth, params as { id: string });
+    case "preview_bulk_schedule":
+      return previewBulkSchedule(auth, params as never);
+    case "bulk_schedule":
+      return bulkSchedulePublications(auth, params as never);
     default:
       throw new Error(`Unknown action: ${action}`);
   }
@@ -180,12 +183,13 @@ Deno.serve(async (request: Request) => {
   }
 
   try {
-    if (MUTATE_ACTIONS.has(action)) requireMutate(auth);
+    authorizeAction(auth, action);
     const { action: _omit, ...params } = body;
     // A hung DB/network call inside a handler fails fast here instead of running until the
     // platform kills the isolate with no useful log entry to correlate against.
     const data = await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`TIMEOUT:${action}`)), action === "replace_thumbnail" ? 60000 : 20000);
+      const timeoutMs = action === "replace_thumbnail" ? 60000 : action === "bulk_schedule" ? 60000 : 20000;
+      const timer = setTimeout(() => reject(new Error(`TIMEOUT:${action}`)), timeoutMs);
       dispatch(auth, action, params).then(
         (value) => { clearTimeout(timer); resolve(value); },
         (error) => { clearTimeout(timer); reject(error); },

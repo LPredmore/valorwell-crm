@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { thumbnailProcessingDecision } from "../../supabase/functions/video-youtube-publish-dispatcher/thumbnail-readiness";
+import { thumbnailProcessingDecision } from "../../supabase/functions/_shared/youtube-publish/status";
 
 const uploadedAt = "2026-09-23T16:00:00.000Z";
 const fiveMinutes = Date.parse("2026-09-23T16:05:00.000Z");

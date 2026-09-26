@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js@2.4.5/edge-runtime.d.ts";
 import { adminClient, authorizeWorker, AI_OPS_TENANT_ID, json, logEvent, safeError } from "../_shared/ai-ops.ts";
-import { syncYoutubeComments, youtubeAuthenticatedChannel, youtubeOauthConfigured, youtubeApiKey } from "../_shared/ai-ops-youtube.ts";
+import { syncYoutubeComments, youtubeAccessToken, youtubeAuthenticatedChannel, youtubeOauthConfigured, youtubeApiKey } from "../_shared/ai-ops-youtube.ts";
+import { getYoutubeDeliveryStatuses } from "../_shared/youtube-publish/api.ts";
+import { reconcileScheduledPublications } from "../_shared/youtube-publish/reconciliation.ts";
 
 // Server-side only. Credentials come from Supabase secrets and are never returned in responses.
 Deno.serve(async (request: Request) => {
@@ -33,8 +35,21 @@ Deno.serve(async (request: Request) => {
       btyPlaylistId: settings?.bty_playlist_id ?? null,
       maxVideos: body.maxVideos,
     });
-    logEvent("ai-operations-youtube-sync", "sync_complete", { tenantId, ...sync });
-    return json({ auth, identity, sync });
+    // Scheduled Social Media Manager publications are also reconciled every minute by
+    // video-youtube-publish-dispatcher; running it here keeps the CRM current whenever a
+    // YouTube sync runs, using the same throttled, idempotent pass.
+    let publications: Record<string, unknown> | null = null;
+    if (auth.oauthConfigured) {
+      try {
+        publications = await reconcileScheduledPublications({
+          db: admin, tenantId, now: Date.now, youtubeToken: youtubeAccessToken, getDeliveryStatuses: getYoutubeDeliveryStatuses,
+        });
+      } catch (error) {
+        publications = { error: safeError(error) };
+      }
+    }
+    logEvent("ai-operations-youtube-sync", "sync_complete", { tenantId, ...sync, publications });
+    return json({ auth, identity, sync, publications });
   } catch (error) {
     logEvent("ai-operations-youtube-sync", "sync_failed", { error: safeError(error) });
     return json({ error: safeError(error) }, 500);

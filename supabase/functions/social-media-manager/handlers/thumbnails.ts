@@ -1,4 +1,4 @@
-import type { AuthContext } from "../auth.ts";
+import type { AuthContext } from "../context.ts";
 import { driveAccessToken, driveFileBytes, driveFileMetadata } from "../drive.ts";
 
 export const THUMBNAIL_BUCKET = "social-media-thumbnails";
