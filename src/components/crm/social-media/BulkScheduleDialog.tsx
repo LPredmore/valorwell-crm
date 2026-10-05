@@ -139,7 +139,7 @@ export function BulkScheduleDialog({
         <DialogHeader>
           <DialogTitle>Bulk schedule videos</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Pick calendar days, review the automatically distributed preferred slots, then schedule the whole batch.
+            Pick calendar days, review the automatically distributed preferred slots, then schedule the whole batch. Numbered Long Form Parts are kept in chronological Part order automatically.
           </p>
         </DialogHeader>
 
@@ -156,6 +156,7 @@ export function BulkScheduleDialog({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{item.title ?? '(untitled)'}</p>
                     <Badge variant="secondary" className="mt-1">{CONTENT_FORMAT_LABELS[item.contentFormat]}</Badge>
+                    {item.partNumber != null && <Badge variant="outline" className="mt-1 ml-1">Part {item.partNumber}</Badge>}
                   </div>
                   <Button
                     type="button"
@@ -263,7 +264,10 @@ export function BulkScheduleDialog({
                       <span className="text-xs text-muted-foreground">{shortDayLabel(assignment.localDate)}</span>
                       <span className="text-sm font-medium">{displayTime(assignment.localTime)}</span>
                       <span className="min-w-0 truncate text-sm">{assignment.title}</span>
-                      <Badge variant="secondary">{CONTENT_FORMAT_LABELS[assignment.contentFormat]}</Badge>
+                      <div className="flex items-center gap-1">
+                        {assignment.partNumber != null && <Badge variant="outline">Part {assignment.partNumber}</Badge>}
+                        <Badge variant="secondary">{CONTENT_FORMAT_LABELS[assignment.contentFormat]}</Badge>
+                      </div>
                     </div>
                   ))}
                 </div>
