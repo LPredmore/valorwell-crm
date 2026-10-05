@@ -186,13 +186,11 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     };
   }, []);
 
-  useEffect(() => {
-    // The loaded draft carried duplicate or stale compliance footers. Mark it
-    // dirty so autosave rewrites the stored document, HTML, and render hash
-    // through the normal export path instead of leaving the repair unsaved.
-    if (repairedOnLoadRef.current) onDirty?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Note: the load-time compliance-footer repair (repairedOnLoadRef) is a
+  // system normalization, not a user edit. It deliberately does NOT call
+  // onDirty — the bulk-send dialog wires onDirty to clearing template
+  // attribution, and a system repair must not strip the chosen template.
+  // The workspace autosave persists the repaired document on the next save.
 
   const markDirty = () => {
     setSnapshot(null);
@@ -391,11 +389,16 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
 
   return (
     <div
-      className="grid h-full min-h-0 grid-cols-[190px_minmax(680px,1fr)_310px] bg-muted/30"
+      className={isDialog
+        ? 'flex min-h-0 flex-col gap-3 bg-muted/30'
+        : 'grid h-full min-h-0 grid-cols-[190px_minmax(680px,1fr)_310px] bg-muted/30'}
       data-testid="newsletter-authoring-layout"
+      data-layout={layout}
     >
       <aside
-        className="min-h-0 overflow-y-auto border-r bg-background p-3"
+        className={isDialog
+          ? 'rounded-md border bg-background p-3'
+          : 'min-h-0 overflow-y-auto border-r bg-background p-3'}
         data-testid="newsletter-block-library"
         ref={blockLibraryRef}
       >
