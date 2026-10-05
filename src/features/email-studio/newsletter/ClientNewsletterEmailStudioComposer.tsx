@@ -406,7 +406,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
           <p className="text-sm font-semibold">Blocks</p>
           <p className="text-xs text-muted-foreground">Add an email-safe section.</p>
         </div>
-        <div className="space-y-1.5">
+        <div className={isDialog ? 'grid grid-cols-2 gap-1.5 sm:grid-cols-3' : 'space-y-1.5'}>
           {blocks.map((block) => {
             const alreadyPresent = block.kind === 'compliance-footer' && hasComplianceFooter;
             return (
@@ -432,7 +432,9 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
       </aside>
 
       <section
-        className="min-h-0 min-w-0 overflow-auto bg-[#e9ece9]"
+        className={isDialog
+          ? 'min-w-0 overflow-x-auto rounded-md border bg-[#e9ece9]'
+          : 'min-h-0 min-w-0 overflow-auto bg-[#e9ece9]'}
         data-testid="newsletter-canvas-region"
       >
         <div
