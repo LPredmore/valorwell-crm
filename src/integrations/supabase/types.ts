@@ -1196,6 +1196,7 @@ export type Database = {
           output_mime_type: string
           output_size_bytes: number | null
           parent_file_id: string
+          part_number: number | null
           project_id: string
           rendered_at: string | null
           start_seconds: number
@@ -1226,6 +1227,7 @@ export type Database = {
           output_mime_type?: string
           output_size_bytes?: number | null
           parent_file_id: string
+          part_number?: number | null
           project_id: string
           rendered_at?: string | null
           start_seconds: number
@@ -1256,6 +1258,7 @@ export type Database = {
           output_mime_type?: string
           output_size_bytes?: number | null
           parent_file_id?: string
+          part_number?: number | null
           project_id?: string
           rendered_at?: string | null
           start_seconds?: number
@@ -1280,6 +1283,53 @@ export type Database = {
           },
         ]
       }
+      ai_operations_video_job_inputs: {
+        Row: {
+          created_at: string
+          drive_file_id: string
+          drive_file_name: string
+          drive_folder_id: string | null
+          id: number
+          job_id: number
+          mime_type: string | null
+          modified_time: string | null
+          position: number
+          size_bytes: number | null
+        }
+        Insert: {
+          created_at?: string
+          drive_file_id: string
+          drive_file_name: string
+          drive_folder_id?: string | null
+          id?: number
+          job_id: number
+          mime_type?: string | null
+          modified_time?: string | null
+          position: number
+          size_bytes?: number | null
+        }
+        Update: {
+          created_at?: string
+          drive_file_id?: string
+          drive_file_name?: string
+          drive_folder_id?: string | null
+          id?: number
+          job_id?: number
+          mime_type?: string | null
+          modified_time?: string | null
+          position?: number
+          size_bytes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_video_job_inputs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_operations_video_jobs: {
         Row: {
           attempts: number
@@ -1290,9 +1340,12 @@ export type Database = {
           created_at: string
           error_message: string | null
           id: number
+          idempotency_key: string | null
           job_type: string
           payload: Json
+          progress: Json
           project_id: string
+          result: Json
           social_publication_id: string | null
           started_at: string | null
           status: string
@@ -1308,9 +1361,12 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: number
+          idempotency_key?: string | null
           job_type: string
           payload?: Json
+          progress?: Json
           project_id: string
+          result?: Json
           social_publication_id?: string | null
           started_at?: string | null
           status?: string
@@ -1326,9 +1382,12 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: number
+          idempotency_key?: string | null
           job_type?: string
           payload?: Json
+          progress?: Json
           project_id?: string
+          result?: Json
           social_publication_id?: string | null
           started_at?: string | null
           status?: string
@@ -1548,6 +1607,8 @@ export type Database = {
           drive_account_label: string | null
           drive_folder_id: string | null
           drive_folder_url: string | null
+          guest_image_folder_id: string | null
+          guest_image_folder_url: string | null
           long_clip_folder_id: string | null
           long_clip_folder_url: string | null
           output_provider: string
@@ -1573,6 +1634,8 @@ export type Database = {
           drive_account_label?: string | null
           drive_folder_id?: string | null
           drive_folder_url?: string | null
+          guest_image_folder_id?: string | null
+          guest_image_folder_url?: string | null
           long_clip_folder_id?: string | null
           long_clip_folder_url?: string | null
           output_provider?: string
@@ -1598,6 +1661,8 @@ export type Database = {
           drive_account_label?: string | null
           drive_folder_id?: string | null
           drive_folder_url?: string | null
+          guest_image_folder_id?: string | null
+          guest_image_folder_url?: string | null
           long_clip_folder_id?: string | null
           long_clip_folder_url?: string | null
           output_provider?: string
@@ -23596,6 +23661,8 @@ export type Database = {
           id: string
           last_name: string | null
           license_type: string | null
+          licensed_states: Json
+          linkedin_connection_attempted: boolean
           linkedin_profile: string | null
           outreach_contactable: boolean
           outreach_exclusion_reason: string | null
@@ -23610,6 +23677,8 @@ export type Database = {
           id?: string
           last_name?: string | null
           license_type?: string | null
+          licensed_states?: Json
+          linkedin_connection_attempted?: boolean
           linkedin_profile?: string | null
           outreach_contactable?: boolean
           outreach_exclusion_reason?: string | null
@@ -23624,6 +23693,8 @@ export type Database = {
           id?: string
           last_name?: string | null
           license_type?: string | null
+          licensed_states?: Json
+          linkedin_connection_attempted?: boolean
           linkedin_profile?: string | null
           outreach_contactable?: boolean
           outreach_exclusion_reason?: string | null
@@ -27073,6 +27144,16 @@ export type Database = {
           source_metadata: Json
         }[]
       }
+      claim_client_eligibility_request: {
+        Args: {
+          p_client_id: string
+          p_client_insurance_id: string
+          p_expected_insurance_version: number
+          p_lease_seconds?: number
+          p_service_date: string
+        }
+        Returns: Json
+      }
       claim_google_ads_donations: {
         Args: { p_limit?: number }
         Returns: {
@@ -27094,6 +27175,36 @@ export type Database = {
       claim_is_externally_submitted_v1: {
         Args: { p_claim_id: string }
         Returns: boolean
+      }
+      claim_next_youtube_publish_job: {
+        Args: { p_lease_seconds?: number; p_worker_id: string }
+        Returns: {
+          attempts: number
+          claimed_at: string | null
+          claimed_by: string | null
+          clip_id: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: number
+          idempotency_key: string | null
+          job_type: string
+          payload: Json
+          progress: Json
+          project_id: string
+          result: Json
+          social_publication_id: string | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ai_operations_video_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       claim_pending_campaign_steps: {
         Args: { p_limit?: number }
@@ -29690,6 +29801,27 @@ export type Database = {
         }
         Returns: Json
       }
+      record_client_eligibility_result_v2: {
+        Args: {
+          p_claimmd_eligibility_id?: string
+          p_client_id: string
+          p_client_insurance_id: string
+          p_coverage_end?: string
+          p_coverage_start?: string
+          p_error_codes?: string[]
+          p_expected_insurance_version: number
+          p_has_other_coverage?: boolean
+          p_outcome: string
+          p_payer_order_detected?: string
+          p_recorded_by_profile_id?: string
+          p_request_fingerprint?: Json
+          p_request_lease_id?: string
+          p_response_message?: string
+          p_result_metadata?: Json
+          p_service_date?: string
+        }
+        Returns: Json
+      }
       record_payroll_payment_result: {
         Args: {
           p_attempt_ended_at: string
@@ -29843,6 +29975,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      release_client_eligibility_request: {
+        Args: { p_request_id: string }
+        Returns: boolean
+      }
       release_client_provider_demand: {
         Args: {
           p_client_action_id: string
@@ -29863,6 +29999,10 @@ export type Database = {
           p_request_id: string
           p_state: string
         }
+        Returns: boolean
+      }
+      release_youtube_publish_job: {
+        Args: { p_job_id: number; p_worker_id: string }
         Returns: boolean
       }
       reopen_client_journey_exception: {
@@ -30919,6 +31059,10 @@ export type Database = {
           p_reported_by: string
         }
         Returns: string
+      }
+      validate_cron_shared_secret: {
+        Args: { p_secret: string }
+        Returns: boolean
       }
       validate_relationship_calendar_channel: {
         Args: {
