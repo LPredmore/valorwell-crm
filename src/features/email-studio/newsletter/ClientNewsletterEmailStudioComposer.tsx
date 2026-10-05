@@ -508,9 +508,9 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
           </span>
         </div>
 
-        <div className="min-w-[680px] px-4 py-8">
+        <div className={isDialog ? 'min-w-0 px-2 py-4' : 'min-w-[680px] px-4 py-8'}>
           <div
-            className="mx-auto w-[648px] rounded-xl border border-border/80 bg-white p-6 shadow-[0_10px_30px_rgba(20,30,24,0.10)]"
+            className={`mx-auto rounded-xl border border-border/80 bg-white p-6 shadow-[0_10px_30px_rgba(20,30,24,0.10)] ${isDialog ? 'w-full max-w-[648px]' : 'w-[648px]'}`}
             data-testid="newsletter-email-canvas"
             onMouseDownCapture={(event) => {
               if (selectNewsletterBlockFromDom(editorRef.current?.editor ?? null, event.target)) {
@@ -529,7 +529,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
                 hideWhenActiveMarks: HIDDEN_BUBBLE_MENU_MARKS,
               }}
               placeholder="Add or select a newsletter block"
-              className="newsletter-email-editor min-h-[760px] w-full [&_.ProseMirror]:min-h-[720px] [&_.ProseMirror]:outline-none [&_.ProseMirror-selectednode]:outline [&_.ProseMirror-selectednode]:outline-2 [&_.ProseMirror-selectednode]:outline-offset-2 [&_.ProseMirror-selectednode]:outline-[#C69A45] [&_.newsletter-structured-block]:cursor-pointer"
+              className={`newsletter-email-editor w-full [&_.ProseMirror]:outline-none [&_.ProseMirror-selectednode]:outline [&_.ProseMirror-selectednode]:outline-2 [&_.ProseMirror-selectednode]:outline-offset-2 [&_.ProseMirror-selectednode]:outline-[#C69A45] [&_.newsletter-structured-block]:cursor-pointer ${isDialog ? 'min-h-[420px] [&_.ProseMirror]:min-h-[400px]' : 'min-h-[760px] [&_.ProseMirror]:min-h-[720px]'}`}
               onReady={() => {
                 editorRef.current?.editor?.setEditable(!readOnly);
                 attachEditorControls();
@@ -546,7 +546,9 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
       </section>
 
       <aside
-        className="min-h-0 overflow-y-auto border-l bg-background"
+        className={isDialog
+          ? 'rounded-md border bg-background'
+          : 'min-h-0 overflow-y-auto border-l bg-background'}
         data-testid="newsletter-settings-panel"
         ref={settingsPanelRef}
       >
