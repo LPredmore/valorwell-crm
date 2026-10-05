@@ -40,6 +40,78 @@ async function loadPublication(auth: AuthContext, id: string) {
   return data as Record<string, unknown>;
 }
 
+type SourceThumbnail = { fileId: string | null; url: string | null };
+
+/** The Library cover is the source of truth until a publication reaches YouTube. */
+async function loadSourceThumbnail(auth: AuthContext, row: Record<string, unknown>): Promise<SourceThumbnail> {
+  if (row.source_type === "clip") {
+    const { data: clip, error: clipError } = await auth.db
+      .from("ai_operations_video_clips")
+      .select("project_id, cover_image_file_id, cover_image_url")
+      .eq("id", row.clip_id as string)
+      .maybeSingle();
+    if (clipError) throw new Error(clipError.message);
+    if (!clip) return { fileId: null, url: null };
+
+    const { data: project, error: projectError } = await auth.db
+      .from("ai_operations_video_projects")
+      .select("tenant_id")
+      .eq("id", clip.project_id as string)
+      .maybeSingle();
+    if (projectError) throw new Error(projectError.message);
+    if (!project || project.tenant_id !== auth.tenantId) return { fileId: null, url: null };
+
+    return {
+      fileId: (clip.cover_image_file_id as string | null) ?? null,
+      url: (clip.cover_image_url as string | null) ?? null,
+    };
+  }
+
+  const { data: project, error } = await auth.db
+    .from("ai_operations_video_projects")
+    .select("cover_image_file_id, cover_image_url")
+    .eq("id", row.project_id as string)
+    .eq("tenant_id", auth.tenantId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return {
+    fileId: (project?.cover_image_file_id as string | null) ?? null,
+    url: (project?.cover_image_url as string | null) ?? null,
+  };
+}
+
+/**
+ * Prepared drafts can predate their Library artwork. Before approval, copy the current
+ * Library cover into the publication snapshot so the worker publishes what the operator sees.
+ * Queue-time recovery only fills a missing legacy snapshot; it never replaces an approved one.
+ */
+async function syncSourceThumbnail(
+  auth: AuthContext,
+  row: Record<string, unknown>,
+  options: { onlyIfMissing?: boolean } = {},
+): Promise<Record<string, unknown>> {
+  if (row.external_video_id) return row;
+  if (options.onlyIfMissing && row.thumbnail_file_id) return row;
+
+  const source = await loadSourceThumbnail(auth, row);
+  if (!source.fileId) return row;
+  if (row.thumbnail_file_id === source.fileId && row.thumbnail_url === source.url) return row;
+
+  let query = auth.db
+    .from("ai_operations_social_publications")
+    .update({ thumbnail_file_id: source.fileId, thumbnail_url: source.url })
+    .eq("id", row.id as string)
+    .eq("tenant_id", auth.tenantId)
+    .eq("status", row.status as string)
+    .is("external_video_id", null);
+  if (options.onlyIfMissing) query = query.is("thumbnail_file_id", null);
+
+  const { data, error } = await query.select("id");
+  if (error) throw new Error(error.message);
+  if (!data?.length) return await loadPublication(auth, row.id as string);
+  return await loadPublication(auth, row.id as string);
+}
+
 async function insertEvent(auth: AuthContext, publicationId: string, eventType: string, detail: Record<string, unknown>) {
   const { error } = await auth.db.from("ai_operations_social_publication_events").insert({
     tenant_id: auth.tenantId,
@@ -340,7 +412,9 @@ export async function validatePublication(auth: AuthContext, params: { id: strin
     if (!Number.isFinite(scheduledMs) || scheduledMs <= Date.now() + MIN_SCHEDULE_LEAD_MS) {
       errors.push("Scheduled publish time must be at least 1 minute in the future.");
     }
-    if (row.content_format === "short" && !row.thumbnail_file_id) {
+    const sourceThumbnail = await loadSourceThumbnail(auth, row);
+    const effectiveThumbnailFileId = (row.thumbnail_file_id as string | null) ?? sourceThumbnail.fileId;
+    if (row.content_format === "short" && !effectiveThumbnailFileId) {
       errors.push("Choose a thumbnail before scheduling this Short so it is ready for the manual YouTube Studio step.");
     }
   }
@@ -389,7 +463,9 @@ export async function validatePublication(auth: AuthContext, params: { id: strin
     else if (!project.source_file_id) errors.push("Source video file is not available.");
   }
 
-  if (row.content_format !== "short" && !row.thumbnail_file_id) warnings.push("No custom thumbnail is set.");
+  const sourceThumbnailForValidation = await loadSourceThumbnail(auth, row);
+  const effectiveThumbnailFileId = (row.thumbnail_file_id as string | null) ?? sourceThumbnailForValidation.fileId;
+  if (row.content_format !== "short" && !effectiveThumbnailFileId) warnings.push("No custom thumbnail is set.");
   if (row.content_format === "short" && row.delivery_mode === "scheduled") {
     warnings.push("This Short will upload to YouTube immediately as private with the scheduled public time. Add its thumbnail manually in YouTube Studio before it publishes.");
   }
@@ -414,8 +490,9 @@ export async function validatePublication(auth: AuthContext, params: { id: strin
 }
 
 export async function approvePublication(auth: AuthContext, params: { id: string }) {
-  const current = await loadPublication(auth, params.id);
+  let current = await loadPublication(auth, params.id);
   assertTransition(String(current.status), "approved");
+  current = await syncSourceThumbnail(auth, current);
   const validation = await validatePublication(auth, params);
   if (!validation.ok) throw new Error(`Publication is not ready to approve: ${validation.errors.join(" ")}`);
 
@@ -433,8 +510,10 @@ export async function approvePublication(auth: AuthContext, params: { id: string
 
 export async function queuePublish(auth: AuthContext, params: { id: string }) {
   // social_queue_publish runs as the service role and is not tenant-aware: prove ownership first.
-  const current = await loadPublication(auth, params.id);
+  let current = await loadPublication(auth, params.id);
   assertTransition(String(current.status), "upload_queued");
+  // Recovery for publications approved before source-cover synchronization existed.
+  current = await syncSourceThumbnail(auth, current, { onlyIfMissing: true });
   const { data, error } = await auth.db.rpc("social_queue_publish", { p_publication_id: params.id });
   if (error) throw new Error(error.message);
   return { jobId: data as number, publication: await getPublication(auth, { id: params.id }) };
