@@ -42,8 +42,8 @@ const detail: NewsletterDetail = {
 };
 
 describe('canonical newsletter control plane', () => {
-  it('exposes only audiences accepted by the canonical newsletter RPC', () => {
-    expect(NEWSLETTER_AUDIENCE_DOMAINS).toEqual(['client', 'staff', 'donor', 'bty']);
+  it('exposes all six audiences accepted by the canonical newsletter RPC', () => {
+    expect(NEWSLETTER_AUDIENCE_DOMAINS).toEqual(['client', 'staff', 'donor', 'relationship', 'bty', 'provider_applicant']);
   });
 
   it('maps Email Studio content to the canonical newsletter upsert contract without rewriting it', () => {

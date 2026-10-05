@@ -28148,6 +28148,7 @@ export type Database = {
         Args: { p_claim_token: string; p_recipient_id: string }
         Returns: Json
       }
+      crm_newsletter_worker_status: { Args: never; Returns: Json }
       crm_normalize_email: { Args: { p_value: string }; Returns: string }
       crm_normalize_phone: { Args: { p_value: string }; Returns: string }
       crm_pause_enrollment: {

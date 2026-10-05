@@ -232,6 +232,7 @@ export function BulkNewsletterDialog({
           initialContent={initialContent}
           readOnly={isSending}
           onDirty={clearTemplateAttribution}
+          layout="dialog"
         />
 
         {progress ? <p className="text-sm text-muted-foreground">{progress}</p> : null}

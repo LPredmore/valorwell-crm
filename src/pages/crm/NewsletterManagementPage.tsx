@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -157,7 +158,19 @@ export default function NewsletterManagementPage() {
         scheduledAt: scheduleAt[newsletterId] ? new Date(scheduleAt[newsletterId]).toISOString() : null,
         reason: reasons[newsletterId] ?? '',
       }),
+    // Scheduling wakes the send worker via a database trigger, so due sends
+    // are picked up immediately without waiting for the hourly sweep.
     onSuccess: refresh,
+  });
+
+  const workerStatus = useQuery({
+    queryKey: ['newsletter-worker-status'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('crm_newsletter_worker_status');
+      if (error) throw error;
+      return data as { lastRunAt: string | null; lastRunStatus: string | null; dueNow: number };
+    },
+    refetchInterval: 60_000,
   });
 
   const cancelSend = useMutation({
@@ -425,6 +438,15 @@ export default function NewsletterManagementPage() {
           <CardDescription>
             {newsletters.data?.suppressedMailboxes ?? 0} mailboxes have unsubscribed. An unsubscribe covers the whole mailbox, so shared family addresses share one decision.
           </CardDescription>
+          {workerStatus.data && (
+            <p className="text-xs text-muted-foreground">
+              Send worker:{' '}
+              {workerStatus.data.lastRunAt
+                ? `last ran ${new Date(workerStatus.data.lastRunAt).toLocaleString()} (${workerStatus.data.lastRunStatus ?? 'unknown'})`
+                : 'has not run yet'}
+              {workerStatus.data.dueNow > 0 ? ` — ${workerStatus.data.dueNow} newsletter(s) due now` : ''}.
+            </p>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {newsletters.isLoading && <p className="text-sm text-muted-foreground">Loading newsletters…</p>}
@@ -478,7 +500,7 @@ export default function NewsletterManagementPage() {
                   )}
                 </div>
 
-                {canMutate && letter.canonical && (
+                {canMutate && (letter.canonical || letter.status === 'scheduled' || letter.status === 'sending') && (
                   <div className="flex flex-wrap items-end gap-2 rounded border bg-muted/30 p-3">
                     <div className="min-w-56 flex-1 space-y-1">
                       <Label htmlFor={`reason-${letter.id}`}>Reason for this action</Label>
@@ -489,7 +511,7 @@ export default function NewsletterManagementPage() {
                         value={reason}
                       />
                     </div>
-                    {letter.status === 'draft' && (
+                    {letter.canonical && letter.status === 'draft' && (
                       <div className="space-y-1">
                         <Label htmlFor={`when-${letter.id}`}>Send at (optional)</Label>
                         <Input
@@ -500,20 +522,22 @@ export default function NewsletterManagementPage() {
                         />
                       </div>
                     )}
-                    <Button
-                      disabled={!reason.trim() || duplicate.isPending}
-                      onClick={() => duplicate.mutate(letter)}
-                      size="sm"
-                      variant="outline"
-                    >
-                      Duplicate to draft
-                    </Button>
-                    {letter.status === 'draft' && (
+                    {letter.canonical && (
+                      <Button
+                        disabled={!reason.trim() || duplicate.isPending}
+                        onClick={() => duplicate.mutate(letter)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Duplicate to draft
+                      </Button>
+                    )}
+                    {letter.canonical && letter.status === 'draft' && (
                       <Button disabled={!reason.trim() || schedule.isPending} onClick={() => schedule.mutate(letter.id)} size="sm">
                         {scheduleAt[letter.id] ? 'Schedule send' : 'Send now'}
                       </Button>
                     )}
-                    {letter.status === 'scheduled' && (
+                    {(letter.status === 'scheduled' || letter.status === 'sending') && (
                       <Button
                         disabled={!reason.trim() || cancelSend.isPending}
                         onClick={() => cancelSend.mutate(letter.id)}

@@ -112,6 +112,8 @@ export type ClientNewsletterEmailStudioComposerProps = {
   readOnly?: boolean;
   scope?: EmailContentScope;
   onDirty?: () => void;
+  /** 'workspace' = full-screen three-column grid; 'dialog' = stacked layout that fits inside a modal. */
+  layout?: 'workspace' | 'dialog';
 };
 
 type InspectorTab = 'block' | 'email' | 'checks';
@@ -129,7 +131,9 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
   readOnly = false,
   scope = 'client',
   onDirty,
+  layout = 'workspace',
 }, ref) {
+  const isDialog = layout === 'dialog';
   const editorRef = useRef<EmailEditorRef>(null);
   const selectionCleanupRef = useRef<(() => void) | null>(null);
   const selectedPositionRef = useRef<number | null>(null);
@@ -142,7 +146,6 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     : createEmailStudioDocument({ mode: 'newsletter', scope, themeKey: initialThemeKey });
   const normalizedInitial = normalizeEmailStudioComplianceFooters(loadedDocument);
   const initialDocument = normalizedInitial.document;
-  const repairedOnLoadRef = useRef(normalizedInitial.changed);
 
   const [themeKey, setThemeKey] = useState<EmailStudioThemeKey>(initialThemeKey);
   const [content, setContent] = useState<EmailEditorDocument>(() => cloneEmailStudioDocument(initialDocument));
@@ -182,13 +185,11 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     };
   }, []);
 
-  useEffect(() => {
-    // The loaded draft carried duplicate or stale compliance footers. Mark it
-    // dirty so autosave rewrites the stored document, HTML, and render hash
-    // through the normal export path instead of leaving the repair unsaved.
-    if (repairedOnLoadRef.current) onDirty?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Note: the load-time compliance-footer repair (repairedOnLoadRef) is a
+  // system normalization, not a user edit. It deliberately does NOT call
+  // onDirty — the bulk-send dialog wires onDirty to clearing template
+  // attribution, and a system repair must not strip the chosen template.
+  // The workspace autosave persists the repaired document on the next save.
 
   const markDirty = () => {
     setSnapshot(null);
@@ -387,11 +388,16 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
 
   return (
     <div
-      className="grid h-full min-h-0 grid-cols-[190px_minmax(680px,1fr)_310px] bg-muted/30"
+      className={isDialog
+        ? 'flex min-h-0 flex-col gap-3 bg-muted/30'
+        : 'grid h-full min-h-0 grid-cols-[190px_minmax(680px,1fr)_310px] bg-muted/30'}
       data-testid="newsletter-authoring-layout"
+      data-layout={layout}
     >
       <aside
-        className="min-h-0 overflow-y-auto border-r bg-background p-3"
+        className={isDialog
+          ? 'rounded-md border bg-background p-3'
+          : 'min-h-0 overflow-y-auto border-r bg-background p-3'}
         data-testid="newsletter-block-library"
         ref={blockLibraryRef}
       >
@@ -399,7 +405,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
           <p className="text-sm font-semibold">Blocks</p>
           <p className="text-xs text-muted-foreground">Add an email-safe section.</p>
         </div>
-        <div className="space-y-1.5">
+        <div className={isDialog ? 'grid grid-cols-2 gap-1.5 sm:grid-cols-3' : 'space-y-1.5'}>
           {blocks.map((block) => {
             const alreadyPresent = block.kind === 'compliance-footer' && hasComplianceFooter;
             return (
@@ -425,7 +431,9 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
       </aside>
 
       <section
-        className="min-h-0 min-w-0 overflow-auto bg-[#e9ece9]"
+        className={isDialog
+          ? 'min-w-0 overflow-x-auto rounded-md border bg-[#e9ece9]'
+          : 'min-h-0 min-w-0 overflow-auto bg-[#e9ece9]'}
         data-testid="newsletter-canvas-region"
       >
         <div
@@ -499,9 +507,9 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
           </span>
         </div>
 
-        <div className="min-w-[680px] px-4 py-8">
+        <div className={isDialog ? 'min-w-0 px-2 py-4' : 'min-w-[680px] px-4 py-8'}>
           <div
-            className="mx-auto w-[648px] rounded-xl border border-border/80 bg-white p-6 shadow-[0_10px_30px_rgba(20,30,24,0.10)]"
+            className={`mx-auto rounded-xl border border-border/80 bg-white p-6 shadow-[0_10px_30px_rgba(20,30,24,0.10)] ${isDialog ? 'w-full max-w-[648px]' : 'w-[648px]'}`}
             data-testid="newsletter-email-canvas"
             onMouseDownCapture={(event) => {
               if (selectNewsletterBlockFromDom(editorRef.current?.editor ?? null, event.target)) {
@@ -520,7 +528,7 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
                 hideWhenActiveMarks: HIDDEN_BUBBLE_MENU_MARKS,
               }}
               placeholder="Add or select a newsletter block"
-              className="newsletter-email-editor min-h-[760px] w-full [&_.ProseMirror]:min-h-[720px] [&_.ProseMirror]:outline-none [&_.ProseMirror-selectednode]:outline [&_.ProseMirror-selectednode]:outline-2 [&_.ProseMirror-selectednode]:outline-offset-2 [&_.ProseMirror-selectednode]:outline-[#C69A45] [&_.newsletter-structured-block]:cursor-pointer"
+              className={`newsletter-email-editor w-full [&_.ProseMirror]:outline-none [&_.ProseMirror-selectednode]:outline [&_.ProseMirror-selectednode]:outline-2 [&_.ProseMirror-selectednode]:outline-offset-2 [&_.ProseMirror-selectednode]:outline-[#C69A45] [&_.newsletter-structured-block]:cursor-pointer ${isDialog ? 'min-h-[420px] [&_.ProseMirror]:min-h-[400px]' : 'min-h-[760px] [&_.ProseMirror]:min-h-[720px]'}`}
               onReady={() => {
                 editorRef.current?.editor?.setEditable(!readOnly);
                 attachEditorControls();
@@ -537,7 +545,9 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
       </section>
 
       <aside
-        className="min-h-0 overflow-y-auto border-l bg-background"
+        className={isDialog
+          ? 'rounded-md border bg-background'
+          : 'min-h-0 overflow-y-auto border-l bg-background'}
         data-testid="newsletter-settings-panel"
         ref={settingsPanelRef}
       >
