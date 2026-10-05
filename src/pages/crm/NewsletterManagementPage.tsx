@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -437,6 +438,15 @@ export default function NewsletterManagementPage() {
           <CardDescription>
             {newsletters.data?.suppressedMailboxes ?? 0} mailboxes have unsubscribed. An unsubscribe covers the whole mailbox, so shared family addresses share one decision.
           </CardDescription>
+          {workerStatus.data && (
+            <p className="text-xs text-muted-foreground">
+              Send worker:{' '}
+              {workerStatus.data.lastRunAt
+                ? `last ran ${new Date(workerStatus.data.lastRunAt).toLocaleString()} (${workerStatus.data.lastRunStatus ?? 'unknown'})`
+                : 'has not run yet'}
+              {workerStatus.data.dueNow > 0 ? ` — ${workerStatus.data.dueNow} newsletter(s) due now` : ''}.
+            </p>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {newsletters.isLoading && <p className="text-sm text-muted-foreground">Loading newsletters…</p>}
