@@ -47,6 +47,30 @@ beforeEach(() => {
   api.validateSocialPublication.mockResolvedValue({ ok: true, errors: [], warnings: [] });
 });
 
+describe('publication validation refresh', () => {
+  it('always refetches validation when the publication editor mounts', async () => {
+    authState.capabilities = { mutate: true };
+    api.fetchSocialPublication.mockResolvedValue(pub({ thumbnailFileId: 'cover-1' }));
+    api.validateSocialPublication.mockResolvedValue({ ok: true, errors: [], warnings: [] });
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(['social-media', 'validation', 'pub-1'], {
+      ok: true,
+      errors: [],
+      warnings: ['No custom thumbnail is set.'],
+    });
+
+    render(
+      <QueryClientProvider client={client}>
+        <SocialPublicationEditor open onOpenChange={vi.fn()} publicationId="pub-1" />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(api.validateSocialPublication).toHaveBeenCalledWith('pub-1'));
+    await waitFor(() => expect(screen.queryByText('No custom thumbnail is set.')).not.toBeInTheDocument());
+  });
+});
+
 describe('publication editor capability gating', () => {
   it('never auto-creates a draft for a readonly user', async () => {
     authState.capabilities = { mutate: false };
