@@ -157,7 +157,12 @@ export default function NewsletterManagementPage() {
         scheduledAt: scheduleAt[newsletterId] ? new Date(scheduleAt[newsletterId]).toISOString() : null,
         reason: reasons[newsletterId] ?? '',
       }),
-    onSuccess: refresh,
+    onSuccess: () => {
+      // Wake the send worker immediately so "Send now" and due scheduled sends
+      // are picked up without waiting for the hourly reconciliation sweep.
+      void supabase.functions.invoke('newsletter-send-worker', { body: {} }).catch(() => undefined);
+      refresh();
+    },
   });
 
   const cancelSend = useMutation({
@@ -478,7 +483,7 @@ export default function NewsletterManagementPage() {
                   )}
                 </div>
 
-                {canMutate && letter.canonical && (
+                {canMutate && (letter.canonical || letter.status === 'scheduled' || letter.status === 'sending') && (
                   <div className="flex flex-wrap items-end gap-2 rounded border bg-muted/30 p-3">
                     <div className="min-w-56 flex-1 space-y-1">
                       <Label htmlFor={`reason-${letter.id}`}>Reason for this action</Label>
@@ -489,7 +494,7 @@ export default function NewsletterManagementPage() {
                         value={reason}
                       />
                     </div>
-                    {letter.status === 'draft' && (
+                    {letter.canonical && letter.status === 'draft' && (
                       <div className="space-y-1">
                         <Label htmlFor={`when-${letter.id}`}>Send at (optional)</Label>
                         <Input
@@ -500,20 +505,22 @@ export default function NewsletterManagementPage() {
                         />
                       </div>
                     )}
-                    <Button
-                      disabled={!reason.trim() || duplicate.isPending}
-                      onClick={() => duplicate.mutate(letter)}
-                      size="sm"
-                      variant="outline"
-                    >
-                      Duplicate to draft
-                    </Button>
-                    {letter.status === 'draft' && (
+                    {letter.canonical && (
+                      <Button
+                        disabled={!reason.trim() || duplicate.isPending}
+                        onClick={() => duplicate.mutate(letter)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Duplicate to draft
+                      </Button>
+                    )}
+                    {letter.canonical && letter.status === 'draft' && (
                       <Button disabled={!reason.trim() || schedule.isPending} onClick={() => schedule.mutate(letter.id)} size="sm">
                         {scheduleAt[letter.id] ? 'Schedule send' : 'Send now'}
                       </Button>
                     )}
-                    {letter.status === 'scheduled' && (
+                    {(letter.status === 'scheduled' || letter.status === 'sending') && (
                       <Button
                         disabled={!reason.trim() || cancelSend.isPending}
                         onClick={() => cancelSend.mutate(letter.id)}
