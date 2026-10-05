@@ -11,6 +11,8 @@ export type SocialMediaLibraryItem = {
   sourceId: string;
   projectId: string;
   clipId: string | null;
+  /** Chronological Part number within the parent project; null for Shorts/full episodes. */
+  partNumber: number | null;
   contentFormat: ContentFormat;
   title: string | null;
   description: string | null;
