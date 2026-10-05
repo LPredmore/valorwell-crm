@@ -25,6 +25,7 @@ export function SocialMediaLibraryCard({ item, onSelect, onChangePhoto }: { item
       <CardContent className="p-3 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="secondary">{CONTENT_FORMAT_LABELS[item.contentFormat]}</Badge>
+          {item.partNumber != null && <Badge variant="outline">Part {item.partNumber}</Badge>}
           {!item.readiness.ready && <Badge variant="destructive">Not Ready</Badge>}
           {publication && (
             <Badge variant={publication.status === 'failed' ? 'destructive' : 'outline'}>{STATUS_LABELS[publication.status]}</Badge>
