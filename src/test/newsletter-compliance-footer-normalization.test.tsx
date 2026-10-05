@@ -87,7 +87,7 @@ describe('compliance footer normalization', () => {
     expect(second.document).toBe(clean);
   });
 
-  it('renders one compliance footer without the postal token and flags the draft for autosave', async () => {
+  it('renders one compliance footer without the postal token without marking the draft dirty', async () => {
     const onDirty = vi.fn();
     const { container } = render(
       <ClientNewsletterEmailStudioComposer
@@ -101,9 +101,11 @@ describe('compliance footer normalization', () => {
         .toBe(1);
     });
     expect(container.innerHTML).not.toContain('{{postal_address}}');
-    // autosave must persist the repair, otherwise the send path keeps using
-    // the stored HTML that still contains both footers
-    expect(onDirty).toHaveBeenCalled();
+    // The mount-time repair is a system normalization, not a user edit: it
+    // must NOT call onDirty, because the bulk-send dialog wires onDirty to
+    // clearing template attribution. The workspace autosave persists the
+    // repaired document on the next save instead.
+    expect(onDirty).not.toHaveBeenCalled();
   });
 
   it('disables the block library entry once a compliance footer exists', async () => {
