@@ -45,6 +45,7 @@ type JobRow = {
 type ClipRow = {
   id: string;
   project_id: string;
+  transcript_text: string;
   hook_text: string;
   primary_speaker: string;
   person_positioning: string;
@@ -52,8 +53,8 @@ type ClipRow = {
   gesture_action: string;
   camera_framing: string;
   pose_family: string;
-  core_visual: string;
-  hook_text_placement: Placement;
+  core_visual: string | null;
+  hook_text_placement: Placement | null;
   thumbnail_generation_revision: number;
   cover_image_file_id: string | null;
 };
@@ -368,8 +369,32 @@ function placementLanguage(placement: Placement): string {
   return labels[placement];
 }
 
-function buildPrompt(clip: ClipRow, project: ProjectRow): string {
-  const negativeSpace = placementLanguage(clip.hook_text_placement);
+function resolvePlacement(clip: ClipRow): Placement {
+  const explicit = clip.hook_text_placement;
+  if (explicit && explicit in TEXT_BOXES) return explicit;
+
+  const framing = clip.camera_framing.toLowerCase();
+  const positioning = clip.person_positioning.toLowerCase();
+
+  if (/upper[- ]right|top[- ]right/.test(framing)) return "top_right";
+  if (/upper[- ]left|top[- ]left/.test(framing)) return "top_left";
+  if (/lower[- ]right|bottom[- ]right/.test(framing)) return "bottom_right";
+  if (/lower[- ]left|bottom[- ]left/.test(framing)) return "bottom_left";
+  if (/negative space[^.]{0,80}right|right[^.]{0,80}negative space|reserve[^.]{0,80}right|open space[^.]{0,80}right/.test(framing)) return "right";
+  if (/negative space[^.]{0,80}left|left[^.]{0,80}negative space|reserve[^.]{0,80}left|open space[^.]{0,80}left/.test(framing)) return "left";
+
+  if (/left (half|third|side)|left-of-center|left of center/.test(positioning + " " + framing)) return "right";
+  if (/right (half|third|side)|right-of-center|right of center/.test(positioning + " " + framing)) return "left";
+  if (/hook text high|hook high|text high|above (the )?shoulders/.test(framing)) return "top_left";
+
+  return "top_left";
+}
+
+function buildPrompt(clip: ClipRow, project: ProjectRow, placement: Placement): string {
+  const negativeSpace = placementLanguage(placement);
+  const transcriptContext = clip.transcript_text.trim().replace(/\s+/g, " ").slice(0, 700);
+  const coreVisual = clip.core_visual?.trim()
+    || `Visually support the meaning of the hook with a simple photographic environment and no infographic elements. Spoken context: ${transcriptContext}`;
   return [
     "Create one finished 16:9 YouTube thumbnail visual. This is the image layer only; typography will be added later by software.",
     "Use the supplied reference image as the identity reference for the primary speaker. Preserve a clearly recognizable likeness while allowing an expressive thumbnail pose.",
@@ -377,7 +402,7 @@ function buildPrompt(clip: ClipRow, project: ProjectRow): string {
     "The primary speaker must dominate the image. Do not make another person the main subject.",
     `Primary speaker: ${clip.primary_speaker}.`,
     `Episode guest/organization context: ${project.guest_name ?? "unknown guest"}.`,
-    `Core visual: ${clip.core_visual}`,
+    `Core visual: ${coreVisual}`,
     `Person positioning: ${clip.person_positioning}`,
     `Facial expression: ${clip.facial_expression}`,
     `Gesture/action: ${clip.gesture_action}`,
@@ -504,6 +529,16 @@ function wrapHook(text: string, pointSize: number, maxWidth: number): string[] {
 }
 
 function chooseTextLayout(text: string, box: TextBox): { pointSize: number; lines: string[]; lineHeight: number } {
+  // Prefer a balanced two-line hook when it can remain large enough. This avoids
+  // awkward one-word orphan lines such as "... WORTH" / "IT".
+  for (let pointSize = 94; pointSize >= 54; pointSize -= 2) {
+    const lines = wrapHook(text, pointSize, box.width);
+    const lineHeight = pointSize * 1.04;
+    if (lines.length === 2 && lines.length * lineHeight <= box.height) {
+      return { pointSize, lines, lineHeight };
+    }
+  }
+
   for (let pointSize = 94; pointSize >= 44; pointSize -= 2) {
     const lines = wrapHook(text, pointSize, box.width);
     const lineHeight = pointSize * 1.04;
@@ -701,7 +736,7 @@ Deno.serve(async (request: Request) => {
 
     const { data: clipData, error: clipError } = await db
       .from("ai_operations_video_clips")
-      .select("id,project_id,hook_text,primary_speaker,person_positioning,facial_expression,gesture_action,camera_framing,pose_family,core_visual,hook_text_placement,thumbnail_generation_revision,cover_image_file_id")
+      .select("id,project_id,transcript_text,hook_text,primary_speaker,person_positioning,facial_expression,gesture_action,camera_framing,pose_family,core_visual,hook_text_placement,thumbnail_generation_revision,cover_image_file_id")
       .eq("id", job.clip_id)
       .maybeSingle();
     if (clipError) throw new ThumbnailError("clip_lookup_failed", clipError.message, true);
@@ -742,7 +777,8 @@ Deno.serve(async (request: Request) => {
     }
 
     const reference = await resolveReference(db, clip, project, settings);
-    const prompt = buildPrompt(clip, project);
+    const placement = resolvePlacement(clip);
+    const prompt = buildPrompt(clip, project, placement);
     const generated = await generateImage(
       openRouterKey,
       prompt,
@@ -752,7 +788,7 @@ Deno.serve(async (request: Request) => {
     const finalBytes = await renderFinalThumbnail(
       generated.bytes,
       clip.hook_text,
-      clip.hook_text_placement,
+      placement,
     );
     if (!finalBytes.length) throw new ThumbnailError("final_image_empty", "Final thumbnail bytes were empty.", true);
     if (finalBytes.byteLength > 2 * 1024 * 1024) {
@@ -839,7 +875,7 @@ Deno.serve(async (request: Request) => {
         output_bytes: finalBytes.byteLength,
         width: TARGET_WIDTH,
         height: TARGET_HEIGHT,
-        hook_text_placement: clip.hook_text_placement,
+        hook_text_placement: placement,
         metadata_hash: job.payload?.metadata_hash ?? null,
       },
     });
