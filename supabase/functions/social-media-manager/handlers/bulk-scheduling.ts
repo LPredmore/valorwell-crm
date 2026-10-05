@@ -2,7 +2,7 @@ import type { AuthContext } from "../context.ts";
 import type { ContentFormat, SourceType } from "../types.ts";
 import { listLibrary } from "./library.ts";
 import {
-  approvePublication, cancelPublication, createPublication, queuePublish, validatePublication,
+  approvePublication, cancelPublication, createPublication, queuePublish, updatePublication, validatePublication,
 } from "./publications.ts";
 import { getPreferredScheduleConfig, type PreferredScheduleTimes } from "./settings.ts";
 
@@ -37,6 +37,17 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_ITEMS = 30;
 const MAX_DATES = 31;
 const MIN_LEAD_MS = 60_000;
+const REUSABLE_ACTIVE_STATUSES = new Set(["draft", "ready", "approved"]);
+
+export function isReusableBulkPublication(
+  publication: { status: string; externalVideoId: string | null } | null | undefined,
+): boolean {
+  return Boolean(
+    publication &&
+    REUSABLE_ACTIVE_STATUSES.has(publication.status) &&
+    !publication.externalVideoId
+  );
+}
 
 function sourceKey(sourceType: SourceType, sourceId: string) {
   return `${sourceType}:${sourceId}`;
@@ -210,9 +221,11 @@ export async function previewBulkSchedule(
     const item = libraryByKey.get(sourceKey(requested.sourceType, requested.sourceId));
     if (!item) throw new Error("One or more selected videos could not be found in your library.");
     if (!item.readiness.ready) throw new Error(`${item.title ?? item.guestName ?? "Selected video"} is not publish-ready: ${item.readiness.reasons[0] ?? "readiness check failed"}`);
-    if (item.activePublication) throw new Error(`${item.title ?? item.guestName ?? "Selected video"} already has an active publication. Schedule or finish that publication individually.`);
     if (item.failedPublication) throw new Error(`${item.title ?? item.guestName ?? "Selected video"} has a failed publication. Use Retry instead of creating another publication.`);
     if (item.publishedPublication) throw new Error(`${item.title ?? item.guestName ?? "Selected video"} has already been published.`);
+    if (item.activePublication && !isReusableBulkPublication(item.activePublication)) {
+      throw new Error(`${item.title ?? item.guestName ?? "Selected video"} is already being uploaded, scheduled, or otherwise processed.`);
+    }
     if (!item.title?.trim()) throw new Error(`${item.guestName ?? "Selected video"} needs a title before it can be bulk scheduled.`);
     if (item.contentFormat === "short" && !item.thumbnailFileId) {
       throw new Error(`${item.title} needs a thumbnail before it can be scheduled.`);
@@ -271,29 +284,55 @@ export async function bulkSchedulePublications(
     throw new Error(`Only ${preview.assignments.length} preferred slots are available for ${preview.selectedCount} selected videos. Select more days.`);
   }
 
-  const created: Array<{ id: string; assignment: BulkScheduleAssignment }> = [];
+  // Publishing prep intentionally creates Draft publications so metadata, playlists, and
+  // thumbnail choices can be reviewed before scheduling. Reuse those pre-upload drafts
+  // instead of forcing operators to cancel them before a bulk schedule.
+  const library = await listLibrary(auth, {});
+  const libraryByKey = new Map(library.map((item) => [sourceKey(item.sourceType, item.sourceId), item]));
+  const prepared: Array<{ id: string; assignment: BulkScheduleAssignment; createdNew: boolean }> = [];
+
   try {
     for (const assignment of preview.assignments) {
-      const publication = await createPublication(auth, {
-        sourceType: assignment.sourceType,
-        ...(assignment.sourceType === "clip" ? { clipId: assignment.sourceId } : { projectId: assignment.sourceId }),
-        deliveryMode: "scheduled",
-        scheduledFor: assignment.scheduledFor,
-      });
-      created.push({ id: publication.id, assignment });
+      const item = libraryByKey.get(sourceKey(assignment.sourceType, assignment.sourceId));
+      if (!item) throw new Error(`${assignment.title} could not be found while preparing the bulk schedule.`);
+      if (item.failedPublication) throw new Error(`${assignment.title} now has a failed publication. Use Retry instead.`);
+      if (item.publishedPublication) throw new Error(`${assignment.title} has already been published.`);
+
+      if (item.activePublication) {
+        if (!isReusableBulkPublication(item.activePublication)) {
+          throw new Error(`${assignment.title} started publishing while the bulk schedule was being prepared. Reload and try again.`);
+        }
+        const publication = await updatePublication(auth, {
+          id: item.activePublication.id,
+          changes: {
+            deliveryMode: "scheduled",
+            scheduledFor: assignment.scheduledFor,
+            desiredPrivacyStatus: "public",
+          },
+        });
+        prepared.push({ id: publication.id, assignment, createdNew: false });
+      } else {
+        const publication = await createPublication(auth, {
+          sourceType: assignment.sourceType,
+          ...(assignment.sourceType === "clip" ? { clipId: assignment.sourceId } : { projectId: assignment.sourceId }),
+          deliveryMode: "scheduled",
+          scheduledFor: assignment.scheduledFor,
+        });
+        prepared.push({ id: publication.id, assignment, createdNew: true });
+      }
     }
 
-    for (const entry of created) {
+    for (const entry of prepared) {
       const validation = await validatePublication(auth, { id: entry.id });
       if (!validation.ok) {
         throw new Error(`${entry.assignment.title} is not ready to schedule: ${validation.errors.join(" ")}`);
       }
     }
 
-    for (const entry of created) await approvePublication(auth, { id: entry.id });
+    for (const entry of prepared) await approvePublication(auth, { id: entry.id });
 
     const scheduled = [];
-    for (const entry of created) {
+    for (const entry of prepared) {
       const queued = await queuePublish(auth, { id: entry.id });
       scheduled.push({
         sourceType: entry.assignment.sourceType,
@@ -307,10 +346,10 @@ export async function bulkSchedulePublications(
 
     return { ...preview, scheduled };
   } catch (error) {
-    // Nothing is intentionally deleted: cancelled rows preserve the audit trail. Best-effort
-    // cleanup is safe only while a publication has not reached YouTube; cancelPublication
-    // enforces that boundary.
-    for (const entry of [...created].reverse()) {
+    // Preserve any pre-existing prepared publication: it may contain hand-reviewed metadata
+    // and playlist choices. Only cancel rows this bulk operation created itself.
+    for (const entry of [...prepared].reverse()) {
+      if (!entry.createdNew) continue;
       try {
         await cancelPublication(auth, { id: entry.id });
       } catch {

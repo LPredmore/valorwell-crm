@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  allocatePreferredSlots, zonedDateTimeToIso,
+  allocatePreferredSlots, isReusableBulkPublication, zonedDateTimeToIso,
   type BulkScheduleSource,
 } from '../../supabase/functions/social-media-manager/handlers/bulk-scheduling';
 import type { ContentFormat } from '../../supabase/functions/social-media-manager/types';
@@ -21,6 +21,18 @@ function item(index: number, contentFormat: ContentFormat = 'long_form') {
 
 const weekdays = ['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02'];
 const now = Date.parse('2026-09-25T12:00:00.000Z');
+
+describe('bulk social scheduling publication reuse', () => {
+  it('reuses prepared pre-upload publications but blocks in-flight work', () => {
+    expect(isReusableBulkPublication({ status: 'draft', externalVideoId: null })).toBe(true);
+    expect(isReusableBulkPublication({ status: 'ready', externalVideoId: null })).toBe(true);
+    expect(isReusableBulkPublication({ status: 'approved', externalVideoId: null })).toBe(true);
+    expect(isReusableBulkPublication({ status: 'upload_queued', externalVideoId: null })).toBe(false);
+    expect(isReusableBulkPublication({ status: 'scheduled', externalVideoId: 'youtube-id' })).toBe(false);
+    expect(isReusableBulkPublication({ status: 'draft', externalVideoId: 'youtube-id' })).toBe(false);
+    expect(isReusableBulkPublication(null)).toBe(false);
+  });
+});
 
 describe('bulk social scheduling allocator', () => {
   it('spreads nine long-form videos across every first slot before using second slots', () => {

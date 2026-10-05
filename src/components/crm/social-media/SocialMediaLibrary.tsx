@@ -16,11 +16,24 @@ function bulkKey(item: SocialMediaLibraryItem): string {
   return `${item.sourceType}:${item.sourceId}`;
 }
 
+const BULK_REUSABLE_ACTIVE_STATUSES = new Set(['draft', 'ready', 'approved']);
+
+function hasReusableActivePublication(item: SocialMediaLibraryItem): boolean {
+  const publication = item.activePublication;
+  return Boolean(
+    publication &&
+    BULK_REUSABLE_ACTIVE_STATUSES.has(publication.status) &&
+    !publication.externalVideoId
+  );
+}
+
 function bulkScheduleEligibilityReason(item: SocialMediaLibraryItem): string | null {
   if (!item.readiness.ready) return item.readiness.reasons[0] ?? 'This video is not publish-ready.';
-  if (item.activePublication) return 'This video already has an active publication.';
   if (item.failedPublication) return 'This video has a failed publication. Use Retry instead.';
   if (item.publishedPublication) return 'This video has already been published.';
+  if (item.activePublication && !hasReusableActivePublication(item)) {
+    return 'This video is already being uploaded, scheduled, or otherwise processed.';
+  }
   if (!item.title?.trim()) return 'Add a title before bulk scheduling this video.';
   if (item.contentFormat === 'short' && !item.thumbnailFileId) return 'Add a thumbnail before scheduling this Short.';
   return null;
@@ -59,9 +72,18 @@ export function SocialMediaLibrary() {
     () => bulkKeys.map((key) => itemByKey.get(key)).filter((item): item is SocialMediaLibraryItem => Boolean(item)),
     [bulkKeys, itemByKey],
   );
+  const eligibleVisibleItems = useMemo(
+    () => (data ?? []).filter((item) => bulkScheduleEligibilityReason(item) === null),
+    [data],
+  );
   const toggleBulk = (item: SocialMediaLibraryItem, checked: boolean) => {
     const key = bulkKey(item);
     setBulkKeys((current) => checked ? (current.includes(key) ? current : [...current, key]) : current.filter((value) => value !== key));
+  };
+  const selectAllEligibleVisible = () => {
+    setBulkKeys((current) => [
+      ...new Set([...current, ...eligibleVisibleItems.map((item) => bulkKey(item))]),
+    ]);
   };
 
   return (
@@ -71,15 +93,25 @@ export function SocialMediaLibrary() {
       <CrmMutationGate>
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2">
           <p className="text-xs text-muted-foreground">
-            Select publish-ready, unscheduled videos with the checkboxes to schedule them as a batch.
+            Select publish-ready videos, including prepared Draft/Ready/Approved publications, then schedule them as a batch.
           </p>
-          {bulkItems.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{bulkItems.length} selected</span>
-              <Button size="sm" onClick={() => setBulkOpen(true)}>Bulk schedule</Button>
-              <Button size="sm" variant="ghost" onClick={() => setBulkKeys([])}>Clear</Button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={!eligibleVisibleItems.length}
+              onClick={selectAllEligibleVisible}
+            >
+              Select all eligible
+            </Button>
+            {bulkItems.length > 0 && (
+              <>
+                <span className="text-sm font-medium">{bulkItems.length} selected</span>
+                <Button size="sm" onClick={() => setBulkOpen(true)}>Bulk schedule</Button>
+                <Button size="sm" variant="ghost" onClick={() => setBulkKeys([])}>Clear</Button>
+              </>
+            )}
+          </div>
         </div>
       </CrmMutationGate>
 
