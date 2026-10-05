@@ -109,7 +109,7 @@ function adminClient(): SupabaseClient {
 function authorizeWorker(request: Request): boolean {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const authorization = request.headers.get("authorization") ?? "";
-  if (serviceKey && authorization === \`Bearer \${serviceKey}\`) return true;
+  if (serviceKey && authorization === `Bearer ${serviceKey}`) return true;
   const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
   return Boolean(cronSecret) && request.headers.get("x-cron-secret") === cronSecret;
 }
@@ -129,7 +129,7 @@ async function ensureFont(): Promise<void> {
       if (!response.ok) {
         throw new ThumbnailError(
           "font_download_failed",
-          \`Thumbnail font download failed (\${response.status}).\`,
+          `Thumbnail font download failed (${response.status}).`,
           true,
         );
       }
@@ -177,7 +177,7 @@ async function googleAccessToken(db: SupabaseClient): Promise<string> {
   if (!response.ok || !body?.access_token) {
     throw new ThumbnailError(
       "drive_token_refresh_failed",
-      \`Google Drive token refresh failed (\${response.status}).\`,
+      `Google Drive token refresh failed (${response.status}).`,
       response.status >= 500 || response.status === 429,
       { googleError: body?.error ?? null },
     );
@@ -190,9 +190,9 @@ async function driveFileMetadata(
   fileId: string,
 ): Promise<{ mimeType: string; size: number; name: string }> {
   const response = await fetch(
-    \`https://www.googleapis.com/drive/v3/files/\${encodeURIComponent(fileId)}?fields=id,name,mimeType,size\`,
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size`,
     {
-      headers: { authorization: \`Bearer \${accessToken}\` },
+      headers: { authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(20_000),
     },
   );
@@ -200,7 +200,7 @@ async function driveFileMetadata(
   if (!response.ok) {
     throw new ThumbnailError(
       "drive_metadata_failed",
-      \`Drive metadata fetch failed (\${response.status}): \${body?.error?.message ?? "unknown error"}\`,
+      `Drive metadata fetch failed (${response.status}): ${body?.error?.message ?? "unknown error"}`,
       response.status === 429 || response.status >= 500,
     );
   }
@@ -213,16 +213,16 @@ async function driveFileMetadata(
 
 async function driveFileBytes(accessToken: string, fileId: string): Promise<Uint8Array> {
   const response = await fetch(
-    \`https://www.googleapis.com/drive/v3/files/\${encodeURIComponent(fileId)}?alt=media\`,
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`,
     {
-      headers: { authorization: \`Bearer \${accessToken}\` },
+      headers: { authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(30_000),
     },
   );
   if (!response.ok) {
     throw new ThumbnailError(
       "drive_download_failed",
-      \`Drive image download failed (\${response.status}).\`,
+      `Drive image download failed (${response.status}).`,
       response.status === 429 || response.status >= 500,
     );
   }
@@ -253,13 +253,13 @@ async function publicImageBytes(url: string): Promise<{ bytes: Uint8Array; mimeT
   if (!response.ok) {
     throw new ThumbnailError(
       "reference_http_failed",
-      \`Reference image request failed (\${response.status}).\`,
+      `Reference image request failed (${response.status}).`,
       response.status === 429 || response.status >= 500,
     );
   }
   const declared = String(response.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
   if (!declared.startsWith("image/")) {
-    throw new ThumbnailError("reference_invalid_mime", \`Reference URL returned \${declared || "unknown MIME type"}.\`, false);
+    throw new ThumbnailError("reference_invalid_mime", `Reference URL returned ${declared || "unknown MIME type"}.`, false);
   }
   const length = Number(response.headers.get("content-length") ?? 0);
   if (length > MAX_REFERENCE_BYTES) {
@@ -324,13 +324,13 @@ async function resolveReference(
       throw new ThumbnailError("host_reference_invalid", "Luke reference file is not an image.", false);
     }
     const bytes = normalizeReference(await driveFileBytes(token, fileId));
-    return { bytes, mimeType: "image/jpeg", source: \`drive:\${fileId}\` };
+    return { bytes, mimeType: "image/jpeg", source: `drive:${fileId}` };
   }
 
   if ((project.guest_name ?? "").trim().toLowerCase() !== speaker) {
     throw new ThumbnailError(
       "speaker_reference_mismatch",
-      \`Primary speaker "\${clip.primary_speaker}" does not match Luke or project guest "\${project.guest_name ?? ""}".\`,
+      `Primary speaker "${clip.primary_speaker}" does not match Luke or project guest "${project.guest_name ?? ""}".`,
       false,
     );
   }
@@ -348,7 +348,7 @@ async function resolveReference(
       throw new ThumbnailError("guest_reference_invalid", "Guest reference file is not an image.", false);
     }
     const bytes = normalizeReference(await driveFileBytes(token, driveId));
-    return { bytes, mimeType: "image/jpeg", source: \`drive:\${driveId}\` };
+    return { bytes, mimeType: "image/jpeg", source: `drive:${driveId}` };
   }
 
   const remote = await publicImageBytes(guestUrl);
@@ -375,16 +375,16 @@ function buildPrompt(clip: ClipRow, project: ProjectRow): string {
     "Use the supplied reference image as the identity reference for the primary speaker. Preserve a clearly recognizable likeness while allowing an expressive thumbnail pose.",
     "Aesthetic: high-energy reaction-thumbnail photography, bold and punchy, emotionally intense, strong contrast, clean subject separation, layered depth, dramatic but believable lighting, mobile-first composition, immediately readable at small size.",
     "The primary speaker must dominate the image. Do not make another person the main subject.",
-    \`Primary speaker: \${clip.primary_speaker}.\`,
-    \`Episode guest/organization context: \${project.guest_name ?? "unknown guest"}.\`,
-    \`Core visual: \${clip.core_visual}\`,
-    \`Person positioning: \${clip.person_positioning}\`,
-    \`Facial expression: \${clip.facial_expression}\`,
-    \`Gesture/action: \${clip.gesture_action}\`,
-    \`Camera framing: \${clip.camera_framing}\`,
-    \`Pose family: \${clip.pose_family}.\`,
-    \`Reserve the \${negativeSpace} as clean negative space for a bold text hook that will be overlaid later. Keep the speaker's face and important gesture out of that text-safe region.\`,
-    \`The later hook will read exactly: "\${clip.hook_text}". Use its meaning to inform the emotion and scene, but DO NOT render the hook or any other text yourself.\`,
+    `Primary speaker: ${clip.primary_speaker}.`,
+    `Episode guest/organization context: ${project.guest_name ?? "unknown guest"}.`,
+    `Core visual: ${clip.core_visual}`,
+    `Person positioning: ${clip.person_positioning}`,
+    `Facial expression: ${clip.facial_expression}`,
+    `Gesture/action: ${clip.gesture_action}`,
+    `Camera framing: ${clip.camera_framing}`,
+    `Pose family: ${clip.pose_family}.`,
+    `Reserve the ${negativeSpace} as clean negative space for a bold text hook that will be overlaid later. Keep the speaker's face and important gesture out of that text-safe region.`,
+    `The later hook will read exactly: "${clip.hook_text}". Use its meaning to inform the emotion and scene, but DO NOT render the hook or any other text yourself.`,
     "Do not render words, letters, numbers, captions, logos, watermarks, title cards, posters, infographics, UI, or readable signage anywhere in the image.",
     "Do not create a full poster. Do not add decorative borders. Keep the composition photographic and entertainment-thumbnail oriented.",
   ].join("\n");
@@ -399,12 +399,12 @@ async function generateImage(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120_000);
   try {
-    const dataUrl = \`data:\${referenceMimeType};base64,\${bytesToBase64(referenceBytes)}\`;
+    const dataUrl = `data:${referenceMimeType};base64,${bytesToBase64(referenceBytes)}`;
     const response = await fetch(OPENROUTER_URL, {
       method: "POST",
       signal: controller.signal,
       headers: {
-        authorization: \`Bearer \${apiKey}\`,
+        authorization: `Bearer ${apiKey}`,
         "content-type": "application/json",
         "HTTP-Referer": "https://valorwell.org",
         "X-Title": "ValorWell BTY Thumbnail Generator",
@@ -426,7 +426,7 @@ async function generateImage(
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const message = String(body?.error?.message ?? body?.message ?? \`OpenRouter error \${response.status}\`);
+      const message = String(body?.error?.message ?? body?.message ?? `OpenRouter error ${response.status}`);
       throw new ThumbnailError(
         "openrouter_failed",
         message,
@@ -491,7 +491,7 @@ function wrapHook(text: string, pointSize: number, maxWidth: number): string[] {
   const lines: string[] = [];
   let current = "";
   for (const word of words) {
-    const candidate = current ? \`\${current} \${word}\` : word;
+    const candidate = current ? `${current} ${word}` : word;
     if (!current || measureText(candidate, pointSize) <= maxWidth) {
       current = candidate;
     } else {
@@ -575,18 +575,18 @@ async function uploadDriveFile(
   fileName: string,
   bytes: Uint8Array,
 ): Promise<{ id: string; url: string }> {
-  const boundary = \`valorwell-thumbnail-\${crypto.randomUUID()}\`;
+  const boundary = `valorwell-thumbnail-${crypto.randomUUID()}`;
   const metadata = {
     name: fileName,
     parents: [folderId],
     mimeType: "image/jpeg",
   };
   const body = new Blob([
-    \`--\${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n\`,
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`,
     JSON.stringify(metadata),
-    \`\r\n--\${boundary}\r\nContent-Type: image/jpeg\r\n\r\n\`,
+    `\r\n--${boundary}\r\nContent-Type: image/jpeg\r\n\r\n`,
     bytes,
-    \`\r\n--\${boundary}--\r\n\`,
+    `\r\n--${boundary}--\r\n`,
   ]);
 
   const response = await fetch(
@@ -594,8 +594,8 @@ async function uploadDriveFile(
     {
       method: "POST",
       headers: {
-        authorization: \`Bearer \${accessToken}\`,
-        "content-type": \`multipart/related; boundary=\${boundary}\`,
+        authorization: `Bearer ${accessToken}`,
+        "content-type": `multipart/related; boundary=${boundary}`,
       },
       body,
       signal: AbortSignal.timeout(45_000),
@@ -605,20 +605,20 @@ async function uploadDriveFile(
   if (!response.ok || !result?.id) {
     throw new ThumbnailError(
       "drive_upload_failed",
-      \`Drive thumbnail upload failed (\${response.status}): \${result?.error?.message ?? "unknown error"}\`,
+      `Drive thumbnail upload failed (${response.status}): ${result?.error?.message ?? "unknown error"}`,
       response.status === 429 || response.status >= 500,
     );
   }
   const id = String(result.id);
-  return { id, url: \`https://drive.google.com/file/d/\${encodeURIComponent(id)}/view\` };
+  return { id, url: `https://drive.google.com/file/d/${encodeURIComponent(id)}/view` };
 }
 
 async function deleteDriveFile(accessToken: string, fileId: string) {
   const response = await fetch(
-    \`https://www.googleapis.com/drive/v3/files/\${encodeURIComponent(fileId)}\`,
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`,
     {
       method: "DELETE",
-      headers: { authorization: \`Bearer \${accessToken}\` },
+      headers: { authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(20_000),
     },
   );
@@ -636,7 +636,7 @@ async function failJob(
   const { data, error: rpcError } = await db.rpc("fail_video_thumbnail_job", {
     p_job_id: job.id,
     p_worker_id: workerId,
-    p_error: \`[\${error.code}] \${error.message}\`,
+    p_error: `[${error.code}] ${error.message}`,
     p_retryable: error.retryable,
     p_result: { error_code: error.code, ...error.detail },
   });
@@ -658,7 +658,7 @@ Deno.serve(async (request: Request) => {
   }
 
   const db = adminClient();
-  const workerId = \`thumbnail-\${crypto.randomUUID()}\`;
+  const workerId = `thumbnail-${crypto.randomUUID()}`;
 
   const { data: claimed, error: claimError } = await db.rpc("claim_next_video_thumbnail_job", {
     p_worker_id: workerId,
@@ -758,7 +758,7 @@ Deno.serve(async (request: Request) => {
     if (finalBytes.byteLength > 2 * 1024 * 1024) {
       throw new ThumbnailError(
         "final_image_too_large",
-        \`Final thumbnail is \${finalBytes.byteLength} bytes; expected at most 2 MB.\`,
+        `Final thumbnail is ${finalBytes.byteLength} bytes; expected at most 2 MB.`,
         true,
       );
     }
@@ -789,7 +789,7 @@ Deno.serve(async (request: Request) => {
 
     const driveToken = await googleAccessToken(db);
     const metadataHash = String(job.payload?.metadata_hash ?? "metadata");
-    const name = \`clip-\${clip.id}-thumb-r\${clip.thumbnail_generation_revision}-\${metadataHash.slice(0, 10)}-\${crypto.randomUUID()}.jpg\`;
+    const name = `clip-${clip.id}-thumb-r${clip.thumbnail_generation_revision}-${metadataHash.slice(0, 10)}-${crypto.randomUUID()}.jpg`;
     const uploaded = await uploadDriveFile(
       driveToken,
       String(settings.cover_image_folder_id),
