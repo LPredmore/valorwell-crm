@@ -106,6 +106,21 @@ describe('YouTube publish worker: privacy modes', () => {
   });
 });
 
+describe('YouTube publish worker: thumbnail preflight', () => {
+  it('blocks an oversized custom thumbnail before creating the YouTube video', async () => {
+    const h = publishHarness();
+    h.drive.files.set('drive-cover-part-a', { size: 3 * MB, mimeType: 'image/png' });
+    const id = await h.prepare('part', 'public');
+
+    await h.tick();
+
+    expect(h.pub(id).status).toBe('failed');
+    expect(String(h.pub(id).error_message)).toContain('2 MB or smaller');
+    expect(h.youtube.count('createResumableUploadSession')).toBe(0);
+    expect(h.youtube.videos.size).toBe(0);
+  });
+});
+
 describe('YouTube publish worker: content formats and playlists', () => {
   it('Long-form Part: uploads the rendered part in chunks, applies its cover via the API, routes to Parts', async () => {
     const h = publishHarness();
