@@ -62,6 +62,8 @@ export const PUBLISH_LEASE_SECONDS = 600;
 /** Takeovers of a crashed holder's lease allowed before the job needs a human. */
 export const MAX_STALE_RECOVERIES = 3;
 const CHUNK_BYTES = 32 * 1024 * 1024; // a multiple of 256KB, as YouTube's resumable protocol requires
+const YOUTUBE_THUMBNAIL_MAX_BYTES = 2 * 1024 * 1024;
+const YOUTUBE_THUMBNAIL_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/bmp"]);
 /** How long a job waiting on YouTube processing yields the queue to other work. */
 export const PROCESSING_POLL_MS = 2 * 60 * 1000;
 
@@ -138,6 +140,27 @@ async function resolveSourceFileId(ctx: Ctx): Promise<string> {
   return data.source_file_id as string;
 }
 
+async function assertThumbnailUploadable(ctx: Ctx) {
+  const fileId = typeof ctx.pub.thumbnail_file_id === "string" ? ctx.pub.thumbnail_file_id : "";
+  if (!fileId) return;
+
+  const driveToken = await ctx.driveToken();
+  const meta = await ctx.drive.fileMetadata(driveToken, fileId);
+  if (!meta.size || meta.size <= 0) {
+    throw new PermanentYoutubeError("Custom thumbnail Drive file is empty. Replace the thumbnail before publishing.");
+  }
+  if (meta.size > YOUTUBE_THUMBNAIL_MAX_BYTES) {
+    throw new PermanentYoutubeError(
+      `Custom thumbnail is ${(meta.size / (1024 * 1024)).toFixed(2)} MB. YouTube requires thumbnails to be 2 MB or smaller. Replace or compress the thumbnail before publishing.`,
+    );
+  }
+  if (!YOUTUBE_THUMBNAIL_MIME_TYPES.has(meta.mimeType)) {
+    throw new PermanentYoutubeError(
+      `Custom thumbnail type "${meta.mimeType || "unknown"}" is not supported by YouTube. Use JPG, PNG, GIF, or BMP.`,
+    );
+  }
+}
+
 async function assertShortRenderProfile(ctx: Ctx) {
   const { db, pub } = ctx;
   if (pub.content_format !== "short" || pub.source_type !== "clip" || !pub.clip_id) return;
@@ -187,6 +210,9 @@ async function recordCreatedVideo(ctx: Ctx, videoId: string, response: Record<st
 async function runUploadStage(ctx: Ctx): Promise<TickResult> {
   const { pub } = ctx;
   await assertShortRenderProfile(ctx);
+  // Fail before videos.insert if the custom thumbnail can never be accepted. This prevents
+  // the partial-success state where the video is public but the intended cover was skipped.
+  await assertThumbnailUploadable(ctx);
   const payload = { ...jobPayload(ctx) };
 
   const driveToken = await ctx.driveToken();
