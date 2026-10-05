@@ -146,7 +146,6 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
     : createEmailStudioDocument({ mode: 'newsletter', scope, themeKey: initialThemeKey });
   const normalizedInitial = normalizeEmailStudioComplianceFooters(loadedDocument);
   const initialDocument = normalizedInitial.document;
-  const repairedOnLoadRef = useRef(normalizedInitial.changed);
 
   const [themeKey, setThemeKey] = useState<EmailStudioThemeKey>(initialThemeKey);
   const [content, setContent] = useState<EmailEditorDocument>(() => cloneEmailStudioDocument(initialDocument));

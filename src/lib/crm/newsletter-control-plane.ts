@@ -2,14 +2,16 @@ import type { EmailContentDocument, EmailEditorDocument } from '@/features/email
 import { isEmailEditorDocument } from '@/features/email-studio/contracts';
 import { supabase } from '@/integrations/supabase/client';
 
-export const NEWSLETTER_AUDIENCE_DOMAINS = ['client', 'staff', 'donor', 'bty'] as const;
+export const NEWSLETTER_AUDIENCE_DOMAINS = ['client', 'staff', 'donor', 'relationship', 'bty', 'provider_applicant'] as const;
 export type NewsletterAudienceDomain = (typeof NEWSLETTER_AUDIENCE_DOMAINS)[number];
 
 export const NEWSLETTER_AUDIENCE_LABELS: Record<NewsletterAudienceDomain, string> = {
   client: 'Clients',
   staff: 'Staff',
   donor: 'Donors',
+  relationship: 'Relationship contacts',
   bty: 'Beyond The Yellow contacts',
+  provider_applicant: 'Provider applicants',
 };
 
 export type NewsletterSummary = {
