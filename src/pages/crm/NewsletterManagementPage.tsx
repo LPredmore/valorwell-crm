@@ -157,12 +157,19 @@ export default function NewsletterManagementPage() {
         scheduledAt: scheduleAt[newsletterId] ? new Date(scheduleAt[newsletterId]).toISOString() : null,
         reason: reasons[newsletterId] ?? '',
       }),
-    onSuccess: () => {
-      // Wake the send worker immediately so "Send now" and due scheduled sends
-      // are picked up without waiting for the hourly reconciliation sweep.
-      void supabase.functions.invoke('newsletter-send-worker', { body: {} }).catch(() => undefined);
-      refresh();
+    // Scheduling wakes the send worker via a database trigger, so due sends
+    // are picked up immediately without waiting for the hourly sweep.
+    onSuccess: refresh,
+  });
+
+  const workerStatus = useQuery({
+    queryKey: ['newsletter-worker-status'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('crm_newsletter_worker_status');
+      if (error) throw error;
+      return data as { lastRunAt: string | null; lastRunStatus: string | null; dueNow: number };
     },
+    refetchInterval: 60_000,
   });
 
   const cancelSend = useMutation({
