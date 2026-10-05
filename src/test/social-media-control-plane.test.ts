@@ -9,7 +9,7 @@ import {
 } from '../../supabase/functions/social-media-manager/handlers/library';
 import {
   approvePublication, cancelPublication, createPublication, queuePublish, reschedulePublication, retryPublication,
-  updatePublication, type YoutubeScheduleClient,
+  updatePublication, validatePublication, type YoutubeScheduleClient,
 } from '../../supabase/functions/social-media-manager/handlers/publications';
 import { getYoutubeConnectionStatus } from '../../supabase/functions/social-media-manager/handlers/youtube-status';
 import type { PublicationStatus, SocialMediaLibraryItem } from '../../supabase/functions/social-media-manager/types';
@@ -53,6 +53,40 @@ describe('publication lifecycle', () => {
     expect(publication(db, created.id).status).toBe('upload_queued');
     await expect(retryPublication(auth, { id: created.id })).rejects.toThrow('Only failed publications can be retried');
     await expect(updatePublication(auth, { id: created.id, changes: { title: 'x' } })).rejects.toThrow('locked');
+  });
+
+  it('uses a Library cover added after the draft was created and snapshots it on approval', async () => {
+    const db = socialDb();
+    const auth = authFor(db);
+    const clip = db.table('ai_operations_video_clips').find((row) => row.id === PART_CLIP_A)!;
+    Object.assign(clip, { cover_image_file_id: null, cover_image_url: null });
+
+    const created = await createPublication(auth, { sourceType: 'clip', clipId: PART_CLIP_A });
+    expect(publication(db, created.id).thumbnail_file_id).toBeNull();
+
+    Object.assign(clip, {
+      cover_image_file_id: 'drive-cover-late',
+      cover_image_url: 'https://drive/cover-late',
+    });
+
+    const validation = await validatePublication(auth, { id: created.id });
+    expect(validation.warnings).not.toContain('No custom thumbnail is set.');
+
+    await approvePublication(auth, { id: created.id });
+    expect(publication(db, created.id).thumbnail_file_id).toBe('drive-cover-late');
+    expect(publication(db, created.id).thumbnail_url).toBe('https://drive/cover-late');
+  });
+
+  it('repairs a missing legacy approved thumbnail from the Library before queueing', async () => {
+    const db = socialDb();
+    const auth = authFor(db);
+    const created = await createPublication(auth, { sourceType: 'clip', clipId: PART_CLIP_A });
+    await approvePublication(auth, { id: created.id });
+    Object.assign(publication(db, created.id), { thumbnail_file_id: null, thumbnail_url: null });
+
+    await queuePublish(auth, { id: created.id });
+    expect(publication(db, created.id).thumbnail_file_id).toBe('drive-cover-part-a');
+    expect(publication(db, created.id).status).toBe('upload_queued');
   });
 
   it('clears approval when approved metadata is edited', async () => {
