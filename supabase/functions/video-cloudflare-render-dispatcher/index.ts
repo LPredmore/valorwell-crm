@@ -206,7 +206,15 @@ Deno.serve(async(req:Request)=>{
     if(jerr) throw new Error(jerr.message);
     if(!jobs?.length) return json({ok:true,action:"idle"});
 
-    const job=jobs[0] as any;
+    const candidateClipIds=(jobs||[]).map((x:any)=>x.clip_id).filter(Boolean);
+    const {data:routingClips,error:routingErr}=await admin.from("ai_operations_video_clips")
+      .select("id,clip_type").in("id",candidateClipIds);
+    if(routingErr) throw new Error(routingErr.message);
+    const clipTypeById=new Map((routingClips||[]).map((x:any)=>[String(x.id),String(x.clip_type ?? "")]));
+    const routedJobs=(jobs||[]).filter((x:any)=>clipTypeById.get(String(x.clip_id))!=="short");
+    if(!routedJobs.length) return json({ok:true,action:"idle",reason:"shorts_delegated_to_ffmpeg_worker"});
+
+    const job=routedJobs[0] as any;
     const projectId=String(job.project_id);
     const {data:projects,error:perr}=await admin.from("ai_operations_video_projects")
       .select("id,source_file_id,source_file_name,source_size_bytes,source_mime_type,metadata")
