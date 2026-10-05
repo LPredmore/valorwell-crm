@@ -15,6 +15,7 @@ type ClipRow = {
   id: string;
   project_id: string;
   clip_type: string;
+  part_number: number | null;
   youtube_title: string | null;
   youtube_description: string | null;
   cover_image_file_id: string | null;
@@ -124,7 +125,7 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
   ] = await Promise.all([
       db.from("ai_operations_video_clips")
         .select(`
-          id, project_id, clip_type, youtube_title, youtube_description,
+          id, project_id, clip_type, part_number, youtube_title, youtube_description,
           cover_image_file_id, cover_image_url, start_seconds, end_seconds,
           drive_file_id, drive_file_url, status,
           ai_operations_video_projects!inner(id, guest_name, organization_name, tenant_id)
@@ -217,6 +218,7 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
       sourceId: clip.id,
       projectId: clip.project_id,
       clipId: clip.id,
+      partNumber: clip.clip_type === "part" ? clip.part_number ?? null : null,
       contentFormat,
       title: clip.youtube_title,
       description: clip.youtube_description,
@@ -249,6 +251,7 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
       sourceId: project.id,
       projectId: project.id,
       clipId: null,
+      partNumber: null,
       contentFormat: "full_episode",
       title: null,
       description: null,
