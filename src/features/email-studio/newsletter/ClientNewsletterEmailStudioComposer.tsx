@@ -112,6 +112,8 @@ export type ClientNewsletterEmailStudioComposerProps = {
   readOnly?: boolean;
   scope?: EmailContentScope;
   onDirty?: () => void;
+  /** 'workspace' = full-screen three-column grid; 'dialog' = stacked layout that fits inside a modal. */
+  layout?: 'workspace' | 'dialog';
 };
 
 type InspectorTab = 'block' | 'email' | 'checks';
@@ -129,7 +131,9 @@ export const ClientNewsletterEmailStudioComposer = forwardRef<
   readOnly = false,
   scope = 'client',
   onDirty,
+  layout = 'workspace',
 }, ref) {
+  const isDialog = layout === 'dialog';
   const editorRef = useRef<EmailEditorRef>(null);
   const selectionCleanupRef = useRef<(() => void) | null>(null);
   const selectedPositionRef = useRef<number | null>(null);
