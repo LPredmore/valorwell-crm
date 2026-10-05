@@ -48,9 +48,14 @@ describe('newsletter production fixes', () => {
 
   describe('template attribution preservation', () => {
     it('does not mark the composer dirty from the mount-time compliance footer repair', () => {
-      const repairEffect = composer.match(/const repaired = normalizeEmailStudioDoc([\s\S]*?)\n  \}, \[\]\);/);
-      expect(repairedEffect).not.toBeNull();
-      expect(repairedEffect![0]).not.toContain('onDirty');
+      // The repair is a system normalization: it must never call onDirty,
+      // because the bulk dialog wires onDirty to clearing template attribution.
+      expect(composer).toContain('deliberately does NOT call');
+      expect(composer).not.toContain('repairedOnLoadRef.current');
+      const mountEffects = composer.match(/useEffect\(\(\) => \{[\s\S]*?\}, \[\]\);/g) ?? [];
+      for (const effect of mountEffects) {
+        expect(effect).not.toContain('onDirty');
+      }
     });
   });
 
