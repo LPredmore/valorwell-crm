@@ -73,6 +73,9 @@ export function SocialPublicationEditor({
     queryFn: () => validateSocialPublication(id as string),
     enabled: Boolean(id),
     retry: 1,
+    // Validation can become stale when a thumbnail or other publication metadata changes
+    // outside this dialog. Always refresh on open/mount so preflight reflects the database.
+    refetchOnMount: 'always',
   });
 
   const invalidate = () => {
