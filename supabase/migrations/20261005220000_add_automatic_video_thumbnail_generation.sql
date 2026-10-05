@@ -165,7 +165,19 @@ begin
     ),
     v_idempotency_key
   )
-  on conflict do nothing
+  on conflict (tenant_id, idempotency_key)
+    where idempotency_key is not null
+  do update set
+    status = 'queued',
+    attempts = 0,
+    claimed_by = null,
+    claimed_at = null,
+    started_at = null,
+    completed_at = null,
+    error_message = null,
+    result = '{}'::jsonb,
+    updated_at = now()
+  where public.ai_operations_video_jobs.status = 'error'
   returning id into v_job_id;
 
   return v_job_id;
