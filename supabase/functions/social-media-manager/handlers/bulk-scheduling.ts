@@ -13,6 +13,7 @@ export type BulkScheduleSource = {
 
 export type BulkScheduleAssignment = BulkScheduleSource & {
   contentFormat: ContentFormat;
+  partNumber: number | null;
   title: string;
   scheduledFor: string;
   localDate: string;
@@ -25,11 +26,13 @@ export type BulkSchedulePreview = {
   selectedCount: number;
   availableSlotCount: number;
   assignments: BulkScheduleAssignment[];
-  unassigned: Array<BulkScheduleSource & { title: string; contentFormat: ContentFormat }>;
+  unassigned: Array<BulkScheduleSource & { title: string; contentFormat: ContentFormat; partNumber: number | null }>;
 };
 
 type AllocatableItem = BulkScheduleSource & {
+  projectId: string;
   contentFormat: ContentFormat;
+  partNumber: number | null;
   title: string;
 };
 
@@ -154,19 +157,59 @@ export function allocatePreferredSlots(
 
     availableSlotCount += candidates.length;
     const groupItems = items.filter((item) => scheduleClass(item.contentFormat) === group);
-    for (let index = 0; index < groupItems.length && index < candidates.length; index += 1) {
-      const item = groupItems[index];
-      const candidate = candidates[index];
+    const assignedPairs = groupItems
+      .slice(0, candidates.length)
+      .map((item, index) => ({ item, candidate: candidates[index] }));
+
+    const setAssignment = (item: AllocatableItem, candidate: { date: string; time: string; scheduledFor: string }) => {
       const assignment: BulkScheduleAssignment = {
         sourceType: item.sourceType,
         sourceId: item.sourceId,
         contentFormat: item.contentFormat,
+        partNumber: item.partNumber,
         title: item.title,
         scheduledFor: candidate.scheduledFor,
         localDate: candidate.date,
         localTime: candidate.time,
       };
       assignmentsByKey.set(sourceKey(item.sourceType, item.sourceId), assignment);
+    };
+
+    // Preserve the existing spread-first slot selection. For numbered Long Form Parts only,
+    // remap the already-selected slots into chronological time order within each parent video,
+    // then assign Part 1, Part 2, Part 3... to those slots. This gives maximum day spread
+    // without ever publishing a later Part before an earlier one.
+    const numberedByProject = new Map<string, typeof assignedPairs>();
+    if (group === "longForm") {
+      for (const pair of assignedPairs) {
+        if (!Number.isInteger(pair.item.partNumber) || Number(pair.item.partNumber) <= 0) continue;
+        const projectPairs = numberedByProject.get(pair.item.projectId) ?? [];
+        projectPairs.push(pair);
+        numberedByProject.set(pair.item.projectId, projectPairs);
+      }
+    }
+
+    const remappedKeys = new Set<string>();
+    for (const projectPairs of numberedByProject.values()) {
+      const chronologicalParts = [...projectPairs].sort((a, b) =>
+        Number(a.item.partNumber) - Number(b.item.partNumber)
+      );
+      const chronologicalSlots = [...projectPairs]
+        .map((pair) => pair.candidate)
+        .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor));
+
+      chronologicalParts.forEach((pair, index) => {
+        setAssignment(pair.item, chronologicalSlots[index]);
+        remappedKeys.add(sourceKey(pair.item.sourceType, pair.item.sourceId));
+      });
+    }
+
+    for (const pair of assignedPairs) {
+      const key = sourceKey(pair.item.sourceType, pair.item.sourceId);
+      if (!remappedKeys.has(key)) setAssignment(pair.item, pair.candidate);
+    }
+
+    for (const candidate of candidates.slice(0, assignedPairs.length)) {
       reserved.add(slotKey(candidate.date, candidate.time));
     }
   }
@@ -176,7 +219,13 @@ export function allocatePreferredSlots(
     .filter((assignment): assignment is BulkScheduleAssignment => Boolean(assignment));
   const unassigned = items
     .filter((item) => !assignmentsByKey.has(sourceKey(item.sourceType, item.sourceId)))
-    .map((item) => ({ ...item }));
+    .map((item) => ({
+      sourceType: item.sourceType,
+      sourceId: item.sourceId,
+      title: item.title,
+      contentFormat: item.contentFormat,
+      partNumber: item.partNumber,
+    }));
 
   return { assignments, unassigned, availableSlotCount };
 }
@@ -233,7 +282,9 @@ export async function previewBulkSchedule(
     return {
       sourceType: item.sourceType,
       sourceId: item.sourceId,
+      projectId: item.projectId,
       contentFormat: item.contentFormat,
+      partNumber: item.partNumber ?? null,
       title: item.title.trim(),
     };
   });
