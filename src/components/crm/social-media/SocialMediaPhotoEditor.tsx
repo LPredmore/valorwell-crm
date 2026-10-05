@@ -39,6 +39,7 @@ export function SocialMediaPhotoEditor({
       queryClient.invalidateQueries({ queryKey: ['social-media', 'thumbnail', item.sourceType, item.sourceId] });
       queryClient.invalidateQueries({ queryKey: ['social-media', 'publications'] });
       queryClient.invalidateQueries({ queryKey: ['social-media', 'publication'] });
+      queryClient.invalidateQueries({ queryKey: ['social-media', 'validation'] });
       toast({
         title: 'Video photo updated',
         description: result.warnings?.length ? result.warnings.join(' ') : result.message,
