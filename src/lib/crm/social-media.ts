@@ -24,6 +24,8 @@ export type SocialMediaLibraryItem = {
   sourceId: string;
   projectId: string;
   clipId: string | null;
+  /** Chronological Part number within the parent project; null/absent for non-Parts. */
+  partNumber?: number | null;
   contentFormat: ContentFormat;
   title: string | null;
   description: string | null;
@@ -155,6 +157,7 @@ export type BulkScheduleSource = {
 
 export type BulkScheduleAssignment = BulkScheduleSource & {
   contentFormat: ContentFormat;
+  partNumber: number | null;
   title: string;
   scheduledFor: string;
   localDate: string;
@@ -167,7 +170,7 @@ export type BulkSchedulePreview = {
   selectedCount: number;
   availableSlotCount: number;
   assignments: BulkScheduleAssignment[];
-  unassigned: Array<BulkScheduleSource & { title: string; contentFormat: ContentFormat }>;
+  unassigned: Array<BulkScheduleSource & { title: string; contentFormat: ContentFormat; partNumber: number | null }>;
 };
 
 export type BulkScheduleResult = BulkSchedulePreview & {
