@@ -10,11 +10,18 @@ const preferred = {
   longForm: ['08:00', '14:00'],
 };
 
-function item(index: number, contentFormat: ContentFormat = 'long_form') {
+function item(
+  index: number,
+  contentFormat: ContentFormat = 'long_form',
+  partNumber: number | null = null,
+  projectId = 'project-a',
+) {
   return {
     sourceType: 'clip' as BulkScheduleSource['sourceType'],
     sourceId: `video-${index}`,
+    projectId,
     contentFormat,
+    partNumber,
     title: `Video ${index}`,
   };
 }
@@ -56,6 +63,36 @@ describe('bulk social scheduling allocator', () => {
       ['2026-09-29', '14:00'],
       ['2026-09-30', '14:00'],
       ['2026-10-01', '14:00'],
+    ]);
+  });
+
+  it('spreads preferred Long Form slots across days, then maps numbered Parts chronologically', () => {
+    const scrambledParts = [7, 1, 5, 3, 2, 6, 4].map((partNumber) =>
+      item(partNumber, 'long_form', partNumber, 'episode-a')
+    );
+
+    const result = allocatePreferredSlots(
+      scrambledParts,
+      weekdays,
+      preferred,
+      new Set(),
+      'America/Chicago',
+      now,
+    );
+
+    expect(result.unassigned).toHaveLength(0);
+    expect(
+      [...result.assignments]
+        .sort((a, b) => Number(a.partNumber) - Number(b.partNumber))
+        .map((assignment) => [assignment.partNumber, assignment.localDate, assignment.localTime])
+    ).toEqual([
+      [1, '2026-09-28', '08:00'],
+      [2, '2026-09-28', '14:00'],
+      [3, '2026-09-29', '08:00'],
+      [4, '2026-09-29', '14:00'],
+      [5, '2026-09-30', '08:00'],
+      [6, '2026-10-01', '08:00'],
+      [7, '2026-10-02', '08:00'],
     ]);
   });
 
