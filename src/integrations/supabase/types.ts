@@ -1181,7 +1181,9 @@ export type Database = {
       }
       ai_operations_video_clips: {
         Row: {
+          camera_framing: string | null
           clip_type: string
+          core_visual: string | null
           cover_image_file_id: string | null
           cover_image_url: string | null
           created_at: string
@@ -1190,21 +1192,32 @@ export type Database = {
           end_seconds: number
           error_message: string | null
           facebook_description: string | null
+          facial_expression: string | null
+          gesture_action: string | null
           hashtags: string[] | null
+          hook_text: string | null
+          hook_text_placement: string | null
           id: string
+          last_progress_at: string
           linkedin_description: string | null
           output_mime_type: string
           output_size_bytes: number | null
           parent_file_id: string
           part_number: number | null
+          person_positioning: string | null
+          pipeline_status: string
+          pose_family: string | null
+          primary_speaker: string | null
           project_id: string
           rendered_at: string | null
           start_seconds: number
           status: string
+          thumbnail_generation_revision: number
           tiktok_description: string | null
           transcript_text: string
           updated_at: string
           uploaded_at: string | null
+          workflow_revision: number
           youtube_description: string | null
           youtube_playlist_ids: string[]
           youtube_title: string | null
@@ -1212,7 +1225,9 @@ export type Database = {
           youtube_video_id: string | null
         }
         Insert: {
+          camera_framing?: string | null
           clip_type?: string
+          core_visual?: string | null
           cover_image_file_id?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -1221,21 +1236,32 @@ export type Database = {
           end_seconds: number
           error_message?: string | null
           facebook_description?: string | null
+          facial_expression?: string | null
+          gesture_action?: string | null
           hashtags?: string[] | null
+          hook_text?: string | null
+          hook_text_placement?: string | null
           id?: string
+          last_progress_at?: string
           linkedin_description?: string | null
           output_mime_type?: string
           output_size_bytes?: number | null
           parent_file_id: string
           part_number?: number | null
+          person_positioning?: string | null
+          pipeline_status?: string
+          pose_family?: string | null
+          primary_speaker?: string | null
           project_id: string
           rendered_at?: string | null
           start_seconds: number
           status?: string
+          thumbnail_generation_revision?: number
           tiktok_description?: string | null
           transcript_text: string
           updated_at?: string
           uploaded_at?: string | null
+          workflow_revision?: number
           youtube_description?: string | null
           youtube_playlist_ids?: string[]
           youtube_title?: string | null
@@ -1243,7 +1269,9 @@ export type Database = {
           youtube_video_id?: string | null
         }
         Update: {
+          camera_framing?: string | null
           clip_type?: string
+          core_visual?: string | null
           cover_image_file_id?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -1252,21 +1280,32 @@ export type Database = {
           end_seconds?: number
           error_message?: string | null
           facebook_description?: string | null
+          facial_expression?: string | null
+          gesture_action?: string | null
           hashtags?: string[] | null
+          hook_text?: string | null
+          hook_text_placement?: string | null
           id?: string
+          last_progress_at?: string
           linkedin_description?: string | null
           output_mime_type?: string
           output_size_bytes?: number | null
           parent_file_id?: string
           part_number?: number | null
+          person_positioning?: string | null
+          pipeline_status?: string
+          pose_family?: string | null
+          primary_speaker?: string | null
           project_id?: string
           rendered_at?: string | null
           start_seconds?: number
           status?: string
+          thumbnail_generation_revision?: number
           tiktok_description?: string | null
           transcript_text?: string
           updated_at?: string
           uploaded_at?: string | null
+          workflow_revision?: number
           youtube_description?: string | null
           youtube_playlist_ids?: string[]
           youtube_title?: string | null
@@ -1333,15 +1372,21 @@ export type Database = {
       ai_operations_video_jobs: {
         Row: {
           attempts: number
+          available_at: string
           claimed_at: string | null
           claimed_by: string | null
           clip_id: string | null
           completed_at: string | null
           created_at: string
+          error_class: string | null
+          error_code: string | null
           error_message: string | null
           id: number
           idempotency_key: string | null
+          input_fingerprint: string | null
           job_type: string
+          lease_expires_at: string | null
+          max_attempts: number
           payload: Json
           progress: Json
           project_id: string
@@ -1351,18 +1396,26 @@ export type Database = {
           status: string
           tenant_id: string
           updated_at: string
+          worker_category: string | null
+          workflow_revision: number
         }
         Insert: {
           attempts?: number
+          available_at?: string
           claimed_at?: string | null
           claimed_by?: string | null
           clip_id?: string | null
           completed_at?: string | null
           created_at?: string
+          error_class?: string | null
+          error_code?: string | null
           error_message?: string | null
           id?: number
           idempotency_key?: string | null
+          input_fingerprint?: string | null
           job_type: string
+          lease_expires_at?: string | null
+          max_attempts?: number
           payload?: Json
           progress?: Json
           project_id: string
@@ -1372,18 +1425,26 @@ export type Database = {
           status?: string
           tenant_id: string
           updated_at?: string
+          worker_category?: string | null
+          workflow_revision?: number
         }
         Update: {
           attempts?: number
+          available_at?: string
           claimed_at?: string | null
           claimed_by?: string | null
           clip_id?: string | null
           completed_at?: string | null
           created_at?: string
+          error_class?: string | null
+          error_code?: string | null
           error_message?: string | null
           id?: number
           idempotency_key?: string | null
+          input_fingerprint?: string | null
           job_type?: string
+          lease_expires_at?: string | null
+          max_attempts?: number
           payload?: Json
           progress?: Json
           project_id?: string
@@ -1393,6 +1454,8 @@ export type Database = {
           status?: string
           tenant_id?: string
           updated_at?: string
+          worker_category?: string | null
+          workflow_revision?: number
         }
         Relationships: [
           {
@@ -1493,12 +1556,21 @@ export type Database = {
           cover_image_url: string | null
           created_at: string
           duration_seconds: number | null
+          expected_part_count: number | null
+          expected_short_count: number | null
           guest_image_url: string | null
           guest_name: string | null
           id: string
+          initial_information_complete: boolean
+          initial_information_completed_at: string | null
+          initial_information_fingerprint: string | null
+          initial_information_revision: number
           last_processed_at: string | null
+          last_progress_at: string
           metadata: Json
           organization_name: string | null
+          pipeline_completed_at: string | null
+          pipeline_status: string
           processing_error: string | null
           source_file_id: string
           source_file_name: string
@@ -1520,18 +1592,28 @@ export type Database = {
           transcript_text: string | null
           transcript_word_count: number | null
           updated_at: string
+          workflow_revision: number
         }
         Insert: {
           cover_image_file_id?: string | null
           cover_image_url?: string | null
           created_at?: string
           duration_seconds?: number | null
+          expected_part_count?: number | null
+          expected_short_count?: number | null
           guest_image_url?: string | null
           guest_name?: string | null
           id?: string
+          initial_information_complete?: boolean
+          initial_information_completed_at?: string | null
+          initial_information_fingerprint?: string | null
+          initial_information_revision?: number
           last_processed_at?: string | null
+          last_progress_at?: string
           metadata?: Json
           organization_name?: string | null
+          pipeline_completed_at?: string | null
+          pipeline_status?: string
           processing_error?: string | null
           source_file_id: string
           source_file_name: string
@@ -1553,18 +1635,28 @@ export type Database = {
           transcript_text?: string | null
           transcript_word_count?: number | null
           updated_at?: string
+          workflow_revision?: number
         }
         Update: {
           cover_image_file_id?: string | null
           cover_image_url?: string | null
           created_at?: string
           duration_seconds?: number | null
+          expected_part_count?: number | null
+          expected_short_count?: number | null
           guest_image_url?: string | null
           guest_name?: string | null
           id?: string
+          initial_information_complete?: boolean
+          initial_information_completed_at?: string | null
+          initial_information_fingerprint?: string | null
+          initial_information_revision?: number
           last_processed_at?: string | null
+          last_progress_at?: string
           metadata?: Json
           organization_name?: string | null
+          pipeline_completed_at?: string | null
+          pipeline_status?: string
           processing_error?: string | null
           source_file_id?: string
           source_file_name?: string
@@ -1586,6 +1678,7 @@ export type Database = {
           transcript_text?: string | null
           transcript_word_count?: number | null
           updated_at?: string
+          workflow_revision?: number
         }
         Relationships: [
           {
@@ -1599,9 +1692,14 @@ export type Database = {
       }
       ai_operations_video_settings: {
         Row: {
+          ai_config_revision: number
+          circuit_breaker_cooldown_seconds: number
+          circuit_breaker_threshold: number
+          circuit_breaker_window_seconds: number
           cover_image_folder_id: string | null
           cover_image_folder_url: string | null
           created_at: string
+          default_max_attempts: number
           default_min_clip_seconds: number
           default_target_max_clip_seconds: number
           drive_account_label: string | null
@@ -1609,6 +1707,11 @@ export type Database = {
           drive_folder_url: string | null
           guest_image_folder_id: string | null
           guest_image_folder_url: string | null
+          host_reference_file_id: string | null
+          host_reference_name: string | null
+          host_reference_url: string | null
+          image_model_id: string
+          image_provider: string
           long_clip_folder_id: string | null
           long_clip_folder_url: string | null
           output_provider: string
@@ -1621,14 +1724,23 @@ export type Database = {
           source_poll_interval_seconds: number
           source_provider: string
           tenant_id: string
+          text_model_id: string
+          text_provider: string
           transcription_engine: string
           transcription_model: string
           updated_at: string
+          workflow_enabled: boolean
+          workflow_timezone: string
         }
         Insert: {
+          ai_config_revision?: number
+          circuit_breaker_cooldown_seconds?: number
+          circuit_breaker_threshold?: number
+          circuit_breaker_window_seconds?: number
           cover_image_folder_id?: string | null
           cover_image_folder_url?: string | null
           created_at?: string
+          default_max_attempts?: number
           default_min_clip_seconds?: number
           default_target_max_clip_seconds?: number
           drive_account_label?: string | null
@@ -1636,6 +1748,11 @@ export type Database = {
           drive_folder_url?: string | null
           guest_image_folder_id?: string | null
           guest_image_folder_url?: string | null
+          host_reference_file_id?: string | null
+          host_reference_name?: string | null
+          host_reference_url?: string | null
+          image_model_id?: string
+          image_provider?: string
           long_clip_folder_id?: string | null
           long_clip_folder_url?: string | null
           output_provider?: string
@@ -1648,14 +1765,23 @@ export type Database = {
           source_poll_interval_seconds?: number
           source_provider?: string
           tenant_id: string
+          text_model_id?: string
+          text_provider?: string
           transcription_engine?: string
           transcription_model?: string
           updated_at?: string
+          workflow_enabled?: boolean
+          workflow_timezone?: string
         }
         Update: {
+          ai_config_revision?: number
+          circuit_breaker_cooldown_seconds?: number
+          circuit_breaker_threshold?: number
+          circuit_breaker_window_seconds?: number
           cover_image_folder_id?: string | null
           cover_image_folder_url?: string | null
           created_at?: string
+          default_max_attempts?: number
           default_min_clip_seconds?: number
           default_target_max_clip_seconds?: number
           drive_account_label?: string | null
@@ -1663,6 +1789,11 @@ export type Database = {
           drive_folder_url?: string | null
           guest_image_folder_id?: string | null
           guest_image_folder_url?: string | null
+          host_reference_file_id?: string | null
+          host_reference_name?: string | null
+          host_reference_url?: string | null
+          image_model_id?: string
+          image_provider?: string
           long_clip_folder_id?: string | null
           long_clip_folder_url?: string | null
           output_provider?: string
@@ -1675,9 +1806,13 @@ export type Database = {
           source_poll_interval_seconds?: number
           source_provider?: string
           tenant_id?: string
+          text_model_id?: string
+          text_provider?: string
           transcription_engine?: string
           transcription_model?: string
           updated_at?: string
+          workflow_enabled?: boolean
+          workflow_timezone?: string
         }
         Relationships: [
           {
@@ -1696,7 +1831,6 @@ export type Database = {
           id: number
           project_id: string
           segment_index: number
-          speaker_label: string | null
           start_seconds: number
           text: string
           words: Json
@@ -1707,7 +1841,6 @@ export type Database = {
           id?: number
           project_id: string
           segment_index: number
-          speaker_label?: string | null
           start_seconds: number
           text: string
           words?: Json
@@ -1718,7 +1851,6 @@ export type Database = {
           id?: number
           project_id?: string
           segment_index?: number
-          speaker_label?: string | null
           start_seconds?: number
           text?: string
           words?: Json
@@ -27176,19 +27308,29 @@ export type Database = {
         Args: { p_claim_id: string }
         Returns: boolean
       }
-      claim_next_youtube_publish_job: {
-        Args: { p_lease_seconds?: number; p_worker_id: string }
+      claim_next_ai_operations_video_job: {
+        Args: {
+          p_job_types: string[]
+          p_lease_seconds?: number
+          p_worker_id: string
+        }
         Returns: {
           attempts: number
+          available_at: string
           claimed_at: string | null
           claimed_by: string | null
           clip_id: string | null
           completed_at: string | null
           created_at: string
+          error_class: string | null
+          error_code: string | null
           error_message: string | null
           id: number
           idempotency_key: string | null
+          input_fingerprint: string | null
           job_type: string
+          lease_expires_at: string | null
+          max_attempts: number
           payload: Json
           progress: Json
           project_id: string
@@ -27198,6 +27340,126 @@ export type Database = {
           status: string
           tenant_id: string
           updated_at: string
+          worker_category: string | null
+          workflow_revision: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ai_operations_video_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_next_video_render_job: {
+        Args: {
+          p_lease_seconds?: number
+          p_worker_category: string
+          p_worker_id: string
+        }
+        Returns: {
+          attempts: number
+          available_at: string
+          claimed_at: string | null
+          claimed_by: string | null
+          clip_id: string | null
+          completed_at: string | null
+          created_at: string
+          error_class: string | null
+          error_code: string | null
+          error_message: string | null
+          id: number
+          idempotency_key: string | null
+          input_fingerprint: string | null
+          job_type: string
+          lease_expires_at: string | null
+          max_attempts: number
+          payload: Json
+          progress: Json
+          project_id: string
+          result: Json
+          social_publication_id: string | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          worker_category: string | null
+          workflow_revision: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ai_operations_video_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_next_video_thumbnail_job: {
+        Args: { p_lease_seconds?: number; p_worker_id: string }
+        Returns: {
+          attempts: number
+          available_at: string
+          claimed_at: string | null
+          claimed_by: string | null
+          clip_id: string | null
+          completed_at: string | null
+          created_at: string
+          error_class: string | null
+          error_code: string | null
+          error_message: string | null
+          id: number
+          idempotency_key: string | null
+          input_fingerprint: string | null
+          job_type: string
+          lease_expires_at: string | null
+          max_attempts: number
+          payload: Json
+          progress: Json
+          project_id: string
+          result: Json
+          social_publication_id: string | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          worker_category: string | null
+          workflow_revision: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ai_operations_video_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_next_youtube_publish_job: {
+        Args: { p_lease_seconds?: number; p_worker_id: string }
+        Returns: {
+          attempts: number
+          available_at: string
+          claimed_at: string | null
+          claimed_by: string | null
+          clip_id: string | null
+          completed_at: string | null
+          created_at: string
+          error_class: string | null
+          error_code: string | null
+          error_message: string | null
+          id: number
+          idempotency_key: string | null
+          input_fingerprint: string | null
+          job_type: string
+          lease_expires_at: string | null
+          max_attempts: number
+          payload: Json
+          progress: Json
+          project_id: string
+          result: Json
+          social_publication_id: string | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          worker_category: string | null
+          workflow_revision: number
         }[]
         SetofOptions: {
           from: "*"
@@ -27416,6 +27678,10 @@ export type Database = {
         }
         Returns: Json
       }
+      complete_ai_operations_video_job: {
+        Args: { p_job_id: number; p_result?: Json; p_worker_id: string }
+        Returns: boolean
+      }
       complete_claimmd_era_inbox_v1: {
         Args: {
           p_error?: string
@@ -27457,6 +27723,17 @@ export type Database = {
             }
             Returns: Json
           }
+      complete_video_thumbnail_job: {
+        Args: {
+          p_clip_id: string
+          p_file_id?: string
+          p_file_url?: string
+          p_job_id: number
+          p_result?: Json
+          p_worker_id: string
+        }
+        Returns: boolean
+      }
       confirm_accepting_status: {
         Args: { p_client_action_id: string }
         Returns: Json
@@ -28523,6 +28800,27 @@ export type Database = {
         }
         Returns: Json
       }
+      fail_ai_operations_video_job: {
+        Args: {
+          p_error_class: string
+          p_error_code: string
+          p_error_message: string
+          p_job_id: number
+          p_result?: Json
+          p_worker_id: string
+        }
+        Returns: string
+      }
+      fail_video_thumbnail_job: {
+        Args: {
+          p_error: string
+          p_job_id: number
+          p_result?: Json
+          p_retryable?: boolean
+          p_worker_id: string
+        }
+        Returns: string
+      }
       finalize_claim_submission: {
         Args: { p_request_id: string; p_result?: Json; p_status: string }
         Returns: undefined
@@ -29349,6 +29647,19 @@ export type Database = {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
+        }
+        Returns: boolean
+      }
+      heartbeat_ai_operations_video_worker: {
+        Args: {
+          p_current_job_id?: number
+          p_current_project_id?: string
+          p_last_error?: string
+          p_metadata?: Json
+          p_status?: string
+          p_tenant_id: string
+          p_worker_id: string
+          p_worker_version?: string
         }
         Returns: boolean
       }
@@ -31108,6 +31419,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      wait_ai_operations_video_job: {
+        Args: {
+          p_job_id: number
+          p_progress?: Json
+          p_wait_seconds?: number
+          p_worker_id: string
+        }
+        Returns: boolean
       }
       website_assign_contact_role: {
         Args: {
