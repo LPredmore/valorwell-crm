@@ -1,5 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.93.1";
+import {
+  renderNewsletterDelivery,
+  validateNewsletterTemplateContract,
+  type RenderedNewsletterDelivery,
+} from "./rendering.ts";
 
 const RESEND_API = "https://api.resend.com";
 const USER_AGENT = "ValorWell-CRM-Newsletter/1.0";
@@ -38,75 +43,11 @@ function log(level: "info" | "warn" | "error", event: string, fields: Record<str
   else console.log(payload);
 }
 
-const escapeHtml = (value: string) => value
-  .replace(/&/g, "&amp;")
-  .replace(/</g, "&lt;")
-  .replace(/>/g, "&gt;")
-  .replace(/"/g, "&quot;");
-
-const stripHtml = (value: string) => value
-  .replace(/<br\s*\/?>/gi, "\n")
-  .replace(/<\/p>/gi, "\n\n")
-  .replace(/<[^>]+>/g, "")
-  .replace(/&nbsp;/gi, " ")
-  .replace(/&amp;/gi, "&")
-  .replace(/&lt;/gi, "<")
-  .replace(/&gt;/gi, ">")
-  .replace(/\n{3,}/g, "\n\n")
-  .trim();
-
-const displayFrom = (email: string, name: string | null) =>
-  name && name.trim().length > 0 ? `${name.trim()} <${email}>` : email;
-
-function unsubscribeUrl(token: string) {
-  const base = (Deno.env.get("NEWSLETTER_UNSUBSCRIBE_BASE_URL") ?? DEFAULT_UNSUBSCRIBE_BASE).trim();
-  const separator = base.includes("?") ? "&" : "?";
-  return `${base}${separator}token=${encodeURIComponent(token)}`;
-}
-
-/**
- * Newsletter bodies are authored once and personalised per mailbox. Only the
- * greeting and the unsubscribe link vary, so no clinical or account data can
- * leak into a shared-mailbox send.
- */
-function renderBody(
-  template: { html: string | null; text: string | null },
-  recipient: ClaimedRecipient,
-  postalAddress: string | null,
-) {
-  const link = unsubscribeUrl(recipient.unsubscribeToken);
-  const greeting = recipient.greetingName || "Friend";
-
-  const substitute = (value: string) => value
-    .replace(/\{\{\s*greeting_name\s*\}\}/gi, greeting)
-    .replace(/\{\{\s*first_name\s*\}\}/gi, greeting)
-    .replace(/\{\{\s*unsubscribe_url\s*\}\}/gi, link)
-    .replace(/\{\{\s*postal_address\s*\}\}/gi, postalAddress ?? "");
-
-  let html = substitute(template.html ?? "");
-  const hasUnsubscribeMarkup = /unsubscribe/i.test(html);
-  if (!hasUnsubscribeMarkup) {
-    const footerLines = [
-      postalAddress ? `<p style="margin:0 0 8px">${escapeHtml(postalAddress)}</p>` : "",
-      `<p style="margin:0"><a href="${link}">Unsubscribe from this newsletter</a></p>`,
-    ].filter(Boolean).join("");
-    html += `<hr><div style="font-size:12px;color:#6b7280">${footerLines}</div>`;
-  }
-
-  let text = substitute(template.text ?? "");
-  if (!text) text = stripHtml(html);
-  if (!/unsubscribe/i.test(text)) {
-    text += `\n\n${postalAddress ? `${postalAddress}\n` : ""}Unsubscribe from this newsletter: ${link}`;
-  }
-
-  return { html, text, unsubscribeLink: link };
-}
-
 async function sendOne(
   apiKey: string,
   batch: ClaimBatch,
   recipient: ClaimedRecipient,
-  body: { html: string; text: string; unsubscribeLink: string },
+  body: RenderedNewsletterDelivery,
   replyTo: string | null,
 ): Promise<{ providerMessageId: string } | { errorCode: string; errorMessage: string }> {
   let response: Response;
@@ -124,7 +65,7 @@ async function sendOne(
         from: displayFrom(batch.senderEmail, batch.senderName),
         to: [recipient.deliveryEmail],
         reply_to: replyTo ?? undefined,
-        subject: batch.subject ?? "",
+        subject: body.subject,
         html: body.html,
         text: body.text,
         headers: {
@@ -191,11 +132,26 @@ Deno.serve(async (request: Request) => {
     // template body is read once per newsletter, not once per recipient
     const { data: letter, error: letterError } = await admin
       .from("crm_newsletters")
-      .select("id, tenant_id, subject, body_html, body_text, status")
+      .select("id, tenant_id, subject, preheader, body_html, body_text, status")
       .eq("id", newsletter.newsletterId)
       .maybeSingle();
     if (letterError || !letter) {
       results.push({ newsletterId: newsletter.newsletterId, outcome: "newsletter_unavailable" });
+      continue;
+    }
+
+    const template = {
+      subject: letter.subject as string | null,
+      preheader: letter.preheader as string | null,
+      html: letter.body_html as string | null,
+      text: letter.body_text as string | null,
+    };
+    try {
+      validateNewsletterTemplateContract(template);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log("error", "template_contract_invalid", { newsletterId: letter.id, message });
+      results.push({ newsletterId: letter.id, outcome: "template_invalid", error: message });
       continue;
     }
 
@@ -227,12 +183,31 @@ Deno.serve(async (request: Request) => {
       batches += 1;
 
       for (const recipient of recipients) {
-        const body = renderBody(
-          { html: letter.body_html as string | null, text: letter.body_text as string | null },
-          recipient,
-          batch.postalAddress,
-        );
-        const outcome = await sendOne(apiKey, { ...batch, subject: letter.subject as string | null }, recipient, body, replyTo);
+        let body: RenderedNewsletterDelivery;
+        try {
+          body = renderNewsletterDelivery({
+            template,
+            greetingName: recipient.greetingName,
+            senderName: batch.senderName,
+            unsubscribeUrl: unsubscribeUrl(recipient.unsubscribeToken),
+            postalAddress: batch.postalAddress,
+          });
+        } catch (error) {
+          failed += 1;
+          const message = error instanceof Error ? error.message : String(error);
+          const { error: recordError } = await admin.rpc("crm_record_newsletter_send_result", {
+            p_recipient_id: recipient.recipientId,
+            p_status: "failed",
+            p_error_code: "render_error",
+            p_error_message: message,
+          });
+          if (recordError) {
+            log("error", "record_render_failed", { recipientId: recipient.recipientId, message: recordError.message });
+          }
+          log("error", "render_failed", { newsletterId: letter.id, recipientId: recipient.recipientId, message });
+          continue;
+        }
+        const outcome = await sendOne(apiKey, batch, recipient, body, replyTo);
 
         if ("providerMessageId" in outcome) {
           sent += 1;
