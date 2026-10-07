@@ -46,7 +46,7 @@ export default function RelationshipOrchestrationPage() {
       <CardHeader>
         <CardTitle>Google connections</CardTitle>
         <CardDescription>
-          Gmail and Drive are restricted to info@valorwell.org. Gmail and Calendar remain read-only observation integrations; Drive uses the minimum drive.readonly scope and is not included in Gmail/Calendar maintenance polling.
+          Gmail and Drive are restricted to info@valorwell.org. Gmail and Calendar remain read-only observation integrations; Drive uses writable Drive access so the video pipeline can read reference images and upload generated thumbnails.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -82,7 +82,7 @@ export default function RelationshipOrchestrationPage() {
             </div>
             {connection.connectionType === 'drive' ? (
               <p className="mt-2 text-xs text-muted-foreground">
-                Last verified: {formatDate(connection.lastVerifiedAt)} · Scope: {connection.scopes.includes('https://www.googleapis.com/auth/drive.readonly') ? 'Drive read-only' : connection.scopes.join(', ') || 'Not recorded'}
+                Last verified: {formatDate(connection.lastVerifiedAt)} · Scope: {connection.scopes.includes('https://www.googleapis.com/auth/drive') ? 'Drive read/write' : connection.scopes.includes('https://www.googleapis.com/auth/drive.readonly') ? 'Drive read-only — reauthorization required' : connection.scopes.join(', ') || 'Not recorded'}
               </p>
             ) : (
               <p className="mt-2 text-xs text-muted-foreground">
