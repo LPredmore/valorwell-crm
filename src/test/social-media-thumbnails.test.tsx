@@ -134,6 +134,7 @@ describe('library thumbnail source selection contract', () => {
   const librarySource = readFileSync('supabase/functions/social-media-manager/handlers/library.ts', 'utf8');
   const thumbnailSource = readFileSync('supabase/functions/social-media-manager/handlers/thumbnails.ts', 'utf8');
   const clientSource = readFileSync('src/lib/crm/social-media.ts', 'utf8');
+  const publicationFormSource = readFileSync('src/components/crm/social-media/SocialPublicationMetadataForm.tsx', 'utf8');
 
   it('never uses the guest portrait as an episode cover', () => {
     expect(librarySource).not.toMatch(/guest_image_url/);
@@ -144,6 +145,12 @@ describe('library thumbnail source selection contract', () => {
     expect(librarySource).toMatch(/thumbnailFileId: project\.cover_image_file_id/);
     expect(librarySource).toMatch(/thumbnailFileId: clip\.cover_image_file_id/);
     expect(librarySource).not.toMatch(/thumbnailUrl: (clip|project)\./);
+  });
+
+  it('never renders a private Drive view URL directly as the publication cover image', () => {
+    expect(publicationFormSource).toContain("publicationId: publication.id");
+    expect(publicationFormSource).not.toContain('<img src={publication.thumbnailUrl}');
+    expect(publicationFormSource).toContain('Open cover image in Drive');
   });
 
   it('resolves publication snapshots only through publication id plus the authenticated tenant', () => {
