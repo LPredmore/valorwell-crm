@@ -284,3 +284,52 @@ confirm with a channel search in YouTube Studio that exactly one video exists.
   `youtube_upload_session_created`), stop the dispatcher cron or let an invocation time
   out. After the 10-minute lease expires, confirm `publish_worker_recovered`, the same
   `upload_session_url` in the job payload, and exactly one YouTube video.
+
+## Schedule Series (weekly automated publishing)
+
+**Contract.** One Beyond The Yellow organization project per Monday–Sunday week, timezone fixed to
+`America/Chicago`. Dispatch deadline = 12:00 Central on the Friday before the Monday (DST aware,
+computed by the `video_series_schedule_guard` trigger and `seriesDispatchAt`). Nothing is created,
+approved or queued before that instant; overdue weeks are caught up after any cron outage.
+
+**State.**
+- `ai_operations_video_series_schedules`: tenant_id, project_id, week_start (Monday CHECK), timezone,
+  dispatch_at, status (`assigned, blocked, dispatching, queued, partially_scheduled, youtube_scheduled,
+  complete, failed, cancelled`), lease/claim/attempt counters, blocked_reasons, last_error(_code),
+  unrecoverable, idempotency_key, dispatch_started_at and milestone timestamps, created_by/provenance.
+  Partial unique indexes: one non-cancelled schedule per (tenant, week) and per (tenant, project).
+  Trigger enforces project/tenant match and forbids changing/removing a week once `dispatch_started_at` is set.
+- `ai_operations_video_series_schedule_items`: frozen per-video manifest (source, sequence, planned
+  time, publication_id, per-item status/error). Unique per (schedule, source).
+- Both tables: RLS on, service_role only. Browsers reach them only through `social-media-manager`,
+  whose handlers filter every query by the caller's server-resolved tenant.
+
+**API (social-media-manager).** View: `list_series_schedules`, `get_series_schedule`,
+`get_series_readiness` (dry run). Mutate (capabilities.mutate): `assign_series_schedule`,
+`change_series_schedule`, `remove_series_schedule` — edits allowed only in `assigned`/`blocked`
+before dispatch starts and while no worker lease is held.
+
+**Planning (`handlers/series-core.ts`, pure).** Uses `listLibrary` (current workflow revision,
+non-superseded clips only). Includes every Part and Short of the project plus the full episode when
+it has a source file. Full-episode title comes from prepared publication metadata
+(`resolveFullEpisodeTitle`). Already-published items are tracked, never republished; items already in
+the YouTube pipeline are adopted. Any unready / untitled / missing-thumbnail (Shorts) / missing-source /
+failed item, incomplete pipeline (`expected_part_count`/`expected_short_count` when non-null), or too
+few free preferred slots blocks the **whole** series — nothing is silently dropped. Slots reuse
+`allocatePreferredSlots` over the 7 days (no 30-item cap; series limit 60), so the full episode takes
+Monday 08:00 and numbered Parts stay chronological. Manual Bulk Schedule is unchanged (30-item cap).
+
+**Dispatch.** pg_cron `video-series-dispatcher-1min` runs an indexed EXISTS each minute and only
+then POSTs `{"action":"series_dispatch_tick"}` to `social-media-manager` with `X-Cron-Secret`
+(the action bypasses CRM JWT auth and is rejected without the secret). `video_series_claim_due`
+claims weeks with `FOR UPDATE SKIP LOCKED` + lease. Blocked weeks retry every 15 min until Monday
+06:00 Central, then fail as `READINESS_DEADLINE_PASSED` (unrecoverable). Once ready, the plan is
+frozen and processed in chunks of 6: create/reuse → validate → approve (automated review recorded
+against the assigning operator, for series only — global `require_review_before_publish` is not
+changed) → after all items are prepared, `queuePublish` → existing `publish_youtube` worker. Each
+step is idempotent so crashed runs resume. Items retry up to 5 times, then fail visibly.
+
+**Tracking.** An item counts as `youtube_scheduled` only when its publication is `scheduled` and
+`platform_payload.youtubeSchedule` is verified, private, with publishAt equal to the planned time.
+`queued` means internal only. Series → `youtube_scheduled` when every item is verified or published,
+`complete` when all are published. Shorts keep the existing manual thumbnail step.

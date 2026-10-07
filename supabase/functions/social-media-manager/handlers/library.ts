@@ -61,7 +61,21 @@ type PublicationRow = {
   project_id: string;
   content_format: string;
   platform_payload: Record<string, unknown> | null;
+  title?: string | null;
 };
+
+/**
+ * Full episodes have no per-clip youtube_title. Their title is the prepared publication
+ * metadata: the active (draft/prepared) publication's title first, then the most recent
+ * publication that carried one. Returns null when nothing was ever prepared.
+ */
+export function resolveFullEpisodeTitle(rows: PublicationRow[] | undefined): string | null {
+  if (!rows?.length) return null;
+  const sorted = [...rows].sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
+  const active = sorted.find((row) => !TERMINAL_STATUSES.has(row.status) && row.status !== "published" && row.title?.trim());
+  const any = active ?? sorted.find((row) => row.title?.trim());
+  return any?.title?.trim() ?? null;
+}
 
 const TERMINAL_STATUSES = new Set(["failed", "cancelled"]);
 
@@ -143,7 +157,7 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
         .order("created_at", { ascending: false })
         .limit(500),
       db.from("ai_operations_social_publications")
-        .select("id, created_at, status, delivery_mode, scheduled_for, desired_privacy_status, external_video_id, external_url, clip_id, project_id, content_format, platform_payload")
+        .select("id, created_at, status, delivery_mode, scheduled_for, desired_privacy_status, external_video_id, external_url, clip_id, project_id, content_format, platform_payload, title")
         .eq("tenant_id", tenantId),
       db.from("ai_operations_video_jobs")
         .select("clip_id, payload, completed_at")
@@ -264,7 +278,7 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
       clipId: null,
       partNumber: null,
       contentFormat: "full_episode",
-      title: null,
+      title: resolveFullEpisodeTitle(pubsByProject.get(project.id)),
       description: null,
       // Full episodes show ONLY an explicitly configured episode cover. The separate guest
       // portrait field is not cover art and is never used as a fallback: a project

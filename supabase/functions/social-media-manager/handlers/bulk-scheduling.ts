@@ -64,7 +64,7 @@ function parseDateKey(key: string): Date {
   return date;
 }
 
-function addDaysToKey(key: string, days: number): string {
+export function addDaysToKey(key: string, days: number): string {
   const date = parseDateKey(key);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
@@ -109,7 +109,7 @@ export function zonedDateTimeToIso(dateKey: string, time: string, timezone: stri
   return new Date(resolved).toISOString();
 }
 
-function isoToLocalSlot(iso: string, timezone: string): { date: string; time: string } {
+export function isoToLocalSlot(iso: string, timezone: string): { date: string; time: string } {
   const parts = wallClockParts(Date.parse(iso), timezone);
   return {
     date: `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`,

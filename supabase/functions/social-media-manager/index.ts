@@ -8,6 +8,9 @@ import {
 } from "./handlers/publications.ts";
 import { getSettings } from "./handlers/settings.ts";
 import { bulkSchedulePublications, previewBulkSchedule } from "./handlers/bulk-scheduling.ts";
+import {
+  assignSeriesSchedule, changeSeriesSchedule, getSeriesReadiness, getSeriesSchedule, listSeriesSchedules, removeSeriesSchedule,
+} from "./handlers/series.ts";
 import { getThumbnailUrl } from "./handlers/thumbnails.ts";
 import { replaceLibraryThumbnail } from "./handlers/thumbnail-edit.ts";
 import { getYoutubeConnectionStatus, verifyYoutubeConnection } from "./handlers/youtube.ts";
@@ -15,6 +18,7 @@ import { youtubeAccessToken } from "../_shared/ai-ops-youtube.ts";
 import { getYoutubeDeliveryStatus, updateVideoStatus } from "../_shared/youtube-publish/api.ts";
 import type { YoutubeScheduleClient } from "./handlers/publications.ts";
 import { resolveAllowHeaders } from "./cors.ts";
+import { runSeriesDispatchTick } from "./series-dispatch.ts";
 import { authorizeAction, MUTATE_ACTIONS, VIEW_ACTIONS } from "./actions.ts";
 
 // Root cause of the "TypeError: Failed to fetch" bug: supabase-js 2.93.1's browser build
@@ -104,6 +108,18 @@ async function dispatch(auth: AuthContext, action: string, params: Record<string
       return previewBulkSchedule(auth, params as never);
     case "bulk_schedule":
       return bulkSchedulePublications(auth, params as never);
+    case "list_series_schedules":
+      return listSeriesSchedules(auth, params);
+    case "get_series_schedule":
+      return getSeriesSchedule(auth, params as { id: string });
+    case "get_series_readiness":
+      return getSeriesReadiness(auth, params as { projectId: string; weekStart: string });
+    case "assign_series_schedule":
+      return assignSeriesSchedule(auth, params);
+    case "change_series_schedule":
+      return changeSeriesSchedule(auth, params as { id: string; projectId?: unknown });
+    case "remove_series_schedule":
+      return removeSeriesSchedule(auth, params as { id: string });
     default:
       throw new Error(`Unknown action: ${action}`);
   }
@@ -164,6 +180,11 @@ Deno.serve(async (request: Request) => {
     return json({ error: "Invalid upload action", requestId }, 400, requestId);
   }
   const action = String(body.action ?? "");
+  if (action === "series_dispatch_tick" && !isMultipart) {
+    // Cron-only entrypoint: authorized by X-Cron-Secret / service-role bearer, never a CRM JWT.
+    const result = await runSeriesDispatchTick(request);
+    return json({ ...result.body, requestId }, result.status, requestId);
+  }
   if (!VIEW_ACTIONS.has(action) && !MUTATE_ACTIONS.has(action)) {
     return json({ error: `Invalid action: ${action}`, requestId }, 400, requestId);
   }

@@ -453,3 +453,51 @@ export function publicationPollInterval(
     Date.parse(pub.scheduledFor) - nowMs < RECONCILE_WINDOW_MS);
   return reconciling ? 60_000 : false;
 }
+
+// ---- Schedule Series --------------------------------------------------------------------
+export type SeriesScheduleStatus =
+  | 'assigned' | 'blocked' | 'dispatching' | 'queued' | 'partially_scheduled'
+  | 'youtube_scheduled' | 'complete' | 'failed' | 'cancelled';
+
+export type SeriesScheduleItem = {
+  id: string; sourceType: SourceType; sourceId: string; contentFormat: ContentFormat; partNumber: number | null;
+  sequence: number; title: string | null; scheduledFor: string | null; publicationId: string | null;
+  status: 'planned' | 'prepared' | 'queued' | 'youtube_scheduled' | 'published' | 'already_published' | 'failed';
+  lastError: string | null;
+};
+
+export type SeriesSchedule = {
+  id: string; projectId: string; weekStart: string; timezone: string; dispatchAt: string; status: SeriesScheduleStatus;
+  organizationName: string | null; guestName: string | null; blockedReasons: string[]; lastError: string | null;
+  lastErrorCode: string | null; unrecoverable: boolean; dispatchStartedAt: string | null; queuedAt: string | null;
+  youtubeScheduledAt: string | null; completedAt: string | null; nextAttemptAt: string | null; lastCheckedAt: string | null;
+  editable: boolean; items?: SeriesScheduleItem[];
+};
+
+export type SeriesScheduleList = {
+  timezone: string; currentWeekStart: string; canMutate: boolean;
+  weeks: Array<{ weekStart: string; dispatchAt: string; schedule: SeriesSchedule | null }>;
+  eligibleProjects: Array<{ id: string; organizationName: string; guestName: string | null }>;
+};
+
+export type SeriesReadiness = {
+  ok: boolean; blockers: string[]; warnings: string[];
+  counts: { shorts: number; parts: number; fullEpisode: number; toSchedule: number };
+};
+
+export const fetchSeriesSchedules = (fromWeek: string | null, weeks: number) =>
+  invoke<SeriesScheduleList>('list_series_schedules', { fromWeek, weeks });
+export const fetchSeriesReadiness = (projectId: string, weekStart: string) =>
+  invoke<SeriesReadiness>('get_series_readiness', { projectId, weekStart }, 30000);
+export const assignSeriesSchedule = (weekStart: string, projectId: string, requestKey: string) =>
+  invoke<SeriesSchedule>('assign_series_schedule', { weekStart, projectId, requestKey });
+export const changeSeriesSchedule = (id: string, projectId: string) =>
+  invoke<SeriesSchedule>('change_series_schedule', { id, projectId });
+export const removeSeriesSchedule = (id: string) =>
+  invoke<{ id: string; status: 'cancelled' }>('remove_series_schedule', { id });
+
+export const SERIES_STATUS_LABELS: Record<SeriesScheduleStatus, string> = {
+  assigned: 'Assigned', blocked: 'Blocked — retrying', dispatching: 'Dispatching', queued: 'Queued for YouTube',
+  partially_scheduled: 'Partially scheduled', youtube_scheduled: 'Scheduled on YouTube', complete: 'Complete',
+  failed: 'Failed', cancelled: 'Removed',
+};
