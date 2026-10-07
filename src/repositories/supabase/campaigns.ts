@@ -4,6 +4,7 @@ import type { CampaignsRepository } from '../types';
 import type {
   Campaign, CampaignEnrollment, CampaignStep, CampaignStatus,
 } from '@/domain/operations';
+import { assertEntityTenant, requireOperatingTenant } from '../tenantScope';
 
 type CampaignRow = Tables<'crm_campaigns'>;
 type CampaignInsert = TablesInsert<'crm_campaigns'>;
@@ -93,12 +94,13 @@ function stepToDomain(r: CampaignStepRow): CampaignStep {
   };
 }
 
-async function loadSteps(campaignIds: string[]): Promise<Map<string, CampaignStep[]>> {
+async function loadSteps(tenantId: string, campaignIds: string[]): Promise<Map<string, CampaignStep[]>> {
   const map = new Map<string, CampaignStep[]>();
   if (!campaignIds.length) return map;
   const { data, error } = await supabase
     .from('crm_campaign_steps')
     .select(STEP_COLS)
+    .eq('tenant_id', tenantId)
     .in('campaign_id', campaignIds)
     .order('step_order', { ascending: true });
   if (error) throw new Error(error.message);
@@ -110,12 +112,13 @@ async function loadSteps(campaignIds: string[]): Promise<Map<string, CampaignSte
   return map;
 }
 
-async function loadMetrics(campaignIds: string[]): Promise<Map<string, Campaign['metrics']>> {
+async function loadMetrics(tenantId: string, campaignIds: string[]): Promise<Map<string, Campaign['metrics']>> {
   const map = new Map<string, Campaign['metrics']>();
   if (!campaignIds.length) return map;
   const enrRes = await supabase
     .from('crm_campaign_enrollments')
     .select('campaign_id, status')
+    .eq('tenant_id', tenantId)
     .in('campaign_id', campaignIds);
   if (enrRes.error) throw new Error(enrRes.error.message);
   const init = (): Campaign['metrics'] => ({
@@ -140,12 +143,13 @@ function mapStatus(r: CampaignRow, hasActiveEnrollments: boolean): CampaignStatu
   return 'Active';
 }
 
-async function loadTriggers(campaignIds: string[]): Promise<Map<string, string[]>> {
+async function loadTriggers(tenantId: string, campaignIds: string[]): Promise<Map<string, string[]>> {
   const map = new Map<string, string[]>();
   if (!campaignIds.length) return map;
   const { data, error } = await supabase
     .from('crm_campaign_triggers')
     .select('campaign_id, trigger_on_status, is_active')
+    .eq('tenant_id', tenantId)
     .in('campaign_id', campaignIds);
   if (error) throw new Error(error.message);
   for (const t of data ?? []) {
@@ -202,18 +206,20 @@ function enrollmentToDomain(
 }
 
 export const supabaseCampaignsRepository: CampaignsRepository = {
-  async list() {
+  async list(tenantIdInput) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     const { data, error } = await supabase
       .from('crm_campaigns')
       .select(CAMPAIGN_COLS)
+      .eq('tenant_id', tenantId)
       .order('updated_at', { ascending: false });
     if (error) throw new Error(error.message);
     const rows = data ?? [];
     const ids = rows.map((r) => r.id);
     const [stepsMap, triggersMap, metricsMap] = await Promise.all([
-      loadSteps(ids),
-      loadTriggers(ids),
-      loadMetrics(ids),
+      loadSteps(tenantId, ids),
+      loadTriggers(tenantId, ids),
+      loadMetrics(tenantId, ids),
     ]);
     return rows.map((r) =>
       campaignRowToDomain(
@@ -225,13 +231,15 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
     );
   },
 
-  async get(id) {
+  async get(tenantIdInput, id) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     const { data, error } = await supabase
-      .from('crm_campaigns').select(CAMPAIGN_COLS).eq('id', id).maybeSingle();
+      .from('crm_campaigns').select(CAMPAIGN_COLS)
+      .eq('tenant_id', tenantId).eq('id', id).maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) return null;
     const [stepsMap, triggersMap, metricsMap] = await Promise.all([
-      loadSteps([id]), loadTriggers([id]), loadMetrics([id]),
+      loadSteps(tenantId, [id]), loadTriggers(tenantId, [id]), loadMetrics(tenantId, [id]),
     ]);
     return campaignRowToDomain(
       data,
@@ -241,7 +249,9 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
     );
   },
 
-  async create(input) {
+  async create(tenantIdInput, input) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    assertEntityTenant(tenantId, input.tenantId, 'Campaign');
     const row: CampaignInsert = {
       tenant_id: input.tenantId,
       name: input.name,
@@ -257,17 +267,20 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
     });
   },
 
-  async update(id, patch) {
+  async update(tenantIdInput, id, patch) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    if (patch.tenantId !== undefined) assertEntityTenant(tenantId, patch.tenantId, 'Campaign');
     const out: CampaignUpdate = {};
     if (patch.name !== undefined) out.name = patch.name;
     if (patch.description !== undefined) out.description = patch.description ?? null;
     if (patch.status !== undefined) out.is_active = patch.status === 'Active';
     if (patch.ownerId !== undefined) out.created_by_profile_id = patch.ownerId ?? null;
     const { data, error } = await supabase
-      .from('crm_campaigns').update(out).eq('id', id).select(CAMPAIGN_COLS).single();
+      .from('crm_campaigns').update(out)
+      .eq('tenant_id', tenantId).eq('id', id).select(CAMPAIGN_COLS).single();
     if (error) throw new Error(error.message);
     const [stepsMap, triggersMap, metricsMap] = await Promise.all([
-      loadSteps([id]), loadTriggers([id]), loadMetrics([id]),
+      loadSteps(tenantId, [id]), loadTriggers(tenantId, [id]), loadMetrics(tenantId, [id]),
     ]);
     return campaignRowToDomain(
       data,
@@ -277,16 +290,19 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
     );
   },
 
-  async enrollments(campaignId) {
+  async enrollments(tenantIdInput, campaignId) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     const [enrRes, stepsRes] = await Promise.all([
       supabase
         .from('crm_campaign_enrollments')
         .select(ENROLL_COLS)
+        .eq('tenant_id', tenantId)
         .eq('campaign_id', campaignId)
         .order('enrolled_at', { ascending: false }),
       supabase
         .from('crm_campaign_steps')
         .select('id, campaign_id, step_order')
+        .eq('tenant_id', tenantId)
         .eq('campaign_id', campaignId),
     ]);
     if (enrRes.error) throw new Error(enrRes.error.message);
@@ -298,10 +314,41 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
     return (enrRes.data ?? []).map((r) => enrollmentToDomain(r, stepIdByOrder));
   },
 
-  async enroll(campaignId, clientIds) {
+  async enroll(tenantIdInput, campaignId, clientIds) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     if (!clientIds.length) return [];
+
+    const { data: campaign, error: campaignError } = await supabase
+      .from('crm_campaigns')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('id', campaignId)
+      .maybeSingle();
+    if (campaignError) throw new Error(campaignError.message);
+    if (!campaign) throw new Error('Campaign not found in current operating tenant');
+
+    const { data: tenantClients, error: clientError } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .in('id', clientIds);
+    if (clientError) throw new Error(clientError.message);
+    const tenantClientIds = new Set((tenantClients ?? []).map((client) => client.id));
+    const foreignClientIds = clientIds.filter((id) => !tenantClientIds.has(id));
+    if (foreignClientIds.length > 0) {
+      throw new Error('One or more clients do not belong to the current operating tenant');
+    }
     // Untyped RPC call (types.ts regenerates post-migration).
-    const rpc = (supabase as unknown as {
+    const { data: enrollment, error: enrollmentError } = await supabase
+    .from('crm_campaign_enrollments')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('id', enrollmentId)
+    .maybeSingle();
+  if (enrollmentError) throw new Error(enrollmentError.message);
+  if (!enrollment) throw new Error('Enrollment not found in current operating tenant');
+
+  const rpc = (supabase as unknown as {
       rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
     }).rpc;
     const { data, error } = await rpc('crm_enroll_clients_in_campaign', {
@@ -318,34 +365,37 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
       .map((r) => r.enrollment_id as string);
     if (!enrolledIds.length) return [];
     const { data: rows, error: fetchErr } = await supabase
-      .from('crm_campaign_enrollments').select(ENROLL_COLS).in('id', enrolledIds);
+      .from('crm_campaign_enrollments').select(ENROLL_COLS)
+      .eq('tenant_id', tenantId).in('id', enrolledIds);
     if (fetchErr) throw new Error(fetchErr.message);
     return (rows ?? []).map((r) => enrollmentToDomain(r, new Map()));
   },
 
 
-  async pauseEnrollment(enrollmentId, reason) {
-    return await enrollmentActionRpc('crm_pause_enrollment', enrollmentId, reason);
+  async pauseEnrollment(tenantId, enrollmentId, reason) {
+    return await enrollmentActionRpc(tenantId, 'crm_pause_enrollment', enrollmentId, reason);
   },
 
-  async resumeEnrollment(enrollmentId, reason) {
-    return await enrollmentActionRpc('crm_resume_enrollment', enrollmentId, reason);
+  async resumeEnrollment(tenantId, enrollmentId, reason) {
+    return await enrollmentActionRpc(tenantId, 'crm_resume_enrollment', enrollmentId, reason);
   },
 
-  async cancelEnrollment(enrollmentId, reason) {
-    return await enrollmentActionRpc('crm_cancel_enrollment', enrollmentId, reason);
+  async cancelEnrollment(tenantId, enrollmentId, reason) {
+    return await enrollmentActionRpc(tenantId, 'crm_cancel_enrollment', enrollmentId, reason);
   },
 
-  async restartEnrollment(enrollmentId, reason) {
-    return await enrollmentActionRpc('crm_restart_enrollment', enrollmentId, reason);
+  async restartEnrollment(tenantId, enrollmentId, reason) {
+    return await enrollmentActionRpc(tenantId, 'crm_restart_enrollment', enrollmentId, reason);
   },
 };
 
 async function enrollmentActionRpc(
+  tenantIdInput: string,
   rpcName: string,
   enrollmentId: string,
   reason: string,
 ): Promise<CampaignEnrollment> {
+  const tenantId = requireOperatingTenant(tenantIdInput);
   if (!reason || reason.trim().length < 3) {
     throw new Error('A reason (min 3 chars) is required for enrollment state changes.');
   }
@@ -359,7 +409,8 @@ async function enrollmentActionRpc(
   });
   if (error) throw new Error(error.message);
   const { data: row, error: fetchErr } = await supabase
-    .from('crm_campaign_enrollments').select(ENROLL_COLS).eq('id', enrollmentId).single();
+    .from('crm_campaign_enrollments').select(ENROLL_COLS)
+    .eq('tenant_id', tenantId).eq('id', enrollmentId).single();
   if (fetchErr) throw new Error(fetchErr.message);
   return enrollmentToDomain(row, new Map());
 }
