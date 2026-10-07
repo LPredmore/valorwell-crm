@@ -13037,6 +13037,9 @@ export type Database = {
           created_by_profile_id: string | null
           editor_document: Json | null
           editor_schema_version: number | null
+          failed_at: string | null
+          failure_code: string | null
+          failure_message: string | null
           id: string
           metadata: Json
           name: string
@@ -13061,6 +13064,9 @@ export type Database = {
           created_by_profile_id?: string | null
           editor_document?: Json | null
           editor_schema_version?: number | null
+          failed_at?: string | null
+          failure_code?: string | null
+          failure_message?: string | null
           id?: string
           metadata?: Json
           name: string
@@ -13085,6 +13091,9 @@ export type Database = {
           created_by_profile_id?: string | null
           editor_document?: Json | null
           editor_schema_version?: number | null
+          failed_at?: string | null
+          failure_code?: string | null
+          failure_message?: string | null
           id?: string
           metadata?: Json
           name?: string
@@ -28514,7 +28523,10 @@ export type Database = {
         }
         Returns: Json
       }
-      crm_claim_due_newsletters: { Args: { p_limit?: number }; Returns: Json }
+      crm_claim_due_newsletters: {
+        Args: { p_limit?: number; p_newsletter_id?: string }
+        Returns: Json
+      }
       crm_claim_newsletter_recipients: {
         Args: { p_limit?: number; p_newsletter_id: string }
         Returns: Json
@@ -28692,6 +28704,10 @@ export type Database = {
         Args: { p_claim_token: string; p_job_id: string }
         Returns: Json
       }
+      crm_fail_newsletter: {
+        Args: { p_code: string; p_message: string; p_newsletter_id: string }
+        Returns: Json
+      }
       crm_finalize_newsletter: {
         Args: { p_newsletter_id: string }
         Returns: Json
@@ -28781,6 +28797,7 @@ export type Database = {
         Args: { p_dry_run?: boolean }
         Returns: Json
       }
+      crm_reconcile_sending_newsletters: { Args: never; Returns: Json }
       crm_record_bty_interview_transcript: {
         Args: { p_meeting_id: string; p_source?: string; p_transcript: string }
         Returns: Json
