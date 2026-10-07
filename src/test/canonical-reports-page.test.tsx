@@ -94,6 +94,7 @@ function readyQueries(): MockReportQueries {
     campaign: query(bucket<CampaignReportRow>([{
       ...period,
       campaign_id: 'campaign-1',
+      campaignName: 'Welcome Campaign',
       enrolled_count: 10,
       completed_count: 7,
       cancelled_count: 1,
@@ -103,7 +104,8 @@ function readyQueries(): MockReportQueries {
     }])),
     task: query(bucket<TaskReportRow>([{
       ...period,
-      assignee_id: null,
+      assignee_id: 'profile-1',
+      assigneeName: 'Morgan Lee',
       open_count: 3,
       completed_count: 9,
       overdue_count: 1,
@@ -142,7 +144,10 @@ describe('CanonicalReports', () => {
     expect(screen.getByText('Engaged')).toBeInTheDocument();
     expect(screen.getByText('Completed Care')).toBeInTheDocument();
     expect(screen.getByText('Integration Failure')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('Welcome Campaign')).toBeInTheDocument();
+    expect(screen.getByText('Morgan Lee')).toBeInTheDocument();
+    expect(screen.queryByText('campaign-1')).not.toBeInTheDocument();
+    expect(screen.queryByText('profile-1')).not.toBeInTheDocument();
     expect(screen.queryByText('completed_care')).not.toBeInTheDocument();
     expect(screen.queryByText(['At', 'Risk Overview'].join('-'))).not.toBeInTheDocument();
   });

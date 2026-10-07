@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useTasks, useTaskMutations } from '@/hooks/canonical/useCrmData';
+import { useStaffList, useTasks, useTaskMutations } from '@/hooks/canonical/useCrmData';
+import { resolveStaffOperatorLabel } from '@/domain/staffIdentity';
 import type { ListTasksQuery } from '@/repositories/types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -34,6 +35,7 @@ export default function CanonicalTasks() {
   const [params, setParams] = useSearchParams();
   const view = (params.get('view') as ListTasksQuery['view']) ?? 'overdue';
   const { data, isLoading } = useTasks({ view });
+  const { data: staff = [] } = useStaffList();
   const mut = useTaskMutations();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -90,7 +92,7 @@ export default function CanonicalTasks() {
                 <TableCell><Badge variant="secondary" className={priorityColor[t.priority]}>{t.priority}</Badge></TableCell>
                 <TableCell className="text-sm">{t.status}</TableCell>
                 <TableCell className="text-sm">{t.dueAt ? new Date(t.dueAt).toLocaleDateString() : '—'}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{t.ownerId ?? 'Unassigned'}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{resolveStaffOperatorLabel(staff, t.ownerId)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

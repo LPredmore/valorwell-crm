@@ -300,8 +300,8 @@ export const mockDataProvider: CrmDataProvider = {
         bucketStart: '2026-07-06',
         bucketEnd: '2026-07-13',
         rows: [
-          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', campaign_id: 'camp-1', enrolled_count: 30, completed_count: 18, cancelled_count: 2, responded_count: 11, suppressed_count: 3, failed_count: 1 },
-          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', campaign_id: 'camp-2', enrolled_count: 22, completed_count: 12, cancelled_count: 1, responded_count: 7, suppressed_count: 2, failed_count: 0 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', campaign_id: 'camp-1', campaignName: 'Welcome Campaign', enrolled_count: 30, completed_count: 18, cancelled_count: 2, responded_count: 11, suppressed_count: 3, failed_count: 1 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', campaign_id: 'camp-2', campaignName: 'Care Follow-Up', enrolled_count: 22, completed_count: 12, cancelled_count: 1, responded_count: 7, suppressed_count: 2, failed_count: 0 },
         ],
       };
     },
@@ -313,8 +313,8 @@ export const mockDataProvider: CrmDataProvider = {
         bucketStart: '2026-07-06',
         bucketEnd: '2026-07-13',
         rows: [
-          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', assignee_id: 'staff-1', open_count: 7, completed_count: 12, overdue_count: 2, median_hours_to_complete: 18 },
-          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', assignee_id: null, open_count: 3, completed_count: 1, overdue_count: 1, median_hours_to_complete: 24 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', assignee_id: 'profile-1', assigneeName: 'Morgan Lee', open_count: 7, completed_count: 12, overdue_count: 2, median_hours_to_complete: 18 },
+          { tenant_id: tenantId, bucket_start: '2026-07-06', bucket_end: '2026-07-13', assignee_id: null, assigneeName: 'Unassigned', open_count: 3, completed_count: 1, overdue_count: 1, median_hours_to_complete: 24 },
         ],
       };
     },

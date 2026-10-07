@@ -202,7 +202,10 @@ export interface CommunicationMessage {
 }
 
 export interface StaffMember {
+  /** Staff/clinician record identity (staff.id). */
   id: string;
+  /** Authenticated operator identity used by operational owner columns (profiles.id). */
+  profileId?: string;
   tenantId: string;
   firstName: string;
   lastName: string;

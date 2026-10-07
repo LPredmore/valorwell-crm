@@ -1,3 +1,4 @@
+import { buildStaffOperatorDisplayName } from '@/domain/staffIdentity';
 import {
   mapDbClosureReasonToDomain,
   mapDbEngagementToDomain,
@@ -58,6 +59,65 @@ type BucketPageFetcher<Row> = (
 
 const REPORT_PAGE_SIZE = 1_000;
 const MAX_REPORT_PAGES = 100;
+
+function uniqueNonNull(values: readonly (string | null)[]): string[] {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value))));
+}
+
+async function loadCampaignNames(
+  tenantId: string,
+  rows: readonly CampaignViewRow[],
+): Promise<Map<string, string>> {
+  const campaignIds = uniqueNonNull(rows.map((row) => row.campaign_id));
+  if (campaignIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from('crm_campaigns')
+    .select('id, name')
+    .eq('tenant_id', tenantId)
+    .in('id', campaignIds);
+  if (error) throw toReportQueryError('campaigns', 'v_crm_reports_campaigns', error);
+
+  return new Map((data ?? []).map((campaign) => [campaign.id, campaign.name]));
+}
+
+async function loadAssigneeNames(
+  tenantId: string,
+  rows: readonly TaskViewRow[],
+): Promise<Map<string, string>> {
+  const assigneeIds = uniqueNonNull(rows.map((row) => row.assignee_id));
+  if (assigneeIds.length === 0) return new Map();
+
+  const { data: staffRows, error: staffError } = await supabase
+    .from('staff')
+    .select('profile_id, prov_name_for_clients, prov_name_f, prov_name_l')
+    .eq('tenant_id', tenantId)
+    .in('profile_id', assigneeIds);
+  if (staffError) throw toReportQueryError('tasks', 'v_crm_reports_tasks', staffError);
+
+  const staffProfileIds = uniqueNonNull((staffRows ?? []).map((row) => row.profile_id));
+  let emailByProfile = new Map<string, string>();
+  if (staffProfileIds.length > 0) {
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, email')
+      .in('id', staffProfileIds);
+    if (profileError) throw toReportQueryError('tasks', 'v_crm_reports_tasks', profileError);
+    emailByProfile = new Map((profiles ?? []).map((profile) => [profile.id, profile.email]));
+  }
+
+  const names = new Map<string, string>();
+  for (const staff of staffRows ?? []) {
+    if (!staff.profile_id) continue;
+    names.set(staff.profile_id, buildStaffOperatorDisplayName({
+      preferredDisplayName: staff.prov_name_for_clients,
+      firstName: staff.prov_name_f,
+      lastName: staff.prov_name_l,
+      email: emailByProfile.get(staff.profile_id),
+    }));
+  }
+  return names;
+}
 
 function safeNumber(value: number | null): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
@@ -303,11 +363,15 @@ export const supabaseReportsRepository: ReportsRepository = {
         .order('campaign_id', { ascending: true, nullsFirst: true })
         .range(from, to),
     );
+    const campaignNames = await loadCampaignNames(tenantId, rows);
     return mapLatestBucket<CampaignViewRow, CampaignReportRow>(
       tenantId,
       rows,
       (row) => ({
         ...row,
+        campaignName: row.campaign_id
+          ? (campaignNames.get(row.campaign_id) ?? 'Unknown campaign')
+          : 'Unknown campaign',
         enrolled_count: safeNumber(row.enrolled_count),
         completed_count: safeNumber(row.completed_count),
         cancelled_count: safeNumber(row.cancelled_count),
@@ -315,7 +379,7 @@ export const supabaseReportsRepository: ReportsRepository = {
         suppressed_count: safeNumber(row.suppressed_count),
         failed_count: safeNumber(row.failed_count),
       }),
-      (row) => row.campaign_id ?? '',
+      (row) => row.campaignName,
     );
   },
 
@@ -339,17 +403,21 @@ export const supabaseReportsRepository: ReportsRepository = {
         .order('assignee_id', { ascending: true, nullsFirst: true })
         .range(from, to),
     );
+    const assigneeNames = await loadAssigneeNames(tenantId, rows);
     return mapLatestBucket<TaskViewRow, TaskReportRow>(
       tenantId,
       rows,
       (row) => ({
         ...row,
+        assigneeName: row.assignee_id
+          ? (assigneeNames.get(row.assignee_id) ?? 'Unknown staff member')
+          : 'Unassigned',
         open_count: safeNumber(row.open_count),
         completed_count: safeNumber(row.completed_count),
         overdue_count: safeNumber(row.overdue_count),
         median_hours_to_complete: safeNumber(row.median_hours_to_complete),
       }),
-      (row) => row.assignee_id ?? '',
+      (row) => row.assigneeName,
     );
   },
 

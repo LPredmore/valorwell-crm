@@ -10,7 +10,7 @@ import {
 
 interface FilterCall {
   column: string;
-  operator: 'eq' | 'not';
+  operator: 'eq' | 'not' | 'in';
   value: unknown;
 }
 
@@ -72,6 +72,11 @@ vi.mock('@/integrations/supabase/client', () => {
       return this;
     }
 
+    in(column: string, values: unknown[]) {
+      this.call.filters.push({ column, operator: 'in', value: values });
+      return this;
+    }
+
     order(column: string, options: { ascending?: boolean; nullsFirst?: boolean } = {}) {
       this.orderBy = {
         ascending: options.ascending ?? true,
@@ -103,6 +108,14 @@ vi.mock('@/integrations/supabase/client', () => {
       });
     }
 
+    then<TResult1 = { data: object[] | null; error: FakeError | null }, TResult2 = never>(
+      onfulfilled?: ((value: { data: object[] | null; error: FakeError | null }) => TResult1 | PromiseLike<TResult1>) | null,
+      onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+    ): Promise<TResult1 | TResult2> {
+      const result = this.result();
+      return Promise.resolve({ data: result.data, error: result.error }).then(onfulfilled, onrejected);
+    }
+
     private result(): { data: object[] | null; error: FakeError | null } {
       const error = boundary.errors[this.view];
       if (error) return { data: null, error };
@@ -111,6 +124,9 @@ vi.mock('@/integrations/supabase/client', () => {
       for (const filter of this.call.filters) {
         if (filter.operator === 'eq') {
           rows = rows.filter(row => valueAt(row, filter.column) === filter.value);
+        } else if (filter.operator === 'in') {
+          const values = filter.value as unknown[];
+          rows = rows.filter(row => values.includes(valueAt(row, filter.column)));
         } else {
           rows = rows.filter(row => valueAt(row, filter.column) !== null);
         }
@@ -173,7 +189,30 @@ function seedRows() {
     { ...common('tenant-a', '2026-07-06'), campaign_id: 'campaign-1', enrolled_count: 10, completed_count: 7, cancelled_count: null, responded_count: 3, suppressed_count: 2, failed_count: 1 },
   ];
   boundary.rows.v_crm_reports_tasks = [
-    { ...common('tenant-a', '2026-07-06'), assignee_id: null, open_count: 4, completed_count: 9, overdue_count: null, median_hours_to_complete: 12.5 },
+    { ...common('tenant-a', '2026-07-06'), assignee_id: 'profile-1', open_count: 4, completed_count: 9, overdue_count: null, median_hours_to_complete: 12.5 },
+  ];
+  boundary.rows.crm_campaigns = [
+    { id: 'campaign-1', tenant_id: 'tenant-a', name: 'Welcome Campaign' },
+    { id: 'campaign-1', tenant_id: 'tenant-b', name: 'Other Tenant Campaign' },
+  ];
+  boundary.rows.staff = [
+    {
+      tenant_id: 'tenant-a',
+      profile_id: 'profile-1',
+      prov_name_for_clients: 'Morgan',
+      prov_name_f: 'Morgan',
+      prov_name_l: 'Lee',
+    },
+    {
+      tenant_id: 'tenant-b',
+      profile_id: 'profile-1',
+      prov_name_for_clients: 'Wrong Tenant',
+      prov_name_f: 'Wrong',
+      prov_name_l: 'Tenant',
+    },
+  ];
+  boundary.rows.profiles = [
+    { id: 'profile-1', email: 'morgan@example.org' },
   ];
   boundary.rows.v_crm_reports_exceptions = [
     { ...common('tenant-a', '2026-07-06'), exception_type: 'integration_failure', raised_count: 5, resolved_count: 3, open_count: null, median_hours_to_resolve: 8.25 },
@@ -198,14 +237,27 @@ describe('Supabase reports repository', () => {
       supabaseReportsRepository.exceptionMetrics('tenant-a'),
     ]);
 
-    expect([...new Set(boundary.calls.map(call => call.view))].sort()).toEqual([...views].sort());
-    expect(boundary.calls).toHaveLength(12);
-    expect(boundary.calls.every(call => call.filters.some(filter => (
+    const reportCalls = boundary.calls.filter((call) => views.includes(call.view as ReportViewName));
+    expect([...new Set(reportCalls.map(call => call.view))].sort()).toEqual([...views].sort());
+    expect(reportCalls).toHaveLength(12);
+    expect(reportCalls.every(call => call.filters.some(filter => (
       filter.operator === 'eq'
       && filter.column === 'tenant_id'
       && filter.value === 'tenant-a'
     )))).toBe(true);
-    expect(boundary.calls.filter(call => call.range !== null)).toHaveLength(6);
+    expect(reportCalls.filter(call => call.range !== null)).toHaveLength(6);
+
+    const campaignLookup = boundary.calls.find((call) => call.view === 'crm_campaigns');
+    expect(campaignLookup?.filters).toEqual(expect.arrayContaining([
+      expect.objectContaining({ column: 'tenant_id', operator: 'eq', value: 'tenant-a' }),
+      expect.objectContaining({ column: 'id', operator: 'in', value: ['campaign-1'] }),
+    ]));
+
+    const staffLookup = boundary.calls.find((call) => call.view === 'staff');
+    expect(staffLookup?.filters).toEqual(expect.arrayContaining([
+      expect.objectContaining({ column: 'tenant_id', operator: 'eq', value: 'tenant-a' }),
+      expect.objectContaining({ column: 'profile_id', operator: 'in', value: ['profile-1'] }),
+    ]));
   });
 
   it('selects the latest tenant bucket deterministically and retains every row in that week', async () => {
@@ -246,11 +298,13 @@ describe('Supabase reports repository', () => {
       disposition_reason: 'completed_care', closed_count: 6, reopened_count: 0, net_closed: 5,
     });
     expect(campaigns?.rows[0]).toMatchObject({
-      campaign_id: 'campaign-1', enrolled_count: 10, completed_count: 7, cancelled_count: 0,
+      campaign_id: 'campaign-1', campaignName: 'Welcome Campaign',
+      enrolled_count: 10, completed_count: 7, cancelled_count: 0,
       responded_count: 3, suppressed_count: 2, failed_count: 1,
     });
     expect(tasks?.rows[0]).toMatchObject({
-      assignee_id: null, open_count: 4, completed_count: 9, overdue_count: 0,
+      assignee_id: 'profile-1', assigneeName: 'Morgan',
+      open_count: 4, completed_count: 9, overdue_count: 0,
       median_hours_to_complete: 12.5,
     });
     expect(exceptions?.rows[0]).toMatchObject({
