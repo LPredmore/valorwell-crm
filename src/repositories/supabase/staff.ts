@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import type { StaffRepository } from '../types';
 import type { StaffMember } from '@/domain/operations';
+import { buildStaffOperatorDisplayName } from '@/domain/staffIdentity';
 
 const STAFF_SELECT = `
   id, tenant_id, profile_id,
@@ -85,7 +86,13 @@ async function buildStaff(rows: StaffRow[]): Promise<StaffMember[]> {
   return rows.map((r) => {
     const first = r.prov_name_f ?? '';
     const last = r.prov_name_l ?? '';
-    const display = r.prov_name_for_clients?.trim() || `${first} ${last}`.trim() || 'Unnamed';
+    const email = (r.profile_id && emailByProfile.get(r.profile_id)) || '';
+    const display = buildStaffOperatorDisplayName({
+      preferredDisplayName: r.prov_name_for_clients,
+      firstName: first,
+      lastName: last,
+      email,
+    });
     const role = mapRole(r.profile_id ? roleByProfile.get(r.profile_id) : undefined);
     const cl = caseload.get(r.id) ?? 0;
     const cap = typeof r.prov_max_clients === 'number' ? r.prov_max_clients : undefined;
@@ -94,6 +101,7 @@ async function buildStaff(rows: StaffRow[]): Promise<StaffMember[]> {
     else if (cap && cl >= cap) availability = 'Full';
     return {
       id: r.id,
+      profileId: r.profile_id ?? undefined,
       tenantId: r.tenant_id,
       firstName: first,
       lastName: last,
@@ -102,7 +110,7 @@ async function buildStaff(rows: StaffRow[]): Promise<StaffMember[]> {
       status: mapStatus(r.prov_status),
       lifecycleStatus: mapLifecycleStatus(r.prov_status),
       states: r.prov_state ? [r.prov_state] : [],
-      email: (r.profile_id && emailByProfile.get(r.profile_id)) || '',
+      email,
       phone: r.prov_phone ?? undefined,
       caseloadCount: cl,
       openTaskCount: openTasks.get(r.id) ?? 0,
