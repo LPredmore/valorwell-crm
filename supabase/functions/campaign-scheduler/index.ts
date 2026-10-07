@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkSuppression } from "../_shared/suppression.ts";
+import { clientGreetingVariables } from "../_shared/client-personalization.ts";
 import {
   appendSignature,
   buildCampaignResendContent,
@@ -459,8 +460,7 @@ async function processCampaignMessages() {
         }
         const settings = await resendSettings(db, step.tenant_id);
         const values: ClientCampaignVariableValues = {
-          first_name: typedClient.pat_name_f || "Client",
-          preferred_name: typedClient.pat_name_preferred || typedClient.pat_name_f || "Client",
+          ...clientGreetingVariables(typedClient),
           last_name: typedClient.pat_name_l || "Client",
           therapist_name: therapistName(typedClient),
           sender_name: settings.from_name || "ValorWell Care Team",
