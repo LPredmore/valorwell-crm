@@ -68,35 +68,88 @@ async function verifyDriveWriteAccess(admin: ReturnType<typeof adminClient>, ten
 }
 
 async function requeueDriveScopeThumbnailJobs(admin: ReturnType<typeof adminClient>) {
-  const reset = {
-    status: "queued",
-    attempts: 0,
-    error_code: null,
-    error_class: null,
-    error_message: null,
-    claimed_by: null,
-    claimed_at: null,
-    lease_expires_at: null,
-    completed_at: null,
-    available_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-
-  const { error: failedError } = await admin
+  const { data: jobs, error: jobsError } = await admin
     .from("ai_operations_video_jobs")
-    .update(reset)
+    .select("id,clip_id,status,error_code,result,payload,workflow_revision,created_at")
     .eq("job_type", "generate_thumbnail")
-    .eq("status", "error")
-    .in("error_code", ["drive_upload_failed", "drive_write_scope_missing"]);
-  if (failedError) throw new Error("Could not requeue Drive-scope thumbnail failures: " + failedError.message);
+    .in("status", ["error", "cancelled"])
+    .order("created_at", { ascending: false });
+  if (jobsError) throw new Error("Could not inspect Drive-scope thumbnail failures: " + jobsError.message);
 
-  const { error: cancelledError } = await admin
-    .from("ai_operations_video_jobs")
-    .update(reset)
-    .eq("job_type", "generate_thumbnail")
-    .eq("status", "cancelled")
-    .contains("result", { cancel_reason: "awaiting_drive_write_reauthorization" });
-  if (cancelledError) throw new Error("Could not requeue thumbnails waiting for Drive reauthorization: " + cancelledError.message);
+  const eligible = (jobs ?? []).filter((job: any) =>
+    job.clip_id
+    && (
+      (job.status === "error" && ["drive_upload_failed", "drive_write_scope_missing"].includes(String(job.error_code ?? "")))
+      || (job.status === "cancelled" && job.result?.cancel_reason === "awaiting_drive_write_reauthorization")
+    )
+  );
+
+  const newestByClip = new Map<string, any>();
+  for (const job of eligible) {
+    if (!newestByClip.has(String(job.clip_id))) newestByClip.set(String(job.clip_id), job);
+  }
+
+  let requeued = 0;
+  let skippedStale = 0;
+  let skippedActive = 0;
+
+  for (const [clipId, job] of newestByClip) {
+    const { data: clip, error: clipError } = await admin
+      .from("ai_operations_video_clips")
+      .select("workflow_revision,thumbnail_generation_revision,pipeline_status")
+      .eq("id", clipId)
+      .maybeSingle();
+    if (clipError) throw new Error("Could not inspect thumbnail clip " + clipId + ": " + clipError.message);
+    if (!clip || clip.pipeline_status === "superseded") {
+      skippedStale++;
+      continue;
+    }
+
+    const jobGenerationRevision = Number(job.payload?.generation_revision ?? -1);
+    if (
+      Number(job.workflow_revision) !== Number(clip.workflow_revision)
+      || jobGenerationRevision !== Number(clip.thumbnail_generation_revision)
+    ) {
+      skippedStale++;
+      continue;
+    }
+
+    const { data: active, error: activeError } = await admin
+      .from("ai_operations_video_jobs")
+      .select("id")
+      .eq("clip_id", clipId)
+      .eq("job_type", "generate_thumbnail")
+      .in("status", ["queued", "claimed", "running", "waiting"])
+      .limit(1);
+    if (activeError) throw new Error("Could not inspect active thumbnail jobs for " + clipId + ": " + activeError.message);
+    if ((active ?? []).length > 0) {
+      skippedActive++;
+      continue;
+    }
+
+    const now = new Date().toISOString();
+    const { error: updateError } = await admin
+      .from("ai_operations_video_jobs")
+      .update({
+        status: "queued",
+        attempts: 0,
+        error_code: null,
+        error_class: null,
+        error_message: null,
+        claimed_by: null,
+        claimed_at: null,
+        lease_expires_at: null,
+        completed_at: null,
+        available_at: now,
+        updated_at: now,
+      })
+      .eq("id", job.id)
+      .in("status", ["error", "cancelled"]);
+    if (updateError) throw new Error("Could not requeue thumbnail job " + job.id + ": " + updateError.message);
+    requeued++;
+  }
+
+  return { requeued, skippedStale, skippedActive };
 }
 
 Deno.serve(async (request: Request) => {
@@ -190,11 +243,19 @@ Deno.serve(async (request: Request) => {
     });
     if (storeError) throw new Error(storeError.message);
     if (connectionType === "drive") {
-      await requeueDriveScopeThumbnailJobs(admin);
+      let retrySummary: Record<string, unknown> = {};
+      try {
+        retrySummary = await requeueDriveScopeThumbnailJobs(admin);
+      } catch (retryError) {
+        retrySummary = {
+          retry_warning: retryError instanceof Error ? retryError.message : String(retryError),
+        };
+      }
       await admin.from("ai_operations_video_oauth_events").insert({
         connection_type: "drive",
         status: "success",
-        message: "Drive OAuth connection stored with writable scope; write probe succeeded and Drive-scope thumbnail jobs were requeued."
+        message: "Drive OAuth connection stored with writable scope; write probe succeeded. Retry summary: "
+          + JSON.stringify(retrySummary).slice(0, 3000)
       });
     }
     return redirectResult(connectionType, "connected");
