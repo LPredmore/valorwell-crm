@@ -260,7 +260,7 @@ describe('Phase 7 integrated release gate', () => {
       .rejects.toThrow('contains invalid Email Studio content');
   });
 
-  it('keeps creator source values raw, publication covers signed, retired BTY calls absent, and Drive OAuth read-only', () => {
+  it('keeps creator source values raw, publication covers signed, retired BTY calls absent, and current Drive OAuth scope intact', () => {
     const creator = read('src/pages/crm/canonical/CreatorCommunityInterestQueue.tsx');
     const publication = read('src/components/crm/social-media/SocialPublicationMetadataForm.tsx');
     const thumbnails = read('supabase/functions/social-media-manager/handlers/thumbnails.ts');
@@ -285,7 +285,8 @@ describe('Phase 7 integrated release gate', () => {
     expect(routes).toContain('Navigate replace to="/crm/business-development/duplicate-cleanup"');
 
     expect(drivePage).toContain("connect.mutate('drive')");
-    expect(oauthStart).toContain('https://www.googleapis.com/auth/drive.readonly');
+    expect(oauthStart).toContain('https://www.googleapis.com/auth/drive');
+    expect(oauthStart).not.toContain('https://www.googleapis.com/auth/drive.readonly');
     expect(oauthStart).toContain('include_granted_scopes: "false"');
     expect(oauthCallback).toContain('store_relationship_google_connection');
     expect(oauthCallback).toContain('new URL("/crm/business-development/orchestration", appUrl)');
