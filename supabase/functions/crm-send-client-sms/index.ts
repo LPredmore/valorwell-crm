@@ -9,7 +9,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   checkSuppression,
   parseIndividualSmsMessageClass,
-  type MessageClass,
 } from "../_shared/suppression.ts";
 
 const corsHeaders = {
