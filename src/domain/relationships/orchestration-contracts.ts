@@ -20,7 +20,7 @@ export type RelationshipOrchestration = {
 
 export type RelationshipIntegrity = {
   flags: Record<string, boolean>;
-  connections: Array<{ id: string; connectionType: 'gmail' | 'calendar'; googleAccountEmail: string; calendarId?: string; scopes: string[]; status: string; lastVerifiedAt?: string; lastErrorCode?: string; lastErrorReason?: string; watchExpiration?: string; lastSuccessfulSyncAt?: string; lastFullReconciliationAt?: string }>;
+  connections: Array<{ id: string; connectionType: 'gmail' | 'calendar' | 'drive'; googleAccountEmail: string; calendarId?: string; scopes: string[]; status: string; lastVerifiedAt?: string; lastErrorCode?: string; lastErrorReason?: string; watchExpiration?: string; lastSuccessfulSyncAt?: string; lastFullReconciliationAt?: string }>;
   invariants: Record<string, number>;
   issues: Array<{ id: string; issueType: string; severity: string; status: string; opportunityId?: string; source: string; summary: string; details: Record<string, unknown>; createdAt: string }>;
 };
