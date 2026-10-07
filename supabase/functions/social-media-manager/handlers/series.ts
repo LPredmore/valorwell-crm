@@ -8,7 +8,7 @@ import {
 } from "./publications.ts";
 import { getPreferredScheduleConfig, type PreferredScheduleTimes } from "./settings.ts";
 import {
-  aggregateSeriesStatus, buildSeriesPlan, currentCentralWeekStart, isMondayKey, SERIES_ACTIVE_STATUSES,
+  aggregateSeriesStatus, buildSeriesPlan, firstAssignableWeekStart, isPastSeriesCutoff, SERIES_CUTOFF_MESSAGE, currentCentralWeekStart, isMondayKey, SERIES_ACTIVE_STATUSES,
   SERIES_EDITABLE_STATUSES, SERIES_TIMEZONE, seriesDispatchAt, seriesReadinessCutoff, trackedItemStatus,
   type SeriesItemStatus, type SeriesPlan, type SeriesProject, type SeriesStatus, type TrackedPublication,
 } from "./series-core.ts";
@@ -99,7 +99,7 @@ export async function computeSeriesPlan(auth: AuthContext, projectId: string, we
   return { ...plan, preferredScheduleTimes };
 }
 
-function summarizeSchedule(row: SeriesScheduleRow, project: { organization_name?: string | null; guest_name?: string | null } | undefined, items?: SeriesItemRow[]) {
+function summarizeSchedule(nowMs: number, row: SeriesScheduleRow, project: { organization_name?: string | null; guest_name?: string | null } | undefined, items?: SeriesItemRow[]) {
   return {
     id: row.id, projectId: row.project_id, weekStart: row.week_start, timezone: row.timezone,
     dispatchAt: row.dispatch_at, status: row.status, organizationName: project?.organization_name ?? null,
@@ -107,7 +107,8 @@ function summarizeSchedule(row: SeriesScheduleRow, project: { organization_name?
     lastError: row.last_error, lastErrorCode: row.last_error_code, unrecoverable: row.unrecoverable,
     dispatchStartedAt: row.dispatch_started_at, queuedAt: row.queued_at, youtubeScheduledAt: row.youtube_scheduled_at,
     completedAt: row.completed_at, nextAttemptAt: row.next_attempt_at, lastCheckedAt: row.last_checked_at,
-    editable: SERIES_EDITABLE_STATUSES.includes(row.status) && !row.dispatch_started_at,
+    cutoffPassed: isPastSeriesCutoff(row.dispatch_at, nowMs),
+    editable: SERIES_EDITABLE_STATUSES.includes(row.status) && !row.dispatch_started_at && !isPastSeriesCutoff(row.dispatch_at, nowMs),
     items: items?.map((item) => ({
       id: item.id, sourceType: item.source_type, sourceId: item.source_id, contentFormat: item.content_format,
       partNumber: item.part_number, sequence: item.sequence, title: item.title, scheduledFor: item.scheduled_for,
@@ -118,7 +119,13 @@ function summarizeSchedule(row: SeriesScheduleRow, project: { organization_name?
 
 export async function listSeriesSchedules(auth: AuthContext, params: { fromWeek?: unknown; weeks?: unknown }, nowMs = Date.now()) {
   const current = currentCentralWeekStart(nowMs);
-  const fromWeek = typeof params.fromWeek === "string" && isMondayKey(params.fromWeek) && params.fromWeek >= current ? params.fromWeek : current;
+  const firstAssignable = firstAssignableWeekStart(nowMs);
+  // Default view starts at the first assignable Monday, unless the current/next week (already
+  // past cutoff) still holds an assignment that must stay visible for status tracking.
+  const { data: tracked } = await auth.db.from(SCHEDULES).select("week_start").eq("tenant_id", auth.tenantId)
+    .neq("status", "cancelled").gte("week_start", current).lt("week_start", firstAssignable).order("week_start").limit(1);
+  const defaultStart = (tracked?.[0]?.week_start as string | undefined) ?? firstAssignable;
+  const fromWeek = typeof params.fromWeek === "string" && isMondayKey(params.fromWeek) && params.fromWeek >= current ? params.fromWeek : defaultStart;
   const weeks = Math.min(MAX_WEEKS, Math.max(1, Number(params.weeks) || 8));
   const toWeek = addDaysToKey(fromWeek, 7 * (weeks - 1));
 
@@ -152,13 +159,16 @@ export async function listSeriesSchedules(auth: AuthContext, params: { fromWeek?
   return {
     timezone: SERIES_TIMEZONE,
     currentWeekStart: current,
+    startWeekStart: defaultStart,
+    firstAssignableWeekStart: firstAssignable,
     canMutate: Boolean(auth.capabilities?.mutate),
     weeks: Array.from({ length: weeks }, (_, index) => {
       const weekStart = addDaysToKey(fromWeek, index * 7);
       const row = byWeek.get(weekStart);
       return {
         weekStart, dispatchAt: seriesDispatchAt(weekStart),
-        schedule: row ? summarizeSchedule(row, projectById.get(row.project_id), itemsBySchedule.get(row.id) ?? []) : null,
+        cutoffPassed: isPastSeriesCutoff(seriesDispatchAt(weekStart), nowMs),
+        schedule: row ? summarizeSchedule(nowMs, row, projectById.get(row.project_id), itemsBySchedule.get(row.id) ?? []) : null,
       };
     }),
     eligibleProjects: (projects ?? []).filter((p) => !assigned.has(p.id as string)).map((p) => ({
@@ -173,7 +183,7 @@ export async function getSeriesSchedule(auth: AuthContext, params: { id: string 
     .eq("id", row.project_id).eq("tenant_id", auth.tenantId).maybeSingle();
   const { data: items, error } = await auth.db.from(ITEMS).select("*").eq("schedule_id", row.id).eq("tenant_id", auth.tenantId).order("sequence");
   if (error) throw new Error(error.message);
-  return summarizeSchedule(row, project ?? undefined, (items ?? []) as SeriesItemRow[]);
+  return summarizeSchedule(Date.now(), row, project ?? undefined, (items ?? []) as SeriesItemRow[]);
 }
 
 export async function getSeriesReadiness(auth: AuthContext, params: { projectId: string; weekStart: string }) {
@@ -183,7 +193,7 @@ export async function getSeriesReadiness(auth: AuthContext, params: { projectId:
 function assertAssignableWeek(weekStart: unknown, nowMs: number): string {
   if (typeof weekStart !== "string" || !isMondayKey(weekStart)) throw new Error("weekStart must be a Monday (YYYY-MM-DD).");
   if (weekStart < currentCentralWeekStart(nowMs)) throw new Error("Past weeks cannot be scheduled.");
-  if (nowMs >= Date.parse(seriesReadinessCutoff(weekStart))) throw new Error("This week has already started; choose an upcoming week.");
+  if (isPastSeriesCutoff(seriesDispatchAt(weekStart), nowMs)) throw new Error(SERIES_CUTOFF_MESSAGE);
   return weekStart;
 }
 
@@ -210,6 +220,7 @@ export async function assignSeriesSchedule(auth: AuthContext, params: { weekStar
 
 async function guardedEdit(auth: AuthContext, id: string, patch: Record<string, unknown>, nowMs: number) {
   const row = await loadSchedule(auth, id);
+  if (isPastSeriesCutoff(row.dispatch_at, nowMs)) throw new Error(SERIES_CUTOFF_MESSAGE);
   if (!SERIES_EDITABLE_STATUSES.includes(row.status) || row.dispatch_started_at) {
     throw new Error("Dispatch has already begun for this week; it can no longer be changed or removed.");
   }
@@ -218,6 +229,8 @@ async function guardedEdit(auth: AuthContext, id: string, patch: Record<string, 
   }
   const { data, error } = await auth.db.from(SCHEDULES).update({ ...patch, updated_by: auth.userId || null })
     .eq("id", id).eq("tenant_id", auth.tenantId).in("status", [...SERIES_EDITABLE_STATUSES]).is("dispatch_started_at", null)
+    .gt("dispatch_at", new Date(nowMs).toISOString())
+    .or(`lease_expires_at.is.null,lease_expires_at.lt.${new Date(nowMs).toISOString()}`)
     .select("id");
   if (error) throw friendlyDbError(error);
   if (!data?.length) throw new Error("This week changed while saving; reload and try again.");

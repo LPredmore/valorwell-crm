@@ -471,12 +471,12 @@ export type SeriesSchedule = {
   organizationName: string | null; guestName: string | null; blockedReasons: string[]; lastError: string | null;
   lastErrorCode: string | null; unrecoverable: boolean; dispatchStartedAt: string | null; queuedAt: string | null;
   youtubeScheduledAt: string | null; completedAt: string | null; nextAttemptAt: string | null; lastCheckedAt: string | null;
-  editable: boolean; items?: SeriesScheduleItem[];
+  cutoffPassed: boolean; editable: boolean; items?: SeriesScheduleItem[];
 };
 
 export type SeriesScheduleList = {
-  timezone: string; currentWeekStart: string; canMutate: boolean;
-  weeks: Array<{ weekStart: string; dispatchAt: string; schedule: SeriesSchedule | null }>;
+  timezone: string; currentWeekStart: string; startWeekStart: string; firstAssignableWeekStart: string; canMutate: boolean;
+  weeks: Array<{ weekStart: string; dispatchAt: string; cutoffPassed: boolean; schedule: SeriesSchedule | null }>;
   eligibleProjects: Array<{ id: string; organizationName: string; guestName: string | null }>;
 };
 

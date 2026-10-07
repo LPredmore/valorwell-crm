@@ -67,6 +67,20 @@ export function seriesDispatchAt(weekStart: string): string {
   return zonedDateTimeToIso(addDaysToKey(weekStart, -3), "12:00", SERIES_TIMEZONE);
 }
 
+export const SERIES_CUTOFF_MESSAGE = "Cutoff passed: this week can only be changed before 12:00 PM Central on the Friday before it.";
+
+/** HARD cutoff: assign/change/remove only strictly before the week's Friday 12:00 Central dispatch_at. */
+export function isPastSeriesCutoff(dispatchAt: string, nowMs: number): boolean {
+  return nowMs >= Date.parse(dispatchAt);
+}
+
+/** The first Monday week whose Friday-noon cutoff is still in the future. */
+export function firstAssignableWeekStart(nowMs: number): string {
+  let week = currentCentralWeekStart(nowMs);
+  while (isPastSeriesCutoff(seriesDispatchAt(week), nowMs)) week = addDaysToKey(week, 7);
+  return week;
+}
+
 export function seriesReadinessCutoff(weekStart: string): string {
   return zonedDateTimeToIso(weekStart, SERIES_READINESS_CUTOFF_TIME, SERIES_TIMEZONE);
 }
