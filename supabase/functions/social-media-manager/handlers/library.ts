@@ -25,10 +25,13 @@ type ClipRow = {
   drive_file_id: string | null;
   drive_file_url: string | null;
   status: string;
+  pipeline_status: string;
+  workflow_revision: number;
   ai_operations_video_projects: {
     id: string;
     guest_name: string | null;
     organization_name: string | null;
+    workflow_revision: number;
   } | null;
 };
 
@@ -127,10 +130,11 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
         .select(`
           id, project_id, clip_type, part_number, youtube_title, youtube_description,
           cover_image_file_id, cover_image_url, start_seconds, end_seconds,
-          drive_file_id, drive_file_url, status,
-          ai_operations_video_projects!inner(id, guest_name, organization_name, tenant_id)
+          drive_file_id, drive_file_url, status, pipeline_status, workflow_revision,
+          ai_operations_video_projects!inner(id, guest_name, organization_name, tenant_id, workflow_revision)
         `)
         .eq("ai_operations_video_projects.tenant_id", tenantId)
+        .neq("pipeline_status", "superseded")
         .order("created_at", { ascending: false })
         .limit(500),
       db.from("ai_operations_video_projects")
@@ -200,8 +204,15 @@ export async function listLibrary(auth: AuthContext, filters: LibraryFilters = {
   const items: SocialMediaLibraryItem[] = [];
 
   for (const clip of (clips ?? []) as unknown as ClipRow[]) {
-    const contentFormat: ContentFormat = clip.clip_type === "short" ? "short" : "long_form";
     const project = clip.ai_operations_video_projects;
+    // Only expose clips from the project's current workflow revision. The database query
+    // already excludes explicit superseded rows; this second guard prevents stale rows
+    // from leaking into the CRM if an older revision was not superseded correctly.
+    if (!project || clip.pipeline_status === "superseded" || clip.workflow_revision !== project.workflow_revision) {
+      continue;
+    }
+
+    const contentFormat: ContentFormat = clip.clip_type === "short" ? "short" : "long_form";
     const { active, published, failed, latest } = pickPublications(pubsByClip.get(clip.id));
     const readinessReasons: string[] = [];
     if (!clip.drive_file_id) readinessReasons.push("Rendered clip is not yet available in Drive.");
