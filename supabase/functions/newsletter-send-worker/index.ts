@@ -146,14 +146,21 @@ Deno.serve(async (request: Request) => {
     p_older_than_minutes: 15,
   });
 
-  let due: DueNewsletter[];
-  if (input.newsletterId) {
-    due = [{ newsletterId: String(input.newsletterId), tenantId: "", name: "" }];
-  } else {
-    const { data, error } = await admin.rpc("crm_claim_due_newsletters", { p_limit: 5 });
-    if (error) return json({ error: error.message }, 500);
-    due = ((data as { newsletters?: DueNewsletter[] } | null)?.newsletters ?? []);
-  }
+  // Recovery: a `sending` newsletter with no remaining recipient work is
+  // finalized (completed or failed) regardless of whether pending work exists.
+  const { data: reconciled, error: reconcileError } = await admin.rpc("crm_reconcile_sending_newsletters");
+  if (reconcileError) log("error", "reconcile_failed", { message: reconcileError.message });
+
+  // One authoritative claim path for cron and immediate wake-up runs. The
+  // database runs template preflight and fails invalid newsletters itself.
+  const { data: claimed, error: claimDueError } = await admin.rpc("crm_claim_due_newsletters", {
+    p_limit: 5,
+    p_newsletter_id: input.newsletterId ? String(input.newsletterId) : null,
+  });
+  if (claimDueError) return json({ error: claimDueError.message }, 500);
+  const claimedPayload = (claimed as { newsletters?: DueNewsletter[]; failed?: unknown[] } | null) ?? {};
+  const due: DueNewsletter[] = claimedPayload.newsletters ?? [];
+  for (const failure of claimedPayload.failed ?? []) log("error", "newsletter_preflight_failed", { failure });
 
   const results: unknown[] = [];
 
@@ -178,8 +185,15 @@ Deno.serve(async (request: Request) => {
     try {
       validateNewsletterTemplateContract(template);
     } catch (error) {
+      // Permanent preflight failure: never leave the newsletter at `sending`.
       const message = error instanceof Error ? error.message : String(error);
       log("error", "template_contract_invalid", { newsletterId: letter.id, message });
+      const { error: failError } = await admin.rpc("crm_fail_newsletter", {
+        p_newsletter_id: letter.id,
+        p_code: "template_invalid",
+        p_message: message,
+      });
+      if (failError) log("error", "fail_newsletter_failed", { newsletterId: letter.id, message: failError.message });
       results.push({ newsletterId: letter.id, outcome: "template_invalid", error: message });
       continue;
     }
