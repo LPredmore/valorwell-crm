@@ -8,9 +8,12 @@ import { SocialPublishingCalendar } from '@/components/crm/social-media/SocialPu
 import { SocialMediaSettings } from '@/components/crm/social-media/SocialMediaSettings';
 import { SocialMediaErrorState } from '@/components/crm/social-media/SocialMediaErrorState';
 import { fetchSocialMediaBootstrap } from '@/lib/crm/social-media';
+import { ScheduleSeriesDialog } from '@/components/crm/social-media/ScheduleSeriesDialog';
+import { CalendarRange } from 'lucide-react';
 
 export default function SocialMediaManagerPage() {
   const [tab, setTab] = useState('library');
+  const [seriesOpen, setSeriesOpen] = useState(false);
 
   // A lightweight preflight so a shared root cause (unreachable function, expired session,
   // no resolvable tenant) shows one clear diagnostic instead of four tabs each independently
@@ -23,12 +26,18 @@ export default function SocialMediaManagerPage() {
 
   return (
     <div className="p-6 space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <h1 className="text-2xl font-semibold">Social Media Manager</h1>
         <p className="text-sm text-muted-foreground">
           Review, approve, and publish Beyond The Yellow video content to YouTube.
         </p>
       </div>
+        <Button variant="outline" onClick={() => setSeriesOpen(true)}>
+          <CalendarRange className="h-4 w-4" /> Schedule Series
+        </Button>
+      </div>
+      <ScheduleSeriesDialog open={seriesOpen} onOpenChange={setSeriesOpen} />
 
       {bootstrap.error && (
         <div className="space-y-2">
