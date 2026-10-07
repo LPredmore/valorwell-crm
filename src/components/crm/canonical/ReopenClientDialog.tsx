@@ -17,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RotateCcw, Info } from 'lucide-react';
 import { useClientMutations, clientKeys } from '@/hooks/canonical/useCanonicalClients';
 import { allowedLifecycleTransitionsKey } from '@/hooks/crm/useAllowedLifecycleTransitions';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 
 interface ReopenClientDialogProps {
   clientId: string;
@@ -33,6 +34,7 @@ interface ReopenClientDialogProps {
  */
 export function ReopenClientDialog({ clientId, disabled }: ReopenClientDialogProps) {
   const qc = useQueryClient();
+  const { currentTenantId } = useCrmAuth();
   const { reopen } = useClientMutations(clientId);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
@@ -42,7 +44,7 @@ export function ReopenClientDialog({ clientId, disabled }: ReopenClientDialogPro
   }
 
   function invalidateAll() {
-    qc.invalidateQueries({ queryKey: clientKeys.one(clientId) });
+    qc.invalidateQueries({ queryKey: clientKeys.one(currentTenantId, clientId) });
     qc.invalidateQueries({ queryKey: ['canonical-clients'] });
     qc.invalidateQueries({ queryKey: allowedLifecycleTransitionsKey(clientId) });
     qc.invalidateQueries({ queryKey: ['crm-activity', clientId] });
