@@ -3,6 +3,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import type { StaffRepository } from '../types';
 import type { StaffMember } from '@/domain/operations';
 import { buildStaffOperatorDisplayName } from '@/domain/staffIdentity';
+import { requireOperatingTenant } from '../tenantScope';
 
 const STAFF_SELECT = `
   id, tenant_id, profile_id,
@@ -47,18 +48,22 @@ function mapLifecycleStatus(value: string | null | undefined): StaffMember['life
   return undefined;
 }
 
-async function buildStaff(rows: StaffRow[]): Promise<StaffMember[]> {
+async function buildStaff(tenantId: string, rows: StaffRow[]): Promise<StaffMember[]> {
   if (!rows.length) return [];
-  const profileIds = Array.from(new Set(rows.map((r) => r.profile_id)));
+  const profileIds = Array.from(new Set(
+    rows.map((r) => r.profile_id).filter((id): id is string => Boolean(id)),
+  ));
   const staffIds = rows.map((r) => r.id);
 
   const [profilesRes, rolesRes, caseloadRes, tasksRes] = await Promise.all([
     supabase.from('profiles').select('id, email').in('id', profileIds),
     supabase.from('user_roles').select('user_id, role').in('user_id', profileIds),
-    supabase.from('clients').select('primary_staff_id').in('primary_staff_id', staffIds),
+    supabase.from('clients').select('primary_staff_id')
+      .eq('tenant_id', tenantId).in('primary_staff_id', staffIds),
     supabase
       .from('crm_tasks')
       .select('staff_id, status')
+      .eq('tenant_id', tenantId)
       .in('staff_id', staffIds)
       .not('status', 'in', '(completed,canceled)'),
   ]);
@@ -121,23 +126,27 @@ async function buildStaff(rows: StaffRow[]): Promise<StaffMember[]> {
 }
 
 export const supabaseStaffRepository: StaffRepository = {
-  async list() {
+  async list(tenantIdInput) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     const { data, error } = await supabase
       .from('staff')
       .select(STAFF_SELECT)
+      .eq('tenant_id', tenantId)
       .order('prov_name_l', { ascending: true, nullsFirst: false });
     if (error) throw new Error(error.message);
-    return buildStaff(data ?? []);
+    return buildStaff(tenantId, data ?? []);
   },
-  async get(id) {
+  async get(tenantIdInput, id) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     const { data, error } = await supabase
       .from('staff')
       .select(STAFF_SELECT)
+      .eq('tenant_id', tenantId)
       .eq('id', id)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) return null;
-    const [mapped] = await buildStaff([data]);
+    const [mapped] = await buildStaff(tenantId, [data]);
     return mapped ?? null;
   },
 };

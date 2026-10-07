@@ -149,7 +149,7 @@ describe('supabaseClientsRepository canonical mutation path', () => {
       next: 'Engaged',
     } satisfies { id: string; next: EngagementState };
 
-    await expect(supabaseClientsRepository.updateEngagement(action.id, action.next))
+    await expect(supabaseClientsRepository.updateEngagement('t1', action.id, action.next))
       .resolves.toMatchObject({ id: 'c1', engagement: 'Engaged' });
     expect(boundary.rpc).toHaveBeenCalledTimes(2);
     expect(payloads[0].p_idempotency_key).toBe(payloads[1].p_idempotency_key);
@@ -160,7 +160,7 @@ describe('supabaseClientsRepository canonical mutation path', () => {
     expect(payloads[0].p_to_state).toBe('normal');
     expect(payloads[1].p_to_state).toBe('normal');
 
-    await expect(supabaseClientsRepository.updateEngagement(action.id, action.next))
+    await expect(supabaseClientsRepository.updateEngagement('t1', action.id, action.next))
       .resolves.toMatchObject({ id: 'c1', engagement: 'Engaged' });
     expect(boundary.rpc).toHaveBeenCalledTimes(3);
     expect(payloads).toHaveLength(3);
@@ -176,7 +176,7 @@ describe('supabaseClientsRepository canonical mutation path', () => {
       throw new TypeError('fetch failed');
     });
 
-    await expect(supabaseClientsRepository.updateEngagement('c1', 'Engaged'))
+    await expect(supabaseClientsRepository.updateEngagement('t1', 'c1', 'Engaged'))
       .rejects.toThrow('fetch failed');
     expect(boundary.rpc).toHaveBeenCalledTimes(2);
     expect(payloads[0].p_idempotency_key).toBe(payloads[1].p_idempotency_key);
@@ -200,7 +200,7 @@ describe('supabaseClientsRepository canonical mutation path', () => {
       return { data: { ok: true }, error: null };
     });
 
-    await expect(supabaseClientsRepository.updateEngagement('c1', 'Engaged'))
+    await expect(supabaseClientsRepository.updateEngagement('t1', 'c1', 'Engaged'))
       .resolves.toMatchObject({ id: 'c1', engagement: 'Engaged' });
     expect(boundary.rpc).toHaveBeenCalledTimes(2);
     expect(payloads[0].p_idempotency_key).toBe(payloads[1].p_idempotency_key);
@@ -215,7 +215,7 @@ describe('supabaseClientsRepository canonical mutation path', () => {
       error: null,
     });
 
-    await expect(supabaseClientsRepository.updateEngagement('c1', 'Engaged'))
+    await expect(supabaseClientsRepository.updateEngagement('t1', 'c1', 'Engaged'))
       .rejects.toThrow('Nope');
     expect(boundary.rpc).toHaveBeenCalledTimes(1);
   });

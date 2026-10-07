@@ -5,6 +5,7 @@ import type {
   OperationalException, ExceptionStatus, ExceptionSeverity, ExceptionType, CrmTask, TaskPriority,
 } from '@/domain/operations';
 import { supabaseTasksRepository } from './tasks';
+import { requireOperatingTenant } from '../tenantScope';
 
 type ExceptionRow = Tables<'crm_exceptions'>;
 type ExceptionDbStatus = ExceptionRow['status'];
@@ -80,8 +81,15 @@ function parseResolutionHistory(value: Json | null): ResolutionHistoryEntry[] {
   });
 }
 
-async function updateStatus(id: string, status: ExceptionStatus, note?: string) {
-  const { data: cur } = await supabase.from('crm_exceptions').select('resolution_history').eq('id', id).maybeSingle();
+async function updateStatus(tenantIdInput: string, id: string, status: ExceptionStatus, note?: string) {
+  const tenantId = requireOperatingTenant(tenantIdInput);
+  const { data: cur, error: currentError } = await supabase.from('crm_exceptions')
+    .select('resolution_history')
+    .eq('tenant_id', tenantId)
+    .eq('id', id)
+    .maybeSingle();
+  if (currentError) throw new Error(currentError.message);
+  if (!cur) throw new Error('Exception not found');
   const historyEntry: Json = {
     at: new Date().toISOString(),
     action: status,
@@ -90,14 +98,17 @@ async function updateStatus(id: string, status: ExceptionStatus, note?: string) 
   const history: Json = [...jsonArray(cur?.resolution_history ?? null), historyEntry];
   const { data, error } = await supabase.from('crm_exceptions')
     .update({ status: STATUS_D2D[status], resolution_history: history, last_activity_at: new Date().toISOString() })
-    .eq('id', id).select(COLS).single();
+    .eq('tenant_id', tenantId).eq('id', id).select(COLS).single();
   if (error) throw new Error(error.message);
   return toDomain(data);
 }
 
 export const supabaseExceptionsRepository: ExceptionsRepository = {
-  async list(q) {
-    let query = supabase.from('crm_exceptions').select(COLS).order('last_activity_at', { ascending: false });
+  async list(tenantIdInput, q) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    let query = supabase.from('crm_exceptions').select(COLS)
+      .eq('tenant_id', tenantId)
+      .order('last_activity_at', { ascending: false });
     if (q?.status?.length) query = query.in('status', q.status.map(s => STATUS_D2D[s]));
     if (q?.ownerId) query = query.eq('owner_id', q.ownerId);
     if (q?.clientId) query = query.eq('client_id', q.clientId);
@@ -105,22 +116,27 @@ export const supabaseExceptionsRepository: ExceptionsRepository = {
     if (error) throw new Error(error.message);
     return (data ?? []).map(toDomain);
   },
-  async get(id) {
-    const { data, error } = await supabase.from('crm_exceptions').select(COLS).eq('id', id).maybeSingle();
+  async get(tenantIdInput, id) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    const { data, error } = await supabase.from('crm_exceptions').select(COLS)
+      .eq('tenant_id', tenantId).eq('id', id).maybeSingle();
     if (error) throw new Error(error.message);
     return data ? toDomain(data) : null;
   },
-  async resolve(id, note) { return updateStatus(id, 'Resolved', note); },
-  async dismiss(id, note) { return updateStatus(id, 'Dismissed', note); },
-  async reassign(id, ownerId) {
+  async resolve(tenantId, id, note) { return updateStatus(tenantId, id, 'Resolved', note); },
+  async dismiss(tenantId, id, note) { return updateStatus(tenantId, id, 'Dismissed', note); },
+  async reassign(tenantIdInput, id, ownerId) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     const { data, error } = await supabase.from('crm_exceptions')
       .update({ owner_id: ownerId, last_activity_at: new Date().toISOString() })
-      .eq('id', id).select(COLS).single();
+      .eq('tenant_id', tenantId).eq('id', id).select(COLS).single();
     if (error) throw new Error(error.message);
     return toDomain(data);
   },
-  async createTaskFromException(id): Promise<CrmTask> {
-    const { data: exc, error: eErr } = await supabase.from('crm_exceptions').select(COLS).eq('id', id).maybeSingle();
+  async createTaskFromException(tenantIdInput, id): Promise<CrmTask> {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    const { data: exc, error: eErr } = await supabase.from('crm_exceptions').select(COLS)
+      .eq('tenant_id', tenantId).eq('id', id).maybeSingle();
     if (eErr) throw new Error(eErr.message);
     if (!exc) throw new Error('Exception not found');
 
@@ -128,14 +144,15 @@ export const supabaseExceptionsRepository: ExceptionsRepository = {
     const { data: existing, error: exErr } = await supabase
       .from('crm_tasks')
       .select('id')
+      .eq('tenant_id', tenantId)
       .eq('exception_id', id)
-      .not('status', 'in', '(completed,cancelled)')
+      .not('status', 'in', '(completed,canceled)')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
     if (exErr) throw new Error(exErr.message);
     if (existing) {
-      const found = await supabaseTasksRepository.get(existing.id);
+      const found = await supabaseTasksRepository.get(tenantId, existing.id);
       if (found) return found;
     }
 
@@ -144,7 +161,7 @@ export const supabaseExceptionsRepository: ExceptionsRepository = {
     if (!createdByProfileId) throw new Error('Authenticated user required to create an exception task');
     const priority: TaskPriority =
       exc.severity === 'critical' ? 'Urgent' : exc.severity === 'high' ? 'High' : 'Normal';
-    return supabaseTasksRepository.create({
+    return supabaseTasksRepository.create(tenantId, {
       tenantId: exc.tenant_id,
       title: `Resolve: ${exc.summary}`,
       description: exc.recommended_resolution ?? undefined,

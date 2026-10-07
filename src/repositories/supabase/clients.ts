@@ -28,6 +28,7 @@ import {
   toCanonicalClientState,
   type CanonicalStateRow,
 } from '@/lib/crm/canonicalClientStateAdapter';
+import { requireOperatingTenant } from '../tenantScope';
 import {
   buildCanonicalRpcArgs,
   callCanonicalRpcWithRetry,
@@ -301,10 +302,11 @@ async function fetchAllRows<T>(
   return all;
 }
 
-async function fetchCanonicalState(clientId: string): Promise<CanonicalClientState> {
+async function fetchCanonicalState(tenantId: string, clientId: string): Promise<CanonicalClientState> {
   const { data, error } = await supabase
     .from(CANONICAL_READ_VIEW)
     .select('*')
+    .eq('tenant_id', tenantId)
     .eq('client_id', clientId)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -312,8 +314,8 @@ async function fetchCanonicalState(clientId: string): Promise<CanonicalClientSta
   return toCanonicalClientState(data);
 }
 
-async function fetchConcurrencyToken(clientId: string): Promise<string> {
-  return (await fetchCanonicalState(clientId)).concurrency_token;
+async function fetchConcurrencyToken(tenantId: string, clientId: string): Promise<string> {
+  return (await fetchCanonicalState(tenantId, clientId)).concurrency_token;
 }
 
 async function callRpc<Name extends CanonicalRpcName>(
@@ -336,34 +338,26 @@ function rpcArgs<Name extends CanonicalRpcName>(
   return buildCanonicalRpcArgs(base, concurrencyToken, idempotencyKey) as CanonicalRpcArgsByName[Name];
 }
 
-async function reload(id: string): Promise<CanonicalClient> {
+async function reload(tenantId: string, id: string): Promise<CanonicalClient> {
   const { data, error } = await supabase
     .from('clients')
     .select(CLIENT_SELECT)
+    .eq('tenant_id', tenantId)
     .eq('id', id)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) throw new Error('Client not found');
-  return rowToCanonical(data, await fetchCanonicalState(id));
-}
-
-async function tenantOf(id: string): Promise<string> {
-  const { data, error } = await supabase
-    .from('clients')
-    .select('tenant_id')
-    .eq('id', id)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data?.tenant_id) throw new Error('Client not found');
-  return data.tenant_id as string;
+  if (!data) throw new Error('Client not found in current operating tenant');
+  return rowToCanonical(data, await fetchCanonicalState(tenantId, id));
 }
 
 export const supabaseClientsRepository: ClientsRepository = {
-  async list(q: ListClientsQuery): Promise<Paged<CanonicalClient>> {
+  async list(tenantIdInput, q: ListClientsQuery): Promise<Paged<CanonicalClient>> {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     const stateCodes = q.states?.length ? requireClientStateCodes(q.states) : undefined;
     let canonicalQuery = supabase
       .from(CANONICAL_READ_VIEW)
-      .select('*');
+      .select('*')
+      .eq('tenant_id', tenantId);
 
     if (q.lifecycle?.length) canonicalQuery = canonicalQuery.in('lifecycle', q.lifecycle.map(mapDomainLifecycleToCanonicalRead));
     if (q.engagement?.length) canonicalQuery = canonicalQuery.in('engagement', q.engagement.map(mapDomainEngagementToCanonicalRead));
@@ -375,7 +369,8 @@ export const supabaseClientsRepository: ClientsRepository = {
 
     let clientsQuery = supabase
       .from('clients')
-      .select(CLIENT_SELECT);
+      .select(CLIENT_SELECT)
+      .eq('tenant_id', tenantId);
 
     if (stateCodes?.length) clientsQuery = clientsQuery.in('pat_state', stateCodes);
     if (q.search && q.search.trim()) {
@@ -393,18 +388,21 @@ export const supabaseClientsRepository: ClientsRepository = {
     return composeFilterSortAndPageClients(canonicalRows, clientRows, q);
   },
 
-  async get(id: string) {
+  async get(tenantIdInput, id: string) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     const { data, error } = await supabase
       .from('clients')
       .select(CLIENT_SELECT)
+      .eq('tenant_id', tenantId)
       .eq('id', id)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return data ? rowToCanonical(data, await fetchCanonicalState(id)) : null;
+    return data ? rowToCanonical(data, await fetchCanonicalState(tenantId, id)) : null;
   },
 
-  async updateLifecycle(id, next, reason, note) {
-    const concurrency_token = await fetchConcurrencyToken(id);
+  async updateLifecycle(tenantIdInput, id, next, reason, note) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    const concurrency_token = await fetchConcurrencyToken(tenantId, id);
     const idempotency_key = newIdempotencyKey();
     await callRpc('crm_transition_lifecycle', {
       p_client_id: id,
@@ -415,11 +413,12 @@ export const supabaseClientsRepository: ClientsRepository = {
       p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
-    return reload(id);
+    return reload(tenantId, id);
   },
 
-  async updateEngagement(id, next) {
-    const concurrency_token = await fetchConcurrencyToken(id);
+  async updateEngagement(tenantIdInput, id, next) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    const concurrency_token = await fetchConcurrencyToken(tenantId, id);
     const idempotency_key = newIdempotencyKey();
     await callRpc('crm_set_engagement', {
       p_client_id: id,
@@ -429,14 +428,15 @@ export const supabaseClientsRepository: ClientsRepository = {
       p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
-    return reload(id);
+    return reload(tenantId, id);
   },
 
-  async updateEligibility(id, next, note, manualReview) {
+  async updateEligibility(tenantIdInput, id, next, note, manualReview) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     if (next === 'Manual Review' && !manualReview) {
       throw new Error('Manual Review requires an owner, next action, and review due date.');
     }
-    const concurrency_token = await fetchConcurrencyToken(id);
+    const concurrency_token = await fetchConcurrencyToken(tenantId, id);
     const idempotency_key = newIdempotencyKey();
     await callRpc('crm_set_eligibility', {
       p_client_id: id,
@@ -447,11 +447,12 @@ export const supabaseClientsRepository: ClientsRepository = {
       p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
-    return reload(id);
+    return reload(tenantId, id);
   },
 
-  async updateContactPolicy(id, next, reason) {
-    const concurrency_token = await fetchConcurrencyToken(id);
+  async updateContactPolicy(tenantIdInput, id, next, reason) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    const concurrency_token = await fetchConcurrencyToken(tenantId, id);
     const idempotency_key = newIdempotencyKey();
     await callRpc('crm_set_contact_policy', {
       p_client_id: id,
@@ -461,11 +462,12 @@ export const supabaseClientsRepository: ClientsRepository = {
       p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
-    return reload(id);
+    return reload(tenantId, id);
   },
 
-  async updateServicePolicy(id, next, reason) {
-    const concurrency_token = await fetchConcurrencyToken(id);
+  async updateServicePolicy(tenantIdInput, id, next, reason) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    const concurrency_token = await fetchConcurrencyToken(tenantId, id);
     const idempotency_key = newIdempotencyKey();
     await callRpc('crm_set_service_policy', {
       p_client_id: id,
@@ -475,11 +477,12 @@ export const supabaseClientsRepository: ClientsRepository = {
       p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
-    return reload(id);
+    return reload(tenantId, id);
   },
 
-  async updateCareCadence(id, next) {
-    const concurrency_token = await fetchConcurrencyToken(id);
+  async updateCareCadence(tenantIdInput, id, next) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    const concurrency_token = await fetchConcurrencyToken(tenantId, id);
     const idempotency_key = newIdempotencyKey();
     await callRpc('crm_set_care_cadence', {
       p_client_id: id,
@@ -489,10 +492,11 @@ export const supabaseClientsRepository: ClientsRepository = {
       p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
-    return reload(id);
+    return reload(tenantId, id);
   },
 
-  async updateRisk() {
+  async updateRisk(tenantIdInput) {
+    requireOperatingTenant(tenantIdInput);
     // Risk state is derived server-side; no client-facing RPC exists on
     // contract 1.0.1. Fail-closed rather than silently no-op.
     throw new Error(
@@ -500,8 +504,9 @@ export const supabaseClientsRepository: ClientsRepository = {
     );
   },
 
-  async close(id, info) {
-    const concurrency_token = await fetchConcurrencyToken(id);
+  async close(tenantIdInput, id, info) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    const concurrency_token = await fetchConcurrencyToken(tenantId, id);
     const idempotency_key = newIdempotencyKey();
     if (!info.closureReason) throw new Error('closureReason is required to close a client');
     await callRpc('crm_close_client', {
@@ -512,11 +517,12 @@ export const supabaseClientsRepository: ClientsRepository = {
       p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
-    return reload(id);
+    return reload(tenantId, id);
   },
 
-  async reopen(id, reason) {
-    const concurrency_token = await fetchConcurrencyToken(id);
+  async reopen(tenantIdInput, id, reason) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    const concurrency_token = await fetchConcurrencyToken(tenantId, id);
     const idempotency_key = newIdempotencyKey();
     await callRpc('crm_reopen_client', {
       p_client_id: id,
@@ -525,14 +531,15 @@ export const supabaseClientsRepository: ClientsRepository = {
       p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
-    return reload(id);
+    return reload(tenantId, id);
   },
 
-  async assignClinician(id, staffId, reason) {
+  async assignClinician(tenantIdInput, id, staffId, reason) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     if (!staffId?.trim()) throw new Error('assignClinician: staffId is required by the canonical RPC contract');
     const trimmedReason = reason?.trim() ?? '';
     if (trimmedReason.length < 3) throw new Error('assignClinician: reason must be at least 3 characters');
-    const concurrency_token = await fetchConcurrencyToken(id);
+    const concurrency_token = await fetchConcurrencyToken(tenantId, id);
     const idempotency_key = newIdempotencyKey();
     await callRpc('crm_assign_clinician', {
       p_client_id: id,
@@ -542,10 +549,11 @@ export const supabaseClientsRepository: ClientsRepository = {
       p_idempotency_key: idempotency_key,
       p_contract_version: CONTRACT_VERSION,
     });
-    return reload(id);
+    return reload(tenantId, id);
   },
 
-  async assignOperationsOwner() {
+  async assignOperationsOwner(tenantIdInput) {
+    requireOperatingTenant(tenantIdInput);
     throw new Error('assignOperationsOwner: no operations-owner column exists on clients yet');
   },
 };

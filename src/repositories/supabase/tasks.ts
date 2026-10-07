@@ -3,6 +3,7 @@ import type { Json, Tables, TablesInsert, TablesUpdate } from '@/integrations/su
 import type { TasksRepository, ListTasksQuery } from '../types';
 import type { CrmTask, TaskStatus, TaskPriority, TaskType } from '@/domain/operations';
 import { buildTaskViewPlan } from '../taskViewSemantics';
+import { assertEntityTenant, requireOperatingTenant } from '../tenantScope';
 
 type Row = Tables<'crm_tasks'>;
 type TaskInsert = TablesInsert<'crm_tasks'>;
@@ -125,7 +126,7 @@ function toDb(patch: Partial<CrmTask>): TaskUpdate {
   return out;
 }
 
-function toInsert(input: Parameters<TasksRepository['create']>[0]): TaskInsert {
+function toInsert(input: Parameters<TasksRepository['create']>[1]): TaskInsert {
   return {
     ...toDb(input),
     tenant_id: input.tenantId,
@@ -136,7 +137,8 @@ function toInsert(input: Parameters<TasksRepository['create']>[0]): TaskInsert {
 
 export const supabaseTasksRepository: TasksRepository = {
   async list(q: ListTasksQuery): Promise<CrmTask[]> {
-    const plan = buildTaskViewPlan(q);
+    const tenantId = requireOperatingTenant(q.tenantId);
+    const plan = buildTaskViewPlan({ ...q, tenantId });
     let query = supabase.from('crm_tasks').select(COLS);
 
     if (plan.tenantId) query = query.eq('tenant_id', plan.tenantId);
@@ -178,43 +180,56 @@ export const supabaseTasksRepository: TasksRepository = {
     return (data ?? []).map(toDomain);
   },
 
-  async get(id) {
-    const { data, error } = await supabase.from('crm_tasks').select(COLS).eq('id', id).maybeSingle();
+  async get(tenantIdInput, id) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    const { data, error } = await supabase.from('crm_tasks').select(COLS)
+      .eq('tenant_id', tenantId).eq('id', id).maybeSingle();
     if (error) throw new Error(error.message);
     return data ? toDomain(data) : null;
   },
 
-  async create(input) {
+  async create(tenantIdInput, input) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    assertEntityTenant(tenantId, input.tenantId, 'Task');
     const row = toInsert(input);
     const { data, error } = await supabase.from('crm_tasks').insert(row).select(COLS).single();
     if (error) throw new Error(error.message);
     return toDomain(data);
   },
 
-  async update(id, patch) {
+  async update(tenantIdInput, id, patch) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    if (patch.tenantId !== undefined) assertEntityTenant(tenantId, patch.tenantId, 'Task');
     const { data, error } = await supabase
-      .from('crm_tasks').update(toDb(patch)).eq('id', id).select(COLS).single();
+      .from('crm_tasks').update(toDb(patch))
+      .eq('tenant_id', tenantId).eq('id', id).select(COLS).single();
     if (error) throw new Error(error.message);
     return toDomain(data);
   },
 
-  async complete(id) {
-    return this.update(id, { status: 'Completed', completedAt: new Date().toISOString() });
+  async complete(tenantId, id) {
+    return this.update(tenantId, id, { status: 'Completed', completedAt: new Date().toISOString() });
   },
 
-  async reassign(ids, ownerId) {
-    const { error } = await supabase.from('crm_tasks').update({ owner_id: ownerId }).in('id', ids);
+  async reassign(tenantIdInput, ids, ownerId) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    const { error } = await supabase.from('crm_tasks').update({ owner_id: ownerId })
+      .eq('tenant_id', tenantId).in('id', ids);
     if (error) throw new Error(error.message);
   },
 
-  async bulkStatus(ids, status) {
+  async bulkStatus(tenantIdInput, ids, status) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     const { error } = await supabase
-      .from('crm_tasks').update({ status: TASK_STATUS_D2D[status] }).in('id', ids);
+      .from('crm_tasks').update({ status: TASK_STATUS_D2D[status] })
+      .eq('tenant_id', tenantId).in('id', ids);
     if (error) throw new Error(error.message);
   },
 
-  async bulkDueDate(ids, dueAt) {
-    const { error } = await supabase.from('crm_tasks').update({ due_at: dueAt }).in('id', ids);
+  async bulkDueDate(tenantIdInput, ids, dueAt) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    const { error } = await supabase.from('crm_tasks').update({ due_at: dueAt })
+      .eq('tenant_id', tenantId).in('id', ids);
     if (error) throw new Error(error.message);
   },
 };

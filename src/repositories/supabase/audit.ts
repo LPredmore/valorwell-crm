@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import type { AuditRepository } from '../types';
 import type { AuditEvent } from '@/domain/operations';
+import { requireOperatingTenant } from '../tenantScope';
 
 type AuditRow = Tables<'crm_client_state_audit'>;
 
@@ -44,10 +45,12 @@ function rowToEvent(r: AuditRow): AuditEvent {
 }
 
 export const supabaseAuditRepository: AuditRepository = {
-  async listForClient(clientId) {
+  async listForClient(tenantIdInput, clientId) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     const { data, error } = await supabase
       .from('crm_client_state_audit')
       .select('*')
+      .eq('tenant_id', tenantId)
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
       .limit(500);

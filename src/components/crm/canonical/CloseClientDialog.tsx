@@ -25,6 +25,7 @@ import { XCircle, Info } from 'lucide-react';
 import { useClientMutations, clientKeys } from '@/hooks/canonical/useCanonicalClients';
 import { CLOSURE_REASONS, type ClosureReason } from '@/domain/canonical';
 import { allowedLifecycleTransitionsKey } from '@/hooks/crm/useAllowedLifecycleTransitions';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 
 interface CloseClientDialogProps {
   clientId: string;
@@ -41,6 +42,7 @@ interface CloseClientDialogProps {
  */
 export function CloseClientDialog({ clientId, disabled }: CloseClientDialogProps) {
   const qc = useQueryClient();
+  const { currentTenantId } = useCrmAuth();
   const { close } = useClientMutations(clientId);
   const [open, setOpen] = useState(false);
   const [disposition, setDisposition] = useState<ClosureReason | ''>('');
@@ -54,7 +56,7 @@ export function CloseClientDialog({ clientId, disabled }: CloseClientDialogProps
   }
 
   function invalidateAll() {
-    qc.invalidateQueries({ queryKey: clientKeys.one(clientId) });
+    qc.invalidateQueries({ queryKey: clientKeys.one(currentTenantId, clientId) });
     qc.invalidateQueries({ queryKey: ['canonical-clients'] });
     qc.invalidateQueries({ queryKey: allowedLifecycleTransitionsKey(clientId) });
     qc.invalidateQueries({ queryKey: ['crm-activity', clientId] });

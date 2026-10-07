@@ -4,6 +4,7 @@ import type { CommunicationsRepository } from '../types';
 import type { CommunicationMessage, CommunicationPolicyResult } from '@/domain/operations';
 import { supabaseClientsRepository } from './clients';
 import { resendEmailApi } from '@/lib/crm/resend-api';
+import { assertEntityTenant, requireOperatingTenant } from '../tenantScope';
 
 /**
  * Canonical communications adapter.
@@ -144,20 +145,23 @@ function rowCrmNote(row: CrmNoteRow): CommunicationMessage {
   };
 }
 
-async function tenantForClient(clientId: string): Promise<string> {
-  const { data } = await supabase
+async function assertClientInTenant(tenantId: string, clientId: string): Promise<void> {
+  const { data, error } = await supabase
     .from('clients')
-    .select('tenant_id')
+    .select('id')
+    .eq('tenant_id', tenantId)
     .eq('id', clientId)
     .maybeSingle();
-  return data?.tenant_id ?? '';
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Client not found in current operating tenant');
 }
 
-async function evaluateCommunicationPolicy(input: {
+async function evaluateCommunicationPolicy(tenantId: string, input: {
   clientId: string;
   channel: 'sms' | 'email';
   messageClass: import('@/domain/operations').CanonicalMessageClass;
 }): Promise<CommunicationPolicyResult> {
+  await assertClientInTenant(tenantId, input.clientId);
   const { data, error } = await supabase.rpc('crm_evaluate_communication_policy', {
     p_client_id: input.clientId,
     p_channel: input.channel,
@@ -186,10 +190,11 @@ async function evaluateCommunicationPolicy(input: {
   };
 }
 
-async function listEmailMessages(filters: { clientId?: string; limit: number }) {
+async function listEmailMessages(filters: { tenantId: string; clientId?: string; limit: number }) {
   let query = untypedSupabase
     .from('crm_email_messages')
     .select('*')
+    .eq('tenant_id', filters.tenantId)
     .order('occurred_at', { ascending: false })
     .limit(filters.limit);
   if (filters.clientId) query = query.eq('client_id', filters.clientId);
@@ -199,25 +204,29 @@ async function listEmailMessages(filters: { clientId?: string; limit: number }) 
 }
 
 export const supabaseCommunicationsRepository: CommunicationsRepository = {
-  async listForClient(clientId) {
-    const tenantId = await tenantForClient(clientId);
+  async listForClient(tenantIdInput, clientId) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    await assertClientInTenant(tenantId, clientId);
     const [inbound, bulk, emailRows, internal] = await Promise.all([
       supabase
         .from('crm_inbound_sms_logs')
         .select('*')
+        .eq('tenant_id', tenantId)
         .eq('client_id', clientId)
         .order('received_at', { ascending: false })
         .limit(200),
       supabase
         .from('crm_bulk_sms_recipients')
         .select('*')
+        .eq('tenant_id', tenantId)
         .eq('client_id', clientId)
         .order('sent_at', { ascending: false, nullsFirst: false })
         .limit(200),
-      listEmailMessages({ clientId, limit: 400 }),
+      listEmailMessages({ tenantId, clientId, limit: 400 }),
       supabase
         .from('crm_notes')
         .select('*')
+        .eq('tenant_id', tenantId)
         .eq('client_id', clientId)
         .eq('note_type', 'internal')
         .order('created_at', { ascending: false })
@@ -233,17 +242,20 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
     return out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   },
 
-  async listThreads(channel) {
+  async listThreads(tenantIdInput, channel) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
     if (channel === 'sms') {
       const [inbound, bulk] = await Promise.all([
         supabase
           .from('crm_inbound_sms_logs')
           .select('*')
+          .eq('tenant_id', tenantId)
           .order('received_at', { ascending: false })
           .limit(500),
         supabase
           .from('crm_bulk_sms_recipients')
           .select('*')
+          .eq('tenant_id', tenantId)
           .order('sent_at', { ascending: false, nullsFirst: false })
           .limit(500),
       ]);
@@ -261,7 +273,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
       return Array.from(byThread.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     }
 
-    const messages = (await listEmailMessages({ limit: 500 })).map(rowEmailMessage);
+    const messages = (await listEmailMessages({ tenantId, limit: 500 })).map(rowEmailMessage);
     const byThread = new Map<string, CommunicationMessage>();
     for (const message of messages) {
       const existing = byThread.get(message.threadId);
@@ -272,9 +284,12 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
     return Array.from(byThread.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
 
-  async send(message) {
+  async send(tenantIdInput, message) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    assertEntityTenant(tenantId, message.tenantId, 'Communication');
     if (message.channel === 'sms') {
       if (!message.clientId) throw new Error('clientId is required for SMS send');
+      await assertClientInTenant(tenantId, message.clientId);
       const { data, error } = await supabase.functions.invoke('crm-send-client-sms', {
         body: {
           clientId: message.clientId,
@@ -299,7 +314,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
       if (!message.clientId) throw new Error('clientId is required for email send');
       if (!message.subject) throw new Error('subject is required for email send');
 
-      const client = await supabaseClientsRepository.get(message.clientId);
+      const client = await supabaseClientsRepository.get(tenantId, message.clientId);
       if (!client) throw new Error('Client not found');
       if (!client.email) {
         return {
@@ -314,7 +329,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
       const messageClass =
         message.messageClass
         ?? (message.campaignId ? 'ordinary_campaign_follow_up' : 'necessary_scheduling');
-      const policy = await evaluateCommunicationPolicy({
+      const policy = await evaluateCommunicationPolicy(tenantId, {
         clientId: message.clientId,
         channel: 'email',
         messageClass,
@@ -369,6 +384,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
     const { data: clientRow, error: clientError } = await supabase
       .from('clients')
       .select('tenant_id')
+      .eq('tenant_id', tenantId)
       .eq('id', message.clientId)
       .maybeSingle();
     if (clientError) throw new Error(clientError.message);
@@ -377,7 +393,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
     const { data, error } = await supabase
       .from('crm_notes')
       .insert({
-        tenant_id: clientRow.tenant_id,
+        tenant_id: tenantId,
         client_id: message.clientId,
         created_by_profile_id: user.id,
         note_type: 'internal',
@@ -389,13 +405,17 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
     return rowCrmNote(data);
   },
 
-  async evaluatePolicy({ clientId, channel, messageClass }): Promise<CommunicationPolicyResult> {
-    return evaluateCommunicationPolicy({ clientId, channel, messageClass });
+  async evaluatePolicy(tenantIdInput, { clientId, channel, messageClass }): Promise<CommunicationPolicyResult> {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    return evaluateCommunicationPolicy(tenantId, { clientId, channel, messageClass });
   },
 
-  async ingestInbound(message) {
+  async ingestInbound(tenantIdInput, message) {
+    const tenantId = requireOperatingTenant(tenantIdInput);
+    assertEntityTenant(tenantId, message.tenantId, 'Communication');
     return {
       ...message,
+      tenantId,
       id: `ingest-${Date.now()}`,
       createdAt: new Date().toISOString(),
       status: 'received',

@@ -313,7 +313,7 @@ describe('Phase 4 Supabase task view semantics', () => {
 
   it('fails closed when a named view lacks tenant/profile/date context', async () => {
     await expect(supabaseTasksRepository.list({ view: 'team' })).rejects.toThrow(
-      'requires current tenant context',
+      'Current CRM operating tenant is required',
     );
     await expect(supabaseTasksRepository.list({ view: 'my', tenantId: TENANT })).rejects.toThrow(
       'requires current operator profile context',

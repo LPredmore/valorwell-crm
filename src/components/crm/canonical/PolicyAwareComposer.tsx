@@ -109,11 +109,11 @@ export function PolicyAwareComposer({
   }, [channel, messageClass, activeClientId]);
 
   useEffect(() => {
-    if (!open || !activeClientId) return;
+    if (!open || !activeClientId || !currentTenantId) return;
     let cancelled = false;
     setChecking(true);
     dataProvider.communications
-      .evaluatePolicy({ clientId: activeClientId, channel, messageClass })
+      .evaluatePolicy(currentTenantId, { clientId: activeClientId, channel, messageClass })
       .then((result) => { if (!cancelled) setPolicy(result); })
       .catch(() => {
         if (!cancelled) {
@@ -127,7 +127,7 @@ export function PolicyAwareComposer({
       })
       .finally(() => { if (!cancelled) setChecking(false); });
     return () => { cancelled = true; };
-  }, [open, activeClientId, channel, messageClass]);
+  }, [open, activeClientId, channel, messageClass, currentTenantId]);
 
   useEffect(() => {
     if (!open || channel !== 'email' || templates.length > 0) return;
@@ -188,7 +188,7 @@ export function PolicyAwareComposer({
 
     setSending(true);
     try {
-      const fresh = await dataProvider.communications.evaluatePolicy({
+      const fresh = await dataProvider.communications.evaluatePolicy(currentTenantId, {
         clientId: selected.id,
         channel,
         messageClass,
@@ -216,7 +216,7 @@ export function PolicyAwareComposer({
         return;
       }
 
-      const result = await dataProvider.communications.send({
+      const result = await dataProvider.communications.send(currentTenantId, {
         tenantId: currentTenantId,
         clientId: selected.id,
         channel,

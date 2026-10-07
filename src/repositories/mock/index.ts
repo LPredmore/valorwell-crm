@@ -38,9 +38,9 @@ function matchClient(c: CanonicalClient, q: ListClientsQuery): boolean {
   return true;
 }
 
-function patch(id: string, mut: (c: CanonicalClient) => CanonicalClient): CanonicalClient {
-  const idx = clients.findIndex(c => c.id === id);
-  if (idx === -1) throw new Error('Client not found');
+function patch(tenantId: string, id: string, mut: (c: CanonicalClient) => CanonicalClient): CanonicalClient {
+  const idx = clients.findIndex(c => c.id === id && c.tenantId === tenantId);
+  if (idx === -1) throw new Error('Client not found in current operating tenant');
   const next = { ...mut(clients[idx]), updatedAt: new Date().toISOString() };
   clients = [...clients.slice(0, idx), next, ...clients.slice(idx + 1)];
   emit();
@@ -50,9 +50,9 @@ function patch(id: string, mut: (c: CanonicalClient) => CanonicalClient): Canoni
 export const mockDataProvider: CrmDataProvider = {
   relationships: unavailableRelationshipsRepository,
   clients: {
-    async list(q: ListClientsQuery): Promise<Paged<CanonicalClient>> {
+    async list(tenantId, q: ListClientsQuery): Promise<Paged<CanonicalClient>> {
       await wait();
-      const filtered = clients.filter(c => matchClient(c, q));
+      const filtered = clients.filter(c => c.tenantId === tenantId && matchClient(c, q));
       const page = q.page ?? 1;
       const pageSize = q.pageSize ?? 50;
       const sortBy = q.sortBy ?? 'updatedAt';
@@ -65,18 +65,18 @@ export const mockDataProvider: CrmDataProvider = {
       const start = (page - 1) * pageSize;
       return { rows: sorted.slice(start, start + pageSize), total: filtered.length, page, pageSize };
     },
-    async get(id) { await wait(60); return clients.find(c => c.id === id) ?? null; },
-    async updateLifecycle(id, next, reason) { return patch(id, c => ({ ...c, lifecycle: next as LifecycleStage, nextRequiredAction: reason ? undefined : c.nextRequiredAction })); },
-    async updateEngagement(id, next) { return patch(id, c => ({ ...c, engagement: next })); },
-    async updateEligibility(id, next) { return patch(id, c => ({ ...c, eligibility: next })); },
-    async updateContactPolicy(id, next) { return patch(id, c => ({ ...c, contactPolicy: next })); },
-    async updateServicePolicy(id, next) { return patch(id, c => ({ ...c, servicePolicy: next })); },
-    async updateCareCadence(id, next) { return patch(id, c => ({ ...c, careCadence: next })); },
-    async updateRisk(id, next) { return patch(id, c => ({ ...c, risk: next })); },
-    async close(id, info) { return patch(id, c => ({ ...c, lifecycle: 'Closed', closure: info })); },
-    async reopen(id) { return patch(id, c => ({ ...c, lifecycle: 'Intake', closure: undefined })); },
-    async assignClinician(id, staffId, _reason) { if (!staffId?.trim()) throw new Error('assignClinician: staffId is required'); return patch(id, c => ({ ...c, assignedClinicianId: staffId })); },
-    async assignOperationsOwner(id, staffId) { return patch(id, c => ({ ...c, assignedOperationsOwnerId: staffId ?? undefined })); },
+    async get(tenantId, id) { await wait(60); return clients.find(c => c.id === id && c.tenantId === tenantId) ?? null; },
+    async updateLifecycle(tenantId, id, next, reason) { return patch(tenantId, id, c => ({ ...c, lifecycle: next as LifecycleStage, nextRequiredAction: reason ? undefined : c.nextRequiredAction })); },
+    async updateEngagement(tenantId, id, next) { return patch(tenantId, id, c => ({ ...c, engagement: next })); },
+    async updateEligibility(tenantId, id, next) { return patch(tenantId, id, c => ({ ...c, eligibility: next })); },
+    async updateContactPolicy(tenantId, id, next) { return patch(tenantId, id, c => ({ ...c, contactPolicy: next })); },
+    async updateServicePolicy(tenantId, id, next) { return patch(tenantId, id, c => ({ ...c, servicePolicy: next })); },
+    async updateCareCadence(tenantId, id, next) { return patch(tenantId, id, c => ({ ...c, careCadence: next })); },
+    async updateRisk(tenantId, id, next) { return patch(tenantId, id, c => ({ ...c, risk: next })); },
+    async close(tenantId, id, info) { return patch(tenantId, id, c => ({ ...c, lifecycle: 'Closed', closure: info })); },
+    async reopen(tenantId, id) { return patch(tenantId, id, c => ({ ...c, lifecycle: 'Intake', closure: undefined })); },
+    async assignClinician(tenantId, id, staffId, _reason) { if (!staffId?.trim()) throw new Error('assignClinician: staffId is required'); return patch(tenantId, id, c => ({ ...c, assignedClinicianId: staffId })); },
+    async assignOperationsOwner(tenantId, id, staffId) { return patch(tenantId, id, c => ({ ...c, assignedOperationsOwnerId: staffId ?? undefined })); },
   },
 
   tasks: {
@@ -99,59 +99,61 @@ export const mockDataProvider: CrmDataProvider = {
       });
       return sortTasksForViewPlan(filtered, plan);
     },
-    async get(id) { await wait(30); return tasks.find(t => t.id === id) ?? null; },
-    async create(input) {
+    async get(tenantId, id) { await wait(30); return tasks.find(t => t.id === id && t.tenantId === tenantId) ?? null; },
+    async create(tenantId, input) {
       await wait();
+      if (input.tenantId !== tenantId) throw new Error('Task does not belong to the current CRM operating tenant');
       const t: CrmTask = { ...input, id: `task-${Date.now()}`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
       tasks = [t, ...tasks]; emit(); return t;
     },
-    async update(id, p) {
+    async update(tenantId, id, p) {
       await wait();
-      const idx = tasks.findIndex(t => t.id === id); if (idx === -1) throw new Error('Task not found');
+      const idx = tasks.findIndex(t => t.id === id && t.tenantId === tenantId); if (idx === -1) throw new Error('Task not found');
       tasks[idx] = { ...tasks[idx], ...p, updatedAt: new Date().toISOString() }; emit(); return tasks[idx];
     },
-    async complete(id) {
-      return this.update(id, { status: 'Completed', completedAt: new Date().toISOString() });
+    async complete(tenantId, id) {
+      return this.update(tenantId, id, { status: 'Completed', completedAt: new Date().toISOString() });
     },
-    async reassign(ids, ownerId) { await wait(); tasks = tasks.map(t => ids.includes(t.id) ? { ...t, ownerId } : t); emit(); },
-    async bulkStatus(ids, status: TaskStatus) { await wait(); tasks = tasks.map(t => ids.includes(t.id) ? { ...t, status } : t); emit(); },
-    async bulkDueDate(ids, dueAt) { await wait(); tasks = tasks.map(t => ids.includes(t.id) ? { ...t, dueAt } : t); emit(); },
+    async reassign(tenantId, ids, ownerId) { await wait(); tasks = tasks.map(t => t.tenantId === tenantId && ids.includes(t.id) ? { ...t, ownerId } : t); emit(); },
+    async bulkStatus(tenantId, ids, status: TaskStatus) { await wait(); tasks = tasks.map(t => t.tenantId === tenantId && ids.includes(t.id) ? { ...t, status } : t); emit(); },
+    async bulkDueDate(tenantId, ids, dueAt) { await wait(); tasks = tasks.map(t => t.tenantId === tenantId && ids.includes(t.id) ? { ...t, dueAt } : t); emit(); },
   },
 
   exceptions: {
-    async list(q) {
+    async list(tenantId, q) {
       await wait();
       return exceptions.filter(e => {
+        if (e.tenantId !== tenantId) return false;
         if (q?.status?.length && !q.status.includes(e.status)) return false;
         if (q?.ownerId && e.ownerId !== q.ownerId) return false;
         if (q?.clientId && e.clientId !== q.clientId) return false;
         return true;
       });
     },
-    async get(id) { return exceptions.find(e => e.id === id) ?? null; },
-    async resolve(id, note) {
+    async get(tenantId, id) { return exceptions.find(e => e.id === id && e.tenantId === tenantId) ?? null; },
+    async resolve(tenantId, id, note) {
       await wait();
-      const idx = exceptions.findIndex(e => e.id === id); if (idx === -1) throw new Error();
+      const idx = exceptions.findIndex(e => e.id === id && e.tenantId === tenantId); if (idx === -1) throw new Error();
       exceptions[idx] = { ...exceptions[idx], status: 'Resolved', lastActivityAt: new Date().toISOString(),
         resolutionHistory: [...exceptions[idx].resolutionHistory, { at: new Date().toISOString(), action: 'resolved', note }] };
       emit(); return exceptions[idx];
     },
-    async dismiss(id, note) {
+    async dismiss(tenantId, id, note) {
       await wait();
-      const idx = exceptions.findIndex(e => e.id === id); if (idx === -1) throw new Error();
+      const idx = exceptions.findIndex(e => e.id === id && e.tenantId === tenantId); if (idx === -1) throw new Error();
       exceptions[idx] = { ...exceptions[idx], status: 'Dismissed', lastActivityAt: new Date().toISOString(),
         resolutionHistory: [...exceptions[idx].resolutionHistory, { at: new Date().toISOString(), action: 'dismissed', note }] };
       emit(); return exceptions[idx];
     },
-    async reassign(id, ownerId) {
+    async reassign(tenantId, id, ownerId) {
       await wait();
-      const idx = exceptions.findIndex(e => e.id === id); if (idx === -1) throw new Error();
+      const idx = exceptions.findIndex(e => e.id === id && e.tenantId === tenantId); if (idx === -1) throw new Error();
       exceptions[idx] = { ...exceptions[idx], ownerId, lastActivityAt: new Date().toISOString() };
       emit(); return exceptions[idx];
     },
-    async createTaskFromException(id) {
-      const e = exceptions.find(x => x.id === id); if (!e) throw new Error();
-      return mockDataProvider.tasks.create({
+    async createTaskFromException(tenantId, id) {
+      const e = exceptions.find(x => x.id === id && x.tenantId === tenantId); if (!e) throw new Error();
+      return mockDataProvider.tasks.create(tenantId, {
         tenantId: e.tenantId,
         title: `Resolve: ${e.type}`, description: e.summary, clientId: e.clientId, exceptionId: e.id,
         type: 'Campaign Exception', priority: e.severity === 'Critical' ? 'Urgent' : 'High',
@@ -162,22 +164,29 @@ export const mockDataProvider: CrmDataProvider = {
   },
 
   campaigns: {
-    async list() { await wait(); return campaigns; },
-    async get(id) { return campaigns.find(c => c.id === id) ?? null; },
-    async create(input) {
+    async list(tenantId) { await wait(); return campaigns.filter(c => c.tenantId === tenantId); },
+    async get(tenantId, id) { return campaigns.find(c => c.id === id && c.tenantId === tenantId) ?? null; },
+    async create(tenantId, input) {
       await wait();
+      if (input.tenantId !== tenantId) throw new Error('Campaign does not belong to the current CRM operating tenant');
       const c: Campaign = { ...input, id: `camp-${Date.now()}`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
         metrics: { enrolled: 0, active: 0, completed: 0, responseRate: 0, suppressed: 0, failed: 0 } };
       campaigns = [c, ...campaigns]; emit(); return c;
     },
-    async update(id, p) {
+    async update(tenantId, id, p) {
       await wait();
-      const idx = campaigns.findIndex(c => c.id === id); if (idx === -1) throw new Error();
+      const idx = campaigns.findIndex(c => c.id === id && c.tenantId === tenantId); if (idx === -1) throw new Error();
       campaigns[idx] = { ...campaigns[idx], ...p, updatedAt: new Date().toISOString() }; emit(); return campaigns[idx];
     },
-    async enrollments(campaignId) { await wait(); return enrollments.filter(e => e.campaignId === campaignId); },
-    async enroll(campaignId, clientIds) {
+    async enrollments(tenantId, campaignId) {
       await wait();
+      if (!campaigns.some(c => c.id === campaignId && c.tenantId === tenantId)) return [];
+      return enrollments.filter(e => e.campaignId === campaignId);
+    },
+    async enroll(tenantId, campaignId, clientIds) {
+      await wait();
+      if (!campaigns.some(c => c.id === campaignId && c.tenantId === tenantId)) throw new Error('Campaign not found in current operating tenant');
+      if (clientIds.some(id => !clients.some(c => c.id === id && c.tenantId === tenantId))) throw new Error('One or more clients do not belong to the current operating tenant');
       const created: CampaignEnrollment[] = clientIds.map(cid => ({
         id: `enr-${Date.now()}-${cid}`, campaignId, clientId: cid, status: 'Active',
         currentStepId: 's1', startedAt: new Date().toISOString(), completedSteps: [],
@@ -186,26 +195,27 @@ export const mockDataProvider: CrmDataProvider = {
       clients = clients.map(c => clientIds.includes(c.id) ? { ...c, activeCampaignId: campaignId } : c);
       emit(); return created;
     },
-    async pauseEnrollment(id, _reason) { const i = enrollments.findIndex(e => e.id === id); enrollments[i] = { ...enrollments[i], status: 'Paused' }; emit(); return enrollments[i]; },
-    async resumeEnrollment(id, _reason) { const i = enrollments.findIndex(e => e.id === id); enrollments[i] = { ...enrollments[i], status: 'Active' }; emit(); return enrollments[i]; },
-    async cancelEnrollment(id, reason) { const i = enrollments.findIndex(e => e.id === id); enrollments[i] = { ...enrollments[i], status: 'Canceled', exitReason: reason }; emit(); return enrollments[i]; },
-    async restartEnrollment(id, _reason) { const i = enrollments.findIndex(e => e.id === id); enrollments[i] = { ...enrollments[i], status: 'Active', currentStepId: 's1', completedSteps: [] }; emit(); return enrollments[i]; },
+    async pauseEnrollment(tenantId, id, _reason) { const i = enrollments.findIndex(e => e.id === id && campaigns.some(c => c.id === e.campaignId && c.tenantId === tenantId)); if (i === -1) throw new Error(); enrollments[i] = { ...enrollments[i], status: 'Paused' }; emit(); return enrollments[i]; },
+    async resumeEnrollment(tenantId, id, _reason) { const i = enrollments.findIndex(e => e.id === id && campaigns.some(c => c.id === e.campaignId && c.tenantId === tenantId)); if (i === -1) throw new Error(); enrollments[i] = { ...enrollments[i], status: 'Active' }; emit(); return enrollments[i]; },
+    async cancelEnrollment(tenantId, id, reason) { const i = enrollments.findIndex(e => e.id === id && campaigns.some(c => c.id === e.campaignId && c.tenantId === tenantId)); if (i === -1) throw new Error(); enrollments[i] = { ...enrollments[i], status: 'Canceled', exitReason: reason }; emit(); return enrollments[i]; },
+    async restartEnrollment(tenantId, id, _reason) { const i = enrollments.findIndex(e => e.id === id && campaigns.some(c => c.id === e.campaignId && c.tenantId === tenantId)); if (i === -1) throw new Error(); enrollments[i] = { ...enrollments[i], status: 'Active', currentStepId: 's1', completedSteps: [] }; emit(); return enrollments[i]; },
   },
 
   communications: {
-    async listForClient(clientId) { await wait(); return messages.filter(m => m.clientId === clientId).sort((a,b) => a.createdAt.localeCompare(b.createdAt)); },
-    async listThreads(channel) {
+    async listForClient(tenantId, clientId) { await wait(); return messages.filter(m => m.tenantId === tenantId && m.clientId === clientId).sort((a,b) => a.createdAt.localeCompare(b.createdAt)); },
+    async listThreads(tenantId, channel) {
       await wait();
       const byThread = new Map<string, CommunicationMessage>();
-      messages.filter(m => m.channel === channel).forEach(m => {
+      messages.filter(m => m.tenantId === tenantId && m.channel === channel).forEach(m => {
         const existing = byThread.get(m.threadId);
         if (!existing || existing.createdAt < m.createdAt) byThread.set(m.threadId, m);
       });
       return Array.from(byThread.values()).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
     },
-    async send(msg) {
+    async send(tenantId, msg) {
       await wait();
-      const policy = await mockDataProvider.communications.evaluatePolicy({
+      if (msg.tenantId !== tenantId) throw new Error('Communication does not belong to the current CRM operating tenant');
+      const policy = await mockDataProvider.communications.evaluatePolicy(tenantId, {
         clientId: msg.clientId!, channel: msg.channel as 'sms'|'email',
         campaignId: msg.campaignId, messageClass: 'necessary_scheduling',
       });
@@ -214,8 +224,8 @@ export const mockDataProvider: CrmDataProvider = {
         suppressionReason: policy.allowed ? undefined : policy.reasons.join('; ') };
       messages = [created, ...messages]; emit(); return created;
     },
-    async evaluatePolicy({ clientId, channel, messageClass }): Promise<CommunicationPolicyResult> {
-      const c = clients.find(x => x.id === clientId);
+    async evaluatePolicy(tenantId, { clientId, channel, messageClass }): Promise<CommunicationPolicyResult> {
+      const c = clients.find(x => x.id === clientId && x.tenantId === tenantId);
       if (!c) return { allowed: false, requiresReview: false, reasons: ['Client not found'] };
       const reasons: string[] = [];
       let code: CommunicationPolicyResult['suppressionCode'] | undefined;
@@ -227,14 +237,15 @@ export const mockDataProvider: CrmDataProvider = {
       if (channel === 'email' && !c.email) { reasons.push('No email on file'); code = code ?? 'class_never_permitted'; }
       return { allowed: reasons.length === 0, requiresReview: false, reasons, suppressionCode: code };
     },
-    async ingestInbound(msg) {
+    async ingestInbound(tenantId, msg) {
       await wait();
-      const created: CommunicationMessage = { ...msg, id: `msg-${Date.now()}`, createdAt: new Date().toISOString(), status: 'received' };
+      if (msg.tenantId !== tenantId) throw new Error('Communication does not belong to the current CRM operating tenant');
+      const created: CommunicationMessage = { ...msg, tenantId, id: `msg-${Date.now()}`, createdAt: new Date().toISOString(), status: 'received' };
       messages = [created, ...messages];
       // REMOVE / STOP detection
       const opt = /^\s*(stop|remove|unsubscribe|quit|end|cancel)\s*$/i.test(msg.body);
       if (opt && msg.clientId) {
-        patch(msg.clientId, c => ({ ...c, contactPolicy: 'Do Not Contact' }));
+        patch(tenantId, msg.clientId, c => ({ ...c, contactPolicy: 'Do Not Contact' }));
         enrollments = enrollments.map(e => e.clientId === msg.clientId && e.status === 'Active'
           ? { ...e, status: 'Canceled', exitReason: 'Client opted out via inbound keyword' } : e);
       }
@@ -243,12 +254,12 @@ export const mockDataProvider: CrmDataProvider = {
   },
 
   staff: {
-    async list() { await wait(); return mockStaff; },
-    async get(id) { return mockStaff.find(s => s.id === id) ?? null; },
+    async list(tenantId) { await wait(); return mockStaff.filter(s => s.tenantId === tenantId); },
+    async get(tenantId, id) { return mockStaff.find(s => s.id === id && s.tenantId === tenantId) ?? null; },
   },
 
   audit: {
-    async listForClient(clientId) { await wait(); return mockAudit[clientId] ?? []; },
+    async listForClient(tenantId, clientId) { await wait(); return (mockAudit[clientId] ?? []).filter(event => event.tenantId === tenantId); },
   },
 
   reports: {

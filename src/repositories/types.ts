@@ -50,24 +50,25 @@ export interface ListClientsQuery {
 }
 
 export interface ClientsRepository {
-  list(query: ListClientsQuery): Promise<Paged<CanonicalClient>>;
-  get(id: string): Promise<CanonicalClient | null>;
-  updateLifecycle(id: string, next: LifecycleStage, reason: string, note?: string): Promise<CanonicalClient>;
-  updateEngagement(id: string, next: EngagementState): Promise<CanonicalClient>;
+  list(tenantId: string, query: ListClientsQuery): Promise<Paged<CanonicalClient>>;
+  get(tenantId: string, id: string): Promise<CanonicalClient | null>;
+  updateLifecycle(tenantId: string, id: string, next: LifecycleStage, reason: string, note?: string): Promise<CanonicalClient>;
+  updateEngagement(tenantId: string, id: string, next: EngagementState): Promise<CanonicalClient>;
   updateEligibility(
+    tenantId: string,
     id: string,
     next: EligibilityState,
     note?: string,
     manualReview?: { owner: string; next_action: string; review_due_at: string } | null,
   ): Promise<CanonicalClient>;
-  updateContactPolicy(id: string, next: ContactPolicy, reason: string): Promise<CanonicalClient>;
-  updateServicePolicy(id: string, next: ServicePolicy, reason: string): Promise<CanonicalClient>;
-  updateCareCadence(id: string, next: CareCadence): Promise<CanonicalClient>;
-  updateRisk(id: string, next: RiskState): Promise<CanonicalClient>;
-  close(id: string, info: ClosureInfo): Promise<CanonicalClient>;
-  reopen(id: string, reason: string): Promise<CanonicalClient>;
-  assignClinician(id: string, staffId: string, reason?: string): Promise<CanonicalClient>;
-  assignOperationsOwner(id: string, staffId: string | null): Promise<CanonicalClient>;
+  updateContactPolicy(tenantId: string, id: string, next: ContactPolicy, reason: string): Promise<CanonicalClient>;
+  updateServicePolicy(tenantId: string, id: string, next: ServicePolicy, reason: string): Promise<CanonicalClient>;
+  updateCareCadence(tenantId: string, id: string, next: CareCadence): Promise<CanonicalClient>;
+  updateRisk(tenantId: string, id: string, next: RiskState): Promise<CanonicalClient>;
+  close(tenantId: string, id: string, info: ClosureInfo): Promise<CanonicalClient>;
+  reopen(tenantId: string, id: string, reason: string): Promise<CanonicalClient>;
+  assignClinician(tenantId: string, id: string, staffId: string, reason?: string): Promise<CanonicalClient>;
+  assignOperationsOwner(tenantId: string, id: string, staffId: string | null): Promise<CanonicalClient>;
 }
 
 export interface ListTasksQuery {
@@ -91,35 +92,35 @@ export interface ListTasksQuery {
 
 export interface TasksRepository {
   list(query: ListTasksQuery): Promise<CrmTask[]>;
-  get(id: string): Promise<CrmTask | null>;
-  create(input: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt'>): Promise<CrmTask>;
-  update(id: string, patch: Partial<CrmTask>): Promise<CrmTask>;
-  complete(id: string, note?: string): Promise<CrmTask>;
-  reassign(ids: string[], ownerId: string): Promise<void>;
-  bulkStatus(ids: string[], status: TaskStatus): Promise<void>;
-  bulkDueDate(ids: string[], dueAt: string): Promise<void>;
+  get(tenantId: string, id: string): Promise<CrmTask | null>;
+  create(tenantId: string, input: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt'>): Promise<CrmTask>;
+  update(tenantId: string, id: string, patch: Partial<CrmTask>): Promise<CrmTask>;
+  complete(tenantId: string, id: string, note?: string): Promise<CrmTask>;
+  reassign(tenantId: string, ids: string[], ownerId: string): Promise<void>;
+  bulkStatus(tenantId: string, ids: string[], status: TaskStatus): Promise<void>;
+  bulkDueDate(tenantId: string, ids: string[], dueAt: string): Promise<void>;
 }
 
 export interface ExceptionsRepository {
-  list(query?: { status?: ExceptionStatus[]; ownerId?: string; clientId?: string }): Promise<OperationalException[]>;
-  get(id: string): Promise<OperationalException | null>;
-  resolve(id: string, note?: string): Promise<OperationalException>;
-  dismiss(id: string, note?: string): Promise<OperationalException>;
-  reassign(id: string, ownerId: string): Promise<OperationalException>;
-  createTaskFromException(id: string): Promise<CrmTask>;
+  list(tenantId: string, query?: { status?: ExceptionStatus[]; ownerId?: string; clientId?: string }): Promise<OperationalException[]>;
+  get(tenantId: string, id: string): Promise<OperationalException | null>;
+  resolve(tenantId: string, id: string, note?: string): Promise<OperationalException>;
+  dismiss(tenantId: string, id: string, note?: string): Promise<OperationalException>;
+  reassign(tenantId: string, id: string, ownerId: string): Promise<OperationalException>;
+  createTaskFromException(tenantId: string, id: string): Promise<CrmTask>;
 }
 
 export interface CampaignsRepository {
-  list(): Promise<Campaign[]>;
-  get(id: string): Promise<Campaign | null>;
-  create(input: Omit<Campaign, 'id' | 'createdAt' | 'updatedAt' | 'metrics'>): Promise<Campaign>;
-  update(id: string, patch: Partial<Campaign>): Promise<Campaign>;
-  enrollments(campaignId: string): Promise<CampaignEnrollment[]>;
-  enroll(campaignId: string, clientIds: string[]): Promise<CampaignEnrollment[]>;
-  pauseEnrollment(enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
-  resumeEnrollment(enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
-  cancelEnrollment(enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
-  restartEnrollment(enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
+  list(tenantId: string): Promise<Campaign[]>;
+  get(tenantId: string, id: string): Promise<Campaign | null>;
+  create(tenantId: string, input: Omit<Campaign, 'id' | 'createdAt' | 'updatedAt' | 'metrics'>): Promise<Campaign>;
+  update(tenantId: string, id: string, patch: Partial<Campaign>): Promise<Campaign>;
+  enrollments(tenantId: string, campaignId: string): Promise<CampaignEnrollment[]>;
+  enroll(tenantId: string, campaignId: string, clientIds: string[]): Promise<CampaignEnrollment[]>;
+  pauseEnrollment(tenantId: string, enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
+  resumeEnrollment(tenantId: string, enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
+  cancelEnrollment(tenantId: string, enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
+  restartEnrollment(tenantId: string, enrollmentId: string, reason: string): Promise<CampaignEnrollment>;
 }
 
 export type CommunicationSendInput = Omit<CommunicationMessage, 'id' | 'createdAt' | 'status'> & {
@@ -134,25 +135,25 @@ export type CommunicationSendInput = Omit<CommunicationMessage, 'id' | 'createdA
 };
 
 export interface CommunicationsRepository {
-  listForClient(clientId: string): Promise<CommunicationMessage[]>;
-  listThreads(channel: 'sms' | 'email'): Promise<CommunicationMessage[]>;
-  send(message: CommunicationSendInput): Promise<CommunicationMessage>;
-  evaluatePolicy(input: {
+  listForClient(tenantId: string, clientId: string): Promise<CommunicationMessage[]>;
+  listThreads(tenantId: string, channel: 'sms' | 'email'): Promise<CommunicationMessage[]>;
+  send(tenantId: string, message: CommunicationSendInput): Promise<CommunicationMessage>;
+  evaluatePolicy(tenantId: string, input: {
     clientId: string;
     channel: 'sms' | 'email';
     campaignId?: string;
     messageClass: import('@/domain/operations').CanonicalMessageClass;
   }): Promise<CommunicationPolicyResult>;
-  ingestInbound(message: Omit<CommunicationMessage, 'id' | 'createdAt' | 'status'>): Promise<CommunicationMessage>;
+  ingestInbound(tenantId: string, message: Omit<CommunicationMessage, 'id' | 'createdAt' | 'status'>): Promise<CommunicationMessage>;
 }
 
 export interface StaffRepository {
-  list(): Promise<StaffMember[]>;
-  get(id: string): Promise<StaffMember | null>;
+  list(tenantId: string): Promise<StaffMember[]>;
+  get(tenantId: string, id: string): Promise<StaffMember | null>;
 }
 
 export interface AuditRepository {
-  listForClient(clientId: string): Promise<AuditEvent[]>;
+  listForClient(tenantId: string, clientId: string): Promise<AuditEvent[]>;
 }
 
 export interface ReportBucket<Row> {

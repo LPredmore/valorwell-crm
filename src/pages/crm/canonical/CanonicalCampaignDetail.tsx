@@ -9,25 +9,31 @@ import { Button } from '@/components/ui/button';
 import { useCampaign, useEnrollments } from '@/hooks/canonical/useCrmData';
 import { useCanonicalClients } from '@/hooks/canonical/useCanonicalClients';
 import { dataProvider } from '@/services/dataProvider';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 
 export default function CanonicalCampaignDetail() {
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { currentTenantId } = useCrmAuth();
+  const tenantId = () => {
+    if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
+    return currentTenantId;
+  };
   const { data: campaign, isLoading } = useCampaign(id);
   const { data: enrollments = [] } = useEnrollments(id);
   const { data: clientsPage } = useCanonicalClients({ pageSize: 500 });
   const clientMap = new Map((clientsPage?.rows ?? []).map((c) => [c.id, c] as const));
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['crm-enrollments', id] });
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['crm-enrollments', currentTenantId, id] });
   const promptReason = (verb: string) => {
     const r = window.prompt(`Reason to ${verb} this enrollment (min 3 chars):`, '');
     return r && r.trim().length >= 3 ? r.trim() : null;
   };
-  const pause = useMutation({ mutationFn: ({ eid, reason }: { eid: string; reason: string }) => dataProvider.campaigns.pauseEnrollment(eid, reason), onSuccess: invalidate });
-  const resume = useMutation({ mutationFn: ({ eid, reason }: { eid: string; reason: string }) => dataProvider.campaigns.resumeEnrollment(eid, reason), onSuccess: invalidate });
-  const cancel = useMutation({ mutationFn: ({ eid, reason }: { eid: string; reason: string }) => dataProvider.campaigns.cancelEnrollment(eid, reason), onSuccess: invalidate });
-  const restart = useMutation({ mutationFn: ({ eid, reason }: { eid: string; reason: string }) => dataProvider.campaigns.restartEnrollment(eid, reason), onSuccess: invalidate });
+  const pause = useMutation({ mutationFn: ({ eid, reason }: { eid: string; reason: string }) => dataProvider.campaigns.pauseEnrollment(tenantId(), eid, reason), onSuccess: invalidate });
+  const resume = useMutation({ mutationFn: ({ eid, reason }: { eid: string; reason: string }) => dataProvider.campaigns.resumeEnrollment(tenantId(), eid, reason), onSuccess: invalidate });
+  const cancel = useMutation({ mutationFn: ({ eid, reason }: { eid: string; reason: string }) => dataProvider.campaigns.cancelEnrollment(tenantId(), eid, reason), onSuccess: invalidate });
+  const restart = useMutation({ mutationFn: ({ eid, reason }: { eid: string; reason: string }) => dataProvider.campaigns.restartEnrollment(tenantId(), eid, reason), onSuccess: invalidate });
 
   const [tab, setTab] = useState<'steps' | 'enrollments'>('enrollments');
 
