@@ -120,13 +120,11 @@ function summarizeSchedule(nowMs: number, row: SeriesScheduleRow, project: { org
 export async function listSeriesSchedules(auth: AuthContext, params: { fromWeek?: unknown; weeks?: unknown }, nowMs = Date.now()) {
   const current = currentCentralWeekStart(nowMs);
   const firstAssignable = firstAssignableWeekStart(nowMs);
-  const nextWeek = addDaysToKey(current, 7);
   // Default view starts at the first assignable Monday, unless the current/next week (already
   // past cutoff) still holds an assignment that must stay visible for status tracking.
   const { data: tracked } = await auth.db.from(SCHEDULES).select("week_start").eq("tenant_id", auth.tenantId)
     .neq("status", "cancelled").gte("week_start", current).lt("week_start", firstAssignable).order("week_start").limit(1);
   const defaultStart = (tracked?.[0]?.week_start as string | undefined) ?? firstAssignable;
-  void nextWeek;
   const fromWeek = typeof params.fromWeek === "string" && isMondayKey(params.fromWeek) && params.fromWeek >= current ? params.fromWeek : defaultStart;
   const weeks = Math.min(MAX_WEEKS, Math.max(1, Number(params.weeks) || 8));
   const toWeek = addDaysToKey(fromWeek, 7 * (weeks - 1));
