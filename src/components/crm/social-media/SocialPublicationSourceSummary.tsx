@@ -21,7 +21,7 @@ export function SocialPublicationSourceSummary({ publication }: { publication: S
     <div className="flex gap-3 rounded-md border p-3">
       <div className="w-36 shrink-0 rounded overflow-hidden border">
         <SocialMediaThumbnail
-          item={{ sourceType: publication.sourceType, sourceId: publication.clipId ?? publication.projectId, thumbnailFileId: publication.thumbnailFileId }}
+          item={{ publicationId: publication.id, thumbnailFileId: publication.thumbnailFileId }}
         />
       </div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs min-w-0">

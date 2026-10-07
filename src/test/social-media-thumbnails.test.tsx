@@ -8,7 +8,11 @@ vi.mock('@/integrations/supabase/client', () => ({
   supabase: { functions: { invoke: (...args: unknown[]) => invokeMock(...args) } },
 }));
 
-import { fetchSocialThumbnailUrl, type SocialMediaLibraryItem } from '@/lib/crm/social-media';
+import {
+  fetchSocialPublicationThumbnailUrl,
+  fetchSocialThumbnailUrl,
+  type SocialMediaLibraryItem,
+} from '@/lib/crm/social-media';
 import { SocialMediaThumbnail } from '@/components/crm/social-media/SocialMediaThumbnail';
 
 function item(overrides: Partial<SocialMediaLibraryItem> = {}): SocialMediaLibraryItem {
@@ -58,6 +62,20 @@ describe('social media thumbnail access', () => {
     });
   });
 
+  it('asks the server for a publication-specific signed URL without widening media SourceType', async () => {
+    invokeMock.mockResolvedValue({
+      data: { data: { fileId: 'publication-cover', signedUrl: 'https://signed/publication', expiresInSeconds: 3600 }, requestId: 'r' },
+      error: null,
+    });
+
+    await fetchSocialPublicationThumbnailUrl('publication-1');
+
+    expect(invokeMock).toHaveBeenCalledWith('social-media-manager', {
+      body: { action: 'get_thumbnail_url', publicationId: 'publication-1' },
+      timeout: 15000,
+    });
+  });
+
   it('renders a blank neutral area and makes no request when no cover image is configured', async () => {
     const { container } = renderThumbnail(item());
     await waitFor(() => expect(screen.getByTestId('social-thumbnail')).toBeTruthy());
@@ -74,6 +92,35 @@ describe('social media thumbnail access', () => {
     }));
   });
 
+  it('renders the signed publication snapshot in the reusable thumbnail component', async () => {
+    invokeMock.mockResolvedValue({
+      data: { data: { fileId: 'publication-cover', signedUrl: 'https://signed/publication', expiresInSeconds: 3600 }, requestId: 'r' },
+      error: null,
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <SocialMediaThumbnail item={{ publicationId: 'publication-1', thumbnailFileId: 'publication-cover' }} />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(container.querySelector('img')?.getAttribute('src')).toBe('https://signed/publication'));
+    expect(invokeMock).toHaveBeenCalledWith('social-media-manager', expect.objectContaining({
+      body: { action: 'get_thumbnail_url', publicationId: 'publication-1' },
+    }));
+  });
+
+  it('keeps a publication cover neutral when its snapshot has no thumbnail file id', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <SocialMediaThumbnail item={{ publicationId: 'publication-no-cover', thumbnailFileId: null }} />
+      </QueryClientProvider>,
+    );
+    expect(container.querySelector('img')).toBeNull();
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
   it('keeps the card blank when one thumbnail request fails instead of surfacing an error', async () => {
     invokeMock.mockResolvedValue({ data: { error: 'THUMBNAIL_SIGN_FAILED', requestId: 'r' }, error: null });
     const { container } = renderThumbnail(item({ thumbnailFileId: 'file-broken' }));
@@ -86,6 +133,8 @@ describe('social media thumbnail access', () => {
 describe('library thumbnail source selection contract', () => {
   const librarySource = readFileSync('supabase/functions/social-media-manager/handlers/library.ts', 'utf8');
   const thumbnailSource = readFileSync('supabase/functions/social-media-manager/handlers/thumbnails.ts', 'utf8');
+  const clientSource = readFileSync('src/lib/crm/social-media.ts', 'utf8');
+  const publicationFormSource = readFileSync('src/components/crm/social-media/SocialPublicationMetadataForm.tsx', 'utf8');
 
   it('never uses the guest portrait as an episode cover', () => {
     expect(librarySource).not.toMatch(/guest_image_url/);
@@ -96,6 +145,19 @@ describe('library thumbnail source selection contract', () => {
     expect(librarySource).toMatch(/thumbnailFileId: project\.cover_image_file_id/);
     expect(librarySource).toMatch(/thumbnailFileId: clip\.cover_image_file_id/);
     expect(librarySource).not.toMatch(/thumbnailUrl: (clip|project)\./);
+  });
+
+  it('never renders a private Drive view URL directly as the publication cover image', () => {
+    expect(publicationFormSource).toContain("publicationId: publication.id");
+    expect(publicationFormSource).not.toContain('<img src={publication.thumbnailUrl}');
+    expect(publicationFormSource).toContain('Open cover image in Drive');
+  });
+
+  it('resolves publication snapshots only through publication id plus the authenticated tenant', () => {
+    expect(thumbnailSource).toMatch(/ai_operations_social_publications/);
+    expect(thumbnailSource).toMatch(/\.eq\("id", sourceId\)[\s\S]*\.eq\("tenant_id", tenantId\)/);
+    expect(clientSource).toContain('export type SourceType = "clip" | "project"');
+    expect(clientSource).not.toContain('export type SourceType = "clip" | "project" | "publication"');
   });
 
   it('resolves the Drive file id from the tenant-scoped record and caches by file id', () => {

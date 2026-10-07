@@ -9,17 +9,6 @@ import {
 } from "../_shared/relationship-google.ts";
 
 function redirectResult(connectionType: string, status: "connected" | "error", message?: string) {
-  if (connectionType === "drive") {
-    const ok = status === "connected";
-    const title = ok ? "Google Drive connected" : "Google Drive connection failed";
-    const detail = ok
-      ? "ValorWell video transcription now has read-only access to the Beyond The Yellow source folder. You can close this window."
-      : (message || "The Drive authorization could not be stored.");
-    return new Response(
-      "<!doctype html><html><head><meta charset=\"utf-8\"><title>"+title+"</title></head><body style=\"font-family:system-ui;padding:40px;max-width:760px\"><h1>"+title+"</h1><p>"+detail.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")+"</p></body></html>",
-      { status: ok ? 200 : 500, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } }
-    );
-  }
   const appUrl = Deno.env.get("RELATIONSHIP_CRM_URL") ?? "https://crm.valorwell.org";
   const target = new URL("/crm/business-development/orchestration", appUrl);
   target.searchParams.set("google", status);

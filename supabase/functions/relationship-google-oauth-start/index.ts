@@ -11,6 +11,7 @@ import {
 const scopes = {
   gmail: ["openid", "email", "https://www.googleapis.com/auth/gmail.readonly"],
   calendar: ["openid", "email", "https://www.googleapis.com/auth/calendar.events.readonly"],
+  drive: ["openid", "email", "https://www.googleapis.com/auth/drive.readonly"],
 } as const;
 
 const corsHeaders = {
@@ -35,8 +36,12 @@ Deno.serve(async (request: Request) => {
   try {
     const { actorId, tenantId } = await requireCrmOperator(request);
     const input = await request.json().catch(() => ({})) as { connectionType?: string };
-    if (input.connectionType !== "gmail" && input.connectionType !== "calendar") {
-      return jsonResponse({ error: "connectionType must be gmail or calendar." }, 400);
+    if (
+      input.connectionType !== "gmail"
+      && input.connectionType !== "calendar"
+      && input.connectionType !== "drive"
+    ) {
+      return jsonResponse({ error: "connectionType must be gmail, calendar, or drive." }, 400);
     }
     const clientId = Deno.env.get("GOOGLE_RELATIONSHIPS_CLIENT_ID") ?? "";
     if (!clientId) return jsonResponse({ error: "Google OAuth client is not configured." }, 503);

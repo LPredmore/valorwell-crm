@@ -59,6 +59,17 @@ describe('CRM reporting source contract', () => {
     }
   });
 
+  it('resolves campaign and task report identities through canonical name sources instead of raw UUID presentation', () => {
+    expect(reportsSource).toContain(".from('crm_campaigns')");
+    expect(reportsSource).toContain(".select('id, name')");
+    expect(reportsSource).toContain(".from('staff')");
+    expect(reportsSource).toContain(".in('profile_id', assigneeIds)");
+    expect(reportsSource).not.toContain(".in('id', assigneeIds)");
+    expect(reportsSource).toContain('buildStaffOperatorDisplayName');
+    expect(reportsSource).toContain('campaignName:');
+    expect(reportsSource).toContain('assigneeName:');
+  });
+
   it('does not read raw or legacy controlled client-state columns', () => {
     for (const column of [
       'lifecycle_stage',

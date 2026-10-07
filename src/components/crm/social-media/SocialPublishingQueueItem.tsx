@@ -16,11 +16,7 @@ export function SocialPublishingQueueItem({ publication, onOpen }: { publication
         <div className="w-28 shrink-0 rounded overflow-hidden border">
           <SocialMediaThumbnail
             className="aspect-video"
-            item={{
-              sourceType: publication.sourceType,
-              sourceId: publication.clipId ?? publication.projectId,
-              thumbnailFileId: publication.thumbnailFileId,
-            }}
+            item={{ publicationId: publication.id, thumbnailFileId: publication.thumbnailFileId }}
           />
         </div>
         <div className="min-w-0 flex-1 space-y-1">

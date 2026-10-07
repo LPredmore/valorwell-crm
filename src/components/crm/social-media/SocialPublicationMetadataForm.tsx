@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown } from 'lucide-react';
 import type { SocialPublication } from '@/lib/crm/social-media';
+import { SocialMediaThumbnail } from './SocialMediaThumbnail';
 
 export function SocialPublicationMetadataForm({
   publication,
@@ -20,9 +21,23 @@ export function SocialPublicationMetadataForm({
 
   return (
     <div className="space-y-4">
-      {publication.thumbnailUrl && (
-        <img src={publication.thumbnailUrl} alt="" className="w-full max-w-xs rounded-md border" />
-      )}
+      <div className="max-w-xs space-y-2">
+        <div className="overflow-hidden rounded-md border">
+          <SocialMediaThumbnail
+            item={{ publicationId: publication.id, thumbnailFileId: publication.thumbnailFileId }}
+          />
+        </div>
+        {publication.thumbnailUrl && (
+          <a
+            href={publication.thumbnailUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-xs text-primary hover:underline"
+          >
+            Open cover image in Drive
+          </a>
+        )}
+      </div>
       {publication.sourceType === 'project' && !publication.title && (
         <p className="text-xs text-amber-600">
           Full episodes don't have a source title yet — enter one before this publication can become Ready.

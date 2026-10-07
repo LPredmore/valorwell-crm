@@ -61,7 +61,9 @@ export function resolveReconciliationIssue(issueId: string, status: 'resolved' |
   return rpc('resolve_relationship_reconciliation_issue', { p_issue_id: issueId, p_status: status, p_resolution: resolution });
 }
 
-export async function startGoogleConnection(connectionType: 'gmail' | 'calendar') {
+export type RelationshipGoogleConnectionType = 'gmail' | 'calendar' | 'drive';
+
+export async function startGoogleConnection(connectionType: RelationshipGoogleConnectionType) {
   const { data, error } = await supabase.functions.invoke('relationship-google-oauth-start', { body: { connectionType } });
   if (error) throw new Error(error.message);
   if (!data?.authorizationUrl) throw new Error(data?.error ?? 'Google authorization URL was not returned.');

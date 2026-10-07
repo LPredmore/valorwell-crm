@@ -52,7 +52,7 @@ const businessDevelopmentItems: NavItem[] = [
   { label: 'Reports', href: '/crm/business-development/reports', icon: BarChart3 },
   { label: 'System Status', href: '/crm/business-development/status', icon: CircleHelp },
   { label: 'BTY Orchestration', href: '/crm/business-development/orchestration', icon: Settings },
-  { label: 'BTY Automation', href: '/crm/business-development/automation', icon: Settings },
+  { label: 'BTY Duplicate Cleanup', href: '/crm/business-development/duplicate-cleanup', icon: Search },
   { label: 'Communications Control Plane', href: '/crm/communications-control-plane', icon: Settings },
 ];
 

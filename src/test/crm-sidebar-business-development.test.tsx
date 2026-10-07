@@ -14,6 +14,8 @@ describe('Business Development sidebar navigation', () => {
     expect(screen.getByText('Clinical CRM')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Inbound Creator & Community Interest' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'System Status' })).toHaveAttribute('href', '/crm/business-development/status');
+    expect(screen.getByRole('link', { name: 'BTY Duplicate Cleanup' })).toHaveAttribute('href', '/crm/business-development/duplicate-cleanup');
+    expect(screen.queryByRole('link', { name: 'BTY Automation' })).not.toBeInTheDocument();
   });
 
   it('marks nested Business Development routes active without marking the dashboard active', () => {
