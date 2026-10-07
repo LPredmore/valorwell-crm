@@ -118,6 +118,14 @@ describe('Phase 9 newsletter production readiness', () => {
     expect(resend).toContain('verifyConnectionForTenant(serviceDb(), tenantId, requestId)');
   });
 
+  it('keeps tenant-level control-plane activity auditable without requiring a client id', () => {
+    const migration = read('supabase/migrations/20261007161927_crm_activity_events_tenant_scope.sql');
+
+    expect(migration).toContain('alter column client_id drop not null');
+    expect(migration).toContain('drop constraint if exists crm_activity_events_event_type_check');
+    expect(migration).toContain("check (nullif(btrim(event_type), '') is not null)");
+  });
+
   it('keeps the public newsletter unsubscribe page marketing-only and idempotent', () => {
     const page = read('src/pages/NewsletterUnsubscribePage.tsx');
 
