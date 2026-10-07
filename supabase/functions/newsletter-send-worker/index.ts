@@ -254,6 +254,22 @@ Deno.serve(async (request: Request) => {
           log("error", "render_failed", { newsletterId: letter.id, recipientId: recipient.recipientId, message });
           continue;
         }
+        // Final authoritative check immediately before provider delivery:
+        // cancellation, runtime pause, suppression, eligibility, already-sent.
+        const { data: guard, error: guardError } = await admin.rpc("crm_newsletter_recipient_send_guard", {
+          p_recipient_id: recipient.recipientId,
+          p_claim_token: batch.claimToken,
+        });
+        const guardResult = guard as { allowed?: boolean; reason?: string } | null;
+        if (guardError || !guardResult?.allowed) {
+          skipped += 1;
+          log("warn", "send_guard_blocked", {
+            newsletterId: letter.id,
+            recipientId: recipient.recipientId,
+            reason: guardError ? `guard_error:${guardError.message}` : guardResult?.reason ?? "unknown",
+          });
+          continue;
+        }
         const outcome = await sendOne(apiKey, batch, recipient, body, replyTo);
 
         if ("providerMessageId" in outcome) {
