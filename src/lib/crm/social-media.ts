@@ -363,6 +363,11 @@ export type SocialThumbnail = { fileId: string | null; signedUrl: string | null;
 export const fetchSocialThumbnailUrl = (sourceType: SourceType, sourceId: string) =>
   invoke<SocialThumbnail>("get_thumbnail_url", { sourceType, sourceId });
 
+/** Publication covers are snapshots and may differ from the source Library cover. Keep this
+ * resolver publication-specific instead of widening the canonical video SourceType. */
+export const fetchSocialPublicationThumbnailUrl = (publicationId: string) =>
+  invoke<SocialThumbnail>("get_thumbnail_url", { publicationId });
+
 /** Read-only: the state recorded by the last verification. Never calls Google or writes. */
 export const fetchYouTubeConnectionStatus = () => invoke<YouTubeConnectionStatus>("get_youtube_connection_status");
 
