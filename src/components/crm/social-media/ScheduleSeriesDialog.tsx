@@ -62,7 +62,8 @@ function WeekRow({ week, data, canMutate }: {
     onError,
   });
   const busy = assign.isPending || remove.isPending;
-  const editable = canMutate && (!schedule || schedule.editable);
+  const cutoffPassed = week.cutoffPassed;
+  const editable = canMutate && !cutoffPassed && (!schedule || schedule.editable);
   const options = schedule
     ? [{ id: schedule.projectId, organizationName: schedule.organizationName ?? 'Current project', guestName: schedule.guestName }, ...data.eligibleProjects]
     : data.eligibleProjects;
@@ -75,9 +76,12 @@ function WeekRow({ week, data, canMutate }: {
           <div className="font-medium">
             {weekRange(week.weekStart)} {isCurrent && <span className="text-xs text-muted-foreground">(this week)</span>}
           </div>
-          <div className="text-xs text-muted-foreground">Dispatches {formatCentralDateTime(week.dispatchAt)}</div>
+          <div className="text-xs text-muted-foreground">
+            {cutoffPassed ? 'Cutoff was' : 'Cutoff & dispatch'} {formatCentralDateTime(week.dispatchAt)}
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          {cutoffPassed && <Badge variant="outline">Cutoff passed</Badge>}
           {schedule && <Badge variant={statusVariant(schedule.status)}>{SERIES_STATUS_LABELS[schedule.status]}</Badge>}
           {editable ? (
             <Select value={schedule?.projectId ?? ''} onValueChange={(value) => assign.mutate(value)} disabled={busy}>
@@ -93,7 +97,7 @@ function WeekRow({ week, data, canMutate }: {
           ) : schedule ? (
             <span className="text-sm">{projectLabel(schedule)}</span>
           ) : (
-            <span className="text-sm text-muted-foreground">Unassigned</span>
+            <span className="text-sm text-muted-foreground">{cutoffPassed ? 'Unassigned (locked)' : 'Unassigned'}</span>
           )}
           {busy && <Loader2 className="h-4 w-4 animate-spin" aria-label="Saving" />}
           {schedule && editable && (
@@ -144,7 +148,7 @@ export function ScheduleSeriesDialog({ open, onOpenChange }: { open: boolean; on
     enabled: open,
   });
   const fromWeek = useMemo(
-    () => (base.data ? addDaysToKey(base.data.currentWeekStart, offset * 7) : null),
+    () => (base.data ? addDaysToKey(base.data.startWeekStart, offset * 7) : null),
     [base.data, offset],
   );
   const list = useQuery({
