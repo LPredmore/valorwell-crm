@@ -108,6 +108,14 @@ vi.mock('@/integrations/supabase/client', () => {
       });
     }
 
+    then<TResult1 = { data: object[] | null; error: FakeError | null }, TResult2 = never>(
+      onfulfilled?: ((value: { data: object[] | null; error: FakeError | null }) => TResult1 | PromiseLike<TResult1>) | null,
+      onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+    ): Promise<TResult1 | TResult2> {
+      const result = this.result();
+      return Promise.resolve({ data: result.data, error: result.error }).then(onfulfilled, onrejected);
+    }
+
     private result(): { data: object[] | null; error: FakeError | null } {
       const error = boundary.errors[this.view];
       if (error) return { data: null, error };
