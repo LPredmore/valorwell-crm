@@ -1,23 +1,22 @@
-import "jsr:@supabase/functions-js@2.4.5/edge-runtime.d.ts";
-import { adminClient, authorizeWorker, json, logEvent, safeError } from "../_shared/ai-ops.ts";
-import type { AuthContext } from "../social-media-manager/context.ts";
+
+import { adminClient, authorizeWorker, logEvent, safeError } from "../_shared/ai-ops.ts";
+import type { AuthContext } from "./context.ts";
 import {
   processSeriesSchedule, seriesOpsFor, seriesStoreFor, type SeriesScheduleRow,
-} from "../social-media-manager/handlers/series.ts";
+} from "./handlers/series.ts";
 
-// Called by pg_cron (video-series-dispatcher-1min) only when a week's Friday-noon Central
+// Called by pg_cron (video-series-dispatcher-1min) via action "series_dispatch_tick" only when a week's Friday-noon Central
 // deadline has passed and work is due. Gated by X-Cron-Secret / service-role bearer.
 // Weeks are claimed atomically (FOR UPDATE SKIP LOCKED + lease) by video_series_claim_due.
-Deno.serve(async (request: Request) => {
-  if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
-  if (!authorizeWorker(request)) return json({ error: "Unauthorized." }, 401);
+export async function runSeriesDispatchTick(request: Request): Promise<{ status: number; body: Record<string, unknown> }> {
+  if (!authorizeWorker(request)) return { status: 401, body: { error: "Unauthorized." } };
 
   const db = adminClient();
   const leaseId = crypto.randomUUID();
   const { data, error } = await db.rpc("video_series_claim_due", { p_lease_id: leaseId, p_limit: 3, p_lease_seconds: 240 });
   if (error) {
     logEvent("video-series-dispatcher", "claim_failed", { error: error.message });
-    return json({ ok: false, error: error.message }, 500);
+    return { status: 500, body: { ok: false, error: error.message } };
   }
 
   const results = [];
@@ -43,5 +42,5 @@ Deno.serve(async (request: Request) => {
       results.push({ id: row.id, ok: false, error: message });
     }
   }
-  return json({ ok: results.every((r) => r.ok), claimed: results.length, results });
-});
+  return { status: 200, body: { ok: results.every((r) => r.ok), claimed: results.length, results } };
+}

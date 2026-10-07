@@ -18,6 +18,7 @@ import { youtubeAccessToken } from "../_shared/ai-ops-youtube.ts";
 import { getYoutubeDeliveryStatus, updateVideoStatus } from "../_shared/youtube-publish/api.ts";
 import type { YoutubeScheduleClient } from "./handlers/publications.ts";
 import { resolveAllowHeaders } from "./cors.ts";
+import { runSeriesDispatchTick } from "./series-dispatch.ts";
 import { authorizeAction, MUTATE_ACTIONS, VIEW_ACTIONS } from "./actions.ts";
 
 // Root cause of the "TypeError: Failed to fetch" bug: supabase-js 2.93.1's browser build
@@ -179,6 +180,11 @@ Deno.serve(async (request: Request) => {
     return json({ error: "Invalid upload action", requestId }, 400, requestId);
   }
   const action = String(body.action ?? "");
+  if (action === "series_dispatch_tick" && !isMultipart) {
+    // Cron-only entrypoint: authorized by X-Cron-Secret / service-role bearer, never a CRM JWT.
+    const result = await runSeriesDispatchTick(request);
+    return json({ ...result.body, requestId }, result.status, requestId);
+  }
   if (!VIEW_ACTIONS.has(action) && !MUTATE_ACTIONS.has(action)) {
     return json({ error: `Invalid action: ${action}`, requestId }, 400, requestId);
   }

@@ -52,7 +52,3 @@ verify_jwt = false
 [functions.youtube-oauth-callback]
 # Receives Google's OAuth redirect; authorizes via state/PKCE, not a CRM session.
 verify_jwt = false
-
-[functions.video-series-dispatcher]
-# Scheduled Schedule Series worker; authorizes X-Cron-Secret or the service-role bearer in code.
-verify_jwt = false
