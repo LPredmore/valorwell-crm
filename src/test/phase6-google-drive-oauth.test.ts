@@ -16,9 +16,10 @@ describe('relationship Google Drive OAuth reconnect contract', () => {
     expect(page).toContain("'Connect Drive'");
   });
 
-  it('requests only the read-only Drive scope while preserving Gmail and Calendar scopes', () => {
+  it('requests writable Drive scope while preserving read-only Gmail and Calendar scopes', () => {
     const start = source('supabase/functions/relationship-google-oauth-start/index.ts');
-    expect(start).toContain('https://www.googleapis.com/auth/drive.readonly');
+    expect(start).toContain('https://www.googleapis.com/auth/drive');
+    expect(start).not.toContain('https://www.googleapis.com/auth/drive.readonly');
     expect(start).toContain('https://www.googleapis.com/auth/gmail.readonly');
     expect(start).toContain('https://www.googleapis.com/auth/calendar.events.readonly');
     expect(start).toContain('input.connectionType !== "drive"');
@@ -29,7 +30,9 @@ describe('relationship Google Drive OAuth reconnect contract', () => {
   it('stores Drive through the existing connection RPC and redirects every connection back to the CRM', () => {
     const callback = source('supabase/functions/relationship-google-oauth-callback/index.ts');
     expect(callback).toContain('connectionType === "drive"');
-    expect(callback).toContain('https://www.googleapis.com/auth/drive.readonly');
+    expect(callback).toContain('https://www.googleapis.com/auth/drive');
+    expect(callback).toContain('verifyDriveWriteAccess');
+    expect(callback).toContain('requeueDriveScopeThumbnailJobs');
     expect(callback).toContain('store_relationship_google_connection');
     expect(callback).toContain('new URL("/crm/business-development/orchestration", appUrl)');
     expect(callback).not.toContain('You can close this window');
