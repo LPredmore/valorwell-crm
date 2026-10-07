@@ -6,6 +6,7 @@ export const VIEW_ACTIONS: ReadonlySet<string> = new Set([
   "bootstrap", "list_library", "list_publications", "get_publication",
   "list_publication_events", "get_settings", "get_youtube_connection_status",
   "get_thumbnail_url", "validate_publication",
+  "list_series_schedules", "get_series_schedule", "get_series_readiness",
 ]);
 
 /** Mutation actions: require capabilities.mutate (crm_admin/crm_operator today). */
@@ -14,6 +15,7 @@ export const MUTATE_ACTIONS: ReadonlySet<string> = new Set([
   "set_publication_playlists", "queue_publish", "reschedule_publication",
   "cancel_publication", "retry_publication", "replace_thumbnail", "mark_thumbnail_manual_done",
   "verify_youtube_connection", "preview_bulk_schedule", "bulk_schedule",
+  "assign_series_schedule", "change_series_schedule", "remove_series_schedule",
 ]);
 
 /** Rejects unknown actions and mutations by callers without the mutate capability. */

@@ -262,6 +262,9 @@ export type SeriesStore = {
   updateItem: (id: string, patch: Record<string, unknown>) => Promise<void>;
 };
 
+export const sameInstant = (a: string | null, b: string | null) =>
+  Boolean(a && b) && Date.parse(String(a)) === Date.parse(String(b));
+
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error)).slice(0, 500);
 
 /** Creates/reuses, validates and approves one item's publication. Idempotent across crashes. */
@@ -284,13 +287,23 @@ async function prepareItem(item: SeriesItemRow, ops: SeriesOps, store: SeriesSto
     return;
   }
   if (current.status === "failed" || current.status === "cancelled") throw new Error(`Publication is ${current.status}.`);
-  if (current.scheduledFor !== item.scheduled_for || current.status === "draft" || current.status === "ready") {
-    if (current.scheduledFor !== item.scheduled_for) await ops.reschedule(publicationId, String(item.scheduled_for));
+  const sameTime = sameInstant(current.scheduledFor, item.scheduled_for);
+  if (!sameTime || current.status === "draft" || current.status === "ready") {
+    if (!sameTime) await ops.reschedule(publicationId, String(item.scheduled_for));
     const validation = await ops.validate(publicationId);
     if (!validation.ok) throw new Error(validation.errors.join(" "));
     await ops.approve(publicationId);
   }
   await store.updateItem(item.id, { status: "prepared", last_error: null });
+}
+
+function manifestRows(row: SeriesScheduleRow, plan: SeriesPlan) {
+  return plan.items.map((item) => ({
+    schedule_id: row.id, tenant_id: row.tenant_id, source_type: item.sourceType, source_id: item.sourceId,
+    content_format: item.contentFormat, part_number: item.partNumber, sequence: item.sequence, title: item.title || null,
+    scheduled_for: item.scheduledFor, local_date: item.localDate, local_time: item.localTime, publication_id: item.publicationId,
+    status: item.kind === "already_published" ? "already_published" : item.kind === "adopt" ? "queued" : "planned",
+  }));
 }
 
 export async function processSeriesSchedule(row: SeriesScheduleRow, leaseId: string, ops: SeriesOps, store: SeriesStore, nowMs = Date.now()) {
@@ -322,16 +335,21 @@ export async function processSeriesSchedule(row: SeriesScheduleRow, leaseId: str
       { status: "dispatching", dispatch_started_at: at(nowMs), blocked_reasons: [], last_error: null, last_error_code: null },
       { project_id: row.project_id, dispatch_started_at: null });
     if (!started) return release({});
-    await store.insertItems(plan.items.map((item) => ({
-      schedule_id: row.id, tenant_id: row.tenant_id, source_type: item.sourceType, source_id: item.sourceId,
-      content_format: item.contentFormat, part_number: item.partNumber, sequence: item.sequence, title: item.title || null,
-      scheduled_for: item.scheduledFor, local_date: item.localDate, local_time: item.localTime, publication_id: item.publicationId,
-      status: item.kind === "already_published" ? "already_published" : item.kind === "adopt" ? "queued" : "planned",
-    })));
+    await store.insertItems(manifestRows(row, plan));
     row = { ...row, status: "dispatching", dispatch_started_at: at(nowMs) };
   }
 
-  const items = await store.loadItems(row.id);
+  let items = await store.loadItems(row.id);
+  if (row.status === "dispatching" && items.length === 0) {
+    // A previous run crashed between freezing the week and writing its manifest: rebuild it.
+    const plan = await ops.plan(row, nowMs).catch(() => null);
+    if (!plan?.ok) {
+      return release({ status: "failed", unrecoverable: false, last_error_code: "MANIFEST_REBUILD_FAILED",
+        last_error: plan?.blockers[0] ?? "Could not rebuild the series manifest.", next_attempt_at: null });
+    }
+    await store.insertItems(manifestRows(row, plan));
+    items = await store.loadItems(row.id);
+  }
 
   // 2) Preparation (create/reuse -> validate -> approve) in bounded chunks; nothing is queued
   //    until every item is prepared, so a bad item blocks the whole series before upload.

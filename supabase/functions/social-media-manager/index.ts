@@ -8,6 +8,9 @@ import {
 } from "./handlers/publications.ts";
 import { getSettings } from "./handlers/settings.ts";
 import { bulkSchedulePublications, previewBulkSchedule } from "./handlers/bulk-scheduling.ts";
+import {
+  assignSeriesSchedule, changeSeriesSchedule, getSeriesReadiness, getSeriesSchedule, listSeriesSchedules, removeSeriesSchedule,
+} from "./handlers/series.ts";
 import { getThumbnailUrl } from "./handlers/thumbnails.ts";
 import { replaceLibraryThumbnail } from "./handlers/thumbnail-edit.ts";
 import { getYoutubeConnectionStatus, verifyYoutubeConnection } from "./handlers/youtube.ts";
@@ -104,6 +107,18 @@ async function dispatch(auth: AuthContext, action: string, params: Record<string
       return previewBulkSchedule(auth, params as never);
     case "bulk_schedule":
       return bulkSchedulePublications(auth, params as never);
+    case "list_series_schedules":
+      return listSeriesSchedules(auth, params);
+    case "get_series_schedule":
+      return getSeriesSchedule(auth, params as { id: string });
+    case "get_series_readiness":
+      return getSeriesReadiness(auth, params as { projectId: string; weekStart: string });
+    case "assign_series_schedule":
+      return assignSeriesSchedule(auth, params);
+    case "change_series_schedule":
+      return changeSeriesSchedule(auth, params as { id: string; projectId?: unknown });
+    case "remove_series_schedule":
+      return removeSeriesSchedule(auth, params as { id: string });
     default:
       throw new Error(`Unknown action: ${action}`);
   }
