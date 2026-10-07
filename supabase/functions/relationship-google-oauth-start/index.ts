@@ -11,7 +11,7 @@ import {
 const scopes = {
   gmail: ["openid", "email", "https://www.googleapis.com/auth/gmail.readonly"],
   calendar: ["openid", "email", "https://www.googleapis.com/auth/calendar.events.readonly"],
-  drive: ["openid", "email", "https://www.googleapis.com/auth/drive.readonly"],
+  drive: ["openid", "email", "https://www.googleapis.com/auth/drive"],
 } as const;
 
 const corsHeaders = {
