@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useStaffList, useTasks, useTaskMutations } from '@/hooks/canonical/useCrmData';
 import { resolveStaffOperatorLabel } from '@/domain/staffIdentity';
 import type { ListTasksQuery } from '@/repositories/types';
+import { isTaskView } from '@/domain/taskViews';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -33,7 +34,8 @@ const priorityColor: Record<string, string> = {
 
 export default function CanonicalTasks() {
   const [params, setParams] = useSearchParams();
-  const view = (params.get('view') as ListTasksQuery['view']) ?? 'overdue';
+  const requestedView = params.get('view');
+  const view: NonNullable<ListTasksQuery['view']> = isTaskView(requestedView) ? requestedView : 'overdue';
   const { data, isLoading } = useTasks({ view });
   const { data: staff = [] } = useStaffList();
   const mut = useTaskMutations();
