@@ -339,16 +339,7 @@ export const supabaseCampaignsRepository: CampaignsRepository = {
       throw new Error('One or more clients do not belong to the current operating tenant');
     }
     // Untyped RPC call (types.ts regenerates post-migration).
-    const { data: enrollment, error: enrollmentError } = await supabase
-    .from('crm_campaign_enrollments')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .eq('id', enrollmentId)
-    .maybeSingle();
-  if (enrollmentError) throw new Error(enrollmentError.message);
-  if (!enrollment) throw new Error('Enrollment not found in current operating tenant');
-
-  const rpc = (supabase as unknown as {
+    const rpc = (supabase as unknown as {
       rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
     }).rpc;
     const { data, error } = await rpc('crm_enroll_clients_in_campaign', {
@@ -399,6 +390,16 @@ async function enrollmentActionRpc(
   if (!reason || reason.trim().length < 3) {
     throw new Error('A reason (min 3 chars) is required for enrollment state changes.');
   }
+
+  const { data: enrollment, error: enrollmentError } = await supabase
+    .from('crm_campaign_enrollments')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('id', enrollmentId)
+    .maybeSingle();
+  if (enrollmentError) throw new Error(enrollmentError.message);
+  if (!enrollment) throw new Error('Enrollment not found in current operating tenant');
+
   const rpc = (supabase as unknown as {
     rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
   }).rpc;
