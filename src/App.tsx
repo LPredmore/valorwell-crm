@@ -103,7 +103,8 @@ const App = () => (
             <Route path="business-development/status" element={<BusinessDevelopmentArchitecture />} />
             <Route path="business-development/orchestration" element={<RelationshipOrchestrationPage />} />
             <Route path="business-development/orchestration/reconciliation" element={<RelationshipReconciliationPage />} />
-            <Route path="business-development/automation" element={<BtyAutomationPage />} />
+            <Route path="business-development/automation" element={<Navigate replace to="/crm/business-development/duplicate-cleanup" />} />
+            <Route path="business-development/duplicate-cleanup" element={<BtyAutomationPage />} />
             <Route path="communications-control-plane" element={<CommunicationsControlPlanePage />} />
 
             <Route path="business-development/search" element={<RelationshipSearchPage />} />
