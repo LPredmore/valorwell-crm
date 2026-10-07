@@ -168,7 +168,7 @@ export default function CanonicalReports() {
                 <thead><tr><th className={th}>Campaign</th><th className={numberTh}>Enrolled</th><th className={numberTh}>Completed</th><th className={numberTh}>Cancelled</th><th className={numberTh}>Responded</th><th className={numberTh}>Suppressed</th><th className={numberTh}>Failed</th></tr></thead>
                 <tbody>{rows.map((row, index) => (
                   <tr key={`${row.campaign_id ?? 'unknown'}-${index}`}>
-                    <td className={`${td} font-mono text-xs`}>{row.campaign_id ?? 'Unknown campaign'}</td>
+                    <td className={td}>{row.campaignName}</td>
                     <td className={numberTd}>{row.enrolled_count}</td>
                     <td className={numberTd}>{row.completed_count}</td>
                     <td className={numberTd}>{row.cancelled_count}</td>
@@ -193,7 +193,7 @@ export default function CanonicalReports() {
                 <thead><tr><th className={th}>Assignee</th><th className={numberTh}>Open</th><th className={numberTh}>Completed</th><th className={numberTh}>Overdue</th><th className={numberTh}>Median completion hours</th></tr></thead>
                 <tbody>{rows.map((row, index) => (
                   <tr key={`${row.assignee_id ?? 'unassigned'}-${index}`}>
-                    <td className={`${td} font-mono text-xs`}>{row.assignee_id ?? 'Unassigned'}</td>
+                    <td className={td}>{row.assigneeName}</td>
                     <td className={numberTd}>{row.open_count}</td>
                     <td className={numberTd}>{row.completed_count}</td>
                     <td className={numberTd}>{row.overdue_count}</td>
