@@ -79,7 +79,7 @@ export async function sha256Hex(value: string) {
 export type GoogleRuntime = {
   id: string;
   tenantId: string;
-  connectionType: "gmail" | "calendar";
+  connectionType: "gmail" | "calendar" | "drive";
   googleAccountEmail: string;
   googleAccountId?: string;
   calendarId?: string;
@@ -89,7 +89,7 @@ export type GoogleRuntime = {
 
 export async function connectionRuntime(
   admin: SupabaseClient,
-  connectionType: "gmail" | "calendar",
+  connectionType: "gmail" | "calendar" | "drive",
   connectionId?: string,
 ): Promise<GoogleRuntime | null> {
   const { data, error } = await admin.rpc("get_relationship_google_connection_runtime", {
