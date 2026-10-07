@@ -225,32 +225,8 @@ export type AudienceCampaign = {
   updatedAt: string | null;
 };
 
-export type NewsletterSummary = {
-  id: string;
-  name: string;
-  subject: string | null;
-  status: string;
-  audienceDomains: string[];
-  scheduledAt: string | null;
-  queued: number;
-  processing: number;
-  sent: number;
-  failed: number;
-  suppressed: number;
-  updatedAt: string | null;
-};
-
-export type NewsletterOverview = {
-  newsletters: NewsletterSummary[];
-  suppressedMailboxes: number;
-};
-
 export function listAudienceCampaigns() {
   return rpc<AudienceCampaign[]>('crm_list_audience_campaigns');
-}
-
-export function listNewsletters() {
-  return rpc<NewsletterOverview>('crm_list_newsletters');
 }
 
 export function upsertAudienceCampaign(input: {
@@ -279,152 +255,6 @@ export function enrollPeopleInAudienceCampaign(input: {
   return rpc<Record<string, unknown>>('crm_enroll_people_in_audience_campaign', {
     p_campaign_id: input.campaignId,
     p_person_ids: input.personIds,
-    p_reason: input.reason,
-  });
-}
-
-export function suppressNewsletterMailbox(input: { email: string; reason: string; source?: string }) {
-  return rpc<Record<string, unknown>>('crm_suppress_newsletter_mailbox', {
-    p_email: input.email,
-    p_reason: input.reason,
-    p_source: input.source ?? 'operator',
-  });
-}
-
-export function buildNewsletterRecipients(input: { newsletterId: string; reason: string }) {
-  return rpc<Record<string, unknown>>('crm_build_newsletter_recipients', {
-    p_newsletter_id: input.newsletterId,
-    p_reason: input.reason,
-  });
-}
-
-export function scheduleNewsletter(input: { newsletterId: string; scheduledAt?: string | null; reason: string }) {
-  return rpc<{ newsletterId: string; status: string; scheduledAt: string; pendingRecipients: number }>(
-    'crm_schedule_newsletter',
-    {
-      p_newsletter_id: input.newsletterId,
-      p_scheduled_at: input.scheduledAt ?? null,
-      p_reason: input.reason,
-    },
-  );
-}
-
-export function cancelNewsletterSend(input: { newsletterId: string; reason: string }) {
-  return rpc<{ newsletterId: string; status: string; stoodDownRecipients: number }>(
-    'crm_cancel_newsletter_send',
-    { p_newsletter_id: input.newsletterId, p_reason: input.reason },
-  );
-}
-
-
-
-export type NewsletterTraceRecipient = {
-  recipientId: string;
-  deliveryEmail: string;
-  mailboxKey: string;
-  personId: string | null;
-  qualifyingAudiences: string[];
-  sourceMemberships: Array<{ domain: string; recordId: string | null; personId: string | null; email: string }>;
-  recipientStatus: string;
-  suppressionReason: string | null;
-  attemptCount: number;
-  errorCode: string | null;
-  emailMessageId: string | null;
-  ledgerStatus: string | null;
-  providerMessageId: string | null;
-  sentAt: string | null;
-  deliveredAt: string | null;
-  failedAt: string | null;
-  errorMessage: string | null;
-};
-
-export type NewsletterDeliveryTrace = {
-  newsletterId: string;
-  summary: Array<{ status: string; count: number }>;
-  recipients: NewsletterTraceRecipient[];
-};
-
-export function getNewsletterDeliveryTrace(newsletterId: string, limit = 200) {
-  return rpc<NewsletterDeliveryTrace>('crm_newsletter_delivery_trace', {
-    p_newsletter_id: newsletterId,
-    p_limit: limit,
-  });
-}
-
-export const NEWSLETTER_AUDIENCE_DOMAINS = [
-  'client',
-  'staff',
-  'donor',
-  'relationship',
-  'bty',
-  'provider_applicant',
-] as const;
-
-export type NewsletterAudienceDomain = (typeof NEWSLETTER_AUDIENCE_DOMAINS)[number];
-
-export const NEWSLETTER_AUDIENCE_LABELS: Record<string, string> = {
-  client: 'Clients',
-  staff: 'Staff',
-  donor: 'Donors',
-  relationship: 'Relationship contacts',
-  bty: 'Beyond The Yellow contacts',
-  provider_applicant: 'Provider applicants',
-};
-
-export type NewsletterDetail = {
-  id: string;
-  name: string;
-  subject: string | null;
-  preheader: string | null;
-  bodyHtml: string | null;
-  bodyText: string | null;
-  audienceDomains: string[];
-  status: string;
-  scheduledAt: string | null;
-  startedAt: string | null;
-  completedAt: string | null;
-  updatedAt: string | null;
-  recipientCounts: Record<string, number>;
-};
-
-export type NewsletterAudiencePreview = {
-  uniqueMailboxes: number;
-  suppressedMailboxes: number;
-  deliverableMailboxes: number;
-  overlapMailboxes: number;
-  byDomain: Record<string, number>;
-  sample: Array<{ email: string; audiences: string[]; suppressed: boolean }>;
-};
-
-export function getNewsletter(newsletterId: string) {
-  return rpc<NewsletterDetail>('crm_get_newsletter', { p_newsletter_id: newsletterId });
-}
-
-export function previewNewsletterAudience(audienceDomains: string[], sampleLimit = 10) {
-  return rpc<NewsletterAudiencePreview>('crm_newsletter_audience_preview', {
-    p_audience_domains: audienceDomains,
-    p_sample_limit: sampleLimit,
-  });
-}
-
-export function upsertNewsletter(input: {
-  newsletterId?: string | null;
-  name: string;
-  subject?: string | null;
-  preheader?: string | null;
-  bodyHtml?: string | null;
-  bodyText?: string | null;
-  audienceDomains: string[];
-  reason: string;
-}) {
-  return rpc<{ newsletterId: string; created: boolean }>('crm_upsert_newsletter', {
-    p_newsletter_id: input.newsletterId ?? null,
-    p_name: input.name,
-    p_subject: input.subject ?? null,
-    p_preheader: input.preheader ?? null,
-    p_body_html: input.bodyHtml ?? null,
-    p_body_text: input.bodyText ?? null,
-    p_audience_domains: input.audienceDomains,
     p_reason: input.reason,
   });
 }
@@ -458,5 +288,38 @@ export type CommunicationsObservability = {
 export function getCommunicationsObservability(windowDays = 7) {
   return rpc<CommunicationsObservability>('crm_communications_observability', {
     p_window_days: windowDays,
+  });
+}
+
+/**
+ * Newsletter lifecycle operations have exactly one client implementation.
+ * Re-exported so every page (including this control plane) shares the same
+ * validation and backend contract.
+ */
+export {
+  NEWSLETTER_AUDIENCE_DOMAINS,
+  NEWSLETTER_AUDIENCE_LABELS,
+  listNewsletters,
+  getNewsletter,
+  previewNewsletterAudience,
+  scheduleNewsletter,
+  cancelNewsletterSend,
+  suppressNewsletterMailbox,
+  getNewsletterDeliveryTrace,
+} from './newsletter-control-plane';
+export type {
+  NewsletterAudienceDomain,
+  NewsletterSummary,
+  NewsletterOverview,
+  NewsletterDetail,
+  NewsletterAudiencePreview,
+  NewsletterTraceRecipient,
+  NewsletterDeliveryTrace,
+} from './newsletter-control-plane';
+
+export function buildNewsletterRecipients(input: { newsletterId: string; reason: string }) {
+  return rpc<Record<string, unknown>>('crm_build_newsletter_recipients', {
+    p_newsletter_id: input.newsletterId,
+    p_reason: input.reason,
   });
 }

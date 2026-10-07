@@ -59,7 +59,7 @@ const emptyComposer: ComposerState = {
 function statusVariant(status: string) {
   if (status === 'sending') return 'default' as const;
   if (status === 'completed') return 'secondary' as const;
-  if (status === 'cancelled') return 'destructive' as const;
+  if (status === 'cancelled' || status === 'failed') return 'destructive' as const;
   return 'outline' as const;
 }
 
@@ -168,7 +168,13 @@ export default function NewsletterManagementPage() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('crm_newsletter_worker_status');
       if (error) throw error;
-      return data as { lastRunAt: string | null; lastRunStatus: string | null; dueNow: number };
+      return data as {
+        lastRunAt: string | null;
+        lastRunStatus: string | null;
+        dueNow: number;
+        stuckSending?: number;
+        failed?: number;
+      };
     },
     refetchInterval: 60_000,
   });
@@ -444,7 +450,13 @@ export default function NewsletterManagementPage() {
               {workerStatus.data.lastRunAt
                 ? `last ran ${new Date(workerStatus.data.lastRunAt).toLocaleString()} (${workerStatus.data.lastRunStatus ?? 'unknown'})`
                 : 'has not run yet'}
-              {workerStatus.data.dueNow > 0 ? ` — ${workerStatus.data.dueNow} newsletter(s) due now` : ''}.
+              {workerStatus.data.dueNow > 0 ? ` — ${workerStatus.data.dueNow} newsletter(s) due now` : ''}
+              {(workerStatus.data.stuckSending ?? 0) > 0 ? ` — ${workerStatus.data.stuckSending} stuck at sending` : ''}.
+            </p>
+          )}
+          {workerStatus.isError && (
+            <p className="text-xs text-destructive">
+              Send worker status is unavailable: {(workerStatus.error as Error).message}
             </p>
           )}
         </CardHeader>
@@ -467,6 +479,9 @@ export default function NewsletterManagementPage() {
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="font-medium">{letter.name}</span>
                   <Badge variant={statusVariant(letter.status)}>{letter.status}</Badge>
+                  {letter.status === 'failed' && letter.failureMessage && (
+                    <span className="text-xs text-destructive">{letter.failureMessage}</span>
+                  )}
                   {letter.canonical && <Badge variant="secondary">Email Studio</Badge>}
                   {letter.audienceDomains.map((domain) => (
                     <Badge key={domain} variant="outline">{NEWSLETTER_AUDIENCE_LABELS[domain] ?? domain}</Badge>

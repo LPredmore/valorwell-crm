@@ -32,6 +32,9 @@ export type NewsletterSummary = {
   suppressed: number;
   skipped: number;
   updatedAt: string | null;
+  failedAt?: string | null;
+  failureCode?: string | null;
+  failureMessage?: string | null;
 };
 
 export type NewsletterOverview = {
@@ -57,6 +60,9 @@ export type NewsletterDetail = {
   scheduledAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  failedAt?: string | null;
+  failureCode?: string | null;
+  failureMessage?: string | null;
   updatedAt: string | null;
   recipientCounts: Record<string, number>;
 };
