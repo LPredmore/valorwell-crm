@@ -5,6 +5,10 @@ import {
   assertNewsletterTemplatesSchedulable,
 } from '@/lib/crm/newsletter-control-plane';
 import {
+  renderEmailTemplate,
+  validateEmailTemplateVariables,
+} from '@/features/email-studio/contracts';
+import {
   renderNewsletterDelivery,
   validateNewsletterTemplateContract,
 } from '../../supabase/functions/newsletter-send-worker/rendering';
@@ -155,6 +159,125 @@ describe('Phase 2 newsletter rendering contract', () => {
       bodyHtml: '<p>Body</p>',
       bodyText: 'Body',
     })).toThrow('Newsletter contains invalid personalization variables');
+  });
+
+  it('accepts supported whitespace variants while rejecting malformed template-like syntax', () => {
+    const rendered = renderNewsletterDelivery({
+      template: {
+        subject: 'Hello {{   newsletter_greeting_name   }}',
+        html: '<p>{{ greeting_name }}</p>',
+        text: '{{ first_name }}',
+        preheader: '{{ preferred_name }}',
+      },
+      greetingName: 'Alex',
+      senderName: 'ValorWell',
+      unsubscribeUrl: 'https://example.org/unsubscribe',
+      postalAddress: 'Kansas City, MO',
+    });
+
+    expect(rendered.subject).toBe('Hello Alex');
+    expect(rendered.preheader).toBe('Alex');
+
+    for (const malformed of ['{{bad-token}}', '{{bad.token}}', '{{newsletter greeting_name}}']) {
+      expect(() => validateNewsletterTemplateContract({
+        subject: `Hello ${malformed}`,
+        html: '<p>Body</p>',
+        text: 'Body',
+        preheader: null,
+      })).toThrow('MALFORMED_NEWSLETTER_TEMPLATE_EXPRESSION');
+
+      const browserValidation = validateEmailTemplateVariables(
+        `Hello ${malformed}`,
+        'marketing_newsletter',
+      );
+      expect(browserValidation.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          code: 'malformed_template_expression',
+          severity: 'error',
+        }),
+      ]));
+    }
+
+    expect(validateEmailTemplateVariables(
+      'Use {braces} literally without creating a template expression.',
+      'marketing_newsletter',
+    ).issues.filter((issue) => issue.severity === 'error')).toHaveLength(0);
+  });
+
+  it('protects subject, preheader, HTML, and text from malformed expressions before scheduling or sending', () => {
+    const workerTemplates = [
+      { subject: '{{bad-token}}', preheader: null, html: '<p>Body</p>', text: 'Body' },
+      { subject: 'Hello', preheader: '{{bad.token}}', html: '<p>Body</p>', text: 'Body' },
+      { subject: 'Hello', preheader: null, html: '<p>{{bad-token}}</p>', text: 'Body' },
+      { subject: 'Hello', preheader: null, html: '<p>Body</p>', text: '{{bad.token}}' },
+    ];
+
+    for (const template of workerTemplates) {
+      expect(() => validateNewsletterTemplateContract(template))
+        .toThrow('MALFORMED_NEWSLETTER_TEMPLATE_EXPRESSION');
+    }
+
+    const schedulableBase = {
+      subject: 'Hello',
+      preheader: 'Preview',
+      bodyHtml: '<p>Body</p>',
+      bodyText: 'Body',
+    };
+    for (const override of [
+      { subject: '{{bad-token}}' },
+      { preheader: '{{bad.token}}' },
+      { bodyHtml: '<p>{{bad-token}}</p>' },
+      { bodyText: '{{bad.token}}' },
+    ]) {
+      expect(() => assertNewsletterTemplatesSchedulable({
+        ...schedulableBase,
+        ...override,
+      })).toThrow('Newsletter contains invalid personalization variables');
+    }
+  });
+
+  it('keeps unknown and disallowed identifiers distinct from malformed syntax', () => {
+    expect(() => validateNewsletterTemplateContract({
+      subject: 'Hello {{does_not_exist}}',
+      html: '<p>Body</p>',
+      text: 'Body',
+      preheader: null,
+    })).toThrow('UNKNOWN_NEWSLETTER_VARIABLE:does_not_exist');
+
+    expect(() => validateNewsletterTemplateContract({
+      subject: 'Hello {{last_name}}',
+      html: '<p>Body</p>',
+      text: 'Body',
+      preheader: null,
+    })).toThrow('DISALLOWED_NEWSLETTER_VARIABLE:last_name');
+  });
+
+  it('fails closed if rendering or supplied values leave any template expression unresolved', () => {
+    const browserRendered = renderEmailTemplate(
+      'Hello {{newsletter_greeting_name}} {{bad-token}}',
+      'marketing_newsletter',
+      { newsletter_greeting_name: 'Alex' },
+      'text',
+    );
+    expect(browserRendered.validation.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'unresolved_template_expression',
+        severity: 'error',
+      }),
+    ]));
+
+    expect(() => renderNewsletterDelivery({
+      template: {
+        subject: 'Hello {{newsletter_greeting_name}}',
+        html: '<p>Hello</p>',
+        text: 'Hello',
+        preheader: null,
+      },
+      greetingName: '{{bad-token}}',
+      senderName: 'ValorWell',
+      unsubscribeUrl: 'https://example.org/unsubscribe',
+      postalAddress: 'Kansas City, MO',
+    })).toThrow('UNRESOLVED_NEWSLETTER_TEMPLATE_EXPRESSION:{{bad-token}}');
   });
 
   it('wires preheader and strict validation into the production worker before claims', () => {
