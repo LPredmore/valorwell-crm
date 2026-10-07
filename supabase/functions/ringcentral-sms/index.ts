@@ -3,7 +3,7 @@ import {
   applyRemove,
   checkSuppression,
   isRemoveMessage,
-  type MessageClass,
+  parseIndividualSmsMessageClass,
 } from "../_shared/suppression.ts";
 
 declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
@@ -510,8 +510,10 @@ Deno.serve(async (req) => {
     const clientId = typeof body.clientId === "string" ? body.clientId : null;
     const text = typeof body.body === "string" ? body.body.trim() : "";
     if (!clientId || !text) return json({ error: "clientId and body required" }, 400);
-    const messageClass = (body.messageClass as MessageClass | undefined) ??
-      "necessary_scheduling";
+    const messageClass = parseIndividualSmsMessageClass(body.messageClass);
+    if (!messageClass) {
+      return json({ error: "Invalid messageClass" }, 400);
+    }
 
     const { data: client, error: clientErr } = await db
       .from("clients")
