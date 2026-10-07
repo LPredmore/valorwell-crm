@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { resolveStaffOperatorLabel } from '@/domain/staffIdentity';
 
 const sevColor: Record<string, string> = {
   Low: 'bg-slate-100 text-slate-700',
@@ -18,7 +19,7 @@ export default function CanonicalExceptions() {
   const staff = useStaffList();
   const mut = useExceptionMutations();
 
-  const staffOptions = staff.data ?? [];
+  const staffOptions = (staff.data ?? []).filter((member) => Boolean(member.profileId));
 
   return (
     <div className="space-y-4 p-6">
@@ -57,10 +58,12 @@ export default function CanonicalExceptions() {
                       >
                         <SelectTrigger className="h-8 w-40"><SelectValue placeholder="Unassigned" /></SelectTrigger>
                         <SelectContent>
-                          {staffOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>)}
+                          {staffOptions.map((s) => (
+                            <SelectItem key={s.profileId} value={s.profileId as string}>{s.displayName}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                    ) : (staffOptions.find(s => s.id === e.ownerId)?.displayName ?? '—')}
+                    ) : resolveStaffOperatorLabel(staffOptions, e.ownerId)}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{new Date(e.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right space-x-2">
