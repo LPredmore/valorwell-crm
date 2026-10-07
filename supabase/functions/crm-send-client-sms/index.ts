@@ -8,6 +8,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   checkSuppression,
+  parseIndividualSmsMessageClass,
   type MessageClass,
 } from "../_shared/suppression.ts";
 
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
     | {
       clientId?: string;
       body?: string;
-      messageClass?: MessageClass;
+      messageClass?: unknown;
       campaignId?: string | null;
       correlationId?: string | null;
     }
@@ -144,7 +145,10 @@ Deno.serve(async (req) => {
   if (!clientId || !text) {
     return json({ error: "clientId and body required" }, 400);
   }
-  const messageClass: MessageClass = body?.messageClass ?? "necessary_scheduling";
+  const messageClass = parseIndividualSmsMessageClass(body?.messageClass);
+  if (!messageClass) {
+    return json({ error: "Invalid messageClass" }, 400);
+  }
 
   const db = createClient(supabaseUrl, serviceRoleKey);
 
