@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,7 @@ import { getRelationshipIntegrity, setFeatureFlag, startGoogleConnection } from 
 
 export default function RelationshipOrchestrationPage() {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const integrity = useQuery({ queryKey: ['relationship-orchestration-integrity'], queryFn: getRelationshipIntegrity, retry: false });
   const connect = useMutation({ mutationFn: startGoogleConnection });
   const [reason, setReason] = useState('');
@@ -29,16 +30,70 @@ export default function RelationshipOrchestrationPage() {
   const data = integrity.data;
   const flags = data?.flags ?? {};
   const invariants = data?.invariants ?? {};
+  const activeConnections = new Set(
+    (data?.connections ?? [])
+      .filter((connection) => connection.status === 'active')
+      .map((connection) => connection.connectionType),
+  );
+  const googleStatus = searchParams.get('google');
+  const googleConnection = searchParams.get('connection');
+  const googleReason = searchParams.get('reason');
 
   return <div className="space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-3xl font-bold">BTY orchestration</h1><p className="mt-2 text-muted-foreground">Google connections, staged activation, integrity invariants, and reconciliation issues.</p></div><div className="flex gap-2"><Button asChild variant="outline"><Link to="/crm/business-development/orchestration/reconciliation">Legacy reconciliation</Link></Button><Button asChild variant="outline"><Link to="/crm/business-development">Back</Link></Button></div></div>
 
-    <Card><CardHeader><CardTitle>Google connections</CardTitle><CardDescription>Gmail is restricted to info@valorwell.org. Calendar is read-only and observes BTY recording events. Watch renewal runs daily at 08:23 UTC and reconciliation hourly at :17.</CardDescription></CardHeader><CardContent className="space-y-4">
-      <div className="flex flex-wrap gap-2"><Button disabled={connect.isPending} onClick={() => connect.mutate('gmail')}>Connect Gmail</Button><Button disabled={connect.isPending} variant="outline" onClick={() => connect.mutate('calendar')}>Connect Calendar</Button></div>
-      {connect.isError && <p className="text-sm text-destructive">{connect.error instanceof Error ? connect.error.message : 'Google connection could not start.'}</p>}
-      {data?.connections.length === 0 && <p className="text-sm text-muted-foreground">No Google relationship connections are active.</p>}
-      {data?.connections.map((connection) => <div className="rounded-md border p-4" key={connection.id}><div className="flex flex-wrap items-center gap-2"><Badge>{connection.connectionType}</Badge><Badge variant="outline">{connection.status}</Badge><span className="text-sm">{connection.googleAccountEmail}</span></div><p className="mt-2 text-xs text-muted-foreground">Last sync: {formatDate(connection.lastSuccessfulSyncAt)} · Watch expires: {formatDate(connection.watchExpiration)} · Last full reconciliation: {formatDate(connection.lastFullReconciliationAt)}</p>{connection.lastErrorReason && <p className="mt-2 text-sm text-destructive">{connection.lastErrorCode}: {connection.lastErrorReason}</p>}</div>)}
-    </CardContent></Card>
+    <Card>
+      <CardHeader>
+        <CardTitle>Google connections</CardTitle>
+        <CardDescription>
+          Gmail and Drive are restricted to info@valorwell.org. Gmail and Calendar remain read-only observation integrations; Drive uses the minimum drive.readonly scope and is not included in Gmail/Calendar maintenance polling.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={connect.isPending} onClick={() => connect.mutate('gmail')}>
+            {activeConnections.has('gmail') ? 'Reconnect Gmail' : 'Connect Gmail'}
+          </Button>
+          <Button disabled={connect.isPending} variant="outline" onClick={() => connect.mutate('calendar')}>
+            {activeConnections.has('calendar') ? 'Reconnect Calendar' : 'Connect Calendar'}
+          </Button>
+          <Button disabled={connect.isPending} variant="outline" onClick={() => connect.mutate('drive')}>
+            {activeConnections.has('drive') ? 'Reconnect Drive' : 'Connect Drive'}
+          </Button>
+        </div>
+        {googleStatus === 'connected' && googleConnection && (
+          <p className="text-sm text-emerald-700">
+            Google {formatConnectionType(googleConnection)} connected successfully.
+          </p>
+        )}
+        {googleStatus === 'error' && (
+          <p className="text-sm text-destructive">
+            Google {formatConnectionType(googleConnection)} connection failed{googleReason ? `: ${googleReason}` : '.'}
+          </p>
+        )}
+        {connect.isError && <p className="text-sm text-destructive">{connect.error instanceof Error ? connect.error.message : 'Google connection could not start.'}</p>}
+        {data?.connections.length === 0 && <p className="text-sm text-muted-foreground">No Google relationship connections are active.</p>}
+        {data?.connections.map((connection) => (
+          <div className="rounded-md border p-4" key={connection.id}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge>{formatConnectionType(connection.connectionType)}</Badge>
+              <Badge variant="outline">{connection.status}</Badge>
+              <span className="text-sm">{connection.googleAccountEmail}</span>
+            </div>
+            {connection.connectionType === 'drive' ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Last verified: {formatDate(connection.lastVerifiedAt)} · Scope: {connection.scopes.includes('https://www.googleapis.com/auth/drive.readonly') ? 'Drive read-only' : connection.scopes.join(', ') || 'Not recorded'}
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Last sync: {formatDate(connection.lastSuccessfulSyncAt)} · Watch expires: {formatDate(connection.watchExpiration)} · Last full reconciliation: {formatDate(connection.lastFullReconciliationAt)}
+              </p>
+            )}
+            {connection.lastErrorReason && <p className="mt-2 text-sm text-destructive">{connection.lastErrorCode}: {connection.lastErrorReason}</p>}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
 
     <Card><CardHeader><CardTitle>Staged activation</CardTitle><CardDescription>Capture is deployed first. Enable in order: lifecycle mutation, auto-enrollment, then Gmail and Calendar effects. Every change requires a reason and is written to the activity ledger.</CardDescription></CardHeader><CardContent className="space-y-4">
       <div className="max-w-xl space-y-1"><label className="text-sm font-medium" htmlFor="flag-reason">Reason for the next change</label><Input id="flag-reason" onChange={(event) => setReason(event.target.value)} placeholder="Shadow validation complete; invariants zero" value={reason} /></div>
@@ -76,6 +131,11 @@ function groupIssues(issues: IssueList): Array<[string, IssueList]> {
     groups.set(issue.issueType, [...existing, issue]);
   }
   return [...groups.entries()];
+}
+
+function formatConnectionType(value: string | null) {
+  if (!value) return 'connection';
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function formatDate(value?: string) { return value ? new Date(value).toLocaleString() : 'Not recorded'; }
