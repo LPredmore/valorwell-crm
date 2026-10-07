@@ -201,7 +201,7 @@ describe('supabaseClientsRepository.list query composition', () => {
   });
 
   it('filters before final pagination, reports the final intersection total, and sorts globally', async () => {
-    const result = await supabaseClientsRepository.list({
+    const result = await supabaseClientsRepository.list('t1', {
       lifecycle: ['Scheduled'],
       states: ['WA'],
       search: 'Needle',
@@ -211,6 +211,8 @@ describe('supabaseClientsRepository.list query composition', () => {
       pageSize: 1,
     });
 
+    expect(boundary.calls.canonical).toContainEqual({ column: 'tenant_id', value: 't1' });
+    expect(boundary.calls.clients).toContainEqual({ column: 'tenant_id', value: 't1' });
     expect(boundary.calls.canonical).toContainEqual({ column: 'lifecycle', values: ['Scheduled'] });
     expect(boundary.calls.clients).toContainEqual({ column: 'pat_state', values: ['WA'] });
     expect(boundary.calls.clients.some((call) => call.column === 'or')).toBe(true);
@@ -226,7 +228,7 @@ describe('supabaseClientsRepository.list query composition', () => {
     );
     boundary.clientRows = [];
 
-    await expect(supabaseClientsRepository.list({ page: 1, pageSize: 50 })).resolves.toEqual({
+    await expect(supabaseClientsRepository.list('t1', { page: 1, pageSize: 50 })).resolves.toEqual({
       rows: [],
       total: 0,
       page: 1,
@@ -242,7 +244,7 @@ describe('supabaseClientsRepository.list query composition', () => {
     );
     boundary.clientRows = [];
 
-    await expect(supabaseClientsRepository.list({ page: 1, pageSize: 50 }))
+    await expect(supabaseClientsRepository.list('t1', { page: 1, pageSize: 50 }))
       .rejects.toThrow('canonical client state candidate row limit exceeded (10000)');
   });
 
@@ -253,12 +255,12 @@ describe('supabaseClientsRepository.list query composition', () => {
       (_, index) => client(String(index + 1), 'WA', `Last ${index + 1}`),
     );
 
-    await expect(supabaseClientsRepository.list({ page: 1, pageSize: 50 }))
+    await expect(supabaseClientsRepository.list('t1', { page: 1, pageSize: 50 }))
       .rejects.toThrow('client identity candidate row limit exceeded (10000)');
   });
 
   it('rejects unsupported state values before querying the generated enum column', async () => {
-    await expect(supabaseClientsRepository.list({ states: ['XX'] }))
+    await expect(supabaseClientsRepository.list('t1', { states: ['XX'] }))
       .rejects.toThrow('Unsupported client state filter: XX');
     expect(boundary.calls.clients).toEqual([]);
   });
