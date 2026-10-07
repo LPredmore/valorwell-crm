@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchSocialThumbnailUrl, type SocialMediaLibraryItem } from '@/lib/crm/social-media';
+import {
+  fetchSocialPublicationThumbnailUrl,
+  fetchSocialThumbnailUrl,
+  type SocialMediaLibraryItem,
+} from '@/lib/crm/social-media';
 
 /** Signed URLs live one hour server-side; refetch a little before that so a long-open Library
  * tab never shows an expired image. */
@@ -13,19 +17,27 @@ const SIGNED_URL_REFRESH_MS = 50 * 60 * 1000;
  * per-card failure, renders a blank neutral area -- never a broken-image icon, and never a
  * failure that escapes to the whole page.
  */
+type ThumbnailItem =
+  | Pick<SocialMediaLibraryItem, 'sourceType' | 'sourceId' | 'thumbnailFileId'>
+  | { publicationId: string; thumbnailFileId: string | null };
+
 export function SocialMediaThumbnail({
   item,
   className = 'aspect-video',
 }: {
-  item: Pick<SocialMediaLibraryItem, 'sourceType' | 'sourceId' | 'thumbnailFileId'>;
+  item: ThumbnailItem;
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
 
-  // A replacement cover must not inherit the previous image's error state.
-  useEffect(() => setImageFailed(false), [item.thumbnailFileId]);
+  const sourceKey = 'publicationId' in item
+    ? `publication:${item.publicationId}`
+    : `${item.sourceType}:${item.sourceId}`;
+
+  // A replacement cover or source must not inherit the previous image's error state.
+  useEffect(() => setImageFailed(false), [item.thumbnailFileId, sourceKey]);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -43,8 +55,10 @@ export function SocialMediaThumbnail({
 
   const enabled = visible && Boolean(item.thumbnailFileId);
   const { data } = useQuery({
-    queryKey: ['social-media', 'thumbnail', item.sourceType, item.sourceId, item.thumbnailFileId],
-    queryFn: () => fetchSocialThumbnailUrl(item.sourceType, item.sourceId),
+    queryKey: ['social-media', 'thumbnail', sourceKey, item.thumbnailFileId],
+    queryFn: () => 'publicationId' in item
+      ? fetchSocialPublicationThumbnailUrl(item.publicationId)
+      : fetchSocialThumbnailUrl(item.sourceType, item.sourceId),
     enabled,
     retry: 1,
     staleTime: SIGNED_URL_REFRESH_MS,
