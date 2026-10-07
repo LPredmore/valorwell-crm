@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { RPC, type MutationResult } from '@/lib/crm/contracts';
 import {
   buildCanonicalRpcArgs,
@@ -43,8 +44,19 @@ function useCanonicalRpc<Name extends CanonicalRpcName, TInput extends BaseArgs>
 ) {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { currentTenantId } = useCrmAuth();
   return useMutation({
     mutationFn: async (input: TInput): Promise<MutationResult> => {
+      if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('tenant_id', currentTenantId)
+        .eq('id', input.client_id)
+        .maybeSingle();
+      if (clientError) throw new Error(clientError.message);
+      if (!client) throw new Error('Client not found in current operating tenant');
+
       const token = assertRealToken(input.concurrency_token);
       const args = buildCanonicalRpcArgs(
         buildArgs(input),
