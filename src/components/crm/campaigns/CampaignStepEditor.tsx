@@ -17,7 +17,6 @@ import {
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import type { CampaignStepFormData } from '@/lib/crm/campaign-types';
@@ -28,6 +27,34 @@ import {
   type ClientCampaignEmailStudioHandle,
 } from '@/features/email-studio/campaign';
 import { listPublishedClientCampaignTemplates } from '@/features/email-studio/templates';
+
+type CanonicalCampaignEmailContent = NonNullable<CampaignStepFormData['email_content']>;
+
+export function applyCanonicalCampaignEmailContent(
+  step: CampaignStepFormData,
+  emailContent: CanonicalCampaignEmailContent,
+): CampaignStepFormData {
+  return {
+    ...step,
+    email_body_html: emailContent.renderedHtml,
+    email_body_text: emailContent.renderedText,
+    email_preheader: emailContent.preheader || '',
+    email_content: emailContent,
+  };
+}
+
+export async function resolveCampaignEmailStepForSave(
+  step: CampaignStepFormData,
+  stepIndex: number,
+  mountedExporter: (() => Promise<CanonicalCampaignEmailContent | null>) | null,
+  cachedContent: CanonicalCampaignEmailContent | null,
+): Promise<CampaignStepFormData> {
+  const emailContent = mountedExporter ? await mountedExporter() : cachedContent;
+  if (!emailContent) {
+    throw new Error(`Step ${stepIndex + 1} contains invalid Email Studio content.`);
+  }
+  return applyCanonicalCampaignEmailContent(step, emailContent);
+}
 
 interface CampaignStepEditorProps {
   step: CampaignStepFormData;
@@ -51,6 +78,7 @@ export function CampaignStepEditor({
 }: CampaignStepEditorProps) {
   const canMutate = useCanMutate();
   const studioRef = useRef<ClientCampaignEmailStudioHandle>(null);
+  const latestValidatedContentRef = useRef<CanonicalCampaignEmailContent | null>(step.email_content);
   const [isOpen, setIsOpen] = useState(true);
   const [editorKey, setEditorKey] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
@@ -66,20 +94,27 @@ export function CampaignStepEditor({
     ?? `legacy:${step.email_body_html}`;
 
   useEffect(() => {
+    if (step.email_content) latestValidatedContentRef.current = step.email_content;
+    if (step.channel !== 'email') latestValidatedContentRef.current = null;
+  }, [step.channel, step.email_content]);
+
+  useEffect(() => {
     if (step.channel !== 'email') {
       registerExporter(step.client_key, null);
       return;
     }
     registerExporter(step.client_key, async () => {
-      const emailContent = await studioRef.current?.exportContent();
-      if (!emailContent) throw new Error(`Step ${stepIndex + 1} contains invalid Email Studio content.`);
-      return {
-        ...step,
-        email_body_html: emailContent.renderedHtml,
-        email_body_text: emailContent.renderedText,
-        email_preheader: emailContent.preheader || '',
-        email_content: emailContent,
-      };
+      const mountedExporter = studioRef.current
+        ? () => studioRef.current!.exportContent()
+        : null;
+      const exported = await resolveCampaignEmailStepForSave(
+        step,
+        stepIndex,
+        mountedExporter,
+        latestValidatedContentRef.current,
+      );
+      latestValidatedContentRef.current = exported.email_content;
+      return exported;
     });
     return () => registerExporter(step.client_key, null);
   }, [registerExporter, step, stepIndex]);
@@ -96,6 +131,7 @@ export function CampaignStepEditor({
 
   const applyTemplate = (versionId: string) => {
     if (versionId === 'blank') {
+      latestValidatedContentRef.current = null;
       onChange({
         email_subject: '',
         email_body_html: '',
@@ -111,6 +147,7 @@ export function CampaignStepEditor({
     }
     const template = templates.data?.find((entry) => entry.versionId === versionId);
     if (!template) return;
+    latestValidatedContentRef.current = template.content;
     onChange({
       email_subject: template.subject,
       email_body_html: template.content.renderedHtml,
@@ -124,22 +161,47 @@ export function CampaignStepEditor({
     setMessage(`Loaded ${template.name} version ${template.versionNumber}. This step keeps an editable snapshot and immutable source-version attribution.`);
   };
 
-  const capture = async () => {
+  const capture = async (): Promise<CanonicalCampaignEmailContent | null> => {
     setMessage(null);
     const emailContent = await studioRef.current?.exportContent();
-    if (!emailContent) return;
+    if (!emailContent) {
+      latestValidatedContentRef.current = null;
+      return null;
+    }
+    latestValidatedContentRef.current = emailContent;
+    const next = applyCanonicalCampaignEmailContent(step, emailContent);
     onChange({
-      email_body_html: emailContent.renderedHtml,
-      email_body_text: emailContent.renderedText,
-      email_preheader: emailContent.preheader || '',
-      email_content: emailContent,
+      email_body_html: next.email_body_html,
+      email_body_text: next.email_body_text,
+      email_preheader: next.email_preheader,
+      email_content: next.email_content,
     });
     setMessage('Canonical Email Studio content captured. Saving the campaign will persist this exact snapshot.');
+    return emailContent;
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setIsOpen(true);
+      return;
+    }
+    if (step.channel !== 'email') {
+      setIsOpen(false);
+      return;
+    }
+    void (async () => {
+      const emailContent = await capture();
+      if (!emailContent) {
+        setMessage('Fix the invalid Email Studio content before collapsing this step.');
+        return;
+      }
+      setIsOpen(false);
+    })();
   };
 
   return (
     <div className={cn('border rounded-lg bg-card', !step.is_active && 'opacity-60')}>
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Collapsible open={isOpen} onOpenChange={handleOpenChange}>
         <div className="flex items-center gap-2 p-3 border-b">
           <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded">
             <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -165,9 +227,15 @@ export function CampaignStepEditor({
             <Button variant="ghost" size="icon" onClick={onRemove} disabled={!canMutate} className="text-muted-foreground hover:text-destructive">
               <Trash2 className="h-4 w-4" />
             </Button>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="icon">{isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</Button>
-            </CollapsibleTrigger>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={isOpen ? `Collapse step ${stepIndex + 1}` : `Expand step ${stepIndex + 1}`}
+              onClick={() => handleOpenChange(!isOpen)}
+            >
+              {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
 
@@ -224,7 +292,10 @@ export function CampaignStepEditor({
                   legacyBodyHtml={step.email_content ? '' : step.email_body_html}
                   legacyBodyText={step.email_content ? '' : step.email_body_text}
                   readOnly={!canMutate}
-                  onDirty={() => setMessage(null)}
+                  onDirty={() => {
+                    latestValidatedContentRef.current = null;
+                    setMessage(null);
+                  }}
                 />
                 <div className="flex flex-wrap items-center gap-3">
                   <Button type="button" variant="outline" disabled={!canMutate} onClick={() => void capture()}>Capture step content</Button>
