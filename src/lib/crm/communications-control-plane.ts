@@ -316,3 +316,10 @@ export type {
   NewsletterTraceRecipient,
   NewsletterDeliveryTrace,
 } from './newsletter-control-plane';
+
+export function buildNewsletterRecipients(input: { newsletterId: string; reason: string }) {
+  return rpc<Record<string, unknown>>('crm_build_newsletter_recipients', {
+    p_newsletter_id: input.newsletterId,
+    p_reason: input.reason,
+  });
+}
