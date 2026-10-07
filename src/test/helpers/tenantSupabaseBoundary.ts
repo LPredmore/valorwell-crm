@@ -1,4 +1,4 @@
-export type BoundaryRow = Record<string, any>;
+export type BoundaryRow = Record<string, unknown>;
 
 type Filter =
   | { kind: 'eq'; column: string; value: unknown }
@@ -7,7 +7,7 @@ type Filter =
   | { kind: 'gte' | 'lte' | 'lt'; column: string; value: unknown };
 
 type QueryResult = {
-  data: any;
+  data: unknown;
   error: { message: string } | null;
 };
 
