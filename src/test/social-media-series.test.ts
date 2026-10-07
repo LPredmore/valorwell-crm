@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   aggregateSeriesStatus, buildSeriesPlan, currentCentralWeekStart, isMondayKey, isYoutubeVerifiedSchedule,
-  mondayWeekStart, seriesDispatchAt, seriesReadinessCutoff, SERIES_MAX_ITEMS,
+  mondayWeekStart, seriesDispatchAt, isPastSeriesCutoff, firstAssignableWeekStart, seriesReadinessCutoff, SERIES_MAX_ITEMS,
 } from '../../supabase/functions/social-media-manager/handlers/series-core';
 import {
-  assignSeriesSchedule, processSeriesSchedule, seriesOpsFor,
+  assignSeriesSchedule, changeSeriesSchedule, getSeriesSchedule, removeSeriesSchedule, processSeriesSchedule, seriesOpsFor,
   type SeriesItemRow, type SeriesOps, type SeriesScheduleRow, type SeriesStore,
 } from '../../supabase/functions/social-media-manager/handlers/series';
 import { resolveFullEpisodeTitle } from '../../supabase/functions/social-media-manager/handlers/library';
@@ -277,5 +277,62 @@ describe('series authorization', () => {
   it('automation refuses to plan another tenant\'s schedule', async () => {
     const auth = { userId: 'u', tenantId: 't1', crmRole: 'x', capabilities: { mutate: true, communicate: false, manage_campaigns: false, report: false }, db: {} as never };
     await expect(seriesOpsFor(auth).plan({ tenant_id: 't2' } as SeriesScheduleRow, AT_DISPATCH)).rejects.toThrow('Tenant mismatch');
+  });
+});
+
+describe('hard Friday 12:00 Central cutoff', () => {
+  const mutator = (db: unknown = {}) => ({ userId: 'u', tenantId: 't1', crmRole: 'crm_admin', capabilities: { mutate: true, communicate: false, manage_campaigns: false, report: false }, db: db as never });
+  const noonCdt = Date.parse('2026-10-16T17:00:00Z'); // Fri Oct 16 12:00 CDT for week 2026-10-19
+  const noonCst = Date.parse('2026-11-06T18:00:00Z'); // Fri Nov 6 12:00 CST for week 2026-11-09
+
+  it('is open at 11:59:59 and closed at exactly noon (CDT and CST)', () => {
+    expect(isPastSeriesCutoff(seriesDispatchAt('2026-10-19'), noonCdt - 1000)).toBe(false);
+    expect(isPastSeriesCutoff(seriesDispatchAt('2026-10-19'), noonCdt)).toBe(true);
+    expect(isPastSeriesCutoff(seriesDispatchAt('2026-11-09'), noonCst - 1000)).toBe(false);
+    expect(isPastSeriesCutoff(seriesDispatchAt('2026-11-09'), noonCst)).toBe(true);
+    // 17:00Z is 11:00 CST, so the CST week is still open then.
+    expect(isPastSeriesCutoff(seriesDispatchAt('2026-11-09'), Date.parse('2026-11-06T17:00:00Z'))).toBe(false);
+  });
+
+  it('starts the list at the next actually assignable Monday', () => {
+    expect(firstAssignableWeekStart(Date.parse('2026-10-14T15:00:00Z'))).toBe('2026-10-19'); // Wed
+    expect(firstAssignableWeekStart(noonCdt - 1000)).toBe('2026-10-19');
+    expect(firstAssignableWeekStart(noonCdt)).toBe('2026-10-26'); // Fri noon onward
+    expect(firstAssignableWeekStart(Date.parse('2026-10-18T20:00:00Z'))).toBe('2026-10-26'); // Sunday
+  });
+
+  it('rejects assignment at noon but not at 11:59:59 (validation reaches the DB lookup)', async () => {
+    await expect(assignSeriesSchedule(mutator(), { weekStart: '2026-10-19', projectId: PROJECT }, noonCdt)).rejects.toThrow(/Cutoff passed/);
+    await expect(assignSeriesSchedule(mutator(), { weekStart: '2026-10-19', projectId: PROJECT }, noonCdt - 1000)).rejects.not.toThrow(/Cutoff passed/);
+  });
+
+  function dbWithRow(row: Record<string, unknown>) {
+    const updates: unknown[] = [];
+    const chain: Record<string, unknown> = {};
+    const self = () => chain;
+    for (const m of ['select', 'eq', 'in', 'is', 'gt', 'or', 'neq']) chain[m] = self;
+    chain.maybeSingle = async () => ({ data: row, error: null });
+    chain.update = (patch: unknown) => { updates.push(patch); return chain; };
+    return { db: { from: () => chain }, updates };
+  }
+  const assigned = { id: 's1', tenant_id: 't1', project_id: PROJECT, week_start: '2026-10-19', dispatch_at: '2026-10-16T17:00:00+00:00', status: 'assigned', dispatch_started_at: null, lease_expires_at: null };
+
+  it('existing assigned week cannot be changed or removed at/after cutoff, even unclaimed', async () => {
+    const { db, updates } = dbWithRow(assigned);
+    await expect(removeSeriesSchedule(mutator(db), { id: 's1' }, noonCdt)).rejects.toThrow(/Cutoff passed/);
+    await expect(changeSeriesSchedule(mutator({ from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: 'p2', tenant_id: 't1', organization_name: 'Org2' }, error: null }) }) }) }) }) }) as never, { id: 's1', projectId: 'p2' }, noonCdt))
+      .rejects.toThrow();
+    expect(updates).toEqual([]);
+  });
+
+  it('summaries mark cutoff weeks as locked', async () => {
+    const { db } = dbWithRow({ ...assigned, blocked_reasons: [] });
+    const realNow = Date.now;
+    Date.now = () => noonCdt;
+    try {
+      const summary = await getSeriesSchedule(mutator(db), { id: 's1' });
+      expect(summary.cutoffPassed).toBe(true);
+      expect(summary.editable).toBe(false);
+    } finally { Date.now = realNow; }
   });
 });
