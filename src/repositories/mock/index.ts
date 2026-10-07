@@ -5,6 +5,7 @@ import type { CanonicalClient, LifecycleStage } from '@/domain/canonical';
 import type { CrmTask, TaskStatus, OperationalException, Campaign, CampaignEnrollment, CommunicationMessage, StaffMember, AuditEvent, CommunicationPolicyResult } from '@/domain/operations';
 import { mockClients, mockCampaigns, mockEnrollments, mockTasks, mockExceptions, mockStaff, mockAudit, mockMessages } from '@/mocks/dataset';
 import { unavailableRelationshipsRepository } from '../relationships-unavailable';
+import { buildTaskViewPlan, sortTasksForViewPlan, taskMatchesViewPlan } from '../taskViewSemantics';
 
 // In-memory mutable stores so mock mutations feel real across the session.
 let clients: CanonicalClient[] = [...mockClients];
@@ -81,21 +82,22 @@ export const mockDataProvider: CrmDataProvider = {
   tasks: {
     async list(q: ListTasksQuery) {
       await wait();
-      const now = Date.now();
-      return tasks.filter(t => {
+      const plan = buildTaskViewPlan(q);
+      const filtered = tasks.filter((t) => {
+        if (!taskMatchesViewPlan(t, plan)) return false;
         if (q.clientId && t.clientId !== q.clientId) return false;
         if (q.ownerIds?.length && (!t.ownerId || !q.ownerIds.includes(t.ownerId))) return false;
         if (q.statuses?.length && !q.statuses.includes(t.status)) return false;
+        if (q.dueBefore && (!t.dueAt || new Date(t.dueAt).getTime() > new Date(q.dueBefore).getTime())) return false;
+        if (q.dueAfter && (!t.dueAt || new Date(t.dueAt).getTime() < new Date(q.dueAfter).getTime())) return false;
+        if (q.types?.length && !q.types.includes(t.type)) return false;
         if (q.search) {
           const s = q.search.toLowerCase();
           if (!`${t.title} ${t.description ?? ''}`.toLowerCase().includes(s)) return false;
         }
-        if (q.view === 'overdue') return t.status !== 'Completed' && t.status !== 'Canceled' && t.dueAt && new Date(t.dueAt).getTime() < now;
-        if (q.view === 'due-today') { if (!t.dueAt) return false; const d = new Date(t.dueAt); const today = new Date(); return d.toDateString() === today.toDateString(); }
-        if (q.view === 'unassigned') return !t.ownerId;
-        if (q.view === 'recently-completed') return t.status === 'Completed';
         return true;
       });
+      return sortTasksForViewPlan(filtered, plan);
     },
     async get(id) { await wait(30); return tasks.find(t => t.id === id) ?? null; },
     async create(input) {
