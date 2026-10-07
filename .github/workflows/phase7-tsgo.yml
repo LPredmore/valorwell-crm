@@ -1,0 +1,22 @@
+name: Phase 7 tsgo Verification
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tsgo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Native TypeScript type-check
+        run: npx --yes --package=@typescript/native-preview tsgo -p tsconfig.app.json --noEmit
