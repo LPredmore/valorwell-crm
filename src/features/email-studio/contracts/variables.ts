@@ -101,6 +101,8 @@ export type EmailTemplateRenderResult = {
 };
 
 const TOKEN_PATTERN = /{{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*}}/g;
+const EXACT_TOKEN_PATTERN = /^{{\s*[a-zA-Z][a-zA-Z0-9_]*\s*}}$/;
+const TEMPLATE_EXPRESSION_PATTERN = /{{[^{}]*}}/g;
 
 export function getEmailVariablesForScope(scope: EmailContentScope): readonly EmailVariableDefinition[] {
   if (scope === 'staff') return [...STAFF_EMAIL_VARIABLES];
@@ -165,7 +167,22 @@ export function validateEmailTemplateVariables(template: string, scope: EmailCon
       issues.push(issue('legacy_variable_alias', `Legacy variable {{${key}}} is accepted but should be replaced with {{${resolution.canonicalKey}}}.`, 'warning', key));
     }
   }
-  return createEmailValidationResult(issues);
+
+  // Resolved canonical variables and accepted aliases normalize to strict
+  // identifier-shaped tokens. Anything else still wrapped in {{...}} is
+  // malformed template syntax and must fail closed before scheduling.
+  const { normalized } = normalizeEmailTemplateVariables(template, scope);
+  for (const expression of extractResidualTemplateExpressions(normalized)) {
+    if (EXACT_TOKEN_PATTERN.test(expression)) continue;
+    issues.push(issue(
+      'malformed_template_expression',
+      `Malformed email template expression ${expression}.`,
+      'error',
+      expression,
+    ));
+  }
+
+  return createEmailValidationResult(dedupeIssues(issues));
 }
 
 export function validateEmailVariableValue(definition: EmailVariableDefinition, value: string): string | null {
@@ -222,10 +239,29 @@ export function renderEmailTemplate(
     return outputFormat === 'html' ? escapeEmailHtml(value) : value;
   });
 
+  // Rendering is also a fail-closed boundary. This catches malformed input
+  // plus any template-like expression introduced by a supplied value.
+  for (const expression of extractResidualTemplateExpressions(output)) {
+    issues.push(issue(
+      'unresolved_template_expression',
+      `Rendered email still contains unresolved template expression ${expression}.`,
+      'error',
+      expression,
+    ));
+  }
+
   return {
     output,
     validation: createEmailValidationResult(dedupeIssues(issues)),
   };
+}
+
+function extractResidualTemplateExpressions(template: string): string[] {
+  const expressions = new Set<string>();
+  for (const match of template.matchAll(TEMPLATE_EXPRESSION_PATTERN)) {
+    expressions.add(match[0]);
+  }
+  return Array.from(expressions).sort();
 }
 
 function variable<
