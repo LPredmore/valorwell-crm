@@ -3,11 +3,52 @@ import { dataProvider } from '@/services/dataProvider';
 import type { ListTasksQuery } from '@/repositories/types';
 import type { TaskStatus, CrmTask } from '@/domain/operations';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { buildTaskViewDateBounds, resolveOperatorTimeZone } from '@/lib/crm/taskViewDates';
 
 const taskKeys = { all: ['crm-tasks'] as const, list: (q: ListTasksQuery) => ['crm-tasks', 'list', q] as const };
 
+export function buildCanonicalTaskListQuery(
+  q: ListTasksQuery,
+  context: {
+    tenantId: string | null;
+    profileId: string;
+    now?: Date;
+    timeZone?: string;
+  },
+): ListTasksQuery | null {
+  if (!context.tenantId || !context.profileId) return null;
+
+  const needsCalendarBounds = q.view === 'due-today' || q.view === 'due-week';
+  const dateBounds = needsCalendarBounds
+    ? buildTaskViewDateBounds(
+        context.now ?? new Date(),
+        context.timeZone ?? resolveOperatorTimeZone(),
+      )
+    : undefined;
+
+  return {
+    ...q,
+    tenantId: context.tenantId,
+    currentProfileId: context.profileId,
+    ...(dateBounds ? { dateBounds } : {}),
+  };
+}
+
 export function useTasks(q: ListTasksQuery = {}) {
-  return useQuery({ queryKey: taskKeys.list(q), queryFn: () => dataProvider.tasks.list(q) });
+  const { currentTenantId, userId, isAuthenticated, isLoading } = useCrmAuth();
+  const taskQuery = buildCanonicalTaskListQuery(q, {
+    tenantId: currentTenantId,
+    profileId: userId,
+  });
+
+  return useQuery({
+    queryKey: taskKeys.list(taskQuery ?? q),
+    queryFn: () => {
+      if (!taskQuery) throw new Error('Task query requires an authenticated CRM operating context');
+      return dataProvider.tasks.list(taskQuery);
+    },
+    enabled: !isLoading && isAuthenticated && Boolean(taskQuery),
+  });
 }
 
 export function useTaskMutations() {
