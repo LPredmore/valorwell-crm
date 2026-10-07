@@ -23,6 +23,7 @@ const REASON_CODE_COPY: Record<string, string> = {
 
 export function LifecycleControl({ clientId, currentStage }: LifecycleControlProps) {
   const qc = useQueryClient();
+  const { currentTenantId } = useCrmAuth();
   const { data, isLoading, isError, refetch } = useAllowedLifecycleTransitions(clientId);
   const { updateLifecycle } = useClientMutations(clientId);
   const [pendingStage, setPendingStage] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export function LifecycleControl({ clientId, currentStage }: LifecycleControlPro
 
   function invalidateAll() {
     qc.invalidateQueries({ queryKey: allowedLifecycleTransitionsKey(clientId) });
-    qc.invalidateQueries({ queryKey: clientKeys.one(clientId) });
+    qc.invalidateQueries({ queryKey: clientKeys.one(currentTenantId, clientId) });
     qc.invalidateQueries({ queryKey: ['canonical-clients'] });
   }
 
