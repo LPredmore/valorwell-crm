@@ -9,6 +9,7 @@ import { useAllowedLifecycleTransitions, allowedLifecycleTransitionsKey } from '
 import { useClientMutations } from '@/hooks/canonical/useCanonicalClients';
 import type { LifecycleStage } from '@/domain/canonical';
 import { clientKeys } from '@/hooks/canonical/useCanonicalClients';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 
 interface LifecycleControlProps {
   clientId: string;
