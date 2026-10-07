@@ -78,6 +78,7 @@ export const LEGACY_EMAIL_VARIABLE_ALIASES = {
   },
   staff: {},
   marketing_newsletter: {
+    greeting_name: 'newsletter_greeting_name',
     recipient_name: 'newsletter_greeting_name',
     first_name: 'newsletter_greeting_name',
     preferred_name: 'newsletter_greeting_name',

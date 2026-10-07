@@ -1,5 +1,8 @@
 import type { EmailContentDocument, EmailEditorDocument } from '@/features/email-studio/contracts';
-import { isEmailEditorDocument } from '@/features/email-studio/contracts';
+import {
+  isEmailEditorDocument,
+  validateEmailTemplateVariables,
+} from '@/features/email-studio/contracts';
 import { supabase } from '@/integrations/supabase/client';
 
 export const NEWSLETTER_AUDIENCE_DOMAINS = ['client', 'staff', 'donor', 'relationship', 'bty', 'provider_applicant'] as const;
@@ -169,7 +172,32 @@ export function buildScheduleNewsletterArgs(input: {
   };
 }
 
-export function scheduleNewsletter(input: { newsletterId: string; scheduledAt?: string | null; reason: string }) {
+export function assertNewsletterTemplatesSchedulable(detail: Pick<
+  NewsletterDetail,
+  'subject' | 'preheader' | 'bodyHtml' | 'bodyText'
+>): void {
+  const templates = [
+    detail.subject ?? '',
+    detail.preheader ?? '',
+    detail.bodyHtml ?? '',
+    detail.bodyText ?? '',
+  ];
+
+  const errors = templates.flatMap((template) =>
+    validateEmailTemplateVariables(template, 'marketing_newsletter').issues
+      .filter((issue) => issue.severity === 'error'),
+  );
+
+  if (errors.length > 0) {
+    const message = Array.from(new Set(errors.map((issue) => issue.message))).join(' ');
+    throw new Error(`Newsletter contains invalid personalization variables. ${message}`);
+  }
+}
+
+export async function scheduleNewsletter(input: { newsletterId: string; scheduledAt?: string | null; reason: string }) {
+  const detail = await getNewsletter(input.newsletterId);
+  assertNewsletterTemplatesSchedulable(detail);
+
   return rpc<{
     newsletterId: string;
     status: 'scheduled';
