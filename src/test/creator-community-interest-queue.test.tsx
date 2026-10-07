@@ -7,7 +7,21 @@ import type { InterestRecord } from '@/lib/crm/creator-community-interest';
 const record: InterestRecord = {
   contact: { id: 'contact-1', tenantId: 'tenant-a', firstName: 'Morgan', lastName: 'River', preferredName: null, email: 'morgan@example.test', phone: null, state: 'MN', veteranAffiliation: 'none', outreachStatus: 'new', reviewState: 'review_needed', ownerProfileId: null, nextAction: 'Send welcome', nextActionDueAt: null, lastContactAt: null, doNotContact: false, source: 'valorwell_website_interest', sourceRecordKey: null, metadata: {}, createdAt: '2026-07-18T00:00:00Z', updatedAt: '2026-07-18T00:00:00Z' },
   profile: { contactId: 'contact-1', motivation: null, veteranConnection: null, willingToShare: null, comfortLevel: null, fundraisingGoal: null, additionalInfo: null, acceptedRules: true, highestFollowerPlatform: 'TikTok', highestFollowerCount: 12000, personalMission: 'Improve veteran access', avatarUrl: null, profileComplete: true, pastCompetitions: [], isCompeting: false, status: 'active', source: 'website', sourceRecordKey: null, metadata: {} },
-  roles: [{ roleCode: 'creator', source: 'website', metadata: {} }], socials: [{ id: 'social-1', platformName: 'TikTok', handle: '@morgan', profileUrl: null, followerCount: 12000, approved: null, source: 'website', metadata: {} }], submissions: [], notes: [], owner: null,
+  roles: [{ roleCode: 'creator', source: 'website', metadata: {} }],
+  socials: [{ id: 'social-1', platformName: 'TikTok', handle: '@morgan', profileUrl: null, followerCount: 12000, approved: null, source: 'website', metadata: {} }],
+  submissions: [{
+    id: 'submission-1',
+    submissionType: 'interest_submission',
+    normalizedLane: 'creator',
+    originalLane: 'creator',
+    sourceSystem: 'legacy_relationship_import',
+    sourcePage: '/legacy-import',
+    status: 'received',
+    payload: {},
+    submittedAt: '2026-07-18T00:30:00Z',
+  }],
+  notes: [],
+  owner: null,
 };
 
 vi.mock('@/hooks/crm/useCreatorCommunityInterest', () => ({
@@ -46,6 +60,37 @@ describe('CreatorCommunityInterestQueue', () => {
     expect(screen.getByText('No matching interest records')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Search by name/i), { target: { value: '@morgan' } });
     fireEvent.change(screen.getByLabelText('Review'), { target: { value: 'review_needed' } });
+    expect(screen.getByText('Morgan River')).toBeInTheDocument();
+  });
+
+  it('keeps raw source, state, and platform codes as option values while showing human labels', () => {
+    render(<MemoryRouter><CreatorCommunityInterestQueue /></MemoryRouter>);
+
+    const source = screen.getByLabelText('Source') as HTMLSelectElement;
+    const sourceOptions = Array.from(source.options).map((option) => ({ value: option.value, label: option.textContent }));
+    expect(sourceOptions).toContainEqual({
+      value: 'valorwell_website_interest',
+      label: 'Valorwell Website Interest',
+    });
+    expect(sourceOptions).toContainEqual({
+      value: 'legacy_relationship_import',
+      label: 'Legacy Relationship Import',
+    });
+
+    fireEvent.change(source, { target: { value: 'legacy_relationship_import' } });
+    expect(screen.getByText('Morgan River')).toBeInTheDocument();
+
+    fireEvent.change(source, { target: { value: 'valorwell_website_interest' } });
+    expect(screen.getByText('Morgan River')).toBeInTheDocument();
+
+    const state = screen.getByLabelText('State') as HTMLSelectElement;
+    expect(Array.from(state.options).find((option) => option.text === 'MN')?.value).toBe('MN');
+    fireEvent.change(state, { target: { value: 'MN' } });
+    expect(screen.getByText('Morgan River')).toBeInTheDocument();
+
+    const platform = screen.getByLabelText('Platform') as HTMLSelectElement;
+    expect(Array.from(platform.options).find((option) => option.text === 'TikTok')?.value).toBe('TikTok');
+    fireEvent.change(platform, { target: { value: 'TikTok' } });
     expect(screen.getByText('Morgan River')).toBeInTheDocument();
   });
 
