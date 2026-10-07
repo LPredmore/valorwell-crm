@@ -23,6 +23,8 @@ export type RenderedNewsletterDelivery = {
 type OutputFormat = "html" | "text";
 
 const TOKEN_PATTERN = /{{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*}}/g;
+const EXACT_TOKEN_PATTERN = /^{{\s*[a-zA-Z][a-zA-Z0-9_]*\s*}}$/;
+const TEMPLATE_EXPRESSION_PATTERN = /{{[^{}]*}}/g;
 
 const CANONICAL_VARIABLES = new Set([
   "newsletter_greeting_name",
@@ -60,6 +62,7 @@ const KNOWN_DISALLOWED_VARIABLES = new Set([
 export function validateNewsletterTemplateContract(template: NewsletterTemplate): void {
   const unknown = new Set<string>();
   const disallowed = new Set<string>();
+  const malformed = new Set<string>();
 
   for (const value of [
     template.subject ?? "",
@@ -74,6 +77,11 @@ export function validateNewsletterTemplateContract(template: NewsletterTemplate)
       if (KNOWN_DISALLOWED_VARIABLES.has(requested)) disallowed.add(requested);
       else unknown.add(requested);
     }
+
+    for (const expression of extractResidualTemplateExpressions(value)) {
+      if (EXACT_TOKEN_PATTERN.test(expression)) continue;
+      malformed.add(expression);
+    }
   }
 
   if (disallowed.size > 0) {
@@ -84,6 +92,11 @@ export function validateNewsletterTemplateContract(template: NewsletterTemplate)
   if (unknown.size > 0) {
     throw new Error(
       `UNKNOWN_NEWSLETTER_VARIABLE:${Array.from(unknown).sort().join(",")}`,
+    );
+  }
+  if (malformed.size > 0) {
+    throw new Error(
+      `MALFORMED_NEWSLETTER_TEMPLATE_EXPRESSION:${Array.from(malformed).sort().join(",")}`,
     );
   }
 }
@@ -134,6 +147,10 @@ export function renderNewsletterDelivery(input: {
     text += `\n\n${values.postal_address ? `${values.postal_address}\n` : ""}Unsubscribe from this newsletter: ${values.unsubscribe_url}`;
   }
 
+  assertNoResidualNewsletterTemplateExpressions(
+    [subject, preheader ?? "", html, text].join("\n"),
+  );
+
   return {
     subject,
     html,
@@ -148,7 +165,7 @@ export function renderTemplate(
   values: NewsletterRenderValues,
   outputFormat: OutputFormat,
 ): string {
-  return template.replace(TOKEN_PATTERN, (_token, rawKey: string) => {
+  const rendered = template.replace(TOKEN_PATTERN, (_token, rawKey: string) => {
     const requested = rawKey.toLowerCase();
     const canonical = (LEGACY_ALIASES[requested] ?? requested) as keyof NewsletterRenderValues;
     const value = values[canonical];
@@ -157,6 +174,9 @@ export function renderTemplate(
     }
     return outputFormat === "html" ? escapeHtml(value) : value;
   });
+
+  assertNoResidualNewsletterTemplateExpressions(rendered);
+  return rendered;
 }
 
 export function prependHiddenPreheader(html: string, preheader: string | null): string {
@@ -171,6 +191,23 @@ export function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function extractResidualTemplateExpressions(value: string): string[] {
+  const expressions = new Set<string>();
+  for (const match of value.matchAll(TEMPLATE_EXPRESSION_PATTERN)) {
+    expressions.add(match[0]);
+  }
+  return Array.from(expressions).sort();
+}
+
+function assertNoResidualNewsletterTemplateExpressions(value: string): void {
+  const residual = extractResidualTemplateExpressions(value);
+  if (residual.length > 0) {
+    throw new Error(
+      `UNRESOLVED_NEWSLETTER_TEMPLATE_EXPRESSION:${residual.join(",")}`,
+    );
+  }
 }
 
 function stripHtml(value: string): string {
