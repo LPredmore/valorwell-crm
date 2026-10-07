@@ -53,60 +53,122 @@ export function useTasks(q: ListTasksQuery = {}) {
 
 export function useTaskMutations() {
   const qc = useQueryClient();
+  const { currentTenantId } = useCrmAuth();
+  const tenantId = () => {
+    if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
+    return currentTenantId;
+  };
   const invalidate = () => qc.invalidateQueries({ queryKey: taskKeys.all });
   return {
-    create: useMutation({ mutationFn: (input: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt'>) => dataProvider.tasks.create(input), onSuccess: invalidate }),
-    update: useMutation({ mutationFn: (p: { id: string; patch: Partial<CrmTask> }) => dataProvider.tasks.update(p.id, p.patch), onSuccess: invalidate }),
-    complete: useMutation({ mutationFn: (id: string) => dataProvider.tasks.complete(id), onSuccess: invalidate }),
-    reassign: useMutation({ mutationFn: (p: { ids: string[]; ownerId: string }) => dataProvider.tasks.reassign(p.ids, p.ownerId), onSuccess: invalidate }),
-    bulkStatus: useMutation({ mutationFn: (p: { ids: string[]; status: TaskStatus }) => dataProvider.tasks.bulkStatus(p.ids, p.status), onSuccess: invalidate }),
-    bulkDueDate: useMutation({ mutationFn: (p: { ids: string[]; dueAt: string }) => dataProvider.tasks.bulkDueDate(p.ids, p.dueAt), onSuccess: invalidate }),
+    create: useMutation({ mutationFn: (input: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt'>) => dataProvider.tasks.create(tenantId(), input), onSuccess: invalidate }),
+    update: useMutation({ mutationFn: (p: { id: string; patch: Partial<CrmTask> }) => dataProvider.tasks.update(tenantId(), p.id, p.patch), onSuccess: invalidate }),
+    complete: useMutation({ mutationFn: (id: string) => dataProvider.tasks.complete(tenantId(), id), onSuccess: invalidate }),
+    reassign: useMutation({ mutationFn: (p: { ids: string[]; ownerId: string }) => dataProvider.tasks.reassign(tenantId(), p.ids, p.ownerId), onSuccess: invalidate }),
+    bulkStatus: useMutation({ mutationFn: (p: { ids: string[]; status: TaskStatus }) => dataProvider.tasks.bulkStatus(tenantId(), p.ids, p.status), onSuccess: invalidate }),
+    bulkDueDate: useMutation({ mutationFn: (p: { ids: string[]; dueAt: string }) => dataProvider.tasks.bulkDueDate(tenantId(), p.ids, p.dueAt), onSuccess: invalidate }),
   };
 }
 
 export function useExceptions() {
-  return useQuery({ queryKey: ['crm-exceptions'], queryFn: () => dataProvider.exceptions.list() });
+  const { currentTenantId, isAuthenticated, isLoading } = useCrmAuth();
+  return useQuery({
+    queryKey: ['crm-exceptions', currentTenantId],
+    queryFn: () => {
+      if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
+      return dataProvider.exceptions.list(currentTenantId);
+    },
+    enabled: !isLoading && isAuthenticated && !!currentTenantId,
+  });
 }
 
 export function useExceptionMutations() {
   const qc = useQueryClient();
+  const { currentTenantId } = useCrmAuth();
+  const tenantId = () => {
+    if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
+    return currentTenantId;
+  };
   const invalidate = () => qc.invalidateQueries({ queryKey: ['crm-exceptions'] });
   return {
-    resolve: useMutation({ mutationFn: (p: { id: string; note?: string }) => dataProvider.exceptions.resolve(p.id, p.note), onSuccess: invalidate }),
-    dismiss: useMutation({ mutationFn: (p: { id: string; note?: string }) => dataProvider.exceptions.dismiss(p.id, p.note), onSuccess: invalidate }),
-    reassign: useMutation({ mutationFn: (p: { id: string; ownerId: string }) => dataProvider.exceptions.reassign(p.id, p.ownerId), onSuccess: invalidate }),
-    createTask: useMutation({ mutationFn: (id: string) => dataProvider.exceptions.createTaskFromException(id), onSuccess: () => { invalidate(); qc.invalidateQueries({ queryKey: ['crm-tasks'] }); } }),
+    resolve: useMutation({ mutationFn: (p: { id: string; note?: string }) => dataProvider.exceptions.resolve(tenantId(), p.id, p.note), onSuccess: invalidate }),
+    dismiss: useMutation({ mutationFn: (p: { id: string; note?: string }) => dataProvider.exceptions.dismiss(tenantId(), p.id, p.note), onSuccess: invalidate }),
+    reassign: useMutation({ mutationFn: (p: { id: string; ownerId: string }) => dataProvider.exceptions.reassign(tenantId(), p.id, p.ownerId), onSuccess: invalidate }),
+    createTask: useMutation({ mutationFn: (id: string) => dataProvider.exceptions.createTaskFromException(tenantId(), id), onSuccess: () => { invalidate(); qc.invalidateQueries({ queryKey: ['crm-tasks'] }); } }),
   };
 }
 
 export function useCampaigns() {
-  return useQuery({ queryKey: ['crm-campaigns'], queryFn: () => dataProvider.campaigns.list() });
+  const { currentTenantId, isAuthenticated, isLoading } = useCrmAuth();
+  return useQuery({
+    queryKey: ['crm-campaigns', currentTenantId],
+    queryFn: () => {
+      if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
+      return dataProvider.campaigns.list(currentTenantId);
+    },
+    enabled: !isLoading && isAuthenticated && !!currentTenantId,
+  });
 }
 export function useCampaign(id?: string) {
-  return useQuery({ queryKey: ['crm-campaigns', id], queryFn: () => (id ? dataProvider.campaigns.get(id) : Promise.resolve(null)), enabled: !!id });
+  const { currentTenantId, isAuthenticated, isLoading } = useCrmAuth();
+  return useQuery({
+    queryKey: ['crm-campaigns', currentTenantId, id],
+    queryFn: () => (id && currentTenantId ? dataProvider.campaigns.get(currentTenantId, id) : Promise.resolve(null)),
+    enabled: !isLoading && isAuthenticated && !!currentTenantId && !!id,
+  });
 }
 export function useEnrollments(campaignId?: string) {
-  return useQuery({ queryKey: ['crm-enrollments', campaignId], queryFn: () => (campaignId ? dataProvider.campaigns.enrollments(campaignId) : Promise.resolve([])), enabled: !!campaignId });
+  const { currentTenantId, isAuthenticated, isLoading } = useCrmAuth();
+  return useQuery({
+    queryKey: ['crm-enrollments', currentTenantId, campaignId],
+    queryFn: () => (campaignId && currentTenantId ? dataProvider.campaigns.enrollments(currentTenantId, campaignId) : Promise.resolve([])),
+    enabled: !isLoading && isAuthenticated && !!currentTenantId && !!campaignId,
+  });
 }
 
 export function useStaffList() {
-  return useQuery({ queryKey: ['crm-staff'], queryFn: () => dataProvider.staff.list() });
+  const { currentTenantId, isAuthenticated, isLoading } = useCrmAuth();
+  return useQuery({
+    queryKey: ['crm-staff', currentTenantId],
+    queryFn: () => {
+      if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
+      return dataProvider.staff.list(currentTenantId);
+    },
+    enabled: !isLoading && isAuthenticated && !!currentTenantId,
+  });
 }
 
 export function useClientAudit(clientId?: string) {
-  return useQuery({ queryKey: ['crm-audit', clientId], queryFn: () => (clientId ? dataProvider.audit.listForClient(clientId) : Promise.resolve([])), enabled: !!clientId });
+  const { currentTenantId, isAuthenticated, isLoading } = useCrmAuth();
+  return useQuery({
+    queryKey: ['crm-audit', currentTenantId, clientId],
+    queryFn: () => (clientId && currentTenantId ? dataProvider.audit.listForClient(currentTenantId, clientId) : Promise.resolve([])),
+    enabled: !isLoading && isAuthenticated && !!currentTenantId && !!clientId,
+  });
 }
 
 export function useClientCommunications(clientId?: string) {
-  return useQuery({ queryKey: ['crm-comms', clientId], queryFn: () => (clientId ? dataProvider.communications.listForClient(clientId) : Promise.resolve([])), enabled: !!clientId });
+  const { currentTenantId, isAuthenticated, isLoading } = useCrmAuth();
+  return useQuery({
+    queryKey: ['crm-comms', currentTenantId, clientId],
+    queryFn: () => (clientId && currentTenantId ? dataProvider.communications.listForClient(currentTenantId, clientId) : Promise.resolve([])),
+    enabled: !isLoading && isAuthenticated && !!currentTenantId && !!clientId,
+  });
 }
 
 export function useMessageThreads(channel: 'sms' | 'email') {
-  return useQuery({ queryKey: ['crm-comms', 'threads', channel], queryFn: () => dataProvider.communications.listThreads(channel) });
+  const { currentTenantId, isAuthenticated, isLoading } = useCrmAuth();
+  return useQuery({
+    queryKey: ['crm-comms', currentTenantId, 'threads', channel],
+    queryFn: () => {
+      if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
+      return dataProvider.communications.listThreads(currentTenantId, channel);
+    },
+    enabled: !isLoading && isAuthenticated && !!currentTenantId,
+  });
 }
 
 export function useReports() {
-  const { tenantId, isAuthenticated } = useCrmAuth();
+  const { currentTenantId: tenantId, isAuthenticated } = useCrmAuth();
   const enabled = isAuthenticated && !!tenantId;
 
   return {
