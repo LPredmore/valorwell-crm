@@ -92,6 +92,26 @@ describe('Phase 7 integrated release gate', () => {
       html: '<p>Hello</p>',
       text: 'Hello',
     })).toThrow('UNKNOWN_NEWSLETTER_VARIABLE');
+
+    expect(() => validateNewsletterTemplateContract({
+      subject: 'Bad {{bad-token}}',
+      preheader: null,
+      html: '<p>Hello</p>',
+      text: 'Hello',
+    })).toThrow('MALFORMED_NEWSLETTER_TEMPLATE_EXPRESSION');
+
+    expect(() => renderNewsletterDelivery({
+      template: {
+        subject: 'Hello {{newsletter_greeting_name}}',
+        preheader: null,
+        html: '<p>Hello</p>',
+        text: 'Hello',
+      },
+      greetingName: '{{bad.token}}',
+      senderName: 'ValorWell',
+      unsubscribeUrl: 'https://example.org/unsubscribe',
+      postalAddress: '100 Main Street, Kansas City, MO',
+    })).toThrow('UNRESOLVED_NEWSLETTER_TEMPLATE_EXPRESSION');
   });
 
   it('keeps operational owner identity profile-based and human-readable', () => {
