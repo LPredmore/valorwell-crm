@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Json, Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 import type { TasksRepository, ListTasksQuery } from '../types';
 import type { CrmTask, TaskStatus, TaskPriority, TaskType } from '@/domain/operations';
+import { buildTaskViewPlan } from '../taskViewSemantics';
 
 type Row = Tables<'crm_tasks'>;
 type TaskInsert = TablesInsert<'crm_tasks'>;
@@ -135,7 +136,10 @@ function toInsert(input: Parameters<TasksRepository['create']>[0]): TaskInsert {
 
 export const supabaseTasksRepository: TasksRepository = {
   async list(q: ListTasksQuery): Promise<CrmTask[]> {
-    let query = supabase.from('crm_tasks').select(COLS).order('due_at', { ascending: true, nullsFirst: false });
+    const plan = buildTaskViewPlan(q);
+    let query = supabase.from('crm_tasks').select(COLS);
+
+    if (plan.tenantId) query = query.eq('tenant_id', plan.tenantId);
     if (q.clientId) query = query.eq('client_id', q.clientId);
     if (q.ownerIds?.length) query = query.in('owner_id', q.ownerIds);
     if (q.statuses?.length) query = query.in('status', q.statuses.map(s => TASK_STATUS_D2D[s]));
@@ -150,19 +154,25 @@ export const supabaseTasksRepository: TasksRepository = {
       const s = q.search.replace(/[,()]/g, ' ');
       query = query.or(`title.ilike.%${s}%,description.ilike.%${s}%`);
     }
-    if (q.view === 'overdue') {
-      query = query.lt('due_at', new Date().toISOString()).not('status', 'in', '(completed,canceled)');
-    } else if (q.view === 'unassigned') {
-      query = query.is('owner_id', null).not('status', 'in', '(completed,canceled)');
-    } else if (q.view === 'recently-completed') {
-      query = query.eq('status', 'completed');
-    } else if (q.view === 'client-followups') {
-      query = query.eq('type', 'client_follow_up').not('status', 'in', '(completed,canceled)');
-    } else if (q.view === 'staff-followups') {
-      query = query.eq('type', 'staff_follow_up').not('status', 'in', '(completed,canceled)');
-    } else if (q.view === 'campaign-exceptions') {
-      query = query.eq('type', 'campaign_exception').not('status', 'in', '(completed,canceled)');
+
+    if (plan.ownerId) query = query.eq('owner_id', plan.ownerId);
+    if (plan.ownerIsNull) query = query.is('owner_id', null);
+    if (plan.excludeTerminal) query = query.not('status', 'in', '(completed,canceled)');
+    if (plan.completedOnly) query = query.eq('status', 'completed');
+    if (plan.dueGte) query = query.gte('due_at', plan.dueGte);
+    if (plan.dueLt) query = query.lt('due_at', plan.dueLt);
+    if (plan.type) query = query.eq('type', TASK_TYPE_D2D[plan.type]);
+
+    if (plan.orderBy === 'completedAt') {
+      query = query
+        .order('completed_at', { ascending: plan.orderAscending, nullsFirst: false })
+        .order('updated_at', { ascending: false });
+    } else {
+      query = query
+        .order('due_at', { ascending: plan.orderAscending, nullsFirst: false })
+        .order('updated_at', { ascending: false });
     }
+
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return (data ?? []).map(toDomain);
