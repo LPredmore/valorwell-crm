@@ -6,7 +6,7 @@ export const ALLOWED_THUMBNAIL_MIME_TYPES = ["image/png", "image/jpeg", "image/w
 export const MAX_THUMBNAIL_BYTES = 10 * 1024 * 1024;
 const SIGNED_URL_TTL_SECONDS = 3600;
 
-export type ThumbnailRequest = { sourceType?: unknown; sourceId?: unknown };
+export type ThumbnailRequest = { sourceType?: unknown; sourceId?: unknown; publicationId?: unknown };
 export type ThumbnailResult = { fileId: string | null; signedUrl: string | null; expiresInSeconds: number | null };
 
 const EXTENSION_BY_MIME: Record<string, string> = {
@@ -22,7 +22,7 @@ const EXTENSION_BY_MIME: Record<string, string> = {
  */
 export function thumbnailCachePath(
   tenantId: string,
-  sourceType: "clip" | "project",
+  sourceType: "clip" | "project" | "publication",
   sourceId: string,
   fileId: string,
   extension: string,
@@ -37,10 +37,22 @@ export function thumbnailCachePath(
  */
 async function resolveSourceFileId(
   auth: AuthContext,
-  sourceType: "clip" | "project",
+  sourceType: "clip" | "project" | "publication",
   sourceId: string,
 ): Promise<string | null> {
   const { db, tenantId } = auth;
+
+  if (sourceType === "publication") {
+    const { data, error } = await db
+      .from("ai_operations_social_publications")
+      .select("id, thumbnail_file_id")
+      .eq("id", sourceId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error("NOT_FOUND");
+    return (data as { thumbnail_file_id: string | null }).thumbnail_file_id ?? null;
+  }
 
   if (sourceType === "clip") {
     const { data, error } = await db
@@ -67,8 +79,13 @@ async function resolveSourceFileId(
 }
 
 export async function getThumbnailUrl(auth: AuthContext, params: ThumbnailRequest): Promise<ThumbnailResult> {
-  const sourceType = params.sourceType === "clip" || params.sourceType === "project" ? params.sourceType : null;
-  const sourceId = typeof params.sourceId === "string" ? params.sourceId.trim() : "";
+  const publicationId = typeof params.publicationId === "string" ? params.publicationId.trim() : "";
+  const sourceType = publicationId
+    ? "publication"
+    : params.sourceType === "clip" || params.sourceType === "project"
+      ? params.sourceType
+      : null;
+  const sourceId = publicationId || (typeof params.sourceId === "string" ? params.sourceId.trim() : "");
   if (!sourceType || !sourceId) throw new Error("INVALID_PARAMS");
 
   const fileId = await resolveSourceFileId(auth, sourceType, sourceId);
