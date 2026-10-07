@@ -1186,6 +1186,14 @@ export type Database = {
         Row: {
           camera_framing: string | null
           clip_type: string
+          cold_open_enabled: boolean
+          cold_open_end_seconds: number | null
+          cold_open_prompt_version: number | null
+          cold_open_reason: string | null
+          cold_open_score: number | null
+          cold_open_selected_at: string | null
+          cold_open_start_seconds: number | null
+          cold_open_text: string | null
           copy_input_fingerprint: string | null
           core_visual: string | null
           cover_image_file_id: string | null
@@ -1245,6 +1253,14 @@ export type Database = {
         Insert: {
           camera_framing?: string | null
           clip_type?: string
+          cold_open_enabled?: boolean
+          cold_open_end_seconds?: number | null
+          cold_open_prompt_version?: number | null
+          cold_open_reason?: string | null
+          cold_open_score?: number | null
+          cold_open_selected_at?: string | null
+          cold_open_start_seconds?: number | null
+          cold_open_text?: string | null
           copy_input_fingerprint?: string | null
           core_visual?: string | null
           cover_image_file_id?: string | null
@@ -1304,6 +1320,14 @@ export type Database = {
         Update: {
           camera_framing?: string | null
           clip_type?: string
+          cold_open_enabled?: boolean
+          cold_open_end_seconds?: number | null
+          cold_open_prompt_version?: number | null
+          cold_open_reason?: string | null
+          cold_open_score?: number | null
+          cold_open_selected_at?: string | null
+          cold_open_start_seconds?: number | null
+          cold_open_text?: string | null
           copy_input_fingerprint?: string | null
           core_visual?: string | null
           cover_image_file_id?: string | null
