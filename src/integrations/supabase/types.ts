@@ -820,6 +820,7 @@ export type Database = {
           updated_at: string
           upload_started_at: string | null
           uploaded_at: string | null
+          workflow_revision: number
         }
         Insert: {
           account_id: string
@@ -869,6 +870,7 @@ export type Database = {
           updated_at?: string
           upload_started_at?: string | null
           uploaded_at?: string | null
+          workflow_revision?: number
         }
         Update: {
           account_id?: string
@@ -918,6 +920,7 @@ export type Database = {
           updated_at?: string
           upload_started_at?: string | null
           uploaded_at?: string | null
+          workflow_revision?: number
         }
         Relationships: [
           {
@@ -1183,6 +1186,7 @@ export type Database = {
         Row: {
           camera_framing: string | null
           clip_type: string
+          copy_input_fingerprint: string | null
           core_visual: string | null
           cover_image_file_id: string | null
           cover_image_url: string | null
@@ -1195,6 +1199,11 @@ export type Database = {
           facial_expression: string | null
           gesture_action: string | null
           hashtags: string[] | null
+          hook_candidates: Json | null
+          hook_generated_at: string | null
+          hook_generation_meta: Json | null
+          hook_generation_revision: number
+          hook_input_fingerprint: string | null
           hook_text: string | null
           hook_text_placement: string | null
           id: string
@@ -1209,11 +1218,20 @@ export type Database = {
           pose_family: string | null
           primary_speaker: string | null
           project_id: string
+          render_input_fingerprint: string | null
           rendered_at: string | null
+          source_revision: number
           start_seconds: number
           status: string
           thumbnail_generation_revision: number
+          thumbnail_input_fingerprint: string | null
+          thumbnail_metadata_input_fingerprint: string | null
           tiktok_description: string | null
+          title_candidates: Json | null
+          title_generated_at: string | null
+          title_generation_meta: Json | null
+          title_generation_revision: number
+          title_input_fingerprint: string | null
           transcript_text: string
           updated_at: string
           uploaded_at: string | null
@@ -1227,6 +1245,7 @@ export type Database = {
         Insert: {
           camera_framing?: string | null
           clip_type?: string
+          copy_input_fingerprint?: string | null
           core_visual?: string | null
           cover_image_file_id?: string | null
           cover_image_url?: string | null
@@ -1239,6 +1258,11 @@ export type Database = {
           facial_expression?: string | null
           gesture_action?: string | null
           hashtags?: string[] | null
+          hook_candidates?: Json | null
+          hook_generated_at?: string | null
+          hook_generation_meta?: Json | null
+          hook_generation_revision?: number
+          hook_input_fingerprint?: string | null
           hook_text?: string | null
           hook_text_placement?: string | null
           id?: string
@@ -1253,11 +1277,20 @@ export type Database = {
           pose_family?: string | null
           primary_speaker?: string | null
           project_id: string
+          render_input_fingerprint?: string | null
           rendered_at?: string | null
+          source_revision?: number
           start_seconds: number
           status?: string
           thumbnail_generation_revision?: number
+          thumbnail_input_fingerprint?: string | null
+          thumbnail_metadata_input_fingerprint?: string | null
           tiktok_description?: string | null
+          title_candidates?: Json | null
+          title_generated_at?: string | null
+          title_generation_meta?: Json | null
+          title_generation_revision?: number
+          title_input_fingerprint?: string | null
           transcript_text: string
           updated_at?: string
           uploaded_at?: string | null
@@ -1271,6 +1304,7 @@ export type Database = {
         Update: {
           camera_framing?: string | null
           clip_type?: string
+          copy_input_fingerprint?: string | null
           core_visual?: string | null
           cover_image_file_id?: string | null
           cover_image_url?: string | null
@@ -1283,6 +1317,11 @@ export type Database = {
           facial_expression?: string | null
           gesture_action?: string | null
           hashtags?: string[] | null
+          hook_candidates?: Json | null
+          hook_generated_at?: string | null
+          hook_generation_meta?: Json | null
+          hook_generation_revision?: number
+          hook_input_fingerprint?: string | null
           hook_text?: string | null
           hook_text_placement?: string | null
           id?: string
@@ -1297,11 +1336,20 @@ export type Database = {
           pose_family?: string | null
           primary_speaker?: string | null
           project_id?: string
+          render_input_fingerprint?: string | null
           rendered_at?: string | null
+          source_revision?: number
           start_seconds?: number
           status?: string
           thumbnail_generation_revision?: number
+          thumbnail_input_fingerprint?: string | null
+          thumbnail_metadata_input_fingerprint?: string | null
           tiktok_description?: string | null
+          title_candidates?: Json | null
+          title_generated_at?: string | null
+          title_generation_meta?: Json | null
+          title_generation_revision?: number
+          title_input_fingerprint?: string | null
           transcript_text?: string
           updated_at?: string
           uploaded_at?: string | null
@@ -1552,12 +1600,25 @@ export type Database = {
       }
       ai_operations_video_projects: {
         Row: {
+          cover_camera_framing: string | null
+          cover_core_visual: string | null
+          cover_facial_expression: string | null
+          cover_gesture_action: string | null
+          cover_hook_text: string | null
+          cover_hook_text_placement: string | null
           cover_image_file_id: string | null
           cover_image_url: string | null
+          cover_input_fingerprint: string | null
+          cover_metadata_input_fingerprint: string | null
+          cover_metadata_revision: number
+          cover_person_positioning: string | null
+          cover_pose_family: string | null
+          cover_primary_speaker: string | null
           created_at: string
           duration_seconds: number | null
           expected_part_count: number | null
           expected_short_count: number | null
+          full_metadata_input_fingerprint: string | null
           guest_image_url: string | null
           guest_name: string | null
           id: string
@@ -1569,9 +1630,11 @@ export type Database = {
           last_progress_at: string
           metadata: Json
           organization_name: string | null
+          parts_input_fingerprint: string | null
           pipeline_completed_at: string | null
           pipeline_status: string
           processing_error: string | null
+          shorts_input_fingerprint: string | null
           source_file_id: string
           source_file_name: string
           source_file_path: string | null
@@ -1579,6 +1642,7 @@ export type Database = {
           source_mime_type: string | null
           source_modified_time: string | null
           source_provider: string
+          source_revision: number
           source_size_bytes: number | null
           source_web_url: string | null
           status: string
@@ -1595,12 +1659,25 @@ export type Database = {
           workflow_revision: number
         }
         Insert: {
+          cover_camera_framing?: string | null
+          cover_core_visual?: string | null
+          cover_facial_expression?: string | null
+          cover_gesture_action?: string | null
+          cover_hook_text?: string | null
+          cover_hook_text_placement?: string | null
           cover_image_file_id?: string | null
           cover_image_url?: string | null
+          cover_input_fingerprint?: string | null
+          cover_metadata_input_fingerprint?: string | null
+          cover_metadata_revision?: number
+          cover_person_positioning?: string | null
+          cover_pose_family?: string | null
+          cover_primary_speaker?: string | null
           created_at?: string
           duration_seconds?: number | null
           expected_part_count?: number | null
           expected_short_count?: number | null
+          full_metadata_input_fingerprint?: string | null
           guest_image_url?: string | null
           guest_name?: string | null
           id?: string
@@ -1612,9 +1689,11 @@ export type Database = {
           last_progress_at?: string
           metadata?: Json
           organization_name?: string | null
+          parts_input_fingerprint?: string | null
           pipeline_completed_at?: string | null
           pipeline_status?: string
           processing_error?: string | null
+          shorts_input_fingerprint?: string | null
           source_file_id: string
           source_file_name: string
           source_file_path?: string | null
@@ -1622,6 +1701,7 @@ export type Database = {
           source_mime_type?: string | null
           source_modified_time?: string | null
           source_provider?: string
+          source_revision?: number
           source_size_bytes?: number | null
           source_web_url?: string | null
           status?: string
@@ -1638,12 +1718,25 @@ export type Database = {
           workflow_revision?: number
         }
         Update: {
+          cover_camera_framing?: string | null
+          cover_core_visual?: string | null
+          cover_facial_expression?: string | null
+          cover_gesture_action?: string | null
+          cover_hook_text?: string | null
+          cover_hook_text_placement?: string | null
           cover_image_file_id?: string | null
           cover_image_url?: string | null
+          cover_input_fingerprint?: string | null
+          cover_metadata_input_fingerprint?: string | null
+          cover_metadata_revision?: number
+          cover_person_positioning?: string | null
+          cover_pose_family?: string | null
+          cover_primary_speaker?: string | null
           created_at?: string
           duration_seconds?: number | null
           expected_part_count?: number | null
           expected_short_count?: number | null
+          full_metadata_input_fingerprint?: string | null
           guest_image_url?: string | null
           guest_name?: string | null
           id?: string
@@ -1655,9 +1748,11 @@ export type Database = {
           last_progress_at?: string
           metadata?: Json
           organization_name?: string | null
+          parts_input_fingerprint?: string | null
           pipeline_completed_at?: string | null
           pipeline_status?: string
           processing_error?: string | null
+          shorts_input_fingerprint?: string | null
           source_file_id?: string
           source_file_name?: string
           source_file_path?: string | null
@@ -1665,6 +1760,7 @@ export type Database = {
           source_mime_type?: string | null
           source_modified_time?: string | null
           source_provider?: string
+          source_revision?: number
           source_size_bytes?: number | null
           source_web_url?: string | null
           status?: string
@@ -1689,6 +1785,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ai_operations_video_prompt_profiles: {
+        Row: {
+          config: Json
+          created_at: string
+          instruction_prompt: string
+          is_active: boolean
+          profile_key: string
+          system_prompt: string
+          tenant_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          instruction_prompt: string
+          is_active?: boolean
+          profile_key: string
+          system_prompt: string
+          tenant_id: string
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          instruction_prompt?: string
+          is_active?: boolean
+          profile_key?: string
+          system_prompt?: string
+          tenant_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
       }
       ai_operations_video_settings: {
         Row: {
@@ -1819,6 +1951,116 @@ export type Database = {
             foreignKeyName: "ai_operations_video_settings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_video_storage_migrations: {
+        Row: {
+          attempts: number
+          bytes_uploaded: number
+          claimed_by: string | null
+          completed_at: string | null
+          created_at: string
+          db_references_found: number
+          db_references_updated: number
+          id: string
+          last_error: string | null
+          lease_expires_at: string | null
+          metadata: Json
+          migration_status: string
+          source_bucket: string
+          source_deleted_at: string | null
+          source_etag: string | null
+          source_key: string
+          source_last_modified: string | null
+          source_provider: string
+          source_size_bytes: number
+          source_url: string | null
+          target_drive_file_id: string | null
+          target_drive_file_url: string | null
+          target_drive_folder_id: string | null
+          target_file_name: string | null
+          target_md5: string | null
+          target_provider: string
+          target_size_bytes: number | null
+          tenant_id: string
+          updated_at: string
+          upload_session_url: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          attempts?: number
+          bytes_uploaded?: number
+          claimed_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          db_references_found?: number
+          db_references_updated?: number
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          metadata?: Json
+          migration_status?: string
+          source_bucket: string
+          source_deleted_at?: string | null
+          source_etag?: string | null
+          source_key: string
+          source_last_modified?: string | null
+          source_provider?: string
+          source_size_bytes?: number
+          source_url?: string | null
+          target_drive_file_id?: string | null
+          target_drive_file_url?: string | null
+          target_drive_folder_id?: string | null
+          target_file_name?: string | null
+          target_md5?: string | null
+          target_provider?: string
+          target_size_bytes?: number | null
+          tenant_id: string
+          updated_at?: string
+          upload_session_url?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          attempts?: number
+          bytes_uploaded?: number
+          claimed_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          db_references_found?: number
+          db_references_updated?: number
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          metadata?: Json
+          migration_status?: string
+          source_bucket?: string
+          source_deleted_at?: string | null
+          source_etag?: string | null
+          source_key?: string
+          source_last_modified?: string | null
+          source_provider?: string
+          source_size_bytes?: number
+          source_url?: string | null
+          target_drive_file_id?: string | null
+          target_drive_file_url?: string | null
+          target_drive_folder_id?: string | null
+          target_file_name?: string | null
+          target_md5?: string | null
+          target_provider?: string
+          target_size_bytes?: number | null
+          tenant_id?: string
+          updated_at?: string
+          upload_session_url?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_video_storage_migrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -9564,7 +9806,7 @@ export type Database = {
       }
       crm_activity_events: {
         Row: {
-          client_id: string
+          client_id: string | null
           created_at: string
           created_by_profile_id: string | null
           event_type: string
@@ -9575,7 +9817,7 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
-          client_id: string
+          client_id?: string | null
           created_at?: string
           created_by_profile_id?: string | null
           event_type: string
@@ -9586,7 +9828,7 @@ export type Database = {
           tenant_id: string
         }
         Update: {
-          client_id?: string
+          client_id?: string | null
           created_at?: string
           created_by_profile_id?: string | null
           event_type?: string
@@ -12339,6 +12581,20 @@ export type Database = {
             referencedRelation: "v_client_canonical_state"
             referencedColumns: ["client_id"]
           },
+          {
+            foreignKeyName: "crm_exceptions_owner_id_profiles_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_exceptions_owner_id_profiles_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       crm_helpscout_settings: {
@@ -13281,6 +13537,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_client_canonical_state"
             referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_owner_id_profiles_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_owner_id_profiles_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -20290,7 +20560,7 @@ export type Database = {
       relationship_meetings: {
         Row: {
           calendar_id: string
-          connection_id: string
+          connection_id: string | null
           contact_id: string
           created_at: string
           ends_at: string | null
@@ -20300,11 +20570,11 @@ export type Database = {
           id: string
           last_synced_at: string
           metadata: Json
-          opportunity_id: string
+          opportunity_id: string | null
           organization_id: string
           purpose: string
           starts_at: string | null
-          streamyard_url: string
+          streamyard_url: string | null
           tenant_id: string
           transcript_captured_at: string | null
           transcript_source: string | null
@@ -20313,7 +20583,7 @@ export type Database = {
         }
         Insert: {
           calendar_id: string
-          connection_id: string
+          connection_id?: string | null
           contact_id: string
           created_at?: string
           ends_at?: string | null
@@ -20323,11 +20593,11 @@ export type Database = {
           id?: string
           last_synced_at?: string
           metadata?: Json
-          opportunity_id: string
+          opportunity_id?: string | null
           organization_id: string
           purpose?: string
           starts_at?: string | null
-          streamyard_url: string
+          streamyard_url?: string | null
           tenant_id: string
           transcript_captured_at?: string | null
           transcript_source?: string | null
@@ -20336,7 +20606,7 @@ export type Database = {
         }
         Update: {
           calendar_id?: string
-          connection_id?: string
+          connection_id?: string | null
           contact_id?: string
           created_at?: string
           ends_at?: string | null
@@ -20346,11 +20616,11 @@ export type Database = {
           id?: string
           last_synced_at?: string
           metadata?: Json
-          opportunity_id?: string
+          opportunity_id?: string | null
           organization_id?: string
           purpose?: string
           starts_at?: string | null
-          streamyard_url?: string
+          streamyard_url?: string | null
           tenant_id?: string
           transcript_captured_at?: string | null
           transcript_source?: string | null
@@ -26205,7 +26475,22 @@ export type Database = {
           overdue_count: number | null
           tenant_id: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crm_tasks_owner_id_profiles_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_owner_id_profiles_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       website_resources_public: {
         Row: {
@@ -27765,6 +28050,17 @@ export type Database = {
         }
         Returns: Json
       }
+      create_ai_operations_video_prompt_version: {
+        Args: {
+          p_activate?: boolean
+          p_config?: Json
+          p_instruction_prompt: string
+          p_profile_key: string
+          p_system_prompt: string
+          p_tenant_id: string
+        }
+        Returns: number
+      }
       create_appointment: {
         Args: {
           p_client_action_id?: string
@@ -28948,6 +29244,8 @@ export type Database = {
             }
             Returns: Json
           }
+      get_ai_operations_video_pipeline_health: { Args: never; Returns: Json }
+      get_ai_operations_video_system_health: { Args: never; Returns: Json }
       get_assigned_clients: { Args: never; Returns: Json }
       get_available_appointment_slots:
         | {
@@ -29259,6 +29557,7 @@ export type Database = {
           staff_id: string
         }[]
       }
+      get_legacy_r2_migration_token: { Args: never; Returns: string }
       get_nightly_claim_submission_candidates_v1: {
         Args: { p_cutoff_at?: string }
         Returns: {
@@ -29736,6 +30035,14 @@ export type Database = {
       is_tenant_member: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
+      }
+      list_bty_scheduler_calendar_connections: {
+        Args: never
+        Returns: {
+          calendar_id: string
+          google_account_email: string
+          id: string
+        }[]
       }
       list_crm_control_plane_flags: { Args: never; Returns: Json }
       list_relationship_campaign_candidates: {
@@ -30533,6 +30840,7 @@ export type Database = {
         }
         Returns: Json
       }
+      run_video_r2_drive_migration_tick: { Args: never; Returns: number }
       save_progress_note_draft_v2: {
         Args: {
           p_appointment_id: string
