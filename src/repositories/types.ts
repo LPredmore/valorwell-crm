@@ -191,12 +191,16 @@ export type CampaignReportRow = WithSafeReportNumbers<
   | 'responded_count'
   | 'suppressed_count'
   | 'failed_count'
->;
+> & {
+  campaignName: string;
+};
 
 export type TaskReportRow = WithSafeReportNumbers<
   Tables<'v_crm_reports_tasks'>,
   'open_count' | 'completed_count' | 'overdue_count' | 'median_hours_to_complete'
->;
+> & {
+  assigneeName: string;
+};
 
 export type ExceptionReportRow = WithSafeReportNumbers<
   Tables<'v_crm_reports_exceptions'>,
