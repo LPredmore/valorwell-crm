@@ -280,7 +280,7 @@ export const supabaseCommunicationsRepository: CommunicationsRepository = {
           clientId: message.clientId,
           body: message.body,
           campaignId: message.campaignId,
-          messageClass: 'necessary_scheduling',
+          messageClass: message.messageClass ?? 'necessary_scheduling',
         },
       });
       if (error) throw new Error(error.message);

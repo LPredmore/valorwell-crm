@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Send } from 'lucide-react';
 import { dataProvider } from '@/services/dataProvider';
-import type { CommunicationPolicyResult } from '@/domain/operations';
+import type { CanonicalMessageClass, CommunicationPolicyResult } from '@/domain/operations';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { SuppressionBanner } from './SuppressionBanner';
@@ -23,18 +23,7 @@ import {
   type PublishedDirectEmailTemplate,
 } from '@/features/email-studio/templates';
 
-/** Must match the backend communication-policy vocabulary exactly. */
-type MessageClass =
-  | 'ordinary_promotional'
-  | 'ordinary_campaign_follow_up'
-  | 'wait_path_ordinary'
-  | 'necessary_scheduling'
-  | 'active_care'
-  | 'billing_insurance'
-  | 'clinical_safety_legal'
-  | 'transactional_account';
-
-const MESSAGE_CLASS_LABELS: Record<MessageClass, string> = {
+const MESSAGE_CLASS_LABELS: Record<CanonicalMessageClass, string> = {
   ordinary_promotional: 'Ordinary — promotional',
   ordinary_campaign_follow_up: 'Ordinary — campaign follow-up',
   wait_path_ordinary: 'Wait path — ordinary',
@@ -79,7 +68,7 @@ export function PolicyAwareComposer({
   const studioRef = useRef<DirectEmailStudioHandle>(null);
 
   const [channel, setChannel] = useState<'sms' | 'email'>(defaultChannel);
-  const [messageClass, setMessageClass] = useState<MessageClass>('necessary_scheduling');
+  const [messageClass, setMessageClass] = useState<CanonicalMessageClass>('necessary_scheduling');
   const [selected, setSelected] = useState<PickedClient | null>(
     clientId ? { id: clientId, displayName: clientDisplayName ?? 'Selected client', email: clientEmail, phone: clientPhone } : null,
   );
@@ -325,10 +314,10 @@ export function PolicyAwareComposer({
             </div>
             <div className="space-y-1.5">
               <Label>Message class</Label>
-              <Select value={messageClass} onValueChange={(value: MessageClass) => setMessageClass(value)}>
+              <Select value={messageClass} onValueChange={(value: CanonicalMessageClass) => setMessageClass(value)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(MESSAGE_CLASS_LABELS) as MessageClass[]).map((key) => (
+                  {(Object.keys(MESSAGE_CLASS_LABELS) as CanonicalMessageClass[]).map((key) => (
                     <SelectItem key={key} value={key}>{MESSAGE_CLASS_LABELS[key]}</SelectItem>
                   ))}
                 </SelectContent>

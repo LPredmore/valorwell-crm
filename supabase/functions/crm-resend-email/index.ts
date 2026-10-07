@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@6.18.0";
+import { clientGreetingVariables } from "../_shared/client-personalization.ts";
 import {
   prepareDirectEmailDelivery,
   prepareNewsletterEmailDelivery,
@@ -228,8 +229,7 @@ async function clientVariableValues(
     }
   }
   return {
-    first_name: client.pat_name_f || "Client",
-    preferred_name: client.pat_name_preferred || client.pat_name_f || "Client",
+    ...clientGreetingVariables(client),
     last_name: client.pat_name_l || "Client",
     therapist_name: therapistName,
     sender_name: settings.from_name || "ValorWell Care Team",

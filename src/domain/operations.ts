@@ -95,15 +95,18 @@ export interface OperationalException {
   }[];
 }
 
-export type CanonicalMessageClass =
-  | 'ordinary_promotional'
-  | 'ordinary_campaign_follow_up'
-  | 'wait_path_ordinary'
-  | 'necessary_scheduling'
-  | 'active_care'
-  | 'billing_insurance'
-  | 'clinical_safety_legal'
-  | 'transactional_account';
+export const CANONICAL_MESSAGE_CLASSES = [
+  'ordinary_promotional',
+  'ordinary_campaign_follow_up',
+  'wait_path_ordinary',
+  'necessary_scheduling',
+  'active_care',
+  'billing_insurance',
+  'clinical_safety_legal',
+  'transactional_account',
+] as const;
+
+export type CanonicalMessageClass = (typeof CANONICAL_MESSAGE_CLASSES)[number];
 
 export interface CommunicationPolicyResult {
   allowed: boolean;

@@ -1,14 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  MESSAGE_CLASSES,
+  isMessageClass,
+  parseIndividualSmsMessageClass,
+  type MessageClass,
+} from "./communication-contracts.ts";
 
-export type MessageClass =
-  | "ordinary_promotional"
-  | "ordinary_campaign_follow_up"
-  | "wait_path_ordinary"
-  | "necessary_scheduling"
-  | "active_care"
-  | "billing_insurance"
-  | "clinical_safety_legal"
-  | "transactional_account";
+export {
+  MESSAGE_CLASSES,
+  isMessageClass,
+  parseIndividualSmsMessageClass,
+};
+export type { MessageClass };
 
 export type Channel = "email" | "sms";
 
