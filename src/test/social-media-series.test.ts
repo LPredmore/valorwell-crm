@@ -312,6 +312,7 @@ describe('hard Friday 12:00 Central cutoff', () => {
     const self = () => chain;
     for (const m of ['select', 'eq', 'in', 'is', 'gt', 'or', 'neq']) chain[m] = self;
     chain.maybeSingle = async () => ({ data: row, error: null });
+    chain.order = async () => ({ data: [], error: null });
     chain.update = (patch: unknown) => { updates.push(patch); return chain; };
     return { db: { from: () => chain }, updates };
   }
