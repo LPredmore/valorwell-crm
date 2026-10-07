@@ -9,6 +9,7 @@ import type {
   RiskState,
   ClosureInfo,
 } from '@/domain/canonical';
+import type { TaskView, TaskViewDateBounds } from '@/domain/taskViews';
 import type {
   CrmTask,
   TaskStatus,
@@ -70,6 +71,14 @@ export interface ClientsRepository {
 }
 
 export interface ListTasksQuery {
+  /** Current CRM operating tenant. Required for every named Canonical Tasks view. */
+  tenantId?: string;
+  /** Authenticated operator profile ID. Required by the My Tasks view. */
+  currentProfileId?: string;
+  /** Operator-local day/week boundaries, already converted to UTC ISO instants. */
+  dateBounds?: TaskViewDateBounds;
+  /** Deterministic clock override for overdue queries/tests. Defaults to current time. */
+  nowIso?: string;
   ownerIds?: string[];
   clientId?: string;
   statuses?: TaskStatus[];
@@ -77,18 +86,7 @@ export interface ListTasksQuery {
   dueAfter?: string;
   types?: string[];
   search?: string;
-  view?:
-    | 'my'
-    | 'team'
-    | 'overdue'
-    | 'due-today'
-    | 'due-week'
-    | 'unassigned'
-    | 'client-followups'
-    | 'staff-followups'
-    | 'campaign-exceptions'
-    | 'recently-completed'
-    | 'all';
+  view?: TaskView;
 }
 
 export interface TasksRepository {
