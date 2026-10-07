@@ -14,6 +14,8 @@ import {
 const RESEND_API = "https://api.resend.com";
 const USER_AGENT = "ValorWell-CRM-Newsletter/1.0";
 const DEFAULT_UNSUBSCRIBE_BASE = "https://crm.valorwell.org/newsletter/unsubscribe";
+// Guard reasons that apply to the whole newsletter, not one recipient.
+export const GUARD_HALT_REASONS = new Set(["runtime_not_active", "newsletter_not_sending"]);
 
 type ClaimedRecipient = {
   recipientId: string;
