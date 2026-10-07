@@ -10,6 +10,7 @@ import {
   type CanonicalNewsletterEmailContent,
   type ClientEmailVariableValues,
 } from "./email-content.ts";
+import { verifyResendConnectionSettings } from "./connection-verification.ts";
 
 const RESEND_API = "https://api.resend.com";
 const USER_AGENT = "ValorWell-CRM/1.3";
@@ -25,6 +26,8 @@ type Settings = {
   tenant_id: string;
   from_name: string | null;
   from_email: string | null;
+  marketing_from_name: string | null;
+  marketing_from_email: string | null;
   reply_to_email: string | null;
   inbound_email: string | null;
   postal_address: string | null;
@@ -186,7 +189,7 @@ function serviceDb(): Db {
 
 async function settingsFor(db: Db, tenantId: string, requireConnected = true): Promise<Settings> {
   const { data, error } = await db.from("crm_resend_email_settings")
-    .select("tenant_id, from_name, from_email, reply_to_email, inbound_email, postal_address, connection_status")
+    .select("tenant_id, from_name, from_email, marketing_from_name, marketing_from_email, reply_to_email, inbound_email, postal_address, connection_status")
     .eq("tenant_id", tenantId)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -743,17 +746,11 @@ async function processBulk(auth: AuthContext, bulkSendId: string) {
     : processClientBulk(auth, log, settings);
 }
 
-async function testConnection(auth: AuthContext, requestId: string) {
-  requireMutationAccess(auth);
-  const settings = await settingsFor(auth.db, auth.tenantId, false);
-  const from = normalizeEmail(settings.from_email ?? "");
-  const inbound = normalizeEmail(settings.inbound_email ?? "");
-  if (!isEmail(from) || !isEmail(inbound)) {
-    safeLog("warn", "test_connection_invalid_settings", { requestId, tenantId: auth.tenantId });
-    throw new Error("Valid sender and inbound receiving addresses are required");
-  }
+async function verifyConnectionForTenant(db: Db, tenantId: string, requestId: string) {
+  const settings = await settingsFor(db, tenantId, false);
   const apiKey = Deno.env.get("RESEND_API_KEY") ?? "";
   if (!apiKey) throw new Error("RESEND_API_KEY not configured");
+
   const response = await fetch(`${RESEND_API}/domains`, {
     headers: { authorization: `Bearer ${apiKey}`, "user-agent": USER_AGENT },
   });
@@ -762,18 +759,81 @@ async function testConnection(auth: AuthContext, requestId: string) {
     message?: string;
   };
   if (!response.ok) throw new Error(payload.message ?? `Resend connection failed: ${response.status}`);
-  const domains = Array.from(new Set([from.split("@")[1], inbound.split("@")[1]].filter(Boolean)));
-  for (const domain of domains) {
-    const found = (payload.data ?? []).find((row) => normalizeEmail(row.name ?? "") === domain);
-    if (!found) throw new Error(`The ${domain} domain was not found in Resend`);
-    if (found.status !== "verified") throw new Error(`The ${domain} domain is ${found.status ?? "not verified"} in Resend`);
+
+  let verification;
+  try {
+    verification = verifyResendConnectionSettings({
+      fromEmail: settings.from_email,
+      marketingFromEmail: settings.marketing_from_email,
+      inboundEmail: settings.inbound_email,
+      domains: payload.data ?? [],
+    });
+  } catch (error) {
+    safeLog("warn", "test_connection_invalid_settings", {
+      requestId,
+      tenantId,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   }
+
   const verifiedAt = new Date().toISOString();
-  const { error } = await auth.db.from("crm_resend_email_settings").update({
-    connection_status: "connected", last_verified_at: verifiedAt, updated_at: verifiedAt,
-  }).eq("tenant_id", auth.tenantId);
+  const { error } = await db.from("crm_resend_email_settings").update({
+    connection_status: "connected",
+    last_verified_at: verifiedAt,
+    updated_at: verifiedAt,
+  }).eq("tenant_id", tenantId);
   if (error) throw new Error(`Unable to save connection status: ${error.message}`);
-  return { connected: true, provider: "resend", fromEmail: from, inboundEmail: inbound, domains, domainStatus: "verified", verifiedAt, requestId };
+
+  safeLog("info", "resend_connection_verified", {
+    requestId,
+    tenantId,
+    domains: verification.verifiedDomains,
+    inboundMode: verification.inboundMode,
+  });
+
+  return {
+    connected: true,
+    provider: "resend",
+    fromEmail: verification.fromEmail,
+    marketingFromEmail: verification.marketingFromEmail,
+    inboundEmail: verification.inboundEmail,
+    domains: verification.verifiedDomains,
+    domainStatus: "verified",
+    inboundMode: verification.inboundMode,
+    verifiedAt,
+    requestId,
+  };
+}
+
+async function testConnection(auth: AuthContext, requestId: string) {
+  requireMutationAccess(auth);
+  return verifyConnectionForTenant(auth.db, auth.tenantId, requestId);
+}
+
+function isCronAuthorized(request: Request): boolean {
+  const configured = Deno.env.get("CRON_SECRET") ?? "";
+  const provided = request.headers.get("x-cron-secret") ?? "";
+  return configured.length > 0 && provided === configured;
+}
+
+async function handleInternalConnectionVerification(request: Request, requestId: string) {
+  if (request.method !== "POST") return json({ error: "Method not allowed", requestId }, 405, requestId);
+  if (!isCronAuthorized(request)) {
+    return json({ error: "Internal connection verification authorization is required", requestId }, 403, requestId);
+  }
+
+  const input = await request.json().catch(() => ({})) as { tenantId?: string };
+  const tenantId = String(input.tenantId ?? "").trim();
+  if (!tenantId) return json({ error: "tenantId required", requestId }, 400, requestId);
+
+  try {
+    return json(await verifyConnectionForTenant(serviceDb(), tenantId, requestId), 200, requestId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    safeLog("error", "internal_connection_verification_failed", { requestId, tenantId, message });
+    return json({ error: message, requestId }, 500, requestId);
+  }
 }
 
 async function handleUnsubscribe(request: Request, requestId: string) {
@@ -1069,6 +1129,9 @@ Deno.serve(async (request: Request) => {
   const action = url.searchParams.get("action");
   if (action === "webhook") return handleWebhook(request, requestId);
   if (action === "unsubscribe") return handleUnsubscribe(request, requestId);
+  if (action === "verify-connection-internal") {
+    return handleInternalConnectionVerification(request, requestId);
+  }
 
   let body: SendInput | null = null;
   try {
