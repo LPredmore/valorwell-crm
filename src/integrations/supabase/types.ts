@@ -1846,6 +1846,188 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_operations_video_series_schedule_items: {
+        Row: {
+          attempt_count: number
+          content_format: string
+          created_at: string
+          id: string
+          last_error: string | null
+          local_date: string | null
+          local_time: string | null
+          part_number: number | null
+          publication_id: string | null
+          schedule_id: string
+          scheduled_for: string | null
+          sequence: number
+          source_id: string
+          source_type: string
+          status: string
+          tenant_id: string
+          title: string | null
+          updated_at: string
+          youtube_publish_at: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          content_format: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          local_date?: string | null
+          local_time?: string | null
+          part_number?: number | null
+          publication_id?: string | null
+          schedule_id: string
+          scheduled_for?: string | null
+          sequence: number
+          source_id: string
+          source_type: string
+          status?: string
+          tenant_id: string
+          title?: string | null
+          updated_at?: string
+          youtube_publish_at?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          content_format?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          local_date?: string | null
+          local_time?: string | null
+          part_number?: number | null
+          publication_id?: string | null
+          schedule_id?: string
+          scheduled_for?: string | null
+          sequence?: number
+          source_id?: string
+          source_type?: string
+          status?: string
+          tenant_id?: string
+          title?: string | null
+          updated_at?: string
+          youtube_publish_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_video_series_schedule_items_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_video_series_schedule_items_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_series_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_video_series_schedules: {
+        Row: {
+          attempt_count: number
+          blocked_reasons: Json
+          cancelled_at: string | null
+          claim_count: number
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          dispatch_at: string
+          dispatch_started_at: string | null
+          id: string
+          idempotency_key: string
+          last_checked_at: string | null
+          last_error: string | null
+          last_error_code: string | null
+          lease_expires_at: string | null
+          lease_id: string | null
+          next_attempt_at: string | null
+          project_id: string
+          provenance: Json
+          queued_at: string | null
+          status: string
+          tenant_id: string
+          timezone: string
+          unrecoverable: boolean
+          updated_at: string
+          updated_by: string | null
+          week_start: string
+          youtube_scheduled_at: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          blocked_reasons?: Json
+          cancelled_at?: string | null
+          claim_count?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          dispatch_at: string
+          dispatch_started_at?: string | null
+          id?: string
+          idempotency_key: string
+          last_checked_at?: string | null
+          last_error?: string | null
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          lease_id?: string | null
+          next_attempt_at?: string | null
+          project_id: string
+          provenance?: Json
+          queued_at?: string | null
+          status?: string
+          tenant_id: string
+          timezone?: string
+          unrecoverable?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          week_start: string
+          youtube_scheduled_at?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          blocked_reasons?: Json
+          cancelled_at?: string | null
+          claim_count?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          dispatch_at?: string
+          dispatch_started_at?: string | null
+          id?: string
+          idempotency_key?: string
+          last_checked_at?: string | null
+          last_error?: string | null
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          lease_id?: string | null
+          next_attempt_at?: string | null
+          project_id?: string
+          provenance?: Json
+          queued_at?: string | null
+          status?: string
+          tenant_id?: string
+          timezone?: string
+          unrecoverable?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          week_start?: string
+          youtube_scheduled_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_video_series_schedules_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_operations_video_settings: {
         Row: {
           ai_config_revision: number
@@ -31767,6 +31949,45 @@ export type Database = {
           to: "relationship_referrals"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      video_series_claim_due: {
+        Args: { p_lease_id: string; p_lease_seconds?: number; p_limit?: number }
+        Returns: {
+          attempt_count: number
+          blocked_reasons: Json
+          cancelled_at: string | null
+          claim_count: number
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          dispatch_at: string
+          dispatch_started_at: string | null
+          id: string
+          idempotency_key: string
+          last_checked_at: string | null
+          last_error: string | null
+          last_error_code: string | null
+          lease_expires_at: string | null
+          lease_id: string | null
+          next_attempt_at: string | null
+          project_id: string
+          provenance: Json
+          queued_at: string | null
+          status: string
+          tenant_id: string
+          timezone: string
+          unrecoverable: boolean
+          updated_at: string
+          updated_by: string | null
+          week_start: string
+          youtube_scheduled_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ai_operations_video_series_schedules"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       wait_ai_operations_video_job: {
