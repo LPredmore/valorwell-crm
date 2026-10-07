@@ -14,6 +14,8 @@ import {
 const RESEND_API = "https://api.resend.com";
 const USER_AGENT = "ValorWell-CRM-Newsletter/1.0";
 const DEFAULT_UNSUBSCRIBE_BASE = "https://crm.valorwell.org/newsletter/unsubscribe";
+// Guard reasons that apply to the whole newsletter, not one recipient.
+export const GUARD_HALT_REASONS = new Set(["runtime_not_active", "newsletter_not_sending"]);
 
 type ClaimedRecipient = {
   recipientId: string;
@@ -209,9 +211,11 @@ Deno.serve(async (request: Request) => {
     let failed = 0;
     let retried = 0;
     let recordingErrors = 0;
+    let skipped = 0;
+    let haltReason: string | null = null;
     let batches = 0;
 
-    while (batches < maxBatches) {
+    while (batches < maxBatches && !haltReason) {
       const { data: claimData, error: claimError } = await admin.rpc("crm_claim_newsletter_recipients", {
         p_newsletter_id: letter.id,
         p_limit: batchSize,
@@ -263,11 +267,18 @@ Deno.serve(async (request: Request) => {
         const guardResult = guard as { allowed?: boolean; reason?: string } | null;
         if (guardError || !guardResult?.allowed) {
           skipped += 1;
+          const reason = guardError ? `guard_error:${guardError.message}` : guardResult?.reason ?? "unknown";
           log("warn", "send_guard_blocked", {
             newsletterId: letter.id,
             recipientId: recipient.recipientId,
-            reason: guardError ? `guard_error:${guardError.message}` : guardResult?.reason ?? "unknown",
+            reason,
           });
+          // Sending paused / newsletter no longer sending: stop this newsletter for
+          // this run instead of re-claiming the same recipients in a tight loop.
+          if (GUARD_HALT_REASONS.has(reason)) {
+            haltReason = reason;
+            break;
+          }
           continue;
         }
         const outcome = await sendOne(apiKey, batch, recipient, body, replyTo);
