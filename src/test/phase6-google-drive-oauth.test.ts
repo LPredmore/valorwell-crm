@@ -33,6 +33,9 @@ describe('relationship Google Drive OAuth reconnect contract', () => {
     expect(callback).toContain('https://www.googleapis.com/auth/drive');
     expect(callback).toContain('verifyDriveWriteAccess');
     expect(callback).toContain('requeueDriveScopeThumbnailJobs');
+    expect(callback).toContain('newestByClip');
+    expect(callback).toContain('thumbnail_generation_revision');
+    expect(callback).toContain('["queued", "claimed", "running", "waiting"]');
     expect(callback).toContain('store_relationship_google_connection');
     expect(callback).toContain('new URL("/crm/business-development/orchestration", appUrl)');
     expect(callback).not.toContain('You can close this window');
