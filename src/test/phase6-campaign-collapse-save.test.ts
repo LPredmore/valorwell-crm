@@ -3,7 +3,7 @@ import type { CampaignStepFormData } from '@/lib/crm/campaign-types';
 import {
   applyCanonicalCampaignEmailContent,
   resolveCampaignEmailStepForSave,
-} from '@/components/crm/campaigns/CampaignStepEditor';
+} from '@/components/crm/campaigns/campaignStepEmailPersistence';
 
 const oldContent = {
   schemaVersion: 1,
