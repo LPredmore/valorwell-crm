@@ -1,0 +1,57 @@
+name: CRM Operations Phases 15-17
+
+on:
+  pull_request:
+    paths:
+      - 'src/domain/relationships/activity-timeline*'
+      - 'src/repositories/supabase/relationship-tasks.ts'
+      - 'src/repositories/supabase/relationship-activity.ts'
+      - 'src/repositories/supabase/relationships.ts'
+      - 'src/components/crm/relationships/RelationshipTimelinePanel.tsx'
+      - 'src/components/crm/relationships/RelationshipTasksPanel.tsx'
+      - 'src/pages/crm/business-development/**'
+      - 'src/hooks/relationships/**'
+      - 'src/domain/relationships/records.ts'
+      - 'supabase/migrations/*crm_relationship_task_subjects.sql'
+      - '.github/workflows/crm-operations-phases-15-17.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  operations:
+    name: Lint, TypeScript, tests, production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Lint changed code
+        run: >
+          npx eslint
+          src/domain/relationships/activity-timeline.ts
+          src/domain/relationships/activity-timeline.test.ts
+          src/domain/relationships/relationship-task-migration.test.ts
+          src/domain/relationships/records.ts
+          src/repositories/supabase/relationship-tasks.ts
+          src/repositories/supabase/relationship-activity.ts
+          src/repositories/supabase/relationships.ts
+          src/components/crm/relationships/RelationshipTimelinePanel.tsx
+          src/components/crm/relationships/RelationshipTasksPanel.tsx
+          src/hooks/relationships/useDebouncedDirectorySearch.ts
+          src/hooks/relationships/useContactDirectory.ts
+          src/hooks/relationships/useOrganizationDirectory.ts
+          src/pages/crm/business-development/ContactDirectoryPage.tsx
+          src/pages/crm/business-development/OrganizationDirectoryPage.tsx
+          src/pages/crm/business-development/ContactDetailPage.tsx
+          src/pages/crm/business-development/OrganizationDetailPage.tsx
+          --max-warnings=0
+      - name: TypeScript application check
+        run: npx tsc -p tsconfig.app.json --noEmit
+      - name: Timeline tests
+        run: npm test -- src/domain/relationships/activity-timeline.test.ts src/domain/relationships/relationship-task-migration.test.ts
+      - name: Production build
+        run: npm run build
