@@ -60,11 +60,23 @@ export default function OrganizationDetailPage() {
           <Summary label="Organization kind" value={organization.data.organizationKind ?? 'Not recorded'} />
           <Summary label="Veteran affiliated" value={organization.data.veteranAffiliated === undefined ? 'Not recorded' : organization.data.veteranAffiliated ? 'Yes' : 'No'} />
           <Summary label="Assigned owner" value={organization.data.ownerId ?? 'Unassigned'} />
-          <Summary label="Website" value={organization.data.website ?? 'Not recorded'} />
+          <Summary label="Organization website" value={organization.data.website ?? 'Not recorded'} />
           <Summary label="Next action" value={organization.data.nextAction ?? 'None'} />
           <Summary label="Next action due" value={formatDate(organization.data.nextActionDueAt)} />
           <Summary label="Last contact" value={formatDate(organization.data.lastContactAt)} />
           <div className="sm:col-span-2 lg:col-span-4"><Badge variant={organization.data.doNotContact ? 'destructive' : 'secondary'}>{organization.data.doNotContact ? 'Do not contact' : 'Contact allowed'}</Badge></div>
+        </CardContent>
+      </Card>}
+
+      {organization.data && <Card>
+        <CardHeader><CardTitle>Beyond The Yellow / ValorWell Feature</CardTitle><CardDescription>The feature page about this organization on valorwell.org (separate from its own website).</CardDescription></CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Feature status</p><Badge className="mt-1" variant={organization.data.btyFeatureStatus === 'published' ? 'default' : 'secondary'}>{organization.data.btyFeatureStatus === 'published' ? 'Published' : 'Draft'}</Badge></div>
+          <div className="sm:col-span-2"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">ValorWell feature URL</p>{organization.data.btyFeatureUrl ? <a className="mt-1 block break-all text-sm text-primary underline-offset-4 hover:underline" href={organization.data.btyFeatureUrl} target="_blank" rel="noopener noreferrer">{organization.data.btyFeatureUrl}</a> : <p className="mt-1 text-sm">Not recorded</p>}</div>
+          <Summary label="Published date" value={organization.data.btyPublishedAt ? new Date(organization.data.btyPublishedAt).toLocaleDateString(undefined, { timeZone: 'UTC' }) : 'Not recorded'} />
+          <Summary label="YouTube video ID" value={organization.data.btyVideoId ?? 'Not recorded'} />
+          <Summary label="Image URL" value={organization.data.btyFeatureImageUrl ?? 'Not recorded'} />
+          <div className="sm:col-span-2"><Summary label="Archive card description" value={organization.data.btyFeatureSummary ?? 'Not recorded'} /></div>
         </CardContent>
       </Card>}
 
