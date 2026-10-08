@@ -33,6 +33,7 @@ jobs:
           npx eslint
           src/domain/relationships/activity-timeline.ts
           src/domain/relationships/activity-timeline.test.ts
+          src/domain/relationships/relationship-task-migration.test.ts
           src/domain/relationships/records.ts
           src/repositories/supabase/relationship-tasks.ts
           src/repositories/supabase/relationships.ts
@@ -49,6 +50,6 @@ jobs:
       - name: TypeScript application check
         run: npx tsc -p tsconfig.app.json --noEmit
       - name: Timeline tests
-        run: npm test -- src/domain/relationships/activity-timeline.test.ts
+        run: npm test -- src/domain/relationships/activity-timeline.test.ts src/domain/relationships/relationship-task-migration.test.ts
       - name: Production build
         run: npm run build
