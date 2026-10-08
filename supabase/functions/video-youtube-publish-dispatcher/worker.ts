@@ -367,7 +367,7 @@ async function applyScheduledShortThumbnail(
   const explicitReplacement = thumbnailOnly && payload.source === "crm_library_cover_editor";
   const forceRetry = thumbnailOnly && payload.source === "operator_backfill";
   const save = (state: Record<string, unknown>) => savePlatformPayloadKey(ctx, "thumbnail", {
-    ...prev, ...state, mode: "api", fileId, studioUrl, visuallyVerified: false,
+    ...((platformPayload(ctx).thumbnail ?? {}) as Record<string, unknown>), ...state, mode: "api", fileId, studioUrl, visuallyVerified: false,
   });
 
   if (!fileId) return null;
