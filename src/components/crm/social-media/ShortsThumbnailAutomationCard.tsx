@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CrmMutationGate } from '@/components/crm/auth/CrmMutationGate';
 import {
-  confirmShortsThumbnailVisual, disableShortsThumbnailApi, fetchShortsThumbnailFeature, runShortsThumbnailTest,
+  confirmShortsThumbnailVisual, coverSourceOptions, disableShortsThumbnailApi, fetchShortsThumbnailFeature, fetchSocialMediaLibrary, runShortsThumbnailTest,
   SHORTS_TEST_CONFIRMATION_PREFIX, SHORTS_VISUAL_CONFIRMATION_PHRASE, type SourceType,
 } from '@/lib/crm/social-media';
 import { SocialMediaErrorState } from './SocialMediaErrorState';
@@ -22,14 +22,28 @@ export function ShortsThumbnailAutomationCard() {
   const queryClient = useQueryClient();
   const { data: feature, error } = useQuery({ queryKey: ['social-media', 'shorts-thumbnail-feature'], queryFn: fetchShortsThumbnailFeature, retry: 1 });
   const [videoId, setVideoId] = useState('');
-  const [sourceType, setSourceType] = useState<SourceType>('clip');
-  const [sourceId, setSourceId] = useState('');
+  const [coverSearch, setCoverSearch] = useState('');
+  const [coverKey, setCoverKey] = useState('');
   const [testConfirm, setTestConfirm] = useState('');
   const [visualConfirm, setVisualConfirm] = useState('');
+  const library = useQuery({
+    queryKey: ['social-media', 'shorts-thumbnail-cover-sources'],
+    queryFn: () => fetchSocialMediaLibrary({}),
+    enabled: !!feature && !feature.automaticUploadsEnabled,
+    staleTime: 60_000,
+  });
+  const options = useMemo(() => coverSourceOptions(library.data ?? []), [library.data]);
+  const filtered = useMemo(() => {
+    const q = coverSearch.trim().toLowerCase();
+    return q ? options.filter((o) => `${o.label} ${o.detail}`.toLowerCase().includes(q)) : options;
+  }, [options, coverSearch]);
+  const selected = options.find((o) => o.key === coverKey) ?? null;
+  const sourceType: SourceType | null = selected?.sourceType ?? null;
+  const sourceId = selected?.sourceId ?? '';
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['social-media', 'shorts-thumbnail-feature'] });
 
   const test = useMutation({
-    mutationFn: () => runShortsThumbnailTest({ videoId: videoId.trim(), sourceType, sourceId: sourceId.trim(), confirmation: testConfirm }),
+    mutationFn: () => runShortsThumbnailTest({ videoId: videoId.trim(), sourceType: sourceType as SourceType, sourceId, confirmation: testConfirm }),
     onSuccess: refresh,
   });
   const review = useMutation({
@@ -70,19 +84,34 @@ export function ShortsThumbnailAutomationCard() {
               <p className="text-xs text-destructive">Warning: this changes the real thumbnail on the test video you name. Use a private, unscheduled Short you own and can discard.</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <div><Label htmlFor="sst-video">Test Short video id</Label><Input id="sst-video" value={videoId} onChange={(e) => setVideoId(e.target.value)} placeholder="11-character id" /></div>
-                <div>
-                  <Label htmlFor="sst-type">Cover from</Label>
-                  <select id="sst-type" className="h-9 w-full rounded-md border bg-background px-2" value={sourceType} onChange={(e) => setSourceType(e.target.value as SourceType)}>
-                    <option value="clip">Library clip</option><option value="project">Library episode</option>
-                  </select>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label htmlFor="sst-cover-search">Library cover to use</Label>
+                  {library.isLoading ? (
+                    <p className="text-xs text-muted-foreground">Loading Library covers…</p>
+                  ) : library.error ? (
+                    <p className="text-xs text-destructive">Couldn't load the Library. Refresh to try again.</p>
+                  ) : options.length === 0 ? (
+                    <p className="rounded border border-dashed p-2 text-xs text-muted-foreground">No clips or episodes have a saved cover yet. Add one with Change Photo in the Library, then come back.</p>
+                  ) : (
+                    <>
+                      <Input id="sst-cover-search" value={coverSearch} onChange={(e) => setCoverSearch(e.target.value)} placeholder="Search by title or organization" />
+                      <select
+                        id="sst-cover" aria-label="Library cover" className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                        value={coverKey} onChange={(e) => setCoverKey(e.target.value)}
+                      >
+                        <option value="">{filtered.length ? `Choose a cover (${filtered.length})` : 'No matches'}</option>
+                        {filtered.map((o) => <option key={o.key} value={o.key}>{o.label}{o.detail ? ` — ${o.detail}` : ''}</option>)}
+                      </select>
+                      {selected && <p className="text-xs text-muted-foreground">Using the saved cover of “{selected.label}”{selected.detail ? ` (${selected.detail})` : ''}.</p>}
+                    </>
+                  )}
                 </div>
-                <div className="sm:col-span-2"><Label htmlFor="sst-source">Library item id (its saved cover is used)</Label><Input id="sst-source" value={sourceId} onChange={(e) => setSourceId(e.target.value)} /></div>
                 <div className="sm:col-span-2">
                   <Label htmlFor="sst-confirm">Type <code>{SHORTS_TEST_CONFIRMATION_PREFIX}{videoId.trim() || '<video id>'}</code></Label>
                   <Input id="sst-confirm" value={testConfirm} onChange={(e) => setTestConfirm(e.target.value)} />
                 </div>
               </div>
-              <Button size="sm" onClick={() => test.mutate()} disabled={test.isPending || testConfirm !== SHORTS_TEST_CONFIRMATION_PREFIX + videoId.trim() || !sourceId.trim()}>
+              <Button size="sm" onClick={() => test.mutate()} disabled={test.isPending || testConfirm !== SHORTS_TEST_CONFIRMATION_PREFIX + videoId.trim() || !selected}>
                 {test.isPending ? 'Testing…' : 'Run test on this video'}
               </Button>
             </div>
