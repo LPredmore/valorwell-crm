@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { dataProvider } from '@/services/dataProvider';
 import type { TaskPriority, TaskStatus } from '@/domain/operations';
+import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 /** Relationship subjects belong to the same canonical crm_tasks table used by My Tasks.
  * The two extra optional DB columns are additive and may not yet appear in
@@ -27,11 +28,15 @@ type TaskDb = {
   public: {
     Tables: {
       crm_tasks: {
-        Row: RelationshipTaskRow & { created_by_profile_id: string };
-        Insert: Partial<RelationshipTaskRow> & {
-          tenant_id: string; title: string; created_by_profile_id: string;
+        Row: Tables<'crm_tasks'> & Pick<RelationshipTaskRow, 'relationship_contact_id' | 'relationship_organization_id'>;
+        Insert: TablesInsert<'crm_tasks'> & {
+          relationship_contact_id?: string | null;
+          relationship_organization_id?: string | null;
         };
-        Update: Partial<RelationshipTaskRow>;
+        Update: TablesUpdate<'crm_tasks'> & {
+          relationship_contact_id?: string | null;
+          relationship_organization_id?: string | null;
+        };
         Relationships: [];
       };
     };
