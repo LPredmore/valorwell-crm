@@ -450,7 +450,7 @@ async function applyScheduledShortThumbnail(
 
   // Sticky across retries of the same key: once a pre-existing custom thumbnail was seen (or the
   // prior state is unknown), later ticks can never infer success from hasCustomThumbnail alone.
-  const sentPriorCustom = pendingSameSend ? !priorCustomKnownFalse || details.hasCustomThumbnail === true && false : details.hasCustomThumbnail !== false;
+  const sentPriorCustom = pendingSameSend ? !priorCustomKnownFalse : details.hasCustomThumbnail !== false;
   await save({ apiStatus: "uploading", manualRequired: false, idempotencyKey: key, sentKey: key, sentPriorCustom, attempts: priorAttempts, attemptedAt: ctx.nowIso(), error: null });
   try {
     const driveToken = await ctx.driveToken();
