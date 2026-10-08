@@ -22,7 +22,7 @@
 - `relationshipTasksRepository.create` inserts canonical task and subject fields in the **same database INSERT** so a failed link never creates an orphan task.
 - Contact/organization panel supports creation, owner, due date/timezone input, priority, status, reassignment, rescheduling, completion, open/overdue/all views. Updates and completion use existing `dataProvider.tasks` methods. Existing staff profiles are used to select an owner.
 - New task relationship columns are not yet in generated Supabase types: a narrow typed API wrapper avoids edits to generated files.
-- **Database migration is in source control, NOT deployed.** Panel shows an explicit schema-unavailable state until approved deployment and authentication checks.
+- **Deployment update (2026-10-08):** The relationship-task-subjects SQL migration was successfully applied to the existing production Billing Hub project using the Supabase migration service (`crm_relationship_task_subjects_20261008`). Verified both new UUID columns, two indexes, task-exclusion check, trigger, and three CRM-scoped RLS policies. 89 existing tasks remain, all 89 client-linked and zero relationship-linked, with no source backfill or data loss. The panel retains an explicit schema-unavailable state for other environments where this migration has not run.
 
 ## Phase 17 — unified directory experience
 - Existing central Contacts and Organizations pages retained (including old deep links).
@@ -31,8 +31,9 @@
 - Pipeline association filters are intentionally deferred until pipeline records exist in Phases 18–24; no fake pipeline joins were invented.
 
 ## Rollback, security and acceptance
-- Read-only counts measured against live source tables; **no row backfill, updates, or table mutation to production** during this PR.
+- Read-only counts measured against live source tables; **no row backfill or source task updates**; following PR merge, only the additive task-link schema migration was deployed to production.
 - CI: lint changed files, TypeScript, timeline unit tests, embedded-PGlite SQL migration tenant-isolation/clinical-exclusion test, Vite build. Run records linked in PR after completion.
-- Prior to a real deployment: review both outstanding migrations (#102 identity, #103 canonical task links), run advisors, actual logged-in CRM smoke test, signed-JWT cross-tenant & field-level negative tests (deferred by user's earlier explicit decision, **not silently marked as passed**), verify no clinical data in general timeline, verify task create/reassign/complete, measure directory counts and latency, and check social publishing health.
+- Deployment checkpoint: PR #104 merged into main as `ba151d4cd928c361effcf7cf8c6c788d09d318ed` (superseded PR #103 closed); focused CI run 37852025837 passed lint, TypeScript, 6 timeline/embedded SQL tests, production build. Supabase task-link DDL applied and read-only live schema/data reconciled. Security advisors returned no findings on these new task subject objects, though unrelated existing warnings remain.
+- **Remaining operational acceptance**: actual logged-in CRM browser smoke test, real signed-JWT cross-tenant/field-level negative tests (user-deferred, **not silently marked as passed**), verify task create/reassign/complete, measure directory latency, confirm production frontend deployment and social publishing health. The separate PR #102 identity-review migration remains unapplied to live Billing Hub.
 - If UI must be rolled back, revert its GitHub merge. If schema is already used, do not blindly drop columns or audit/source references; preserve tasks and use a separately reviewed downgrade.
 - **Merge to `main` after checks**, as user expressly requires. Github merge is distinct from cloud deployment and SQL application; report these separately.
