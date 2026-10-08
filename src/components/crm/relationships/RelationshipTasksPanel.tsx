@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
-import type { TaskPriority } from '@/domain/operations';
+import type { TaskPriority, TaskStatus } from '@/domain/operations';
 import {
   relationshipTasksRepository, RelationshipTasksNotDeployedError, statusLabels,
   type RelationshipTaskRow, type RelationshipTaskSubject,
@@ -33,6 +33,11 @@ export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskS
   const [ownerId, setOwnerId] = useState(userId);
   const [due, setDue] = useState('');
   const [view, setView] = useState<'open' | 'overdue' | 'all'>('open');
+  const [editId, setEditId] = useState('');
+  const [editOwnerId, setEditOwnerId] = useState('');
+  const [editDueAt, setEditDueAt] = useState('');
+  const [editPriority, setEditPriority] = useState<TaskPriority>('Normal');
+  const [editStatus, setEditStatus] = useState<TaskStatus>('Not Started');
   const subjectKey = subject.contactId ? 'contact:' + subject.contactId : 'organization:' + subject.organizationId;
   const key = ['relationship-tasks', currentTenantId, subjectKey];
   const query = useQuery({
@@ -60,9 +65,10 @@ export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskS
   const update = useMutation({
     mutationFn: ({ task, complete, patch }: {
       task: RelationshipTaskRow; complete?: boolean;
-      patch?: { ownerId?: string | null; dueAt?: string | null; priority?: TaskPriority };
+      patch?: { ownerId?: string | null; dueAt?: string | null; priority?: TaskPriority; status?: TaskStatus };
     }) => complete ? relationshipTasksRepository.complete(task) : relationshipTasksRepository.update(task, patch ?? {}),
     onSuccess: async () => {
+      setEditId('');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: key }),
         queryClient.invalidateQueries({ queryKey: ['tasks'] }),
@@ -108,10 +114,48 @@ export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskS
                 <div className="flex gap-2"><Badge variant={isOverdue(task) ? 'destructive' : 'outline'}>{statusLabels[task.status]}</Badge>
                   <Badge variant="outline">{task.priority}</Badge></div>
               </div>
-              {capabilities.mutate && task.status !== 'completed' && task.status !== 'canceled' &&
+              {capabilities.mutate && task.status !== 'completed' && task.status !== 'canceled' && <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" disabled={update.isPending} onClick={() => {
+                  setEditId(editId === task.id ? '' : task.id);
+                  setEditOwnerId(task.owner_id ?? '');
+                  setEditPriority((task.priority.charAt(0).toUpperCase() + task.priority.slice(1)) as TaskPriority);
+                  setEditStatus(statusLabels[task.status]);
+                  setEditDueAt(task.due_at ? toLocalInput(task.due_at) : '');
+                }}>Edit task</Button>
                 <Button variant="outline" size="sm" disabled={update.isPending} onClick={() => update.mutate({ task, complete: true })}>
                   Complete task
-                </Button>}
+                </Button>
+              </div>}
+              {editId === task.id && <div className="grid w-full gap-2 border-t pt-2 sm:grid-cols-4">
+                <label className="text-xs">Owner
+                  <select className="mt-1 h-9 w-full rounded border bg-background px-2" value={editOwnerId} onChange={e => setEditOwnerId(e.target.value)}>
+                    <option value="">Unassigned</option>
+                    <option value={userId}>Me</option>
+                    {team.data?.filter(x => x.profileId && x.profileId !== userId).map(x =>
+                      <option key={x.profileId} value={x.profileId}>{x.displayName}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs">Due
+                  <Input className="mt-1" type="datetime-local" value={editDueAt} onChange={e => setEditDueAt(e.target.value)} />
+                </label>
+                <label className="text-xs">Priority
+                  <select className="mt-1 h-9 w-full rounded border bg-background px-2" value={editPriority} onChange={e => setEditPriority(e.target.value as TaskPriority)}>
+                    {priorityOptions.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs">Status
+                  <select className="mt-1 h-9 w-full rounded border bg-background px-2" value={editStatus} onChange={e => setEditStatus(e.target.value as TaskStatus)}>
+                    {(['Not Started', 'In Progress', 'Waiting', 'Blocked'] as const).map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </label>
+                <div className="flex gap-2 sm:col-span-4">
+                  <Button size="sm" disabled={update.isPending} onClick={() => update.mutate({ task, patch: {
+                    ownerId: editOwnerId || null, dueAt: editDueAt ? new Date(editDueAt).toISOString() : null,
+                    priority: editPriority, status: editStatus,
+                  } })}>Save task</Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditId('')}>Cancel</Button>
+                </div>
+              </div>}
             </div>)}
           </div>
         </>}
@@ -155,4 +199,10 @@ export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskS
       </CardContent>
     </Card>
   );
+}
+
+function toLocalInput(iso: string): string {
+  const date = new Date(iso);
+  const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return adjusted.toISOString().slice(0, 16);
 }
