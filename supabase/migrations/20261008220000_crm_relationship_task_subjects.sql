@@ -50,6 +50,16 @@ begin
   ) then
     raise exception 'Organization subject does not belong to this tenant' using errcode = '23514';
   end if;
+  if new.owner_id is not null and not exists (
+    select 1 from public.tenant_memberships m
+    where m.profile_id = new.owner_id and m.tenant_id = new.tenant_id
+  ) then
+    raise exception 'Task owner does not belong to the operating tenant' using errcode = '23514';
+  end if;
+  if tg_op = 'UPDATE' and old.relationship_contact_id is null
+    and old.relationship_organization_id is null then
+    raise exception 'An existing unrelated task cannot be converted to a relationship task' using errcode = '23514';
+  end if;
   if tg_op = 'UPDATE' and (
     new.tenant_id is distinct from old.tenant_id or
     new.client_id is distinct from old.client_id or
