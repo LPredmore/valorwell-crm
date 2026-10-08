@@ -1,3 +1,5 @@
+import { ContactProfileEditor } from '@/components/crm/identity/ContactProfileEditor';
+import { IdentityReviewPanel } from '@/components/crm/identity/IdentityReviewPanel';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -73,6 +75,9 @@ export default function ContactDetailPage() {
           <div className="sm:col-span-2 lg:col-span-4"><Badge variant={contact.data.doNotContact ? 'destructive' : 'secondary'}>{contact.data.doNotContact ? 'Do not contact' : 'Contact allowed'}</Badge></div>
         </CardContent>
       </Card>}
+
+      {contact.data && <ContactProfileEditor contact={contact.data} />}
+      {contact.data && <IdentityReviewPanel contact={contact.data} />}
 
       {contact.data && (
         <RelationshipLifecyclePanel
