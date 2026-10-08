@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import RelationshipUnsubscribePage from "./pages/RelationshipUnsubscribePage";
 import NewsletterUnsubscribePage from "./pages/NewsletterUnsubscribePage";
 import { CrmLayout } from "./components/crm/layout/CrmLayout";
+import { CrmLegacyRouteRedirect } from "./components/crm/layout/CrmLegacyRouteRedirect";
 import CrmIndex from "./pages/crm/Index";
 import CrmSettings from "./pages/crm/Settings";
 import EmailStudioPage from "./pages/crm/EmailStudioPage";
@@ -83,7 +84,7 @@ const App = () => (
             <Route path="clients" element={<CanonicalClients />} />
             <Route path="clients/:id" element={<CanonicalClientDetail />} />
             <Route path="staff" element={<CanonicalStaff />} />
-            <Route path="campaigns" element={<Navigate replace to="/crm/communications/campaigns" />} />
+            <Route path="campaigns" element={<CrmLegacyRouteRedirect to="/crm/communications/campaigns" />} />
             <Route path="campaigns/:id" element={<CanonicalCampaignDetail />} />
             <Route path="campaigns/:id/edit" element={<CrmCampaignEditor />} />
             <Route path="campaigns/:id/enrollments" element={<CrmCampaignEnrollments />} />
@@ -93,7 +94,7 @@ const App = () => (
             <Route path="tasks" element={<CanonicalTasks />} />
             <Route path="ai-operations" element={<AiOperationsPage />} />
             <Route path="social-media" element={<SocialMediaManagerPage />} />
-            <Route path="command-center" element={<Navigate replace to="/command-center" />} />
+            <Route path="command-center" element={<CrmLegacyRouteRedirect to="/command-center" />} />
 
             <Route path="exceptions" element={<CanonicalExceptions />} />
             <Route path="therapist-matches" element={<TherapistMatchReconciliationPage />} />
@@ -103,7 +104,7 @@ const App = () => (
             <Route path="business-development/status" element={<BusinessDevelopmentArchitecture />} />
             <Route path="business-development/orchestration" element={<RelationshipOrchestrationPage />} />
             <Route path="business-development/orchestration/reconciliation" element={<RelationshipReconciliationPage />} />
-            <Route path="business-development/automation" element={<Navigate replace to="/crm/business-development/duplicate-cleanup" />} />
+            <Route path="business-development/automation" element={<CrmLegacyRouteRedirect to="/crm/business-development/duplicate-cleanup" />} />
             <Route path="business-development/duplicate-cleanup" element={<BtyAutomationPage />} />
             <Route path="communications-control-plane" element={<CommunicationsControlPlanePage />} />
 
@@ -136,17 +137,17 @@ const App = () => (
             <Route path="email-studio-spike" element={<EmailStudioSpikePage />} />
             <Route path="settings" element={<CrmSettings />} />
             <Route path="canonical" element={<CanonicalDashboard />} />
-            <Route path="canonical/clients" element={<CanonicalClients />} />
-            <Route path="canonical/clients/:id" element={<CanonicalClientDetail />} />
-            <Route path="canonical/tasks" element={<CanonicalTasks />} />
-            <Route path="canonical/exceptions" element={<CanonicalExceptions />} />
-            <Route path="canonical/therapist-matches" element={<TherapistMatchReconciliationPage />} />
-            <Route path="canonical/campaigns" element={<Navigate replace to="/crm/communications/campaigns" />} />
-            <Route path="canonical/campaigns/:id" element={<CanonicalCampaignDetail />} />
-            <Route path="canonical/inbox" element={<CanonicalInbox />} />
+            <Route path="canonical/clients" element={<CrmLegacyRouteRedirect to="/crm/clients" />} />
+            <Route path="canonical/clients/:id" element={<CrmLegacyRouteRedirect to="/crm/clients/:id" />} />
+            <Route path="canonical/tasks" element={<CrmLegacyRouteRedirect to="/crm/tasks" />} />
+            <Route path="canonical/exceptions" element={<CrmLegacyRouteRedirect to="/crm/exceptions" />} />
+            <Route path="canonical/therapist-matches" element={<CrmLegacyRouteRedirect to="/crm/therapist-matches" />} />
+            <Route path="canonical/campaigns" element={<CrmLegacyRouteRedirect to="/crm/communications/campaigns" />} />
+            <Route path="canonical/campaigns/:id" element={<CrmLegacyRouteRedirect to="/crm/campaigns/:id" />} />
+            <Route path="canonical/inbox" element={<CrmLegacyRouteRedirect to="/crm/inbox" />} />
             <Route path="canonical/search" element={<CanonicalSearch />} />
-            <Route path="canonical/staff" element={<CanonicalStaff />} />
-            <Route path="canonical/reports" element={<CanonicalReports />} />
+            <Route path="canonical/staff" element={<CrmLegacyRouteRedirect to="/crm/staff" />} />
+            <Route path="canonical/reports" element={<CrmLegacyRouteRedirect to="/crm/reports" />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
