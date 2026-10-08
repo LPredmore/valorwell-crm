@@ -65,7 +65,7 @@ export function detectDuplicateCandidates(
     return [{
       contact,
       matchBasis,
-      ambiguous: !nameMatch || Boolean(emailMatch && !phoneMatch && subject.phone && contact.phone),
+      ambiguous: !nameMatch || !phoneMatch,
       evidence: emailMatch && phoneMatch ? 'Exact email and phone match'
         : emailMatch ? 'Exact email match (shared/family addresses are possible)'
           : 'Matching US phone number (shared phone numbers are possible)',
