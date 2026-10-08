@@ -15,8 +15,8 @@ create index if not exists crm_tasks_relationship_organization_idx
 -- Clinical and non-clinical source subjects cannot coexist on the same task.
 alter table public.crm_tasks
   add constraint crm_tasks_clinical_relationship_exclusion
-  check (client_id is null or
-    (relationship_contact_id is null and relationship_organization_id is null));
+  check ((relationship_contact_id is null and relationship_organization_id is null)
+    or (client_id is null and staff_id is null and campaign_id is null and exception_id is null));
 
 create or replace function private.crm_validate_relationship_task_subject()
 returns trigger language plpgsql security definer set search_path = ''
@@ -34,8 +34,9 @@ begin
   then
     raise exception 'Relationship task mutation is not authorized' using errcode = '42501';
   end if;
-  if new.client_id is not null then
-    raise exception 'Relationship tasks cannot contain clinical client links' using errcode = '23514';
+  if new.client_id is not null or new.staff_id is not null
+    or new.campaign_id is not null or new.exception_id is not null then
+    raise exception 'Relationship tasks cannot contain clinical or campaign source links' using errcode = '23514';
   end if;
   if new.relationship_contact_id is not null and not exists (
     select 1 from public.relationship_contacts c
@@ -52,6 +53,9 @@ begin
   if tg_op = 'UPDATE' and (
     new.tenant_id is distinct from old.tenant_id or
     new.client_id is distinct from old.client_id or
+    new.staff_id is distinct from old.staff_id or
+    new.campaign_id is distinct from old.campaign_id or
+    new.exception_id is distinct from old.exception_id or
     new.created_by_profile_id is distinct from old.created_by_profile_id or
     new.relationship_contact_id is distinct from old.relationship_contact_id or
     new.relationship_organization_id is distinct from old.relationship_organization_id
