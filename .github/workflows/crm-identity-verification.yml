@@ -39,6 +39,6 @@ jobs:
       - name: Type-check application
         run: npx tsc -p tsconfig.app.json --noEmit
       - name: Run identity unit tests
-        run: npm test -- src/domain/identity/review.test.ts
+        run: npm test -- src/domain/identity
       - name: Production build
         run: npm run build
