@@ -15,7 +15,7 @@ export function ContactProfileEditor({ contact }: { contact: RelationshipContact
   const [open, setOpen] = useState(false);
   const [fields, setFields] = useState(() => fromContact(contact));
 
-  useEffect(() => { setFields(fromContact(contact)); setOpen(false); }, [contact.id]);
+  useEffect(() => { setFields(fromContact(contact)); setOpen(false); }, [contact]);
   const save = useMutation({
     mutationFn: () => dataProvider.relationships.updateContact(contact.id, {
       firstName: fields.firstName, lastName: fields.lastName, preferredName: fields.preferredName,
