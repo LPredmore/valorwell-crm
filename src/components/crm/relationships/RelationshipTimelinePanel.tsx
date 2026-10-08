@@ -1,3 +1,4 @@
+import { listRelationshipEmails } from '@/repositories/supabase/relationship-activity';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +26,7 @@ export function RelationshipTimelinePanel({ subject }: { subject: Subject }) {
   const { currentTenantId } = useCrmAuth();
   const subjectKey = subject.contactId ? 'contact:' + subject.contactId : 'organization:' + subject.organizationId;
   const [interactionPage, setInteractionPage] = useState(1);
+  const [emailPage, setEmailPage] = useState(1);
   const [displayPage, setDisplayPage] = useState(1);
   const [channel, setChannel] = useState<'all' | TimelineChannel>('all');
   const enabled = Boolean(currentTenantId) && Boolean(subject.contactId || subject.organizationId);
@@ -43,18 +45,24 @@ export function RelationshipTimelinePanel({ subject }: { subject: Subject }) {
     enabled, retry: false,
   });
   const communications = useQuery({
-    queryKey: ['relationship-timeline-communications', currentTenantId, subjectKey],
-    queryFn: () => dataProvider.relationships.listCommunications(subject),
+    queryKey: ['relationship-timeline-communications', currentTenantId, subjectKey, emailPage],
+    queryFn: async () => {
+      const pages = await Promise.all(Array.from({ length: emailPage }, (_, i) =>
+        listRelationshipEmails(subject, i + 1),
+      ));
+      return { rows: pages.flatMap(x => x.items), total: pages[0]?.total ?? 0 };
+    },
     enabled, retry: false,
   });
   const entries = useMemo(() => {
-    const rows = buildActivityTimeline(interactions.data?.rows ?? [], communications.data ?? []);
+    const rows = buildActivityTimeline(interactions.data?.rows ?? [], communications.data?.rows ?? []);
     return channel === 'all' ? rows : rows.filter(x => x.channel === channel);
   }, [interactions.data, communications.data, channel]);
 
   const busy = interactions.isLoading || communications.isLoading;
   const error = interactions.error || communications.error;
   const hasMoreInteractions = (interactions.data?.rows.length ?? 0) < (interactions.data?.total ?? 0);
+  const hasMoreEmails = (communications.data?.rows.length ?? 0) < (communications.data?.total ?? 0);
 
   return (
     <Card>
@@ -105,13 +113,17 @@ export function RelationshipTimelinePanel({ subject }: { subject: Subject }) {
           {entries.length > displayPage * PAGE_SIZE && <Button variant="outline" size="sm" onClick={() => setDisplayPage(p => p + 1)}>
             Show more activity
           </Button>}
+          {hasMoreEmails && <Button variant="outline" size="sm" disabled={communications.isFetching}
+            onClick={() => setEmailPage(p => p + 1)}>
+            Load older email communications
+          </Button>}
           {hasMoreInteractions && <Button variant="outline" size="sm" disabled={interactions.isFetching}
             onClick={() => setInteractionPage(p => p + 1)}>
             Load older interactions
           </Button>}
           <p className="text-xs text-muted-foreground">
             Showing {Math.min(entries.length, displayPage * PAGE_SIZE)} of {entries.length} loaded events
-            {hasMoreInteractions ? ' (more older interactions available)' : ''}
+            {hasMoreInteractions || hasMoreEmails ? ' (older source events available)' : ''}
           </p>
         </div>}
       </CardContent>
