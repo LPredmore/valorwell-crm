@@ -1,3 +1,4 @@
+import { useDebouncedDirectorySearch } from '@/hooks/relationships/useDebouncedDirectorySearch';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { dataProvider } from '@/services/dataProvider';
@@ -31,7 +32,12 @@ export function useOrganizationDirectoryFilters() {
     organizationKinds: values(searchParams, 'organizationKind'),
     veteranAffiliated: booleanParam(searchParams.get('veteranAffiliated')),
     ownerIds: values(searchParams, 'owner'),
+    sources: values(searchParams, 'source'),
+    stages: values(searchParams, 'stage') as RelationshipOrganizationFilters['stages'],
+    lastContactWithinDays: [30, 90, 365].includes(Number(searchParams.get('contactDays')))
+      ? Number(searchParams.get('contactDays')) : undefined,
     overdueNextAction: booleanParam(searchParams.get('overdue')),
+    hasNextAction: booleanParam(searchParams.get('hasNextAction')),
     doNotContact: booleanParam(searchParams.get('doNotContact')),
     contacted: (searchParams.get('contacted') || undefined) as RelationshipOrganizationFilters['contacted'],
     page: numberParam(searchParams.get('page'), 1),
@@ -62,9 +68,11 @@ export function useOrganizationDirectoryFilters() {
 
 /** Query is enabled only after the typed organization capability is available. */
 export function useOrganizationDirectory(filters: RelationshipOrganizationFilters, enabled: boolean) {
+  const search = useDebouncedDirectorySearch(filters.search);
+  const queryFilters = { ...filters, search, };
   return useQuery({
-    queryKey: ['relationship-organizations', filters],
-    queryFn: () => dataProvider.relationships.listOrganizations(filters),
+    queryKey: ['relationship-organizations', queryFilters],
+    queryFn: () => dataProvider.relationships.listOrganizations(queryFilters),
     enabled,
     retry: false,
   });
