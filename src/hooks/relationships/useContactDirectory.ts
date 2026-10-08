@@ -1,3 +1,4 @@
+import { useDebouncedDirectorySearch } from '@/hooks/relationships/useDebouncedDirectorySearch';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import type {
@@ -28,7 +29,13 @@ export function useContactDirectoryFilters() {
   const filters: RelationshipContactFilters = {
     search: searchParams.get('q') || undefined,
     organizationIds: values(searchParams, 'organization'),
+    roleTitle: searchParams.get('roleTitle') || undefined,
+    overdueNextAction: booleanParam(searchParams.get('overdue')),
     ownerIds: values(searchParams, 'owner'),
+    sources: values(searchParams, 'source'),
+    stages: values(searchParams, 'stage') as RelationshipContactFilters['stages'],
+    lastContactWithinDays: [30, 90, 365].includes(Number(searchParams.get('contactDays')))
+      ? Number(searchParams.get('contactDays')) : undefined,
     outreachStatuses: values(searchParams, 'outreachStatus') as RelationshipOutreachStatus[],
     veteranAffiliations: values(searchParams, 'veteranAffiliation') as VeteranAffiliation[],
     doNotContact: booleanParam(searchParams.get('doNotContact')),
@@ -60,9 +67,12 @@ export function useContactDirectoryFilters() {
 }
 
 export function useContactDirectory(filters: RelationshipContactFilters, enabled: boolean) {
+  const search = useDebouncedDirectorySearch(filters.search);
+  const roleTitle = useDebouncedDirectorySearch(filters.roleTitle);
+  const queryFilters = { ...filters, search, roleTitle, };
   return useQuery({
-    queryKey: ['relationship-contacts', filters],
-    queryFn: () => dataProvider.relationships.listContacts(filters),
+    queryKey: ['relationship-contacts', queryFilters],
+    queryFn: () => dataProvider.relationships.listContacts(queryFilters),
     enabled,
     retry: false,
   });
