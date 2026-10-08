@@ -80,6 +80,10 @@ export type RelationshipOrganizationFilters = {
   organizationKinds?: string[];
   veteranAffiliated?: boolean;
   ownerIds?: string[];
+  sources?: string[];
+  stages?: RelationshipStage[];
+  lastContactWithinDays?: number;
+  hasNextAction?: boolean;
   overdueNextAction?: boolean;
   doNotContact?: boolean;
   contacted?: 'recently' | 'never';
@@ -160,6 +164,11 @@ export type RelationshipContactFilters = {
   search?: string;
   organizationIds?: string[];
   ownerIds?: string[];
+  roleTitle?: string;
+  sources?: string[];
+  stages?: RelationshipStage[];
+  lastContactWithinDays?: number;
+  overdueNextAction?: boolean;
   outreachStatuses?: RelationshipOutreachStatus[];
   veteranAffiliations?: VeteranAffiliation[];
   doNotContact?: boolean;
