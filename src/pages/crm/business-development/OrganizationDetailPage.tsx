@@ -1,3 +1,5 @@
+import { RelationshipTimelinePanel } from '@/components/crm/relationships/RelationshipTimelinePanel';
+import { RelationshipTasksPanel } from '@/components/crm/relationships/RelationshipTasksPanel';
 import { OrganizationAffiliationEditor } from '@/components/crm/identity/OrganizationAffiliationEditor';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
@@ -79,6 +81,9 @@ export default function OrganizationDetailPage() {
           <div className="sm:col-span-2"><Summary label="Archive card description" value={organization.data.btyFeatureSummary ?? 'Not recorded'} /></div>
         </CardContent>
       </Card>}
+
+      {organization.data && <RelationshipTimelinePanel subject={{ organizationId: organization.data.id }} />}
+      {organization.data && <RelationshipTasksPanel subject={{ organizationId: organization.data.id }} />}
 
       {organization.data && (
         <RelationshipLifecyclePanel
