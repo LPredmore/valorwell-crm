@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,30 @@ import { ScheduleSeriesDialog } from '@/components/crm/social-media/ScheduleSeri
 import { CalendarRange } from 'lucide-react';
 
 export default function SocialMediaManagerPage() {
-  const [tab, setTab] = useState('library');
-  const [seriesOpen, setSeriesOpen] = useState(false);
+  // Existing /crm/social-media remains canonical. Query state enables navigation
+  // from the dedicated sidebar without remounting or rewriting any publishing tools.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const tab = requestedTab && ['library', 'queue', 'calendar', 'settings'].includes(requestedTab)
+    ? requestedTab
+    : 'library';
+  const seriesOpen = searchParams.get('action') === 'schedule-series';
+  const setTab = (nextTab: string) => {
+    setSearchParams((previous) => {
+      const params = new URLSearchParams(previous);
+      params.set('tab', nextTab);
+      params.delete('action');
+      return params;
+    }, { replace: true });
+  };
+  const setSeriesOpen = (open: boolean) => {
+    setSearchParams((previous) => {
+      const params = new URLSearchParams(previous);
+      if (open) params.set('action', 'schedule-series');
+      else params.delete('action');
+      return params;
+    }, { replace: true });
+  };
 
   // A lightweight preflight so a shared root cause (unreachable function, expired session,
   // no resolvable tenant) shows one clear diagnostic instead of four tabs each independently
