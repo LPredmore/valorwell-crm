@@ -5,6 +5,7 @@ import { CONTENT_FORMAT_LABELS, STATUS_LABELS, thumbnailStatusLabel, type Social
 import { SocialMediaThumbnail } from './SocialMediaThumbnail';
 import { formatCentralDateTime } from './centralTime';
 import { visibilityLabel } from './publicationViews';
+import { ShortThumbnailBackfillButton } from './ShortThumbnailBackfillButton';
 
 export function SocialPublishingQueueItem({ publication, onOpen }: { publication: SocialPublication; onOpen: () => void }) {
   const playlists = publication.playlists.map((playlist) => playlist.displayName).filter(Boolean);
@@ -46,6 +47,7 @@ export function SocialPublishingQueueItem({ publication, onOpen }: { publication
               <a href={publication.externalUrl} target="_blank" rel="noreferrer">Open</a>
             </Button>
           )}
+          <ShortThumbnailBackfillButton publication={publication} />
           <Button size="sm" variant="outline" onClick={onOpen}>View</Button>
         </div>
       </CardContent>
