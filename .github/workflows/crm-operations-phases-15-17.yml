@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/domain/relationships/activity-timeline*'
       - 'src/repositories/supabase/relationship-tasks.ts'
+      - 'src/repositories/supabase/relationship-activity.ts'
       - 'src/repositories/supabase/relationships.ts'
       - 'src/components/crm/relationships/RelationshipTimelinePanel.tsx'
       - 'src/components/crm/relationships/RelationshipTasksPanel.tsx'
@@ -36,6 +37,7 @@ jobs:
           src/domain/relationships/relationship-task-migration.test.ts
           src/domain/relationships/records.ts
           src/repositories/supabase/relationship-tasks.ts
+          src/repositories/supabase/relationship-activity.ts
           src/repositories/supabase/relationships.ts
           src/components/crm/relationships/RelationshipTimelinePanel.tsx
           src/components/crm/relationships/RelationshipTasksPanel.tsx
