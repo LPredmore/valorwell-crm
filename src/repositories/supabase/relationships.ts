@@ -141,6 +141,12 @@ function toOrganization(row: RelationshipOrganizationRow): RelationshipOrganizat
     doNotContact: row.do_not_contact,
     source: row.source,
     sourceRecordKey: row.source_record_key ?? undefined,
+    btyFeatureStatus: row.bty_feature_status === 'published' ? 'published' : 'draft',
+    btyFeatureUrl: row.bty_feature_url ?? undefined,
+    btyFeatureSummary: row.bty_feature_summary ?? undefined,
+    btyVideoId: row.bty_video_id ?? undefined,
+    btyFeatureImageUrl: row.bty_feature_image_url ?? undefined,
+    btyPublishedAt: row.bty_published_at ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -164,6 +170,12 @@ function organizationInsert(
     next_action_due_at: input.nextActionDueAt ?? null,
     do_not_contact: input.doNotContact ?? false,
     source: 'crm_manual',
+    bty_feature_status: input.btyFeatureStatus ?? 'draft',
+    bty_feature_url: optionalText(input.btyFeatureUrl),
+    bty_feature_summary: optionalText(input.btyFeatureSummary),
+    bty_video_id: optionalText(input.btyVideoId),
+    bty_feature_image_url: optionalText(input.btyFeatureImageUrl),
+    bty_published_at: input.btyPublishedAt || null,
   };
 }
 
@@ -182,6 +194,12 @@ function organizationUpdate(input: Partial<RelationshipOrganizationInput>): Rela
   if (input.nextAction !== undefined) patch.next_action = optionalText(input.nextAction);
   if (input.nextActionDueAt !== undefined) patch.next_action_due_at = input.nextActionDueAt || null;
   if (input.doNotContact !== undefined) patch.do_not_contact = input.doNotContact;
+  if (input.btyFeatureStatus !== undefined) patch.bty_feature_status = input.btyFeatureStatus;
+  if (input.btyFeatureUrl !== undefined) patch.bty_feature_url = optionalText(input.btyFeatureUrl);
+  if (input.btyFeatureSummary !== undefined) patch.bty_feature_summary = optionalText(input.btyFeatureSummary);
+  if (input.btyVideoId !== undefined) patch.bty_video_id = optionalText(input.btyVideoId);
+  if (input.btyFeatureImageUrl !== undefined) patch.bty_feature_image_url = optionalText(input.btyFeatureImageUrl);
+  if (input.btyPublishedAt !== undefined) patch.bty_published_at = input.btyPublishedAt || null;
   return patch;
 }
 

@@ -3988,6 +3988,57 @@ export type Database = {
           },
         ]
       }
+      bty_published_features: {
+        Row: {
+          feature_url: string
+          image_url: string | null
+          organization_id: string
+          organization_name: string
+          published_at: string
+          summary: string
+          tenant_id: string
+          updated_at: string
+          video_id: string | null
+        }
+        Insert: {
+          feature_url: string
+          image_url?: string | null
+          organization_id: string
+          organization_name: string
+          published_at: string
+          summary: string
+          tenant_id: string
+          updated_at?: string
+          video_id?: string | null
+        }
+        Update: {
+          feature_url?: string
+          image_url?: string | null
+          organization_id?: string
+          organization_name?: string
+          published_at?: string
+          summary?: string
+          tenant_id?: string
+          updated_at?: string
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bty_published_features_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "relationship_organization_directory_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bty_published_features_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_sync_log: {
         Row: {
           appointment_id: string
@@ -21260,6 +21311,12 @@ export type Database = {
       }
       relationship_organizations: {
         Row: {
+          bty_feature_image_url: string | null
+          bty_feature_status: string
+          bty_feature_summary: string | null
+          bty_feature_url: string | null
+          bty_published_at: string | null
+          bty_video_id: string | null
           created_at: string
           created_by_profile_id: string | null
           do_not_contact: boolean
@@ -21284,6 +21341,12 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          bty_feature_image_url?: string | null
+          bty_feature_status?: string
+          bty_feature_summary?: string | null
+          bty_feature_url?: string | null
+          bty_published_at?: string | null
+          bty_video_id?: string | null
           created_at?: string
           created_by_profile_id?: string | null
           do_not_contact?: boolean
@@ -21308,6 +21371,12 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          bty_feature_image_url?: string | null
+          bty_feature_status?: string
+          bty_feature_summary?: string | null
+          bty_feature_url?: string | null
+          bty_published_at?: string | null
+          bty_video_id?: string | null
           created_at?: string
           created_by_profile_id?: string | null
           do_not_contact?: boolean
@@ -29402,6 +29471,14 @@ export type Database = {
         Returns: {
           email: string
           id: string
+        }[]
+      }
+      flurra_migration_list_storage_objects: {
+        Args: { p_bucket: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          bucket_id: string
+          mime_type: string
+          name: string
         }[]
       }
       format_timestamp_in_timezone: {

@@ -47,6 +47,19 @@ export type RelationshipOrganizationRecord = AuditMetadata & {
   doNotContact: boolean;
   source: string;
   sourceRecordKey?: string;
+} & BtyFeatureFields;
+
+export const btyFeatureStatuses = ['draft', 'published'] as const;
+export type BtyFeatureStatus = (typeof btyFeatureStatuses)[number];
+
+/** Beyond The Yellow / ValorWell feature metadata stored on the organization. */
+export type BtyFeatureFields = {
+  btyFeatureStatus?: BtyFeatureStatus;
+  btyFeatureUrl?: string;
+  btyFeatureSummary?: string;
+  btyVideoId?: string;
+  btyFeatureImageUrl?: string;
+  btyPublishedAt?: string;
 };
 
 export type RelationshipOrganizationInput = {
@@ -59,7 +72,7 @@ export type RelationshipOrganizationInput = {
   nextAction?: string;
   nextActionDueAt?: string;
   doNotContact?: boolean;
-};
+} & BtyFeatureFields;
 
 export type RelationshipOrganizationFilters = {
   search?: string;
