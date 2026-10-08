@@ -267,6 +267,71 @@ describe('Worker with the gate ON (scheduled Shorts)', () => {
     expect(thumb(h, id).apiStatus).toBe('api_confirmed');
   });
 
+  async function replacementSetup() {
+    const h = publishHarness();
+    const id = await scheduledShort(h);
+    await h.drain(id);
+    await markThumbnailManualDone(h.auth, { id });
+    enableGate(h);
+    h.youtube.video().thumbnailsSet = 1; // OLD custom thumbnail already on YouTube
+    h.pub(id).thumbnail_file_id = 'drive-cover-part-a';
+    const push = (jobId: number) => h.db.table('ai_operations_video_jobs').push({
+      id: jobId, tenant_id: h.pub(id).tenant_id, project_id: h.pub(id).project_id, clip_id: h.pub(id).clip_id, job_type: 'publish_youtube',
+      status: 'queued', social_publication_id: id, payload: { thumbnail_only: true, source: 'crm_library_cover_editor' }, attempts: 0, created_at: new Date(h.now()).toISOString(),
+    });
+    return { h, id, push, key: `${h.youtube.video().id}:drive-cover-part-a` };
+  }
+
+  it('Change Photo over an OLD custom thumbnail: 429 after sentKey is retried, never confirmed from the stale flag', async () => {
+    const { h, id, push } = await replacementSetup();
+    h.youtube.failNext('setThumbnail', httpFailure(429, 'rate', 60_000));
+    push(9400);
+    await h.tick();
+    expect(thumb(h, id)).toMatchObject({ apiStatus: 'retry_pending', sentPriorCustom: true });
+    expect(h.youtube.video().thumbnailsSet).toBe(1); // still the old image; hasCustomThumbnail=true
+    h.advance(10 * 60_000);
+    await h.drain(id, 40);
+    expect(h.youtube.count('setThumbnail')).toBe(2);
+    expect(h.youtube.video().thumbnailsSet).toBe(2);
+    expect(thumb(h, id).recoveredAfterRestart).toBeUndefined();
+    expect(thumb(h, id).apiStatus).toBe('api_confirmed');
+    expect(h.youtube.count('createResumableUploadSession')).toBe(1);
+  });
+
+  it('Change Photo over an OLD custom thumbnail: crash after sentKey but before the request re-attempts the set', async () => {
+    const { h, id, push, key } = await replacementSetup();
+    const payload = h.pub(id).platform_payload as Payload;
+    payload.thumbnail = { ...payload.thumbnail, apiStatus: 'uploading', idempotencyKey: key, sentKey: key, sentPriorCustom: true, attempts: 0 };
+    push(9401);
+    await h.drain(id, 40);
+    expect(h.youtube.count('setThumbnail')).toBe(1);
+    expect(thumb(h, id).recoveredAfterRestart).toBeUndefined();
+    expect(h.eventsFor(id).map((e) => e.event_type)).not.toContain('thumbnail_api_recovered_after_restart');
+  });
+
+  it('legacy sentKey without prior-state evidence is not trusted; background retry still re-sets the same file', async () => {
+    const { h, id, key } = await replacementSetup();
+    const payload = h.pub(id).platform_payload as Payload;
+    payload.thumbnail = { ...payload.thumbnail, apiStatus: 'retry_pending', idempotencyKey: key, sentKey: key, attempts: 1 };
+    delete payload.thumbnail.sentPriorCustom;
+    h.db.table('ai_operations_video_jobs').push({
+      id: 9402, tenant_id: h.pub(id).tenant_id, project_id: h.pub(id).project_id, clip_id: h.pub(id).clip_id, job_type: 'publish_youtube',
+      status: 'queued', social_publication_id: id, payload: { thumbnail_only: true, source: 'operator_backfill' }, attempts: 0, created_at: new Date(h.now()).toISOString(),
+    });
+    await h.drain(id, 40);
+    expect(h.youtube.count('setThumbnail')).toBe(1);
+    expect(thumb(h, id).apiStatus).not.toBe('already_present_not_overwritten');
+  });
+
+  it('Change Photo over an OLD custom thumbnail: 403 degrades to manual without claiming success', async () => {
+    const { h, id, push } = await replacementSetup();
+    h.youtube.failNext('setThumbnail', httpFailure(403, 'forbidden'));
+    push(9403);
+    await h.drain(id, 40);
+    expect(thumb(h, id)).toMatchObject({ apiStatus: 'manual_required', manualRequired: true, sentPriorCustom: true });
+    expect(h.pub(id).status).toBe('scheduled');
+  });
+
   it('thumbnail-only Change Photo with the gate OFF keeps the manual flow', async () => {
     const h = publishHarness();
     const id = await scheduledShort(h);
@@ -298,5 +363,20 @@ describe('Opt-in backfill', () => {
     expect(h.youtube.count('setThumbnail')).toBe(1);
     expect(thumb(h, id).apiStatus).toBe('api_confirmed');
     expect(h.pub(id).status).toBe('scheduled');
+  });
+});
+
+describe('coverSourceOptions', () => {
+  it('lists only clips/episodes with a saved cover, with readable labels', async () => {
+    const { coverSourceOptions } = await import('@/lib/crm/social-media');
+    const base = { projectId: 'p', clipId: null, description: null, thumbnailUrl: null, guestName: null, durationSeconds: null, sourceFileId: null, sourceFileUrl: null, readiness: { ready: true, reasons: [] }, activePublication: null, publishedPublication: null, failedPublication: null, latestPublication: null, defaultPlaylistName: null };
+    const opts = coverSourceOptions([
+      { ...base, sourceType: 'clip', sourceId: 'c1', contentFormat: 'short', partNumber: 2, title: 'Hello', thumbnailFileId: 'f1', organizationName: 'Org A' },
+      { ...base, sourceType: 'project', sourceId: 'p1', contentFormat: 'full_episode', title: null, thumbnailFileId: 'f2', organizationName: null },
+      { ...base, sourceType: 'clip', sourceId: 'c2', contentFormat: 'short', title: 'No cover', thumbnailFileId: null, organizationName: null },
+    ] as never);
+    expect(opts.map((o) => o.key)).toEqual(['clip:c1', 'project:p1']);
+    expect(opts[0]).toMatchObject({ label: 'Hello', detail: 'Org A · Part 2', sourceType: 'clip', sourceId: 'c1' });
+    expect(opts[1]).toMatchObject({ label: 'Untitled', detail: 'Episode' });
   });
 });

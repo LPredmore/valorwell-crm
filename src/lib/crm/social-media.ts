@@ -540,3 +540,19 @@ export function thumbnailStatusLabel(apiStatus: string | null | undefined): stri
     default: return null;
   }
 }
+
+export type CoverSourceOption = { key: string; sourceType: SourceType; sourceId: string; label: string; detail: string };
+
+/** Library items that have a saved cover, as readable picker options (server re-validates ownership). */
+export function coverSourceOptions(items: SocialMediaLibraryItem[]): CoverSourceOption[] {
+  return items
+    .filter((item) => !!item.thumbnailFileId && (item.sourceType === 'clip' || item.sourceType === 'project'))
+    .map((item) => {
+      const kind = item.sourceType === 'clip' ? (item.partNumber ? `Part ${item.partNumber}` : CONTENT_FORMAT_LABELS[item.contentFormat] ?? 'Clip') : 'Episode';
+      return {
+        key: `${item.sourceType}:${item.sourceId}`, sourceType: item.sourceType, sourceId: item.sourceId,
+        label: item.title?.trim() || 'Untitled',
+        detail: [item.organizationName || item.guestName, kind].filter(Boolean).join(' · '),
+      };
+    });
+}
