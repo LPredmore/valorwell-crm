@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,30 @@ import { ScheduleSeriesDialog } from '@/components/crm/social-media/ScheduleSeri
 import { CalendarRange } from 'lucide-react';
 
 export default function SocialMediaManagerPage() {
-  const [tab, setTab] = useState('library');
-  const [seriesOpen, setSeriesOpen] = useState(false);
+  // Existing /crm/social-media remains canonical. Query state enables navigation
+  // from the dedicated sidebar without remounting or rewriting any publishing tools.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const tab = requestedTab && ['library', 'queue', 'calendar', 'settings'].includes(requestedTab)
+    ? requestedTab
+    : 'library';
+  const seriesOpen = searchParams.get('action') === 'schedule-series';
+  const setTab = (nextTab: string) => {
+    setSearchParams((previous) => {
+      const params = new URLSearchParams(previous);
+      params.set('tab', nextTab);
+      params.delete('action');
+      return params;
+    }, { replace: true });
+  };
+  const setSeriesOpen = (open: boolean) => {
+    setSearchParams((previous) => {
+      const params = new URLSearchParams(previous);
+      if (open) params.set('action', 'schedule-series');
+      else params.delete('action');
+      return params;
+    }, { replace: true });
+  };
 
   // A lightweight preflight so a shared root cause (unreachable function, expired session,
   // no resolvable tenant) shows one clear diagnostic instead of four tabs each independently
@@ -25,7 +47,7 @@ export default function SocialMediaManagerPage() {
   });
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-4 p-3 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <h1 className="text-2xl font-semibold">Social Media Manager</h1>
@@ -33,7 +55,7 @@ export default function SocialMediaManagerPage() {
           Review, approve, and publish Beyond The Yellow video content to YouTube.
         </p>
       </div>
-        <Button variant="outline" onClick={() => setSeriesOpen(true)}>
+        <Button variant="outline" className="self-start gap-2" onClick={() => setSeriesOpen(true)}>
           <CalendarRange className="h-4 w-4" /> Schedule Series
         </Button>
       </div>
@@ -47,22 +69,22 @@ export default function SocialMediaManagerPage() {
       )}
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className="h-auto max-w-full flex-wrap justify-start gap-1">
           <TabsTrigger value="library">Library</TabsTrigger>
           <TabsTrigger value="queue">Publishing Queue</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
-        <TabsContent value="library">
+        <TabsContent value="library" className="min-w-0">
           <SocialMediaLibrary />
         </TabsContent>
-        <TabsContent value="queue">
+        <TabsContent value="queue" className="min-w-0">
           <SocialPublishingQueue />
         </TabsContent>
-        <TabsContent value="calendar">
+        <TabsContent value="calendar" className="min-w-0">
           <SocialPublishingCalendar />
         </TabsContent>
-        <TabsContent value="settings">
+        <TabsContent value="settings" className="min-w-0">
           <SocialMediaSettings />
         </TabsContent>
       </Tabs>
