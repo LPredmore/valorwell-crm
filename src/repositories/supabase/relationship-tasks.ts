@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { dataProvider } from '@/services/dataProvider';
 import type { TaskPriority, TaskStatus } from '@/domain/operations';
@@ -22,6 +23,25 @@ export interface RelationshipTaskRow {
   completed_at: string | null;
   updated_at: string;
 }
+type TaskDb = {
+  public: {
+    Tables: {
+      crm_tasks: {
+        Row: RelationshipTaskRow & { created_by_profile_id: string };
+        Insert: Partial<RelationshipTaskRow> & {
+          tenant_id: string; title: string; created_by_profile_id: string;
+        };
+        Update: Partial<RelationshipTaskRow>;
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
+const tasksClient = supabase as unknown as SupabaseClient<TaskDb>;
 export const statusLabels: Record<RelationshipTaskRow['status'], TaskStatus> = {
   not_started: 'Not Started', in_progress: 'In Progress', waiting: 'Waiting',
   blocked: 'Blocked', completed: 'Completed', canceled: 'Canceled',
@@ -60,7 +80,7 @@ export const relationshipTasksRepository = {
     const { tenantId } = await context();
     // Select only task columns relevant to this non-clinical subject; never
     // fetch client task descriptions and then filter in browser memory.
-    let query = supabase.from('crm_tasks')
+    let query = tasksClient.from('crm_tasks')
       .select('id,tenant_id,relationship_contact_id,relationship_organization_id,title,description,status,priority,owner_id,due_at,completed_at,updated_at')
       .eq('tenant_id', tenantId);
     query = subject.contactId ? query.eq('relationship_contact_id', subject.contactId)
@@ -79,7 +99,7 @@ export const relationshipTasksRepository = {
     if (!title || title.length > 200) throw new Error('Enter a task title of 1–200 characters.');
     // Explicit insert of canonical crm_tasks row and relation in ONE transaction:
     // no orphan task is created if the subject link is invalid.
-    const { data, error } = await supabase.from('crm_tasks')
+    const { data, error } = await tasksClient.from('crm_tasks')
       .insert({
         tenant_id: ctx.tenantId,
         created_by_profile_id: ctx.userId,
@@ -92,7 +112,7 @@ export const relationshipTasksRepository = {
         due_at: input.dueAt || null,
         relationship_contact_id: subject.contactId ?? null,
         relationship_organization_id: subject.organizationId ?? null,
-      } as never)
+      })
       .select('id')
       .single();
     checkError(error);
