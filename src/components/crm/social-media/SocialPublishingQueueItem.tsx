@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CONTENT_FORMAT_LABELS, STATUS_LABELS, type SocialPublication } from '@/lib/crm/social-media';
+import { CONTENT_FORMAT_LABELS, STATUS_LABELS, thumbnailStatusLabel, type SocialPublication } from '@/lib/crm/social-media';
 import { SocialMediaThumbnail } from './SocialMediaThumbnail';
 import { formatCentralDateTime } from './centralTime';
 import { visibilityLabel } from './publicationViews';
@@ -26,6 +26,9 @@ export function SocialPublishingQueueItem({ publication, onOpen }: { publication
             <Badge variant="outline">{visibilityLabel(publication)}</Badge>
             {publication.thumbnailStatus === 'manual_required' && (
               <Badge variant="outline" className="border-amber-500 text-amber-700">Thumbnail needed</Badge>
+            )}
+            {publication.thumbnailStatus && publication.thumbnailStatus !== 'manual_required' && thumbnailStatusLabel(publication.thumbnailStatus) && (
+              <Badge variant="outline">{thumbnailStatusLabel(publication.thumbnailStatus)}</Badge>
             )}
             {publication.attemptCount > 1 && <Badge variant="destructive">Attempt {publication.attemptCount}</Badge>}
           </div>

@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  CONTENT_FORMAT_LABELS, primaryPublication, STATUS_LABELS, type SocialMediaLibraryItem,
+  CONTENT_FORMAT_LABELS, primaryPublication, STATUS_LABELS, thumbnailStatusLabel, type SocialMediaLibraryItem,
 } from '@/lib/crm/social-media';
 import { SocialMediaThumbnail } from './SocialMediaThumbnail';
 import { CrmMutationGate } from '@/components/crm/auth/CrmMutationGate';
@@ -35,6 +35,9 @@ export function SocialMediaLibraryCard({ item, onSelect, onChangePhoto }: { item
           )}
           {publication?.thumbnailStatus === 'manual_confirmed' && (
             <Badge variant="outline" className="border-emerald-500 text-emerald-700">Thumbnail done</Badge>
+          )}
+          {publication?.thumbnailStatus && !['manual_required', 'manual_confirmed'].includes(publication.thumbnailStatus) && thumbnailStatusLabel(publication.thumbnailStatus) && (
+            <Badge variant="outline">{thumbnailStatusLabel(publication.thumbnailStatus)}</Badge>
           )}
         </div>
         <p className="text-sm font-medium line-clamp-2">{item.title ?? '(untitled)'}</p>
