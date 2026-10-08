@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Building2, Check, LogOut, User } from 'lucide-react';
+import { Building2, Check, LogOut, Menu, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -14,9 +14,11 @@ import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 
 interface CrmHeaderProps {
   title?: string;
+  section?: string;
+  onOpenNavigation?: () => void;
 }
 
-export function CrmHeader({ title }: CrmHeaderProps) {
+export function CrmHeader({ title, section, onOpenNavigation }: CrmHeaderProps) {
   const navigate = useNavigate();
   const {
     crmRole,
@@ -34,9 +36,27 @@ export function CrmHeader({ title }: CrmHeaderProps) {
   const showTenantSwitcher = availableTenants.length > 1;
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-card px-6">
-      <div className="flex items-center gap-4">
-        {title && <h1 className="text-lg font-semibold">{title}</h1>}
+    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-card px-3 sm:px-6">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+        {onOpenNavigation && (
+          <Button
+            type="button" variant="ghost" size="icon"
+            className="h-9 w-9 shrink-0 lg:hidden" onClick={onOpenNavigation}
+            aria-label="Open CRM navigation"
+          >
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </Button>
+        )}
+        <div className="min-w-0">
+          {section && (
+            <nav aria-label="Breadcrumb" className="hidden sm:block">
+              <ol className="flex items-center gap-1 text-xs text-muted-foreground">
+                <li>CRM</li><li aria-hidden="true">/</li><li>{section}</li>
+              </ol>
+            </nav>
+          )}
+          {title && <h1 className="truncate text-sm font-semibold sm:text-base">{title}</h1>}
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
