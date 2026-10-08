@@ -8,7 +8,7 @@ import { CrmMutationGate } from '@/components/crm/auth/CrmMutationGate';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import {
   approveSocialPublication, cancelSocialPublication, createSocialPublication, fetchSocialPublication,
-  markThumbnailManualDone, publicationPollInterval, queueSocialPublication, rescheduleSocialPublication,
+  backfillShortThumbnails, fetchShortsThumbnailFeature, markThumbnailManualDone, publicationPollInterval, thumbnailStatusLabel, queueSocialPublication, rescheduleSocialPublication,
   retrySocialPublication, setPublicationPlaylists, updateSocialPublication,
   validateSocialPublication, STATUS_LABELS, type DeliveryMode, type PrivacyStatus, type SourceType,
 } from '@/lib/crm/social-media';
@@ -126,6 +126,22 @@ export function SocialPublicationEditor({
     onError: (error: Error) => toast({ title: 'Could not mark thumbnail done', description: error.message, variant: 'destructive' }),
   });
 
+  const { data: shortsThumbnailFeature } = useQuery({
+    queryKey: ['social-media', 'shorts-thumbnail-feature'],
+    queryFn: fetchShortsThumbnailFeature,
+    enabled: publication?.contentFormat === 'short',
+    retry: 1,
+  });
+  const thumbnailApiRetryMutation = useMutation({
+    mutationFn: () => backfillShortThumbnails([id as string]),
+    onSuccess: (result) => {
+      invalidate();
+      if (result.queued.length) toast({ title: 'Thumbnail upload queued' });
+      else toast({ title: 'Not queued', description: result.skipped[0]?.reason ?? 'Not eligible', variant: 'destructive' });
+    },
+    onError: (error: Error) => toast({ title: 'Could not queue thumbnail upload', description: error.message, variant: 'destructive' }),
+  });
+
   const merged = publication ? { ...publication, ...pendingChanges } as typeof publication : publication;
   const onYouTube = Boolean(publication?.externalVideoId);
   // A failed publication stays editable until it has reached YouTube; saving sends it back to Ready.
@@ -204,7 +220,18 @@ export function SocialPublicationEditor({
 
             {merged.contentFormat === 'short' && merged.thumbnailUrl && (
               <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2 text-sm dark:border-amber-800 dark:bg-amber-950/30">
-                <h4 className="font-semibold">Short thumbnail</h4>
+                <h4 className="font-semibold">
+                  Short thumbnail
+                  {thumbnailStatusLabel(merged.thumbnailDelivery?.apiStatus) && (
+                    <Badge variant="outline" className="ml-2">{thumbnailStatusLabel(merged.thumbnailDelivery?.apiStatus)}</Badge>
+                  )}
+                </h4>
+                {(merged.thumbnailDelivery as { degradedReason?: string } | null)?.degradedReason && (
+                  <p className="text-xs text-muted-foreground">
+                    Automatic upload stopped ({(merged.thumbnailDelivery as { degradedReason?: string }).degradedReason}
+                    {merged.thumbnailDelivery?.error ? `: ${merged.thumbnailDelivery.error}` : ''}). The video and its schedule are unaffected.
+                  </p>
+                )}
                 {merged.thumbnailDelivery?.apiStatus === 'manual_required' ? (
                   <p className="text-muted-foreground">
                     <strong>Thumbnail needed.</strong> This Short is already uploaded to YouTube as Private and its public publish time is scheduled there. Open the saved cover and the YouTube Studio link below, upload the thumbnail manually, save it in Studio, then mark the step done here.
@@ -238,6 +265,16 @@ export function SocialPublicationEditor({
                     same image again through the API is unlikely to solve channel eligibility.
                     Check YouTube Studio for custom Shorts thumbnail access. If that option is unavailable,
                     you can choose a frame from the Short using the YouTube mobile app.
+                  </p>
+                ) : merged.thumbnailDelivery?.apiStatus === 'api_confirmed' || merged.thumbnailDelivery?.apiStatus === 'api_accepted' ? (
+                  <p className="text-muted-foreground">
+                    The CRM uploaded your saved cover through the YouTube API
+                    ({merged.thumbnailDelivery?.apiStatus === 'api_confirmed' ? 'YouTube reports a custom thumbnail' : 'request accepted'}).
+                    This is not visual proof; spot-check the Short in Studio.
+                  </p>
+                ) : merged.thumbnailDelivery?.apiStatus === 'uploading' || merged.thumbnailDelivery?.apiStatus === 'retry_pending' || merged.thumbnailDelivery?.apiStatus === 'queued' ? (
+                  <p className="text-muted-foreground">
+                    The thumbnail upload is in progress{merged.thumbnailDelivery?.apiStatus === 'retry_pending' ? ' and will retry shortly after a temporary YouTube error' : ''}. The video's schedule is not affected.
                   </p>
                 ) : merged.thumbnailDelivery?.apiStatus === 'confirmed_by_youtube' ? (
                   <p className="text-muted-foreground">
@@ -275,6 +312,13 @@ export function SocialPublicationEditor({
                         Edit Short in YouTube Studio
                       </a>
                     </Button>
+                  )}
+                  {merged.thumbnailDelivery?.apiStatus === 'manual_required' && shortsThumbnailFeature?.automaticUploadsEnabled && (
+                    <CrmMutationGate>
+                      <Button size="sm" variant="outline" onClick={() => thumbnailApiRetryMutation.mutate()} disabled={thumbnailApiRetryMutation.isPending}>
+                        {thumbnailApiRetryMutation.isPending ? 'Queuing…' : 'Upload thumbnail via API'}
+                      </Button>
+                    </CrmMutationGate>
                   )}
                   {merged.thumbnailDelivery?.apiStatus === 'manual_required' && (
                     <CrmMutationGate>
