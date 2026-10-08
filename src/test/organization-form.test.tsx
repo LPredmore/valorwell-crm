@@ -112,7 +112,7 @@ describe('organization form submission preparation', () => {
   it('submits the tenant-scoped repository create path', async () => {
     renderForm();
     fireEvent.change(screen.getByLabelText('Organization name'), { target: { value: 'Veterans Forward' } });
-    fireEvent.change(screen.getByLabelText('Website'), { target: { value: 'https://example.org' } });
+    fireEvent.change(screen.getByLabelText("Organization's own website"), { target: { value: 'https://example.org' } });
     fireEvent.change(screen.getByLabelText('Organization kind'), { target: { value: 'nonprofit' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create organization' }));
 
