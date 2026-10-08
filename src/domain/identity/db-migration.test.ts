@@ -32,7 +32,7 @@ create table public.therapist_outreach_prospects(id uuid primary key);
 create table public._identity_test_roles(user_id uuid, tenant_id uuid, crm_role text);
 create function private.crm_has_relationship_permission(p_user_id uuid, p_tenant uuid, p_permission text)
   returns boolean language sql stable security definer set search_path = ''
-  as $ select p_user_id = auth.uid() and exists (
+  as $$ select p_user_id = auth.uid() and exists (
     select 1 from public._identity_test_roles r
       where r.user_id = p_user_id and r.tenant_id = p_tenant
       and case when p_permission = 'view_sensitive_evidence' then r.crm_role = 'crm_admin'
@@ -42,9 +42,9 @@ create function private.crm_has_relationship_permission(p_user_id uuid, p_tenant
   ) $$;
 create function public.crm_has_role(p_user_id uuid, p_roles text[], p_tenant uuid)
   returns boolean language sql stable security definer set search_path = ''
-  as $ select p_user_id = auth.uid() and
+  as $$ select p_user_id = auth.uid() and
     exists(select 1 from public._identity_test_roles r where r.user_id = p_user_id
-      and r.tenant_id = p_tenant and r.crm_role = 'crm_admin') $;
+      and r.tenant_id = p_tenant and r.crm_role = 'crm_admin') $$;
 grant usage on schema auth, private to authenticated;
 grant execute on function auth.uid() to authenticated;
 grant execute on function private.crm_has_relationship_permission(uuid,uuid,text) to authenticated;
