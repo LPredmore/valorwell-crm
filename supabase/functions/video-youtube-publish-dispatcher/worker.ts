@@ -421,7 +421,8 @@ async function applyScheduledShortThumbnail(
   }
 
   // Crash recovery: we sent thumbnails.set for this key but died before recording success.
-  if (sameKey && prev.apiStatus === "uploading" && details.hasCustomThumbnail === true) {
+  // sentKey is written before thumbnails.set and kept through retry states.
+  if (prev.sentKey === key && details.hasCustomThumbnail === true) {
     payload.thumbnail_api_status = "api_confirmed";
     await save({ apiStatus: "api_confirmed", manualRequired: false, idempotencyKey: key, hasCustomThumbnail: true, recoveredAfterRestart: true, confirmedAt: ctx.nowIso(), error: null });
     await insertEvent(ctx, "thumbnail_api_recovered_after_restart", { videoId });
@@ -441,7 +442,7 @@ async function applyScheduledShortThumbnail(
     return await waitForYoutube(ctx, { ok: true, action: "waiting_for_youtube_processing", publicationId: pub.id, videoId, processingStatus: details.processingStatus });
   }
 
-  await save({ apiStatus: "uploading", manualRequired: false, idempotencyKey: key, attempts: priorAttempts, attemptedAt: ctx.nowIso(), error: null });
+  await save({ apiStatus: "uploading", manualRequired: false, idempotencyKey: key, sentKey: key, attempts: priorAttempts, attemptedAt: ctx.nowIso(), error: null });
   try {
     const driveToken = await ctx.driveToken();
     const meta = await ctx.drive.fileMetadata(driveToken, fileId);

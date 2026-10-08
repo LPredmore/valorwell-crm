@@ -17,6 +17,7 @@ type Payload = Record<string, Record<string, unknown>>;
 const thumb = (h: H, id: string) => (h.pub(id).platform_payload as Payload).thumbnail;
 const settings = (h: H) => h.db.table('ai_operations_social_settings').find((row) => row.account_id === ACCOUNT_A)!;
 const admin = (h: H) => ({ ...h.auth, crmRole: 'crm_admin' });
+const operator = (h: H) => ({ ...h.auth, crmRole: 'crm_operator' });
 
 function enableGate(h: H) {
   settings(h).metadata = {
@@ -72,7 +73,7 @@ describe('Compatibility test workflow', () => {
   it('requires admin, typed confirmation, and records an accepted test as testing (not enabled)', async () => {
     const h = publishHarness();
     const { client, calls } = fakeClient();
-    await expect(runShortsThumbnailCompatTest(h.auth, testParams(), client)).rejects.toThrow('FORBIDDEN');
+    await expect(runShortsThumbnailCompatTest(operator(h), testParams(), client)).rejects.toThrow('FORBIDDEN');
     await expect(runShortsThumbnailCompatTest(admin(h), { ...testParams(), confirmation: 'yes' }, client)).rejects.toThrow('Type exactly');
     expect(calls.setThumbnail).toBe(0);
 
@@ -223,8 +224,6 @@ describe('Worker with the gate ON (scheduled Shorts)', () => {
   it('is idempotent across restarts: a crash after thumbnails.set does not upload again', async () => {
     const h = publishHarness();
     enableGate(h);
-    h.youtube.failNext('setThumbnail', new Error('worker crashed'), { afterEffect: true });
-    // afterEffect only applies to methods that call exit(); emulate a crash after effect manually.
     const original = h.youtube.setThumbnail.bind(h.youtube);
     let crashed = false;
     h.youtube.setThumbnail = async (token, videoId, bytes, mime) => {
@@ -234,8 +233,8 @@ describe('Worker with the gate ON (scheduled Shorts)', () => {
     const id = await scheduledShort(h);
     await h.drain(id, 80);
     // second pass recognises its own 'uploading' key + custom thumbnail and records success.
-    expect(['api_confirmed']).toContain(thumb(h, id).apiStatus);
-    expect(h.youtube.video().thumbnailsSet).toBeLessThanOrEqual(2);
+    expect(thumb(h, id)).toMatchObject({ apiStatus: 'api_confirmed', recoveredAfterRestart: true });
+    expect(h.youtube.video().thumbnailsSet).toBe(1);
     const before = h.youtube.count('setThumbnail');
     h.db.table('ai_operations_video_jobs').push({
       id: 9100, tenant_id: h.pub(id).tenant_id, project_id: h.pub(id).project_id, clip_id: h.pub(id).clip_id, job_type: 'publish_youtube',
@@ -289,7 +288,7 @@ describe('Opt-in backfill', () => {
     await h.drain(id);
     await expect(backfillShortThumbnails(admin(h), { publicationIds: [id], confirmation: 'BACKFILL' })).rejects.toThrow('not enabled');
     enableGate(h);
-    await expect(backfillShortThumbnails(h.auth, { publicationIds: [id], confirmation: 'BACKFILL' })).rejects.toThrow('FORBIDDEN');
+    await expect(backfillShortThumbnails(operator(h), { publicationIds: [id], confirmation: 'BACKFILL' })).rejects.toThrow('FORBIDDEN');
     await expect(backfillShortThumbnails(admin(h), { publicationIds: [id], confirmation: 'no' })).rejects.toThrow('BACKFILL');
     const result = await backfillShortThumbnails(admin(h), { publicationIds: [id], confirmation: 'BACKFILL' });
     expect(result.queued).toEqual([id]);
