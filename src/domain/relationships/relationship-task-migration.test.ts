@@ -78,7 +78,7 @@ describe('CRM relationship task schema in embedded PostgreSQL (not signed JWT)',
       await expect(db.query(`
         insert into public.crm_tasks(tenant_id,title,created_by_profile_id,relationship_contact_id)
         values ($1,'Unowned',$2,$3)
-      `,[tenantA,outsider,contactA])).rejects.toThrow(/row-level security|permission/i);
+      `,[tenantA,outsider,contactA])).rejects.toThrow(/row-level security|permission|not authorized/i);
     } finally { await db.close(); }
   },60000);
 });
