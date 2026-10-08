@@ -226,8 +226,8 @@ describe('Worker with the gate ON (scheduled Shorts)', () => {
     enableGate(h);
     const original = h.youtube.setThumbnail.bind(h.youtube);
     let crashed = false;
-    h.youtube.setThumbnail = async (token, videoId, bytes, mime) => {
-      await original(token, videoId, bytes, mime);
+    h.youtube.setThumbnail = async (token: string, videoId: string) => {
+      await original(token, videoId);
       if (!crashed) { crashed = true; throw new Error('lost response'); }
     };
     const id = await scheduledShort(h);
