@@ -4,6 +4,7 @@
 
 ## Live schema assessment (read-only, Oct 8 2026)
 - `relationship_interactions`: 1,053 rows, `relationship_communications`: 595 rows, `crm_tasks`: 89 rows, `crm_activity_events`: 692 rows.
+- Read-only source matching showed **595 of 595 relationship email communications also have an exact-time and same-direction relationship interaction audit**, making provider-email/audit de-duplication necessary.
 - Relationship timeline must use `relationship_interactions` and `relationship_communications`; **do not select `crm_email_messages` or `crm_activity_events`** because those include clinical client records.
 - Current relationship message provider and reply status are owned by existing source tables/RPCs; never infer a reply from an audit note or assume scheduled means sent.
 - The previous `crm_identity_reviews` migration from PR #102 is **not present** in live Billing Hub; these 15–17 operations must not depend on it.
@@ -12,7 +13,7 @@
 ## Phase 15 — timeline
 - New pure `buildActivityTimeline` maps actual non-clinical relationship communications, including sender, recipient, provider-status, campaign and event timestamp, alongside recorded relationship interactions (meeting, phone, notes, system activity).
 - Suppress only matched **exact timestamp + direction** email-interaction audit entries when an authoritative communication exists. Unmatched audits remain unverified; never fabricate send/received/delivered status.
-- `RelationshipTimelinePanel` is embedded in both contact and organization details; source annotations, channel filters, chronological sort, 30-at-a-time display pagination and fetch of older interaction pages (100/page).
+- `RelationshipTimelinePanel` is embedded in both contact and organization details; source annotations, channel filters, chronological sort, 30-at-a-time display pagination and fetch of older interaction pages (100/page). The existing communications RPC is capped at **250 items**; use `listRelationshipEmails` to paginate RLS-filtered relationship email records from the source table (100/page) instead, ensuring older messages remain retrievable.
 - No bulk import, sending-engine changes, new provider query, or clinical message exposure.
 
 ## Phase 16 — one canonical task store
