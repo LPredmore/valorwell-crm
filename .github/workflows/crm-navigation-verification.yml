@@ -1,0 +1,44 @@
+name: CRM Navigation Verification
+
+on:
+  pull_request:
+    paths:
+      - 'src/App.tsx'
+      - 'src/components/crm/layout/**'
+      - 'src/pages/crm/SocialMediaManagerPage.tsx'
+      - '.github/workflows/crm-navigation-verification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  navigation:
+    name: Nav lint, type-check, tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Lint changed CRM navigation files
+        run: >
+          npx eslint
+          src/App.tsx
+          src/components/crm/layout/CrmSidebar.tsx
+          src/components/crm/layout/CrmHeader.tsx
+          src/components/crm/layout/CrmLayout.tsx
+          src/components/crm/layout/CrmLegacyRouteRedirect.tsx
+          src/components/crm/layout/crmNavigation.ts
+          src/components/crm/layout/crmNavigation.test.tsx
+          src/pages/crm/SocialMediaManagerPage.tsx
+          --max-warnings=0
+      - name: Type-check application
+        run: npx tsc -p tsconfig.app.json --noEmit
+      - name: Run CRM navigation regression tests
+        run: npm test -- src/components/crm/layout/crmNavigation.test.tsx
+      - name: Build application
+        run: npm run build
