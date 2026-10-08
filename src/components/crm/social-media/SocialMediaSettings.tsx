@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { fetchSocialMediaSettings, fetchYouTubeConnectionStatus } from '@/lib/crm/social-media';
 import { YouTubeConnectionStatus } from './YouTubeConnectionStatus';
 import { SocialMediaErrorState } from './SocialMediaErrorState';
+import { ShortsThumbnailAutomationCard } from './ShortsThumbnailAutomationCard';
 
 function displayTime(time: string): string {
   const [hour, minute] = time.split(':').map(Number);
@@ -38,6 +39,8 @@ export function SocialMediaSettings() {
   return (
     <div className="pt-4 space-y-4 max-w-2xl">
       {connectionError ? <SocialMediaErrorState error={connectionError} /> : <YouTubeConnectionStatus status={connection} />}
+
+      <ShortsThumbnailAutomationCard />
 
       <Card>
         <CardHeader><CardTitle className="text-sm">Account</CardTitle></CardHeader>

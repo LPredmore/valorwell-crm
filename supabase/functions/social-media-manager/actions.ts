@@ -7,6 +7,7 @@ export const VIEW_ACTIONS: ReadonlySet<string> = new Set([
   "list_publication_events", "get_settings", "get_youtube_connection_status",
   "get_thumbnail_url", "validate_publication",
   "list_series_schedules", "get_series_schedule", "get_series_readiness",
+  "get_shorts_thumbnail_feature",
 ]);
 
 /** Mutation actions: require capabilities.mutate (crm_admin/crm_operator today). */
@@ -16,6 +17,7 @@ export const MUTATE_ACTIONS: ReadonlySet<string> = new Set([
   "cancel_publication", "retry_publication", "replace_thumbnail", "mark_thumbnail_manual_done",
   "verify_youtube_connection", "preview_bulk_schedule", "bulk_schedule",
   "assign_series_schedule", "change_series_schedule", "remove_series_schedule",
+  "run_shorts_thumbnail_test", "confirm_shorts_thumbnail_visual", "disable_shorts_thumbnail_api", "backfill_short_thumbnails",
 ]);
 
 /** Rejects unknown actions and mutations by callers without the mutate capability. */
