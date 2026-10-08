@@ -51,3 +51,14 @@ A contact may have multiple source roles concurrently (prospect, guest, applican
 - Automated CI must pass changed-source ESLint, application TypeScript, tests and build. SQL migration has **NOT** had a database-only staging execution because the user declined an additional paid Supabase branch. This limitation is explicitly **not** a pass.
 - To accept rollout: apply the reviewed SQL migration in an approved environment, check security advisor and schema grants, run seeded two-tenant signed-JWT CRUD/negative source link tests, run client/recruiter least-privilege checks, test trigger audit before/after reversals and idempotent decisions, reconcile source row counts, perform logged-in contact/org workflow smoke test. Do NOT mark live linking complete until those gates pass.
 - Tasks 7–10 PR #101 is prerequisite for visual unified sidebar, but this PR does not replace or modify that prior navigation work.
+
+## Executed verification — 2026-10-08
+Focused GitHub Actions CI **PASS**: https://github.com/LPredmore/valorwell-crm/actions/runs/37846452491
+- Changed-source ESLint: PASS
+- Application TypeScript: PASS
+- **9 Vitest checks: PASS** — 8 conservative candidate-matching tests plus 1 embedded Postgres/PGlite integration suite
+- Production Vite build: PASS
+- The PGlite integration suite executes the **actual proposed migration SQL** against isolated synthetic source tables and checks canonical contact-pair ordering, link/update review events, target tenant mismatch denial, BTY primary-contact validation, immutable source identity, authorized client UUID reference and outsider RLS denial.
+- This is **embedded Postgres with synthetic authorization fixtures**, NOT a real Supabase GoTrue/HTTP signed-JWT test; do not misrepresent it as fulfilling deferred Task 03C.
+- A **read-only live source audit** (no names/emails exported) found **0 duplicate-email groups among relationship contacts**, **0 duplicate-email groups among applicants**, but **34 relationship-contact rows with exact normalized email overlap with a provider applicant**. Matching emails are candidates, not confirmed same-person records; no auto-links/backfill performed.
+- Live SQL confirmed proposed `public.crm_identity_reviews` table **does not yet exist in production**; the PR migration has not been applied.
