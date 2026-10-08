@@ -501,3 +501,42 @@ export const SERIES_STATUS_LABELS: Record<SeriesScheduleStatus, string> = {
   partially_scheduled: 'Partially scheduled', youtube_scheduled: 'Scheduled on YouTube', complete: 'Complete',
   failed: 'Failed', cancelled: 'Removed',
 };
+
+// ---- Shorts thumbnail API gate (default OFF; per YouTube account) ----
+export type ShortsThumbnailTestRun = {
+  id: string; videoId: string; thumbnailFileId: string; sourceType: string; sourceId: string;
+  requestedBy: string; requestedAt: string; httpStatus: number | null; apiAccepted: boolean;
+  hasCustomThumbnail: boolean | null; error: string | null;
+  visualResult: 'pending' | 'confirmed' | 'not_visible'; visualReviewedBy: string | null; visualReviewedAt: string | null;
+};
+export type ShortsThumbnailFeature = {
+  accountId: string; state: 'disabled' | 'testing' | 'api_verified'; automaticUploadsEnabled: boolean;
+  enabledBy: string | null; enabledAt: string | null; enabledFromTestRunId: string | null;
+  disabledBy: string | null; disabledAt: string | null; note: string | null; testRuns: ShortsThumbnailTestRun[];
+};
+export const SHORTS_TEST_CONFIRMATION_PREFIX = 'CHANGE THUMBNAIL ';
+export const SHORTS_VISUAL_CONFIRMATION_PHRASE = 'I SAW THE CUSTOM THUMBNAIL ON SHORTS';
+
+export const fetchShortsThumbnailFeature = () => invoke<ShortsThumbnailFeature>('get_shorts_thumbnail_feature');
+export const runShortsThumbnailTest = (params: { videoId: string; sourceType: SourceType; sourceId: string; confirmation: string }) =>
+  invoke<{ run: ShortsThumbnailTestRun; feature: ShortsThumbnailFeature; studioUrl: string; shortsUrl: string }>('run_shorts_thumbnail_test', params, 60000);
+export const confirmShortsThumbnailVisual = (params: { testRunId: string; result: 'confirmed' | 'not_visible'; confirmation?: string }) =>
+  invoke<ShortsThumbnailFeature>('confirm_shorts_thumbnail_visual', params);
+export const disableShortsThumbnailApi = () => invoke<ShortsThumbnailFeature>('disable_shorts_thumbnail_api');
+export const backfillShortThumbnails = (publicationIds: string[]) =>
+  invoke<{ queued: string[]; skipped: { id: string; reason: string }[] }>('backfill_short_thumbnails', { publicationIds, confirmation: 'BACKFILL' });
+
+/** Operator-facing label for platform_payload.thumbnail.apiStatus. API states never claim visual proof. */
+export function thumbnailStatusLabel(apiStatus: string | null | undefined): string | null {
+  switch (apiStatus) {
+    case 'queued': case 'pending': case 'waiting_processing': case 'retry_pending': return 'Thumbnail Pending';
+    case 'uploading': return 'Thumbnail Uploading';
+    case 'accepted_unverified': case 'api_accepted': return 'Thumbnail API Accepted';
+    case 'confirmed_by_youtube': case 'api_confirmed': return 'Thumbnail API Confirmed';
+    case 'manual_required': return 'Thumbnail Manual Required';
+    case 'manual_confirmed': return 'Thumbnail Done';
+    case 'already_present_not_overwritten': return 'Thumbnail Preserved';
+    case 'failed': case 'not_applied': return 'Thumbnail Failed';
+    default: return null;
+  }
+}

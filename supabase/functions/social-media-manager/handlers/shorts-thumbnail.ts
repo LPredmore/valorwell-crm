@@ -29,7 +29,7 @@ const MAX_BACKFILL = 25;
 
 function requireAdmin(auth: AuthContext) {
   requireMutate(auth);
-  if (auth.crmRole !== "crm_admin") throw new Error("FORBIDDEN: only CRM admins can test or enable automatic Shorts thumbnails.");
+  if (auth.crmRole !== "crm_admin") throw new Error("FORBIDDEN"); // crm_admin only
 }
 
 async function loadAccountSettings(auth: AuthContext) {
