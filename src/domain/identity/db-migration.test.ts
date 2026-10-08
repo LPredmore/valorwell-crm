@@ -61,7 +61,7 @@ describe('migration DDL and RLS integrity against embedded Postgres (not real si
   it('enforces cross-tenant rejection, source-domain checks, immutable associations and event audit', async () => {
     const db = new PGlite();
     try {
-      const fixtureStatements = schema.split(/;\\s*\\n/).map(s => s.trim()).filter(Boolean);
+      const fixtureStatements = schema.split(/;\s*\n/).map(s => s.trim()).filter(Boolean);
       for (const statement of fixtureStatements) {
         try { await db.exec(statement + ';'); }
         catch (error) { throw new Error('Fixture DDL failed at ' + statement.slice(0, 140) + ': ' + String(error)); }
