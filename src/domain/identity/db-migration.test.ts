@@ -61,9 +61,9 @@ describe('migration DDL and RLS integrity against embedded Postgres (not real si
   it('enforces cross-tenant rejection, source-domain checks, immutable associations and event audit', async () => {
     const db = new PGlite();
     try {
-      await db.exec(schema);
+      try { await db.exec(schema); } catch (error) { throw new Error('Fixture DDL failed: ' + String(error)); }
       const migration = readFileSync(resolve(process.cwd(), 'supabase/migrations/20261008161000_crm_identity_review_links.sql'), 'utf8');
-      await db.exec(migration);
+      try { await db.exec(migration); } catch (error) { throw new Error('Migration DDL failed: ' + String(error)); }
 
       await db.exec("set role authenticated");
       await db.query("select set_config('request.jwt.claim.sub', $1, false)", [alice]);
