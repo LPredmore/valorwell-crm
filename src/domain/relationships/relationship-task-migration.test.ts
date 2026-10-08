@@ -29,6 +29,7 @@ create table public.crm_tasks(
  created_by_profile_id uuid not null, due_at timestamptz
 );
 create table public.identity_fixture_memberships(user_id uuid, tenant_id uuid, role text);
+create table public.tenant_memberships(profile_id uuid, tenant_id uuid);
 create function private.crm_has_relationship_permission(p_user uuid, p_tenant uuid, p_perm text)
 returns boolean language sql stable security definer set search_path = ''
 as $body$ select p_user = auth.uid() and exists (
@@ -41,6 +42,7 @@ grant execute on function private.crm_has_relationship_permission(uuid,uuid,text
 grant select,insert,update on public.crm_tasks to authenticated;
 alter table public.crm_tasks enable row level security;
 insert into public.identity_fixture_memberships values ('${operator}','${tenantA}','crm_operator');
+insert into public.tenant_memberships values ('${operator}','${tenantA}');
 insert into public.relationship_contacts values ('${contactA}','${tenantA}'), ('${contactB}','${tenantB}');
 insert into public.relationship_organizations values ('${organizationA}','${tenantA}');
 `;
