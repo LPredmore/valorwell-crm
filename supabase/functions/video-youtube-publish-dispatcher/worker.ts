@@ -420,15 +420,21 @@ async function applyScheduledShortThumbnail(
     return c.kind === "manual" ? await degradeToManual("lookup_refused", safeError(error), c.status) : await transient(error, c.status, c.retryAfterMs);
   }
 
-  // Crash recovery: we sent thumbnails.set for this key but died before recording success.
-  // sentKey is written before thumbnails.set and kept through retry states.
-  if (prev.sentKey === key && details.hasCustomThumbnail === true) {
+  // Crash recovery: we may have sent thumbnails.set for this key but died before recording success.
+  // sentKey + sentPriorCustom are written before thumbnails.set and kept through retry states.
+  // hasCustomThumbnail=true only proves OUR image landed if the video had NO custom thumbnail
+  // before our first attempt. If an old custom thumbnail existed (explicit replacement), or the
+  // prior state is unknown (legacy record), the flag may describe the OLD image: retry the set.
+  const pendingSameSend = prev.sentKey === key;
+  const priorCustomKnownFalse = pendingSameSend && prev.sentPriorCustom === false;
+  const pendingReplacement = pendingSameSend && !priorCustomKnownFalse;
+  if (priorCustomKnownFalse && details.hasCustomThumbnail === true) {
     payload.thumbnail_api_status = "api_confirmed";
     await save({ apiStatus: "api_confirmed", manualRequired: false, idempotencyKey: key, hasCustomThumbnail: true, recoveredAfterRestart: true, confirmedAt: ctx.nowIso(), error: null });
     await insertEvent(ctx, "thumbnail_api_recovered_after_restart", { videoId });
     return null;
   }
-  if (details.hasCustomThumbnail === true && !explicitReplacement) {
+  if (details.hasCustomThumbnail === true && !explicitReplacement && !pendingReplacement) {
     payload.thumbnail_api_status = "already_present_not_overwritten";
     await save({ apiStatus: "already_present_not_overwritten", manualRequired: false, idempotencyKey: key, error: null, checkedAt: ctx.nowIso(), note: "YouTube already reports a custom thumbnail; not overwritten." });
     await insertEvent(ctx, "thumbnail_preexisting_preserved", { videoId });
@@ -442,7 +448,10 @@ async function applyScheduledShortThumbnail(
     return await waitForYoutube(ctx, { ok: true, action: "waiting_for_youtube_processing", publicationId: pub.id, videoId, processingStatus: details.processingStatus });
   }
 
-  await save({ apiStatus: "uploading", manualRequired: false, idempotencyKey: key, sentKey: key, attempts: priorAttempts, attemptedAt: ctx.nowIso(), error: null });
+  // Sticky across retries of the same key: once a pre-existing custom thumbnail was seen (or the
+  // prior state is unknown), later ticks can never infer success from hasCustomThumbnail alone.
+  const sentPriorCustom = pendingSameSend ? !priorCustomKnownFalse || details.hasCustomThumbnail === true && false : details.hasCustomThumbnail !== false;
+  await save({ apiStatus: "uploading", manualRequired: false, idempotencyKey: key, sentKey: key, sentPriorCustom, attempts: priorAttempts, attemptedAt: ctx.nowIso(), error: null });
   try {
     const driveToken = await ctx.driveToken();
     const meta = await ctx.drive.fileMetadata(driveToken, fileId);
