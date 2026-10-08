@@ -278,3 +278,40 @@ export async function updateVideoStatus(accessToken: string, videoId: string, st
   });
   if (!response.ok) await failure(response, `Video status update failed (${response.status}).`);
 }
+
+export type YoutubeVideoOwnership = {
+  id: string;
+  channelId: string | null;
+  privacyStatus: string | null;
+  publishAt: string | null;
+  uploadStatus: string | null;
+  durationSeconds: number | null;
+  hasCustomThumbnail: boolean | null;
+};
+
+function isoDurationSeconds(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const match = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/.exec(value);
+  if (!match) return null;
+  const [, d, h, m, s] = match.map((part) => Number(part ?? 0));
+  return d * 86400 + h * 3600 + m * 60 + s;
+}
+
+/** Read-only lookup used to validate a compatibility-test video. Null when not visible. */
+export async function getYoutubeVideoOwnership(accessToken: string, videoId: string): Promise<YoutubeVideoOwnership | null> {
+  const url = `${API}/videos?part=snippet,status,contentDetails&id=${encodeURIComponent(videoId)}`;
+  const response = await request(url, { headers: { authorization: `Bearer ${accessToken}` } });
+  if (!response.ok) await failure(response, `Video lookup failed (${response.status}).`);
+  const body = await response.json().catch(() => ({}));
+  const video = body?.items?.[0];
+  if (!video) return null;
+  return {
+    id: String(video.id),
+    channelId: video.snippet?.channelId ?? null,
+    privacyStatus: video.status?.privacyStatus ?? null,
+    publishAt: video.status?.publishAt ?? null,
+    uploadStatus: video.status?.uploadStatus ?? null,
+    durationSeconds: isoDurationSeconds(video.contentDetails?.duration),
+    hasCustomThumbnail: typeof video.contentDetails?.hasCustomThumbnail === "boolean" ? video.contentDetails.hasCustomThumbnail : null,
+  };
+}
