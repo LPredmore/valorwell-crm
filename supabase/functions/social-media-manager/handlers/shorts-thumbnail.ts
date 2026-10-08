@@ -6,7 +6,7 @@
  */
 import type { AuthContext } from "../context.ts";
 import { requireMutate } from "../context.ts";
-import { httpFailure, safeError, YoutubePublishError } from "../../_shared/youtube-publish/errors.ts";
+import { safeError, YoutubePublishError } from "../../_shared/youtube-publish/errors.ts";
 import type { YoutubeVideoOwnership } from "../../_shared/youtube-publish/api.ts";
 import {
   isShortsThumbnailApiEnabled, resolveShortsThumbnailFeature, SHORTS_THUMBNAIL_METADATA_KEY,
@@ -238,4 +238,3 @@ export async function backfillShortThumbnails(auth: AuthContext, params: Record<
   return { queued, skipped };
 }
 
-export { httpFailure };
