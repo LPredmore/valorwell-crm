@@ -1,0 +1,44 @@
+name: CRM Identity Verification
+
+on:
+  pull_request:
+    paths:
+      - 'src/domain/identity/**'
+      - 'src/repositories/identity-reviews.ts'
+      - 'src/components/crm/identity/**'
+      - 'src/pages/crm/business-development/ContactDetailPage.tsx'
+      - 'src/pages/crm/business-development/OrganizationDetailPage.tsx'
+      - 'supabase/migrations/*crm_identity_review_links.sql'
+      - '.github/workflows/crm-identity-verification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  identity:
+    name: Identity lint, type-check, tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Lint identity and changed workspace code
+        run: >
+          npx eslint
+          src/domain/identity
+          src/repositories/identity-reviews.ts
+          src/components/crm/identity
+          src/pages/crm/business-development/ContactDetailPage.tsx
+          src/pages/crm/business-development/OrganizationDetailPage.tsx
+          --max-warnings=0
+      - name: Type-check application
+        run: npx tsc -p tsconfig.app.json --noEmit
+      - name: Run identity unit tests
+        run: npm test -- src/domain/identity
+      - name: Production build
+        run: npm run build

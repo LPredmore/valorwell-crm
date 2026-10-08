@@ -1,3 +1,4 @@
+import { OrganizationAffiliationEditor } from '@/components/crm/identity/OrganizationAffiliationEditor';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,8 @@ export default function OrganizationDetailPage() {
           })}</div>}
         </CardContent>
       </Card>
+
+      {organization.data && <OrganizationAffiliationEditor organizationId={organization.data.id} />}
 
       <Card>
         <CardHeader><CardTitle>Remaining relationship functions</CardTitle><CardDescription>Campaigns, suppressions, and automated communications remain capability-gated for later implementation passes.</CardDescription></CardHeader>
