@@ -1,3 +1,4 @@
+import { relationshipStages } from '@/domain/relationships/contracts';
 import { Link } from 'react-router-dom';
 import { RotateCcw, Search, UsersRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,11 @@ export default function ContactDirectoryPage() {
         <CardHeader><CardTitle>Contact directory filters</CardTitle><CardDescription>Filters use only persisted contact and affiliation fields.</CardDescription></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-2"><Label htmlFor="contact-search">Search</Label><div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input id="contact-search" className="pl-9" value={filters.search ?? ''} onChange={(event) => set('q', event.target.value)} placeholder="Name, email, or phone" /></div></div>
+          <div className="space-y-2"><Label htmlFor="contact-stage">Relationship stage</Label><select id="contact-stage" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={filters.stages?.[0] ?? ''} onChange={e => set('stage', e.target.value)}><option value="">All stages</option>{relationshipStages.map(stage => <option key={stage} value={stage}>{relationshipStageLabel(stage)}</option>)}</select></div>
+          <Filter id="contact-source" label="Source" value={filters.sources?.[0] ?? ''} onChange={value => set('source', value)} placeholder="e.g. crm_manual" />
+          <Filter id="contact-role" label="Organization role" value={filters.roleTitle ?? ''} onChange={value => set('roleTitle', value)} placeholder="Founder, director, volunteer…" />
+          <div className="space-y-2"><Label htmlFor="contact-contact-days">Last contact</Label><select id="contact-contact-days" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={filters.lastContactWithinDays ?? ''} onChange={e => set('contactDays', e.target.value)}><option value="">Any time</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last year</option></select></div>
+          <BooleanFilter id="contact-overdue" label="Overdue next action" value={filters.overdueNextAction} onChange={value => set('overdue', value)} />
           <Filter id="contact-organization" label="Organization ID" value={filters.organizationIds?.[0] ?? ''} onChange={(value) => set('organization', value)} placeholder="Organization UUID" />
           <Filter id="contact-owner" label="Assigned owner" value={filters.ownerIds?.[0] ?? ''} onChange={(value) => set('owner', value)} placeholder="Owner profile ID" />
           <Filter id="contact-outreach" label="Outreach status" value={filters.outreachStatuses?.[0] ?? ''} onChange={(value) => set('outreachStatus', value)} placeholder="e.g. contacted" />

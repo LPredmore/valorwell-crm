@@ -376,6 +376,12 @@ export const supabaseRelationshipsRepository: RelationshipsRepository = {
     if (filters.organizationKinds?.length) query = query.in('organization_kind', filters.organizationKinds);
     if (filters.veteranAffiliated !== undefined) query = query.eq('veteran_affiliated', filters.veteranAffiliated);
     if (filters.ownerIds?.length) query = query.in('owner_profile_id', filters.ownerIds);
+    if (filters.sources?.length) query = query.in('source', filters.sources);
+    if (filters.stages?.length) query = query.in('relationship_stage', filters.stages);
+    if (filters.hasNextAction !== undefined) query = filters.hasNextAction
+      ? query.not('next_action', 'is', null) : query.is('next_action', null);
+    if (filters.lastContactWithinDays && Number.isFinite(filters.lastContactWithinDays))
+      query = query.gte('last_contact_at', new Date(Date.now() - filters.lastContactWithinDays * 86400000).toISOString());
     if (filters.doNotContact !== undefined) query = query.eq('do_not_contact', filters.doNotContact);
     if (filters.overdueNextAction) {
       query = query
@@ -454,12 +460,14 @@ export const supabaseRelationshipsRepository: RelationshipsRepository = {
     const paging = pageValues(filters.page, filters.pageSize);
     let restrictedContactIds: string[] | undefined;
 
-    if (filters.organizationIds?.length) {
-      const affiliations = await supabase
+    if (filters.organizationIds?.length || filters.roleTitle?.trim()) {
+      let affiliationQuery = supabase
         .from('relationship_contact_organizations')
         .select('contact_id')
-        .eq('tenant_id', context.tenantId)
-        .in('organization_id', filters.organizationIds);
+        .eq('tenant_id', context.tenantId);
+      if (filters.organizationIds?.length) affiliationQuery = affiliationQuery.in('organization_id', filters.organizationIds);
+      if (filters.roleTitle?.trim()) affiliationQuery = affiliationQuery.ilike('role_title', '%' + searchTerm(filters.roleTitle) + '%');
+      const affiliations = await affiliationQuery;
       if (affiliations.error) throw new Error(affiliations.error.message);
       restrictedContactIds = [...new Set((affiliations.data ?? []).map((row) => row.contact_id))];
       if (!restrictedContactIds.length) {
@@ -480,6 +488,11 @@ export const supabaseRelationshipsRepository: RelationshipsRepository = {
       );
     }
     if (filters.ownerIds?.length) query = query.in('owner_profile_id', filters.ownerIds);
+    if (filters.sources?.length) query = query.in('source', filters.sources);
+    if (filters.stages?.length) query = query.in('relationship_stage', filters.stages);
+    if (filters.lastContactWithinDays && Number.isFinite(filters.lastContactWithinDays))
+      query = query.gte('last_contact_at', new Date(Date.now() - filters.lastContactWithinDays * 86400000).toISOString());
+    if (filters.overdueNextAction) query = query.lt('next_action_due_at', new Date().toISOString()).not('next_action', 'is', null);
     if (filters.outreachStatuses?.length) query = query.in('outreach_status', filters.outreachStatuses);
     if (filters.veteranAffiliations?.length) query = query.in('veteran_affiliation', filters.veteranAffiliations);
     if (filters.doNotContact !== undefined) query = query.eq('do_not_contact', filters.doNotContact);

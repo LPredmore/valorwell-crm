@@ -1,3 +1,5 @@
+import { RelationshipTimelinePanel } from '@/components/crm/relationships/RelationshipTimelinePanel';
+import { RelationshipTasksPanel } from '@/components/crm/relationships/RelationshipTasksPanel';
 import { ContactProfileEditor } from '@/components/crm/identity/ContactProfileEditor';
 import { IdentityReviewPanel } from '@/components/crm/identity/IdentityReviewPanel';
 import { useQueries, useQuery } from '@tanstack/react-query';
@@ -75,6 +77,9 @@ export default function ContactDetailPage() {
           <div className="sm:col-span-2 lg:col-span-4"><Badge variant={contact.data.doNotContact ? 'destructive' : 'secondary'}>{contact.data.doNotContact ? 'Do not contact' : 'Contact allowed'}</Badge></div>
         </CardContent>
       </Card>}
+
+      {contact.data && <RelationshipTimelinePanel subject={{ contactId: contact.data.id }} />}
+      {contact.data && <RelationshipTasksPanel subject={{ contactId: contact.data.id }} />}
 
       {contact.data && <ContactProfileEditor contact={contact.data} />}
       {contact.data && <IdentityReviewPanel contact={contact.data} />}
