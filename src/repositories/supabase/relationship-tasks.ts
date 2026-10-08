@@ -43,11 +43,6 @@ function checkError(error: { code?: string; message: string } | null): void {
   }
   throw new Error(error.message);
 }
-function subjectFilter(query: ReturnType<ReturnType<typeof supabase.from>['select']>, subject: RelationshipTaskSubject) {
-  return subject.contactId
-    ? query.eq('relationship_contact_id', subject.contactId)
-    : query.eq('relationship_organization_id', subject.organizationId!);
-}
 async function context(): Promise<{ tenantId: string; userId: string; canMutate: boolean }> {
   const { data, error } = await supabase.rpc('get_crm_operating_context');
   checkError(error);
