@@ -10,7 +10,7 @@ import type { CrmCapabilities } from '@/lib/crm/types';
 /**
  * Navigation is presentation-only; the server's existing RLS/RPC and social-media
  * bootstrap remain the authority for access. Never infer permissions from a URL.
- * Link to existing routes only: unified pipelines/recruitment are delivered later.
+ * The configurable pipeline builder is available at /crm/pipelines; source adapters arrive in later phases.
  */
 export type CrmNavGroupId = 'workspace' | 'crm' | 'operations' | 'social' | 'administration';
 
@@ -49,7 +49,7 @@ export const crmNavGroups: readonly CrmNavGroup[] = [
     items: [
       { label: 'Contacts', href: '/crm/business-development/contacts', icon: Users },
       { label: 'Organizations', href: '/crm/business-development/organizations', icon: Building2 },
-      { label: 'Pipelines', href: '/crm/business-development/opportunities', icon: GitBranch, description: 'Existing BTY opportunities; shared pipelines arrive in later phases' },
+      { label: 'Pipelines', href: '/crm/pipelines', icon: GitBranch, description: 'Configurable personal and organization relationship pipelines' },
       { label: 'Communications', href: '/crm/communications-control-plane', icon: MessageCircle, description: 'Existing communications control plane' },
       { label: 'Campaigns', href: '/crm/communications/campaigns', icon: Megaphone },
     ],

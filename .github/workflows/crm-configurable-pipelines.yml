@@ -1,0 +1,38 @@
+name: CRM configurable pipelines
+
+on:
+  pull_request:
+    paths:
+      - 'src/domain/pipelines/**'
+      - 'src/repositories/supabase/pipeline*'
+      - 'src/pages/crm/pipelines/**'
+      - 'supabase/migrations/*crm_configurable_pipelines.sql'
+      - 'src/App.tsx'
+      - 'src/components/crm/layout/crmNavigation.ts'
+      - '.github/workflows/crm-configurable-pipelines.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pipelines:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Changed-file ESLint
+        run: >
+          npx eslint src/App.tsx src/components/crm/layout/crmNavigation.ts
+          src/domain/pipelines src/repositories/supabase/pipelines.ts
+          src/repositories/supabase/pipeline-subjects.ts src/pages/crm/pipelines
+          --max-warnings=0
+      - name: Types
+        run: npx tsc -p tsconfig.app.json --noEmit
+      - name: Unit tests
+        run: npm test -- src/domain/pipelines/models.test.ts src/domain/pipelines/pipeline-migration.test.ts
+      - name: Production build
+        run: npm run build
