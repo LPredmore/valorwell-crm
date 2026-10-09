@@ -4,7 +4,9 @@ import { createClient } from "npm:@supabase/supabase-js@2.93.1";
 
 const TENANT_ID="00000000-0000-0000-0000-000000000001";
 const AUTH_HASH="e330cb8e006ec406ddd7d1eb357d82a7986bcdf22b0f34338e7c528f8adc332e";
-const LEGACY_EXPORT_URL="https://asjhkidpuhqodryczuth.supabase.co/functions/v1/legacy-r2-video-export";
+// Legacy export is retired. Opt in only for an explicitly configured migration
+// endpoint; never embed a retired Supabase project URL in the active codebase.
+const LEGACY_EXPORT_URL=Deno.env.get("LEGACY_R2_VIDEO_EXPORT_URL")??"";
 const MIGRATION_FOLDER_NAME="Legacy R2 Video Migration";
 const CHUNK_BYTES=64*1024*1024;
 const MAX_CHUNKS_PER_TICK=4;
