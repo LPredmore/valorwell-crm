@@ -14,6 +14,10 @@ declare
   v_current_count integer;
   v_old_lock text;
   v_new_lock text;
+  v_old_org uuid;
+  v_old_tenant uuid;
+  v_old_contact uuid;
+  v_old_primary boolean;
 begin
   if tg_op = 'DELETE' then
     perform pg_advisory_xact_lock(
@@ -26,6 +30,10 @@ begin
   -- organization locks in a stable order to avoid lock inversion.
   v_new_lock := new.tenant_id::text || ':' || new.organization_id::text;
   if tg_op = 'UPDATE' then
+    v_old_org := old.organization_id;
+    v_old_tenant := old.tenant_id;
+    v_old_contact := old.contact_id;
+    v_old_primary := old.is_primary;
     v_old_lock := old.tenant_id::text || ':' || old.organization_id::text;
     if v_old_lock <> v_new_lock then
       perform pg_advisory_xact_lock(hashtextextended(least(v_old_lock,v_new_lock),0));
@@ -42,9 +50,9 @@ begin
     where a.tenant_id = new.tenant_id
       and a.organization_id = new.organization_id
       and (tg_op = 'INSERT'
-        or a.organization_id is distinct from old.organization_id
-        or a.tenant_id is distinct from old.tenant_id
-        or a.contact_id is distinct from old.contact_id);
+        or a.organization_id is distinct from v_old_org
+        or a.tenant_id is distinct from v_old_tenant
+        or a.contact_id is distinct from v_old_contact);
 
   if v_current_count = 0 then
     -- First/only association: turn on Primary even if the caller explicitly
@@ -54,19 +62,19 @@ begin
     -- Preserve the previous protection against competing primaries.
     -- Updating an unrelated field on a legacy ambiguous organization
     -- should not unexpectedly fail; only NEW primary selections are checked.
-    if tg_op = 'INSERT' or old.is_primary is distinct from true
-      or old.organization_id is distinct from new.organization_id
-      or old.tenant_id is distinct from new.tenant_id
-      or old.contact_id is distinct from new.contact_id then
+    if tg_op = 'INSERT' or v_old_primary is distinct from true
+      or v_old_org is distinct from new.organization_id
+      or v_old_tenant is distinct from new.tenant_id
+      or v_old_contact is distinct from new.contact_id then
       if exists(
         select 1 from public.relationship_contact_organizations a
         where a.organization_id = new.organization_id
           and a.tenant_id = new.tenant_id
           and a.is_primary
           and (tg_op = 'INSERT'
-            or a.organization_id is distinct from old.organization_id
-            or a.tenant_id is distinct from old.tenant_id
-            or a.contact_id is distinct from old.contact_id)
+            or a.organization_id is distinct from v_old_org
+            or a.tenant_id is distinct from v_old_tenant
+            or a.contact_id is distinct from v_old_contact)
       ) then
         raise exception 'ORGANIZATION_ALREADY_HAS_PRIMARY_CONTACT'
           using errcode = '23514';
