@@ -287,7 +287,9 @@ export default function PipelineHubPage(){
         Connected cards always reflect their authoritative source.
         {p.source_key==='relationship_opportunities'
           ?' BTY changes use the existing permission-checked, version-checked source transition function and write its official history; no email is sent.'
-          :' This source requires its existing authorized workflow for status changes. Generic CRM stage movement is disabled.'}
+          :p.source_key==='provider_applicants'
+            ?' Contacted → Screening uses the authorized staff workflow, preserving its owner/follow-up and audit requirements. Outreach delivery and approval remain in the staff applicant workspace.'
+            :' This source requires its existing authorized workflow for status changes. Generic CRM stage movement is disabled.'}
       </p>}
       {connected.isError&&<p role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">Source records could not be loaded with your current permissions: {connected.error.message}</p>}
       {p.source_mode==='manual'&&records.data?.length===recordLimit&&recordLimit<2000&&
@@ -361,7 +363,7 @@ export default function PipelineHubPage(){
               {p.subject_type==='organization'&&<td className="p-3">{contact}</td>}
               <td className="p-3 space-y-2">
                 <span>{stages.data?.find(stage=>stage.id===row.stage_id)?.name??'Unknown stage'}</span>
-                {source&&p.source_key==='relationship_opportunities'&&capabilities.mutate&&
+                {source&&['relationship_opportunities','provider_applicants'].includes(p.source_key??'')&&capabilities.mutate&&
                   <ConnectedStageEditor key={source.id+':list:'+source.sourceVersion}
                     pipeline={p} card={source} stages={stages.data??[]} busy={busy} save={act}/>}
               </td>
@@ -401,7 +403,7 @@ export default function PipelineHubPage(){
                   :<Link to={source.sourceUrl} className="text-xs underline">Open source record</Link>)}
                 {visibleFields.map(f=><p key={f.id} className="text-sm">{f.label}: {String(record.field_values[f.field_key]??'—')}</p>)}
                 {record.next_action&&<p className="text-xs text-muted-foreground">Next: {record.next_action}</p>}
-                {source&&p.source_key==='relationship_opportunities'&&capabilities.mutate&&
+                {source&&['relationship_opportunities','provider_applicants'].includes(p.source_key??'')&&capabilities.mutate&&
                   <ConnectedStageEditor key={source.id+':board:'+source.sourceVersion}
                     pipeline={p} card={source} stages={stages.data??[]} busy={busy} save={act}/>}
                 {manual&&capabilities.mutate&&<PipelineActionEditor key={record.id+':actions:'+(manual.version??0)}
