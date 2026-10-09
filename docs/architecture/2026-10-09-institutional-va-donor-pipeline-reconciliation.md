@@ -21,6 +21,6 @@ At deployment: 80 state-by-state Institutional Recruiting targets, **0 linked**;
 
 Needed next:
 1. Authenticated browser acceptance/published frontend deployment confirmation for CRM→Pipelines; actual role-specific RLS behavior with signed real JWTs.
-2. Manually review/canonicalize 80 Institutional and 82 VA records. Some VA contacts are named departmental inboxes, not humans. Choose the actual best-relationship contact and parent facility before linking, prevent duplicate organizations and choose one global primary. Existing Bob Woodruff Foundation duplicate primaries and Craig Newmark Philanthropies missing primary remain for operator resolution.
+2. Manually review/canonicalize 80 Institutional and 82 VA records. Some VA contacts are named departmental inboxes, not humans. Choose the actual best-relationship contact and parent facility before linking. **After PR #109, an organization with exactly one linked contact assigns that contact Primary automatically.** Bob Woodruff Foundation still has duplicate primaries requiring review. Craig Newmark Philanthropies now has its sole contact set Primary, but the contact's email domain belongs to Bob Woodruff Foundation—verify that relationship association before relying on it.
 3. True donor payment ingestion/recurring-event sync and matching approved donor identities into `crm_donors`, with no name-only merges; donor prospect workflow still manual.
 4. Future stage movement and history, drag-drop Kanban, saved views, facility hierarchy modeling and auto-refresh of research metadata on linked cards.
