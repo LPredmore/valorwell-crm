@@ -333,15 +333,29 @@ export default function PipelineHubPage(){
           <option value="">Bulk move to stage</option>{(stages.data??[]).map(stage=><option key={stage.id} value={stage.id}>{stage.name}</option>)}
         </select>
         <Button size="sm" disabled={busy||!bulkStage||selectedRecords.length===0}
-          onClick={()=>act(async()=>{
+          onClick={()=>{
             const moving=(records.data??[]).filter(r=>selectedRecords.includes(r.id));
-            for(const record of moving){
-              if(canMovePipelineCard(record.stage_id,bulkStage,stages.data??[],rules.data??[])){
-                await pipelinesRepository.move(record,bulkStage);
-              } else throw new Error('A selected record has a blocked stage transition. No further records were moved.');
+            const destination=stages.data?.find(stage=>stage.id===bulkStage);
+            if(!destination||moving.length!==selectedRecords.length){
+              setActionError('Some selected records are no longer loaded. Refresh and retry.');return;
             }
-            setSelectedRecords([]);
-          })}>Move selected (up to 20)</Button>
+            if(moving.some(record=>!canMovePipelineCard(record.stage_id,bulkStage,stages.data??[],rules.data??[]))){
+              setActionError('A selected record has a blocked transition. Nothing was moved.');return;
+            }
+            if(!window.confirm(`Move ${moving.length} selected records to "${destination.name}"? Each move is recorded in the pipeline audit history.`))return;
+            void act(async()=>{
+              let completed=0;
+              try{
+                for(const record of moving){
+                  await pipelinesRepository.move(record,bulkStage);
+                  completed++;
+                }
+                setSelectedRecords([]);
+              }catch(error){
+                throw new Error(`${completed} of ${moving.length} records moved. ${error instanceof Error?error.message:'A move failed'}. Refresh before retrying remaining records.`);
+              }
+            });
+          }}>Move selected (up to 20)</Button>
       </div>}
       {viewMode==='list'&&<div className="overflow-x-auto rounded border">
         <table className="w-full min-w-[640px] text-sm">
