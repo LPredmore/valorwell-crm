@@ -14,13 +14,13 @@ import type { SocialMediaLibraryItem } from '../../supabase/functions/social-med
 const preferred = { short: ['12:00', '15:00', '18:00'], longForm: ['08:00', '14:00'] };
 const PROJECT = 'project-1';
 const WEEK = '2026-10-19';
-const BEFORE_DISPATCH = Date.parse('2026-10-16T16:59:00Z'); // Fri 11:59 CDT
-const AT_DISPATCH = Date.parse('2026-10-16T17:00:00Z'); // Fri 12:00 CDT
+const BEFORE_DISPATCH = Date.parse('2026-10-16T22:59:00Z'); // Fri 17:59 CDT
+const AT_DISPATCH = Date.parse('2026-10-16T23:00:00Z'); // Fri 18:00 CDT
 
 function lib(overrides: Partial<SocialMediaLibraryItem> & { sourceId: string }): SocialMediaLibraryItem {
   return {
     sourceType: 'clip', projectId: PROJECT, clipId: overrides.sourceId, partNumber: null, contentFormat: 'short',
-    title: `Title ${overrides.sourceId}`, description: '', thumbnailUrl: null, thumbnailFileId: 'thumb', guestName: 'G',
+    title: `Title ${overrides.sourceId}`, description: 'Prepared YouTube description', thumbnailUrl: null, thumbnailFileId: 'thumb', guestName: 'G',
     organizationName: 'Org', durationSeconds: 60, sourceFileId: 'file', sourceFileUrl: null,
     readiness: { ready: true, reasons: [] }, activePublication: null, publishedPublication: null,
     failedPublication: null, latestPublication: null, defaultPlaylistName: null, ...overrides,
@@ -44,13 +44,13 @@ describe('series week math (America/Chicago, DST aware)', () => {
     expect(isMondayKey('2026-10-20')).toBe(false);
     expect(currentCentralWeekStart(Date.parse('2026-10-19T04:30:00Z'))).toBe('2026-10-12'); // still Sunday night in Chicago
   });
-  it('dispatches previous Friday at 12:00 Central in CDT and CST', () => {
-    expect(seriesDispatchAt('2026-10-19')).toBe('2026-10-16T17:00:00.000Z');
-    expect(seriesDispatchAt('2026-11-09')).toBe('2026-11-06T18:00:00.000Z');
+  it('dispatches previous Friday at 18:00 Central in CDT and CST', () => {
+    expect(seriesDispatchAt('2026-10-19')).toBe('2026-10-16T23:00:00.000Z');
+    expect(seriesDispatchAt('2026-11-09')).toBe('2026-11-07T00:00:00.000Z');
     // Week right after fall-back (Nov 1 2026): Friday Oct 30 is still CDT.
-    expect(seriesDispatchAt('2026-11-02')).toBe('2026-10-30T17:00:00.000Z');
+    expect(seriesDispatchAt('2026-11-02')).toBe('2026-10-30T23:00:00.000Z');
     // Spring-forward Sunday Mar 8 2026: Friday Mar 6 is CST.
-    expect(seriesDispatchAt('2026-03-09')).toBe('2026-03-06T18:00:00.000Z');
+    expect(seriesDispatchAt('2026-03-09')).toBe('2026-03-07T00:00:00.000Z');
     expect(() => seriesDispatchAt('2026-10-20')).toThrow();
     expect(seriesReadinessCutoff(WEEK)).toBe('2026-10-19T11:00:00.000Z');
   });
@@ -93,6 +93,7 @@ describe('buildSeriesPlan', () => {
 
   it('blocks the whole series on any unready, untitled or thumbnail-less item', () => {
     expect(plan([part(1), short(1, { thumbnailFileId: null })]).blockers.join()).toMatch(/thumbnail/);
+    expect(plan([part(1, { description: '' })]).blockers.join()).toMatch(/description/);
     expect(plan([part(1, { readiness: { ready: false, reasons: ['not rendered'] } })]).blockers.join()).toMatch(/not rendered/);
     expect(plan([part(1), full({ title: null })]).blockers.join()).toMatch(/Full episode needs a title/);
   });
@@ -205,7 +206,7 @@ function harness(libraryItems: SocialMediaLibraryItem[], options: { failValidate
 }
 
 describe('processSeriesSchedule', () => {
-  it('does nothing before the Friday-noon deadline', async () => {
+  it('does nothing before the Friday 18:00 Central deadline', async () => {
     const h = harness([part(1)]);
     await h.tick(BEFORE_DISPATCH);
     expect(h.schedule.status).toBe('assigned');
@@ -280,30 +281,30 @@ describe('series authorization', () => {
   });
 });
 
-describe('hard Friday 12:00 Central cutoff', () => {
+describe('hard Friday 18:00 Central cutoff', () => {
   const mutator = (db: unknown = {}) => ({ userId: 'u', tenantId: 't1', crmRole: 'crm_admin', capabilities: { mutate: true, communicate: false, manage_campaigns: false, report: false }, db: db as never });
-  const noonCdt = Date.parse('2026-10-16T17:00:00Z'); // Fri Oct 16 12:00 CDT for week 2026-10-19
-  const noonCst = Date.parse('2026-11-06T18:00:00Z'); // Fri Nov 6 12:00 CST for week 2026-11-09
+  const cutoffCdt = Date.parse('2026-10-16T23:00:00Z'); // Fri Oct 16 18:00 CDT
+  const cutoffCst = Date.parse('2026-11-07T00:00:00Z'); // Fri Nov 6 18:00 CST
 
-  it('is open at 11:59:59 and closed at exactly noon (CDT and CST)', () => {
-    expect(isPastSeriesCutoff(seriesDispatchAt('2026-10-19'), noonCdt - 1000)).toBe(false);
-    expect(isPastSeriesCutoff(seriesDispatchAt('2026-10-19'), noonCdt)).toBe(true);
-    expect(isPastSeriesCutoff(seriesDispatchAt('2026-11-09'), noonCst - 1000)).toBe(false);
-    expect(isPastSeriesCutoff(seriesDispatchAt('2026-11-09'), noonCst)).toBe(true);
+  it('is open at 17:59:59 and closed at exactly 18:00 Central (CDT and CST)', () => {
+    expect(isPastSeriesCutoff(seriesDispatchAt('2026-10-19'), cutoffCdt - 1000)).toBe(false);
+    expect(isPastSeriesCutoff(seriesDispatchAt('2026-10-19'), cutoffCdt)).toBe(true);
+    expect(isPastSeriesCutoff(seriesDispatchAt('2026-11-09'), cutoffCst - 1000)).toBe(false);
+    expect(isPastSeriesCutoff(seriesDispatchAt('2026-11-09'), cutoffCst)).toBe(true);
     // 17:00Z is 11:00 CST, so the CST week is still open then.
     expect(isPastSeriesCutoff(seriesDispatchAt('2026-11-09'), Date.parse('2026-11-06T17:00:00Z'))).toBe(false);
   });
 
   it('starts the list at the next actually assignable Monday', () => {
     expect(firstAssignableWeekStart(Date.parse('2026-10-14T15:00:00Z'))).toBe('2026-10-19'); // Wed
-    expect(firstAssignableWeekStart(noonCdt - 1000)).toBe('2026-10-19');
-    expect(firstAssignableWeekStart(noonCdt)).toBe('2026-10-26'); // Fri noon onward
+    expect(firstAssignableWeekStart(cutoffCdt - 1000)).toBe('2026-10-19');
+    expect(firstAssignableWeekStart(cutoffCdt)).toBe('2026-10-26'); // Fri 18:00 Central onward
     expect(firstAssignableWeekStart(Date.parse('2026-10-18T20:00:00Z'))).toBe('2026-10-26'); // Sunday
   });
 
-  it('rejects assignment at noon but not at 11:59:59 (validation reaches the DB lookup)', async () => {
-    await expect(assignSeriesSchedule(mutator(), { weekStart: '2026-10-19', projectId: PROJECT }, noonCdt)).rejects.toThrow(/Cutoff passed/);
-    await expect(assignSeriesSchedule(mutator(), { weekStart: '2026-10-19', projectId: PROJECT }, noonCdt - 1000)).rejects.not.toThrow(/Cutoff passed/);
+  it('rejects assignment at 18:00 but not at 17:59:59 (validation reaches the DB lookup)', async () => {
+    await expect(assignSeriesSchedule(mutator(), { weekStart: '2026-10-19', projectId: PROJECT }, cutoffCdt)).rejects.toThrow(/Cutoff passed/);
+    await expect(assignSeriesSchedule(mutator(), { weekStart: '2026-10-19', projectId: PROJECT }, cutoffCdt - 1000)).rejects.not.toThrow(/Cutoff passed/);
   });
 
   function dbWithRow(row: Record<string, unknown>) {
@@ -316,12 +317,12 @@ describe('hard Friday 12:00 Central cutoff', () => {
     chain.update = (patch: unknown) => { updates.push(patch); return chain; };
     return { db: { from: () => chain }, updates };
   }
-  const assigned = { id: 's1', tenant_id: 't1', project_id: PROJECT, week_start: '2026-10-19', dispatch_at: '2026-10-16T17:00:00+00:00', status: 'assigned', dispatch_started_at: null, lease_expires_at: null };
+  const assigned = { id: 's1', tenant_id: 't1', project_id: PROJECT, week_start: '2026-10-19', dispatch_at: '2026-10-16T23:00:00+00:00', status: 'assigned', dispatch_started_at: null, lease_expires_at: null };
 
   it('existing assigned week cannot be changed or removed at/after cutoff, even unclaimed', async () => {
     const { db, updates } = dbWithRow(assigned);
-    await expect(removeSeriesSchedule(mutator(db), { id: 's1' }, noonCdt)).rejects.toThrow(/Cutoff passed/);
-    await expect(changeSeriesSchedule(mutator({ from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: 'p2', tenant_id: 't1', organization_name: 'Org2' }, error: null }) }) }) }) }) }) as never, { id: 's1', projectId: 'p2' }, noonCdt))
+    await expect(removeSeriesSchedule(mutator(db), { id: 's1' }, cutoffCdt)).rejects.toThrow(/Cutoff passed/);
+    await expect(changeSeriesSchedule(mutator({ from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: 'p2', tenant_id: 't1', organization_name: 'Org2' }, error: null }) }) }) }) }) }) as never, { id: 's1', projectId: 'p2' }, cutoffCdt))
       .rejects.toThrow();
     expect(updates).toEqual([]);
   });
@@ -329,7 +330,7 @@ describe('hard Friday 12:00 Central cutoff', () => {
   it('summaries mark cutoff weeks as locked', async () => {
     const { db } = dbWithRow({ ...assigned, blocked_reasons: [] });
     const realNow = Date.now;
-    Date.now = () => noonCdt;
+    Date.now = () => cutoffCdt;
     try {
       const summary = await getSeriesSchedule(mutator(db), { id: 's1' });
       expect(summary.cutoffPassed).toBe(true);
