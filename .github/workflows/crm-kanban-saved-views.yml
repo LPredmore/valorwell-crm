@@ -1,0 +1,32 @@
+name: CRM Kanban, stage rules and saved views
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/domain/pipelines/**'
+      - 'src/pages/crm/pipelines/**'
+      - 'src/repositories/supabase/pipelines.ts'
+      - 'supabase/migrations/*pipeline_stage_rules_and_saved_views.sql'
+      - '.github/workflows/crm-kanban-saved-views.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Focused lint
+        run: npx eslint src/domain/pipelines src/pages/crm/pipelines src/repositories/supabase/pipelines.ts --max-warnings=0
+      - name: TypeScript
+        run: npx tsc -p tsconfig.app.json --noEmit
+      - name: PGlite and view-filter tests
+        run: npx vitest run src/domain/pipelines
+      - name: Production build
+        run: npm run build
