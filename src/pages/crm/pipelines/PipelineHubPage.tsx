@@ -303,6 +303,11 @@ export default function PipelineHubPage(){
             await pipelinesRepository.deleteView(v);setActiveSavedView('');
           })}>Delete saved view</Button>}
       </div>
+      {p.source_key==='provider_applicants'&&<p className="rounded border p-3 text-sm">
+        Outreach prospects are sourced from the protected recruitment staging table, not from submitted clinician applications.
+        The board previews the 200 most recent prospects; <Link className="underline" to="/crm/recruitment/prospects">open the full paginated recruitment queue</Link> to search and edit all 1,279 existing prospects.
+        Email and SMS campaigns are paused; review stages do not send messages.
+      </p>}
       {p.source_mode==='connected'&&<p className="rounded border p-3 text-sm">
         Connected cards always reflect their authoritative source.
         {p.source_key==='relationship_opportunities'
@@ -401,7 +406,7 @@ export default function PipelineHubPage(){
                   <ConnectedStageEditor key={source.id+':list:'+source.sourceVersion}
                     pipeline={p} card={source} stages={stages.data??[]} busy={busy} save={act}/>}
               </td>
-              <td className="p-3">{manual?ownerName(manual.owner_profile_id):'Managed in source'}</td>
+              <td className="p-3">{manual?ownerName(manual.owner_profile_id):source?.sourceKind==='therapist_prospect'?ownerName(source.owner_profile_id??null):'Managed in source'}</td>
                <td className="p-3">{row.next_action??'—'}</td>
               {visibleFields.map(field=><td key={field.id} className="p-3">{String(row.field_values[field.field_key]??'—')}</td>)}
             </tr>;
@@ -437,7 +442,9 @@ export default function PipelineHubPage(){
                   ?<a href={source.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline">Open source workspace</a>
                   :<Link to={source.sourceUrl} className="text-xs underline">Open source record</Link>)}
                 {visibleFields.map(f=><p key={f.id} className="text-sm">{f.label}: {String(record.field_values[f.field_key]??'—')}</p>)}
-                {manual&&<p className="text-xs text-muted-foreground">Assigned owner: {ownerName(manual.owner_profile_id)}</p>}
+                {(manual||source?.sourceKind==='therapist_prospect')&&<p className="text-xs text-muted-foreground">
+                   Assigned owner: {ownerName(manual?.owner_profile_id??source?.owner_profile_id??null)}
+                 </p>}
                  {record.next_action&&<p className="text-xs text-muted-foreground">Next: {record.next_action}</p>}
                 {source&&['relationship_opportunities','provider_applicants'].includes(p.source_key??'')&&capabilities.mutate&&
                   <ConnectedStageEditor key={source.id+':board:'+source.sourceVersion}
