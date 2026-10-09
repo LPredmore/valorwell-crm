@@ -428,7 +428,7 @@ async function applyScheduledShortThumbnail(
   const pendingSameSend = prev.sentKey === key;
   const priorCustomKnownFalse = pendingSameSend && prev.sentPriorCustom === false;
   const pendingReplacement = pendingSameSend && !priorCustomKnownFalse;
-  if (priorCustomKnownFalse && details.hasCustomThumbnail === true) {
+  if (!explicitReplacement && priorCustomKnownFalse && details.hasCustomThumbnail === true) {
     payload.thumbnail_api_status = "api_confirmed";
     await save({ apiStatus: "api_confirmed", manualRequired: false, idempotencyKey: key, hasCustomThumbnail: true, recoveredAfterRestart: true, confirmedAt: ctx.nowIso(), error: null });
     await insertEvent(ctx, "thumbnail_api_recovered_after_restart", { videoId });
