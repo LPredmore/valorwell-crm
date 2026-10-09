@@ -124,3 +124,93 @@ end;
 $f$;
 revoke all on function public.crm_enroll_research_source(uuid,uuid,uuid) from public,anon;
 grant execute on function public.crm_enroll_research_source(uuid,uuid,uuid) to authenticated;
+
+-- An explicit one-click approval is required before promoting researched
+-- source contact information to the organization's global primary contact.
+-- No bulk import, background primary selection or emails are triggered.
+create function public.crm_create_research_organization(
+  p_pipeline_id uuid,p_source_id uuid,p_primary_name text,p_primary_email text
+) returns uuid
+language plpgsql security invoker set search_path=''
+as $f$
+declare
+  v_tenant uuid;
+  v_kind text;
+  v_existing uuid;
+  v_name text;
+  v_website text;
+  v_state text;
+  v_org uuid;
+  v_contact uuid;
+  v_contact_count integer;
+  v_first text;
+  v_last text;
+  v_source_id uuid;
+  v_email text:=lower(btrim(p_primary_email));
+  v_clean_name text:=btrim(p_primary_name);
+begin
+  select p.tenant_id,b.source_kind into v_tenant,v_kind
+  from public.crm_pipelines p join public.crm_pipeline_source_bindings b
+    on b.pipeline_id=p.id and b.tenant_id=p.tenant_id
+  where p.id=p_pipeline_id and p.source_mode='manual'
+    and p.subject_type='organization' and p.archived_at is null
+    and b.source_kind in ('institutional_recruiting','va_facilities');
+  if not found or not private.crm_has_relationship_permission((select auth.uid()),v_tenant,'edit_relationships')
+    then raise exception 'PIPELINE_NOT_AUTHORIZED' using errcode='42501'; end if;
+  if v_email !~* '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' then
+     raise exception 'PRIMARY_CONTACT_REQUIRES_REAL_EMAIL' using errcode='23514'; end if;
+  if length(v_clean_name)<3 or strpos(v_clean_name,' ')=0 then
+     raise exception 'PRIMARY_CONTACT_REQUIRES_REAL_PERSON_NAME' using errcode='23514'; end if;
+  v_first:=split_part(v_clean_name,' ',1);
+  v_last:=btrim(substr(v_clean_name,length(v_first)+2));
+  if v_kind='institutional_recruiting' then
+     select organization_name,website,state_code,relationship_organization_id
+       into v_name,v_website,v_state,v_existing
+     from public.relationship_institutional_recruiting_targets where id=p_source_id and tenant_id=v_tenant for update;
+  else
+     select facility_name,null,state,relationship_organization_id
+       into v_name,v_website,v_state,v_existing
+     from public.crm_va_vaccn_referral_contacts where id=p_source_id and tenant_id=v_tenant for update;
+  end if;
+  if not found then raise exception 'SOURCE_NOT_FOUND' using errcode='42501'; end if;
+  if v_existing is not null then
+    -- A previously accepted source cannot create duplicates on retries.
+    perform public.crm_enroll_research_source(p_pipeline_id,p_source_id,v_existing);
+    return v_existing;
+  end if;
+  if exists(select 1 from public.relationship_organizations o
+     where o.tenant_id=v_tenant and lower(btrim(o.name))=lower(btrim(v_name))) then
+     raise exception 'MATCHING_ORGANIZATION_REQUIRES_EXISTING_RECORD_LINK' using errcode='23505';
+  end if;
+  -- A known contact identity must be uniquely resolved, never duplicated
+  -- or silently merged with a different person.
+  select count(*),min(id) into v_contact_count,v_contact from public.relationship_contacts
+    where tenant_id=v_tenant and email is not null and lower(btrim(email))=v_email;
+  if v_contact_count>1 then
+    raise exception 'AMBIGUOUS_PRIMARY_CONTACT_EMAIL' using errcode='23505';
+  end if;
+  if v_contact_count=0 then
+     insert into public.relationship_contacts(tenant_id,first_name,last_name,email,
+       source,source_record_key,created_by_profile_id,updated_by_profile_id)
+     values(v_tenant,v_first,v_last,v_email,
+       'crm_research_primary',v_kind||':'||p_source_id::text,(select auth.uid()),(select auth.uid()))
+     returning id into v_contact;
+  end if;
+  insert into public.relationship_organizations(tenant_id,name,website,
+    headquarters_state,organization_kind,source,source_record_key,
+    created_by_profile_id,updated_by_profile_id)
+   values(v_tenant,v_name,v_website,
+    case when v_state~'^[A-Z]{2}$' then v_state else null end,
+    case when v_kind='va_facilities' then 'va_medical_center' else 'institutional_recruiting' end,
+    v_kind,v_kind||':'||p_source_id::text,(select auth.uid()),(select auth.uid()))
+   returning id into v_org;
+  insert into public.relationship_contact_organizations(
+      tenant_id,contact_id,organization_id,role_title,is_primary)
+    values(v_tenant,v_contact,v_org,'Primary relationship contact',true);
+  perform public.crm_enroll_research_source(p_pipeline_id,p_source_id,v_org);
+  return v_org;
+end;
+$f$;
+revoke all on function public.crm_create_research_organization(uuid,uuid,text,text)
+  from public,anon;
+grant execute on function public.crm_create_research_organization(uuid,uuid,text,text) to authenticated;
