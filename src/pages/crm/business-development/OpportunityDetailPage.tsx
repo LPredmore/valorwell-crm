@@ -20,6 +20,8 @@ import { dataProvider } from '@/services/dataProvider';
 import type { OperatorActivityType } from '@/domain/relationships/orchestration-contracts';
 import { getOpportunityOrchestration, recordOperatorActivity, retryAutoEnrollment } from '@/lib/crm/relationship-orchestration';
 import { canRunOperatorAction } from '@/domain/relationships/activation-gating';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { listTeamOwners } from '@/pages/crm/pipelines/PipelineActionEditor';
 
 
 const noteTypes: InteractionType[] = ['manual_note', 'phone_call', 'meeting', 'outbound_email', 'inbound_reply'];
@@ -31,6 +33,9 @@ export default function OpportunityDetailPage() {
   const available = opportunityCapability.capability?.available === true;
   const interactionsAvailable = interactionCapability.capability?.available === true;
   const queryClient = useQueryClient();
+  const {currentTenantId}=useCrmAuth();
+  const teamOwners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId],queryFn:()=>listTeamOwners(currentTenantId!),enabled:!!currentTenantId,retry:false});
+  const ownerLabel=(id?:string)=>!id?'Unassigned':(teamOwners.data?.find(person=>person.id===id)?.name??'Assigned team member');
 
   const opportunity = useQuery({
     queryKey: ['relationship-opportunity', id],
@@ -224,7 +229,7 @@ export default function OpportunityDetailPage() {
             <Summary label="Status" value={opportunityStatusLabel(opportunity.data.status)} />
             <Summary label="Cause area" value={opportunity.data.causeArea ?? 'Not recorded'} />
             <Summary label="Veteran priority" value={opportunity.data.veteranPriority ? 'Yes' : 'No'} />
-            <Summary label="Assigned owner" value={opportunity.data.ownerId ?? 'Unassigned'} />
+            <Summary label="Assigned owner" value={ownerLabel(opportunity.data.ownerId)} />
             <Summary label="Next action" value={opportunity.data.nextAction ?? 'None'} />
             <Summary label="Next action due" value={formatDate(opportunity.data.nextActionDueAt)} />
             <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Organization</p><Link className="mt-1 block text-sm text-primary hover:underline" to={`/crm/business-development/organizations/${opportunity.data.organizationId}`}>{organization.data?.name ?? opportunity.data.organizationId}</Link></div>
@@ -238,7 +243,14 @@ export default function OpportunityDetailPage() {
           <CardHeader><CardTitle>Qualification and ownership</CardTitle><CardDescription>Edit non-status opportunity fields. Status changes use the separate guarded transition workflow.</CardDescription></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <Field id="opportunity-primary-contact" label="Primary contact ID" value={primaryContactId} onChange={setPrimaryContactId} placeholder="Optional relationship contact UUID" />
-            <Field id="opportunity-owner" label="Owner profile ID" value={ownerId} onChange={setOwnerId} placeholder="Optional CRM profile UUID" />
+            <div className="space-y-2"><Label htmlFor="opportunity-owner">Assigned owner</Label>
+              <select id="opportunity-owner" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={ownerId} onChange={event=>setOwnerId(event.target.value)}>
+                <option value="">Unassigned</option>
+                {ownerId&&!(teamOwners.data??[]).some(person=>person.id===ownerId)&&<option value={ownerId}>Current owner (not in directory)</option>}
+                {(teamOwners.data??[]).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
+              </select>
+              {teamOwners.isError&&<p role="alert" className="text-xs text-destructive">Team directory unavailable; the current assignment is preserved.</p>}
+            </div>
             <Field id="opportunity-cause-area" label="Cause area" value={causeArea} onChange={setCauseArea} />
             <label className="flex items-center gap-2 self-end rounded-md border p-3 text-sm"><input type="checkbox" checked={veteranPriority} disabled={save.isPending} onChange={(event) => setVeteranPriority(event.target.checked)} />Veteran-priority opportunity</label>
             <Field id="opportunity-next-action" label="Next action" value={nextAction} onChange={setNextAction} />
