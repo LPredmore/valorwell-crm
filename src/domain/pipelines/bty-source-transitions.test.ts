@@ -10,6 +10,7 @@ describe('BTY source-driven stage permissions',()=>{
   });
   it('rejects shortcuts, empty audit reasons and absent versions',()=>{
     expect(()=>requireBtySourceTransition('identified','completed','Actual interview completed',2)).toThrow(/not supported/);
+    expect(()=>requireBtySourceTransition('qualified','ready_for_campaign','Reviewed and approved',2)).toThrow(/Campaign readiness/);
     expect(()=>requireBtySourceTransition('qualified','contacted','',2)).toThrow(/reason/);
     expect(()=>requireBtySourceTransition('qualified','contacted','Verified a personal reply',null)).toThrow(/version/);
     expect(()=>requireBtySourceTransition('qualified','contacted','Verified an outreach interaction',3)).not.toThrow();
