@@ -184,7 +184,7 @@ begin
   end if;
   -- A known contact identity must be uniquely resolved, never duplicated
   -- or silently merged with a different person.
-  select count(*),min(id) into v_contact_count,v_contact from public.relationship_contacts
+  select count(*),min(id::text)::uuid into v_contact_count,v_contact from public.relationship_contacts
     where tenant_id=v_tenant and email is not null and lower(btrim(email))=v_email;
   if v_contact_count>1 then
     raise exception 'AMBIGUOUS_PRIMARY_CONTACT_EMAIL' using errcode='23505';
