@@ -98,12 +98,53 @@ create table public.crm_pipeline_stage_events (
 );
 create index crm_pipeline_events_record_idx on public.crm_pipeline_stage_events(tenant_id,record_id,occurred_at desc);
 
+-- Pipeline identity is immutable after creation; configurations are data,
+-- but cannot be used to turn personal records into organization records.
+create function private.crm_validate_pipeline_config()
+returns trigger language plpgsql security invoker set search_path=''
+as $f$
+declare v_key text;
+begin
+  if tg_op='UPDATE' then
+    if new.tenant_id is distinct from old.tenant_id
+      or new.subject_type is distinct from old.subject_type
+      or new.source_mode is distinct from old.source_mode
+      or new.source_key is distinct from old.source_key
+      or new.created_by is distinct from old.created_by then
+      raise exception 'PIPELINE_IDENTITY_IMMUTABLE' using errcode='23514';
+    end if;
+  end if;
+  foreach v_key in array new.card_field_keys loop
+    if not exists(select 1 from public.crm_pipeline_fields
+      where tenant_id=new.tenant_id and pipeline_id=new.id
+      and field_key=v_key and show_on_card) then
+      raise exception 'CARD_FIELD_MUST_BE_ENABLED: %',v_key using errcode='23514';
+    end if;
+  end loop;
+  foreach v_key in array new.sort_field_keys loop
+    if v_key not in ('updated_at','created_at','next_action_due_at')
+    and not exists(select 1 from public.crm_pipeline_fields
+      where tenant_id=new.tenant_id and pipeline_id=new.id
+      and field_key=v_key and allow_sort) then
+      raise exception 'SORT_FIELD_MUST_BE_ENABLED: %',v_key using errcode='23514';
+    end if;
+  end loop;
+  new.updated_at:=now();
+  return new;
+end;
+$f$;
+revoke all on function private.crm_validate_pipeline_config() from public,anon,authenticated;
+create trigger crm_validate_pipeline_config
+  before insert or update on public.crm_pipelines
+  for each row execute function private.crm_validate_pipeline_config();
+
 -- Two safeguards: user cannot manufacture a clinician/client source stage,
 -- nor create an organization pipeline card with ambiguous/absent primary.
 create function private.crm_validate_pipeline_record()
 returns trigger language plpgsql security invoker set search_path = ''
 as $f$
-declare v_subject_type text; v_source_mode text; v_count integer; v_field_key text;
+declare v_subject_type text; v_source_mode text; v_count integer;
+  v_field_key text; v_field public.crm_pipeline_fields%rowtype; v_value jsonb;
 begin
   select subject_type,source_mode into v_subject_type,v_source_mode
     from public.crm_pipelines where tenant_id=new.tenant_id and id=new.pipeline_id and archived_at is null;
@@ -111,7 +152,7 @@ begin
   if (v_subject_type='person') <> (new.contact_id is not null) then
     raise exception 'PIPELINE_SUBJECT_MISMATCH' using errcode='23514';
   end if;
-  if v_source_mode='connected' and (select auth.role()) <> 'service_role' then
+  if v_source_mode='connected' and current_user <> 'service_role' then
     raise exception 'CONNECTED_PIPELINE_READ_ONLY' using errcode='42501';
   end if;
   if v_source_mode='manual' and new.source_record_type is not null then
@@ -127,11 +168,30 @@ begin
     where profile_id=new.owner_profile_id and tenant_id=new.tenant_id
   ) then raise exception 'OWNER_CROSS_TENANT' using errcode='42501'; end if;
   for v_field_key in select jsonb_object_keys(new.field_values) loop
-    if not exists(select 1 from public.crm_pipeline_fields f where f.tenant_id=new.tenant_id
-      and f.pipeline_id=new.pipeline_id and f.field_key=v_field_key) then
-      raise exception 'UNKNOWN_PIPELINE_FIELD: %',v_field_key using errcode='23514';
+    select * into v_field from public.crm_pipeline_fields f where f.tenant_id=new.tenant_id
+      and f.pipeline_id=new.pipeline_id and f.field_key=v_field_key;
+    if not found then raise exception 'UNKNOWN_PIPELINE_FIELD: %',v_field_key using errcode='23514'; end if;
+    v_value:=new.field_values->v_field_key;
+    if v_value <> 'null'::jsonb then
+      if v_field.field_type in ('text','date','datetime','url','select') and jsonb_typeof(v_value)<>'string'
+      or v_field.field_type in ('number','currency') and jsonb_typeof(v_value)<>'number'
+      or v_field.field_type='boolean' and jsonb_typeof(v_value)<>'boolean'
+      or v_field.field_type='multiselect' and jsonb_typeof(v_value)<>'array' then
+        raise exception 'PIPELINE_FIELD_TYPE_MISMATCH: %',v_field_key using errcode='23514';
+      end if;
+      if v_field.field_type='select' and jsonb_array_length(v_field.options)>0
+        and not(v_field.options ? trim(both '"' from v_value::text)) then
+        raise exception 'PIPELINE_SELECT_OPTION_NOT_ALLOWED: %',v_field_key using errcode='23514';
+      end if;
     end if;
   end loop;
+  if exists(select 1 from public.crm_pipeline_fields f
+      where f.pipeline_id=new.pipeline_id and f.tenant_id=new.tenant_id
+        and f.required and (not(new.field_values ? f.field_key)
+        or new.field_values->f.field_key='null'::jsonb
+        or new.field_values->>f.field_key='')) then
+    raise exception 'PIPELINE_REQUIRED_FIELD_MISSING' using errcode='23514';
+  end if;
   if tg_op='UPDATE' then
     if new.tenant_id is distinct from old.tenant_id
       or new.pipeline_id is distinct from old.pipeline_id
