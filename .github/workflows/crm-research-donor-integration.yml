@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'src/domain/pipelines/donor-enrichment*'
+      - 'src/domain/pipelines/research-reconciliation.test.ts'
       - 'src/pages/crm/pipelines/**'
       - 'src/repositories/supabase/pipeline-research.ts'
       - 'supabase/migrations/*crm_research_pipeline_reconciliation.sql'
