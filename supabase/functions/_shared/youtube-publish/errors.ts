@@ -57,7 +57,11 @@ export function classifyPublishFailure(error: unknown, attempts: number): Publis
   const retryAfterMs = error instanceof YoutubePublishError ? error.retryAfterMs : null;
 
   let classification: PublishFailureClassification;
-  if (error instanceof PermanentYoutubeError) {
+  if (message.includes("the operation was aborted")) {
+    // YouTube sometimes reports an aborted processing operation with a 4xx status.
+    // Retrying is safe because a previously created video is identified by its saved id.
+    classification = { kind: "timeout", retryable: true, retryAfterMs: null };
+  } else if (error instanceof PermanentYoutubeError) {
     const kind: PublishFailureKind = status === 401 || status === 403 ? "auth"
       : status === 404 ? "not_found"
       : status === 400 ? "validation"
