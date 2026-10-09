@@ -12,7 +12,7 @@ import { listPipelineSubjects,getPipelineCardSubjects } from '@/repositories/sup
 import {
   availableSortFields,builtinSortFields,cardFieldLabels,comparePipelineRecords,
   mandatoryCardFields,normalizePipelineFieldKey,
-  type CrmPipeline,type CrmPipelineField,type PipelineFieldType,type PipelineSubject,
+  type CrmPipeline,type CrmPipelineField,type CrmPipelineRecord,type PipelineFieldType,type PipelineSubject,
 } from '@/domain/pipelines/models';
 
 const fieldTypes:PipelineFieldType[]=['text','number','currency','date','datetime','boolean','url','select','multiselect'];
@@ -171,6 +171,9 @@ export default function PipelineHubPage(){
                 {p.subject_type==='organization'&&<p className="text-sm text-muted-foreground">Primary: {identity?.primaryContact??'Loading…'}</p>}
                 {visibleFields.map(f=><p key={f.id} className="text-sm">{f.label}: {String(record.field_values[f.field_key]??'—')}</p>)}
                 {record.next_action&&<p className="text-xs text-muted-foreground">Next: {record.next_action}</p>}
+                {p.source_mode==='manual'&&capabilities.mutate&&(fields.data?.length??0)>0&&
+                  <PipelineValueEditor key={record.id+':'+record.version} record={record} fields={fields.data??[]}
+                    busy={busy} save={act}/>}
                 {p.source_mode==='manual'&&capabilities.mutate&&<select aria-label={'Move '+(identity?.label??'record')} className="w-full rounded border bg-background p-2 text-xs" value={record.stage_id}
                   onChange={e=>act(()=>pipelinesRepository.move(record,e.target.value))}>
                   {(stages.data??[]).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
@@ -187,4 +190,39 @@ function PipelineRename({p,save,busy}:{p:CrmPipeline;save:(fn:()=>Promise<unknow
   const [name,setName]=useState(p.name);
   return <div className="flex gap-2"><Input value={name} onChange={e=>setName(e.target.value)} maxLength={120}/>
     <Button disabled={busy||!name.trim()||name===p.name} onClick={()=>save(()=>pipelinesRepository.update(p,{name:name.trim()}))}>Save name</Button></div>;
+}
+
+function PipelineValueEditor({record,fields,busy,save}:{
+  record:CrmPipelineRecord; fields:CrmPipelineField[]; busy:boolean;
+  save:(action:()=>Promise<unknown>)=>void;
+}){
+  const [open,setOpen]=useState(false);
+  const [values,setValues]=useState<Record<string,unknown>>({...record.field_values});
+  return <>
+    <Button size="sm" variant="outline" disabled={busy} onClick={()=>setOpen(v=>!v)}>
+      {open?'Hide fields':'Edit custom fields'}
+    </Button>
+    {open&&<div className="space-y-3 border-t pt-3">
+      {fields.map(field=><label key={field.id} className="block space-y-1 text-xs">
+        <span>{field.label}{field.required?' *':''}</span>
+        {field.field_type==='boolean'
+          ? <input type="checkbox" checked={values[field.field_key]===true} onChange={e=>setValues(v=>({...v,[field.field_key]:e.target.checked}))}/>
+          : field.field_type==='select'
+            ? <select className="w-full rounded border bg-background p-2" value={String(values[field.field_key]??'')}
+                onChange={e=>setValues(v=>({...v,[field.field_key]:e.target.value||null}))}>
+                <option value="">Select</option>
+                {field.options.map(option=><option key={option} value={option}>{option}</option>)}
+              </select>
+            : <Input type={field.field_type==='number'||field.field_type==='currency'?'number':field.field_type==='date'?'date':field.field_type==='datetime'?'datetime-local':field.field_type==='url'?'url':'text'}
+                value={Array.isArray(values[field.field_key])?(values[field.field_key] as string[]).join(', '):String(values[field.field_key]??'')}
+                onChange={e=>setValues(v=>({...v,[field.field_key]:
+                  field.field_type==='number'||field.field_type==='currency'?(e.target.value===''?null:Number(e.target.value))
+                  :field.field_type==='multiselect'?e.target.value.split(',').map(x=>x.trim()).filter(Boolean)
+                  :e.target.value||null,
+                }))}/>}
+      </label>)}
+      <Button size="sm" disabled={busy||fields.some(f=>f.required&&(values[f.field_key]==null||values[f.field_key]===''))}
+        onClick={()=>save(async()=>{await pipelinesRepository.updateValues(record,values);setOpen(false);})}>Save custom fields</Button>
+    </div>}
+  </>;
 }
