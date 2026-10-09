@@ -11,6 +11,7 @@ const other='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const org='11111111-1111-4111-8111-111111111111';
 const contact='22222222-2222-4222-8222-222222222222';
 const pipeline='33333333-3333-4333-8333-333333333333';
+const alternate='55555555-5555-4555-8555-555555555555';
 const stage='44444444-4444-4444-8444-444444444444';
 const fixture=`
 create role authenticated; create role anon; create role service_role;
@@ -24,7 +25,7 @@ create table public.relationship_contacts(tenant_id uuid,id uuid,first_name text
   primary key(tenant_id,id));
 create table public.relationship_organizations(tenant_id uuid,id uuid,name text,
   primary key(tenant_id,id));
-create table public.relationship_contact_organizations(tenant_id uuid,contact_id uuid,organization_id uuid,is_primary boolean);
+create table public.relationship_contact_organizations(tenant_id uuid,contact_id uuid,organization_id uuid,is_primary boolean,updated_at timestamptz not null default now());
 create table public.tenant_memberships(profile_id uuid,tenant_id uuid);
 create function private.crm_has_relationship_permission(p_user uuid,p_tenant uuid,p_permission text)
 returns boolean language sql stable security definer set search_path=''
@@ -35,7 +36,7 @@ crm_role in ('crm_admin','crm_operator','crm_readonly') and
 insert into public.tenants values ('${a}'),('${b}');
 insert into public.profiles values ('${u}'),('${other}');
 insert into public.crm_user_capabilities values ('${u}','${a}','crm_admin');
-insert into public.relationship_contacts values ('${a}','${contact}','Taylor','Smith');
+insert into public.relationship_contacts values ('${a}','${contact}','Taylor','Smith'),('${a}','${alternate}','Robin','Lee');
 insert into public.relationship_organizations values ('${a}','${org}','Provider Partners');
 insert into public.tenant_memberships values ('${u}','${a}');
 grant usage on schema auth,private to authenticated;
@@ -62,10 +63,18 @@ describe('pipeline migration with embedded PostgreSQL',()=>{
       await expect(db.query(`insert into public.crm_pipeline_records(tenant_id,pipeline_id,stage_id,organization_id)
         values($1,$2,$3,$4)`,[a,pipeline,stage,org]))
         .rejects.toThrow(/PRIMARY_CONTACT/);
-      await db.query(`insert into public.relationship_contact_organizations values($1,$2,$3,true)`,[a,contact,org]);
+      await db.query(`insert into public.relationship_contact_organizations(tenant_id,contact_id,organization_id,is_primary) values($1,$2,$3,true)`,[a,contact,org]);
       await db.query(`insert into public.crm_pipeline_records(tenant_id,pipeline_id,stage_id,organization_id)
         values($1,$2,$3,$4)`,[a,pipeline,stage,org]);
       expect((await db.query('select id from public.crm_pipeline_records')).rows).toHaveLength(1);
+      await expect(db.query(`insert into public.relationship_contact_organizations(tenant_id,contact_id,organization_id,is_primary)
+        values($1,$2,$3,true)`,[a,alternate,org])).rejects.toThrow(/ALREADY_HAS_PRIMARY/);
+      await db.query(`insert into public.relationship_contact_organizations(tenant_id,contact_id,organization_id,is_primary)
+        values($1,$2,$3,false)`,[a,alternate,org]);
+      expect((await db.query<{id:string}>(`select public.crm_set_organization_primary_contact($1,$2) as id`,[org,alternate])).rows[0].id)
+        .toBe(alternate);
+      const primary=await db.query<{contact_id:string}>(`select contact_id from public.relationship_contact_organizations where organization_id=$1 and is_primary`,[org]);
+      expect(primary.rows.map(x=>x.contact_id)).toEqual([alternate]);
       await expect(db.query(`insert into public.crm_pipeline_records(tenant_id,pipeline_id,stage_id,organization_id)
         values($1,$2,$3,$4)`,[b,pipeline,stage,org])).rejects.toThrow();
       await expect(db.query(`update public.crm_pipelines set subject_type='person' where id=$1`,[pipeline]))
