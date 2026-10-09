@@ -69,6 +69,7 @@ export const pipelinesRepository={
       tenant_id:p.tenant_id,pipeline_id:p.id,stage_id:stageId,
       contact_id:p.subject_type==='person'?subjectId:null,
       organization_id:p.subject_type==='organization'?subjectId:null,
+      associated_organization_id:p.subject_type==='person'?(associatedOrganizationId??null):null,
       field_values:{},
     } as never);assert(error);
   },
