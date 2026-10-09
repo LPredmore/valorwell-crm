@@ -129,7 +129,7 @@ export function CrmSidebar({ mobile = false, onNavigate }: CrmSidebarProps) {
                   <button
                     type="button"
                     className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label={`${groupsOpen[group.id] ? 'Collapse' : 'Expand'} ${group.label} navigation`}
+                    aria-label={`${groupsOpen[group.id] ? 'Collapse' : 'Expand'} ${group.label} group`}
                   >
                     <GroupIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
                     <span className="flex-1">{group.label}</span>
