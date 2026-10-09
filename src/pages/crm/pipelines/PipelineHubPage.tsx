@@ -10,6 +10,8 @@ import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { pipelinesRepository } from '@/repositories/supabase/pipelines';
 import { listPipelineSubjects,getPipelineCardSubjects,listAssociatedOrganizations } from '@/repositories/supabase/pipeline-subjects';
 import { listConnectedPipelineCards,type ConnectedPipelineCard } from '@/repositories/supabase/connected-pipeline-cards';
+import {getPipelineSourceKind,donorValuesByContact} from '@/repositories/supabase/pipeline-research';
+import {ResearchSourceReview} from './ResearchSourceReview';
 import {
   availableSortFields,builtinSortFields,cardFieldLabels,comparePipelineRecords,
   mandatoryCardFields,normalizePipelineFieldKey,
@@ -45,6 +47,12 @@ export default function PipelineHubPage(){
   const list=useQuery({queryKey:['crm-pipelines',currentTenantId],queryFn:()=>pipelinesRepository.list(currentTenantId!),enabled:!!currentTenantId,retry:false});
   const p=list.data?.find(x=>x.id===selected)??list.data?.[0]??null;
   const {stages,fields,records,subjects,connected}=usePipeData(p);
+  const sourceBinding=useQuery({queryKey:['pipeline-source-binding',p?.id],
+    queryFn:()=>getPipelineSourceKind(p!),enabled:!!p,retry:false});
+  const giving=useQuery({queryKey:['pipeline-donor-giving',p?.id,records.dataUpdatedAt],
+    queryFn:()=>donorValuesByContact(p!,[...new Set((records.data??[])
+      .map(row=>row.contact_id).filter((id):id is string=>!!id))]),
+    enabled:!!p&&sourceBinding.data==='donor_giving'&&!!records.data,retry:false});
   const candidates=useQuery({queryKey:['pipeline-subject-picker',p?.id,findSubject],queryFn:()=>listPipelineSubjects(p!,findSubject),enabled:!!p&&p.source_mode==='manual',retry:false});
   const relatedOrganizations=useQuery({queryKey:['pipeline-optional-organizations',currentTenantId],queryFn:()=>listAssociatedOrganizations(currentTenantId!),enabled:!!p&&p.source_mode==='manual'&&p.subject_type==='person'&&!!currentTenantId,retry:false});
   const mutation=useMutation({
@@ -63,8 +71,15 @@ export default function PipelineHubPage(){
     ]);}
     catch(e){setActionError(e instanceof Error?e.message:'Action failed');}
   };
-  const sorted=useMemo(()=>[...(p?.source_mode==='connected'?(connected.data??[]):(records.data??[]))].sort((a,b)=>comparePipelineRecords(a as CrmPipelineRecord,b as CrmPipelineRecord,sortKey)),
-    [p?.source_mode,connected.data,records.data,sortKey]);
+  const sorted=useMemo(()=>{
+    const originals=p?.source_mode==='connected'?(connected.data??[]):(records.data??[]);
+    const values=originals.map(row=>{
+      if(p?.source_mode!=='manual'||!('contact_id' in row)||!row.contact_id)return row;
+      const donation=giving.data?.[row.contact_id];
+      return donation?{...row,field_values:{...row.field_values,...donation}}:row;
+    });
+    return [...values].sort((a,b)=>comparePipelineRecords(a as CrmPipelineRecord,b as CrmPipelineRecord,sortKey));
+  },[p?.source_mode,connected.data,records.data,giving.data,sortKey]);
   const visibleFields= p?cardFieldLabels(p,fields.data??[]):[];
   const sortOptions=p?availableSortFields(p,fields.data??[]):[];
   const missingCount=sorted.filter(r=>p?.subject_type==='organization'&&((p.source_mode==='connected'?(r as ConnectedPipelineCard).primaryContact:subjects.data?.[(r as CrmPipelineRecord).organization_id??'']?.primaryContact)==='Primary contact needs review')).length;
@@ -154,6 +169,11 @@ export default function PipelineHubPage(){
       {connected.isError&&<p role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">Source records could not be loaded with your current permissions: {connected.error.message}</p>}
       {p.source_mode==='manual'&&records.data?.length===500&&<p role="status" className="text-sm text-amber-700">Showing up to 500 records. Pagination will be included in the next board phase.</p>}
       {missingCount>0&&<p role="alert" className="text-destructive">{missingCount} organizations need primary-contact review.</p>}
+      {sourceBinding.isError&&<p role="alert" className="text-destructive">Source binding unavailable: {sourceBinding.error.message}</p>}
+      {giving.isError&&<p role="alert" className="text-destructive">Verified donation enrichment could not be loaded: {giving.error.message}</p>}
+      {sourceBinding.data==='donor_giving'&&<p className="rounded border p-3 text-sm">
+        Donor relationship stages remain manually managed. Verified giving totals, donor type and last donation are read live from your existing donor database when a donor is linked to the CRM person; temporary test donors are excluded.
+      </p>}
       {p.source_mode==='manual'&&capabilities.mutate&&(stages.data?.length??0)>0&&<Card><CardContent className="grid gap-2 pt-4 md:grid-cols-[1fr_2fr_auto]">
         <Input aria-label="Find CRM person or organization" placeholder="Search existing CRM records" value={findSubject} onChange={e=>{setFindSubject(e.target.value);setEnrollId('');}}/>
         <select aria-label="Record to add" className="rounded border bg-background p-2" value={enrollId} onChange={e=>setEnrollId(e.target.value)}>
@@ -168,6 +188,8 @@ export default function PipelineHubPage(){
           await pipelinesRepository.enroll(p,stages.data![0].id,enrollId,associatedOrgId||null);setEnrollId('');setAssociatedOrgId('');
         })}>Add to pipeline</Button>
       </CardContent></Card>}
+      {(sourceBinding.data==='institutional_recruiting'||sourceBinding.data==='va_facilities')&&p.source_mode==='manual'&&
+        <ResearchSourceReview pipeline={p} kind={sourceBinding.data} canEdit={capabilities.mutate}/>}
       <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
         {(stages.data??[]).map(stage=><Card key={stage.id} className="min-w-0">
           <CardHeader><CardTitle className="text-base">{stage.name}</CardTitle><CardDescription>{sorted.filter(r=>r.stage_id===stage.id).length} records</CardDescription></CardHeader>
