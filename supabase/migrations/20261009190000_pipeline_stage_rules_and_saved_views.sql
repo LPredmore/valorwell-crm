@@ -38,6 +38,7 @@ create table public.crm_pipeline_saved_views (
   search_text text not null default '' check(length(search_text)<=200),
   stage_id uuid,
   attention text not null default 'all' check(attention in ('all','overdue','no_next_action')),
+  owner_filter text not null default 'all' check(owner_filter in ('all','mine','unassigned')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   foreign key(tenant_id,pipeline_id) references public.crm_pipelines(tenant_id,id) on delete cascade,
