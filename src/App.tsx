@@ -117,6 +117,7 @@ const App = () => (
             <Route path="business-development/contacts" element={<ContactDirectoryPage />} />
             <Route path="business-development/contacts/:id" element={<ContactDetailPage />} />
             <Route path="business-development/opportunities" element={<OpportunityDirectoryPage />} />
+            <Route path="pipelines" element={<PipelineHubPage />} />
             <Route path="business-development/opportunities/:id" element={<OpportunityDetailPage />} />
             <Route path="business-development/imports" element={<RelationshipImportPage />} />
             <Route path="business-development/bulk-enrollment" element={<RelationshipBulkEnrollmentPage />} />
