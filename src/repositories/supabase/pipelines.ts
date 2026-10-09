@@ -63,7 +63,7 @@ export const pipelinesRepository={
       .eq('pipeline_id',p.id).order('updated_at',{ascending:false}).limit(500);
     assert(error);return (data??[]) as CrmPipelineRecord[];
   },
-  async enroll(p:CrmPipeline,stageId:string,subjectId:string){
+  async enroll(p:CrmPipeline,stageId:string,subjectId:string,associatedOrganizationId?:string|null){
     if(p.source_mode!=='manual')throw new Error('Connected pipelines must be synchronized from their authoritative source.');
     const {error}=await db.from('crm_pipeline_records').insert({
       tenant_id:p.tenant_id,pipeline_id:p.id,stage_id:stageId,
