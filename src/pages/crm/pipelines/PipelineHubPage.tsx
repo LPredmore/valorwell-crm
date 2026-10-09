@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { pipelinesRepository } from '@/repositories/supabase/pipelines';
-import { listPipelineSubjects,getPipelineCardSubjects } from '@/repositories/supabase/pipeline-subjects';
+import { listPipelineSubjects,getPipelineCardSubjects,listAssociatedOrganizations } from '@/repositories/supabase/pipeline-subjects';
+import { listConnectedPipelineCards,type ConnectedPipelineCard } from '@/repositories/supabase/connected-pipeline-cards';
 import {
   availableSortFields,builtinSortFields,cardFieldLabels,comparePipelineRecords,
   mandatoryCardFields,normalizePipelineFieldKey,
@@ -20,9 +21,10 @@ function usePipeData(p:CrmPipeline|null) {
   const enabled=!!p;
   const stages=useQuery({queryKey:['pipeline-stages',p?.id],queryFn:()=>pipelinesRepository.stages(p!),enabled,retry:false});
   const fields=useQuery({queryKey:['pipeline-fields',p?.id],queryFn:()=>pipelinesRepository.fields(p!),enabled,retry:false});
-  const records=useQuery({queryKey:['pipeline-records',p?.id],queryFn:()=>pipelinesRepository.records(p!),enabled,retry:false});
-  const subjects=useQuery({queryKey:['pipeline-card-subjects',p?.id,records.dataUpdatedAt],queryFn:()=>getPipelineCardSubjects(p!,records.data??[]),enabled:enabled&&!!records.data,retry:false});
-  return {stages,fields,records,subjects};
+  const records=useQuery({queryKey:['pipeline-records',p?.id],queryFn:()=>pipelinesRepository.records(p!),enabled:enabled&&p?.source_mode==='manual',retry:false});
+  const connected=useQuery({queryKey:['pipeline-connected-cards',p?.id],queryFn:()=>listConnectedPipelineCards(p!,stages.data??[]),enabled:enabled&&p?.source_mode==='connected'&&!!stages.data,retry:false});
+  const subjects=useQuery({queryKey:['pipeline-card-subjects',p?.id,records.dataUpdatedAt],queryFn:()=>getPipelineCardSubjects(p!,records.data??[]),enabled:enabled&&p?.source_mode==='manual'&&!!records.data,retry:false});
+  return {stages,fields,records,subjects,connected};
 }
 export default function PipelineHubPage(){
   const {currentTenantId,userId,crmRole,capabilities}=useCrmAuth();
@@ -38,11 +40,13 @@ export default function PipelineHubPage(){
   const [fieldOptions,setFieldOptions]=useState('');
   const [findSubject,setFindSubject]=useState('');
   const [enrollId,setEnrollId]=useState('');
+  const [associatedOrgId,setAssociatedOrgId]=useState('');
   const [sortKey,setSortKey]=useState('updated_at');
   const list=useQuery({queryKey:['crm-pipelines',currentTenantId],queryFn:()=>pipelinesRepository.list(currentTenantId!),enabled:!!currentTenantId,retry:false});
   const p=list.data?.find(x=>x.id===selected)??list.data?.[0]??null;
-  const {stages,fields,records,subjects}=usePipeData(p);
+  const {stages,fields,records,subjects,connected}=usePipeData(p);
   const candidates=useQuery({queryKey:['pipeline-subject-picker',p?.id,findSubject],queryFn:()=>listPipelineSubjects(p!,findSubject),enabled:!!p&&p.source_mode==='manual',retry:false});
+  const relatedOrganizations=useQuery({queryKey:['pipeline-optional-organizations',currentTenantId],queryFn:()=>listAssociatedOrganizations(currentTenantId!),enabled:!!p&&p.source_mode==='manual'&&p.subject_type==='person'&&!!currentTenantId,retry:false});
   const mutation=useMutation({
     mutationFn:async (fn:()=>Promise<unknown>)=>fn(),
     onSuccess:()=>qc.invalidateQueries({queryKey:['crm-pipelines']}),
@@ -59,11 +63,11 @@ export default function PipelineHubPage(){
     ]);}
     catch(e){setActionError(e instanceof Error?e.message:'Action failed');}
   };
-  const sorted=useMemo(()=>[...(records.data??[])].sort((a,b)=>comparePipelineRecords(a,b,sortKey)),
-    [records.data,sortKey]);
+  const sorted=useMemo(()=>[...(p?.source_mode==='connected'?(connected.data??[]):(records.data??[]))].sort((a,b)=>comparePipelineRecords(a as CrmPipelineRecord,b as CrmPipelineRecord,sortKey)),
+    [p?.source_mode,connected.data,records.data,sortKey]);
   const visibleFields= p?cardFieldLabels(p,fields.data??[]):[];
   const sortOptions=p?availableSortFields(p,fields.data??[]):[];
-  const missingCount=sorted.filter(r=>p?.subject_type==='organization'&&subjects.data?.[r.organization_id??'']?.primaryContact==='Primary contact needs review').length;
+  const missingCount=sorted.filter(r=>p?.subject_type==='organization'&&((p.source_mode==='connected'?(r as ConnectedPipelineCard).primaryContact:subjects.data?.[(r as CrmPipelineRecord).organization_id??'']?.primaryContact)==='Primary contact needs review')).length;
   if(!currentTenantId)return <p className="p-6">Select your CRM tenant to view pipelines.</p>;
   return <div className="space-y-5 p-2 md:p-4">
     <div className="flex flex-wrap justify-between gap-3">
@@ -108,8 +112,8 @@ export default function PipelineHubPage(){
       <Card><CardHeader><CardTitle>Stages</CardTitle><CardDescription>Stage names are configuration data, not application code. Connected workflows will map to the existing authoritative statuses.</CardDescription></CardHeader>
         <CardContent className="space-y-3">
           {(stages.data??[]).map(s=><p key={s.id} className="rounded border px-3 py-2">{s.position+1}. {s.name} {s.is_terminal?'· Terminal':''}</p>)}
-          <div className="flex gap-2"><Input aria-label="New stage name" placeholder="Add a stage" value={stageName} maxLength={100} onChange={e=>setStageName(e.target.value)}/>
-            <Button disabled={busy||!stageName.trim()} onClick={()=>act(async()=>{await pipelinesRepository.addStage(p,stageName,stages.data?.length??0);setStageName('');})}>Add stage</Button></div>
+          {p.source_mode==='manual'&&<div className="flex gap-2"><Input aria-label="New stage name" placeholder="Add a stage" value={stageName} maxLength={100} onChange={e=>setStageName(e.target.value)}/>
+            <Button disabled={busy||!stageName.trim()} onClick={()=>act(async()=>{await pipelinesRepository.addStage(p,stageName,stages.data?.length??0);setStageName('');})}>Add stage</Button></div>}
         </CardContent>
       </Card>
       <Card><CardHeader><CardTitle>Custom fields and card layout</CardTitle><CardDescription>Enable fields on cards independently of the Sort by dropdown. Select and multiselect fields accept comma-separated options.</CardDescription></CardHeader>
@@ -144,10 +148,11 @@ export default function PipelineHubPage(){
         <div className="space-y-1"><Label htmlFor="pipeline-sort">Sort by</Label><select id="pipeline-sort" value={sortOptions.some(s=>s.key===sortKey)?sortKey:sortOptions[0]?.key??'updated_at'}
           onChange={e=>setSortKey(e.target.value)} className="rounded border bg-background p-2">{sortOptions.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></div>
         <Badge variant="secondary">{p.subject_type==='organization'?'Organization':'Personal'} pipeline</Badge>
-        <Badge variant="outline">{records.data?.length??0} records loaded</Badge>
+        <Badge variant="outline">{sorted.length} records loaded</Badge>
       </div>
-      {p.source_mode==='connected'&&<p className="rounded border p-3 text-sm">Connected source adapter is not configured yet; no source statuses can be changed from this board.</p>}
-      {records.data?.length===500&&<p role="status" className="text-sm text-amber-700">Showing up to 500 records. Pagination will be included in the next board phase.</p>}
+      {p.source_mode==='connected'&&<p className="rounded border p-3 text-sm">Live source-connected board: stages are read from the authoritative system, not copied or editable here. To change a stage, use the existing record workflow.</p>}
+      {connected.isError&&<p role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">Source records could not be loaded with your current permissions: {connected.error.message}</p>}
+      {p.source_mode==='manual'&&records.data?.length===500&&<p role="status" className="text-sm text-amber-700">Showing up to 500 records. Pagination will be included in the next board phase.</p>}
       {missingCount>0&&<p role="alert" className="text-destructive">{missingCount} organizations need primary-contact review.</p>}
       {p.source_mode==='manual'&&capabilities.mutate&&(stages.data?.length??0)>0&&<Card><CardContent className="grid gap-2 pt-4 md:grid-cols-[1fr_2fr_auto]">
         <Input aria-label="Find CRM person or organization" placeholder="Search existing CRM records" value={findSubject} onChange={e=>{setFindSubject(e.target.value);setEnrollId('');}}/>
@@ -155,8 +160,12 @@ export default function PipelineHubPage(){
           <option value="">Choose {p.subject_type==='person'?'a person':'an organization'}</option>
           {(candidates.data??[]).map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
         </select>
+        {p.subject_type==='person'&&<select aria-label="Optional associated organization" className="rounded border bg-background p-2" value={associatedOrgId} onChange={e=>setAssociatedOrgId(e.target.value)}>
+          <option value="">No associated organization</option>
+          {(relatedOrganizations.data??[]).map(org=><option key={org.id} value={org.id}>{org.name}</option>)}
+        </select>}
         <Button disabled={busy||!enrollId} onClick={()=>act(async()=>{
-          await pipelinesRepository.enroll(p,stages.data![0].id,enrollId);setEnrollId('');
+          await pipelinesRepository.enroll(p,stages.data![0].id,enrollId,associatedOrgId||null);setEnrollId('');setAssociatedOrgId('');
         })}>Add to pipeline</Button>
       </CardContent></Card>}
       <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -164,18 +173,22 @@ export default function PipelineHubPage(){
           <CardHeader><CardTitle className="text-base">{stage.name}</CardTitle><CardDescription>{sorted.filter(r=>r.stage_id===stage.id).length} records</CardDescription></CardHeader>
           <CardContent className="space-y-3">
             {sorted.filter(r=>r.stage_id===stage.id).map(record=>{
-              const subjectId=p.subject_type==='person'?record.contact_id:record.organization_id;
+              const source=p.source_mode==='connected'?record as ConnectedPipelineCard:null;
+              const manual=source?null:record as CrmPipelineRecord;
+              const subjectId=manual?(p.subject_type==='person'?manual.contact_id:manual.organization_id):null;
               const identity=subjects.data?.[subjectId??''];
               return <div key={record.id} className="rounded-lg border p-3 space-y-2">
-                <p className="font-medium">{identity?.label??'Loading subject…'}</p>
-                {p.subject_type==='organization'&&<p className="text-sm text-muted-foreground">Primary: {identity?.primaryContact??'Loading…'}</p>}
+                <p className="font-medium">{source?.displayName??identity?.label??'Loading subject…'}</p>
+                {p.subject_type==='organization'&&<p className="text-sm text-muted-foreground">Primary: {source?.primaryContact??identity?.primaryContact??'Loading…'}</p>}
+                {manual?.associated_organization_id&&<p className="text-xs text-muted-foreground">Organization: {relatedOrganizations.data?.find(org=>org.id===manual.associated_organization_id)?.name??'Linked organization'}</p>}
+                {source?.sourceUrl&&<Link to={source.sourceUrl} className="text-xs underline">Open source record</Link>}
                 {visibleFields.map(f=><p key={f.id} className="text-sm">{f.label}: {String(record.field_values[f.field_key]??'—')}</p>)}
                 {record.next_action&&<p className="text-xs text-muted-foreground">Next: {record.next_action}</p>}
                 {p.source_mode==='manual'&&capabilities.mutate&&(fields.data?.length??0)>0&&
-                  <PipelineValueEditor key={record.id+':'+record.version} record={record} fields={fields.data??[]}
+                  <PipelineValueEditor key={record.id+':'+(manual?.version??0)} record={manual!} fields={fields.data??[]}
                     busy={busy} save={act}/>}
-                {p.source_mode==='manual'&&capabilities.mutate&&<select aria-label={'Move '+(identity?.label??'record')} className="w-full rounded border bg-background p-2 text-xs" value={record.stage_id}
-                  onChange={e=>act(()=>pipelinesRepository.move(record,e.target.value))}>
+                {manual&&capabilities.mutate&&<select aria-label={'Move '+(identity?.label??'record')} className="w-full rounded border bg-background p-2 text-xs" value={record.stage_id}
+                  onChange={e=>act(()=>pipelinesRepository.move(manual,e.target.value))}>
                   {(stages.data??[]).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>}
               </div>;

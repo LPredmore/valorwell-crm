@@ -51,3 +51,12 @@ export async function getPipelineCardSubjects(p:CrmPipeline,records:CrmPipelineR
     return [org.id,{id:org.id,label:org.name,primaryContact:names.length===1?names[0]:'Primary contact needs review'}];
   }));
 }
+
+/** Optional related organization for Personal pipeline records, not a new
+ * per-pipeline primary contact. */
+export async function listAssociatedOrganizations(tenantId:string):Promise<Array<{id:string;name:string}>>{
+  const {data,error}=await supabase.from('relationship_organizations')
+    .select('id,name').eq('tenant_id',tenantId).order('name').limit(500);
+  if(error)throw new Error(error.message);
+  return data??[];
+}

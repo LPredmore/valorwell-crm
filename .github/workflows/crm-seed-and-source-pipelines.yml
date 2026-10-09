@@ -1,0 +1,36 @@
+name: CRM seven pipeline configurations
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/pages/crm/pipelines/**'
+      - 'src/repositories/supabase/connected-pipeline-cards.ts'
+      - 'supabase/migrations/*seed_valorwell_pipeline_configuration.sql'
+      - 'supabase/migrations/*crm_personal_pipeline_optional_organization.sql'
+      - 'src/domain/pipelines/**'
+      - '.github/workflows/crm-seed-and-source-pipelines.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Changed file lint
+        run: npx eslint src/repositories/supabase/connected-pipeline-cards.ts src/pages/crm/pipelines/PipelineHubPage.tsx src/domain/pipelines --max-warnings=0
+      - name: Typecheck
+        run: npx tsc -p tsconfig.app.json --noEmit
+      - name: Unit and SQL migration tests
+        run: npx vitest run src/domain/pipelines/models.test.ts src/domain/pipelines/pipeline-migration.test.ts src/domain/pipelines/valorwell-seed.test.ts
+      - name: Production build
+        run: npm run build
