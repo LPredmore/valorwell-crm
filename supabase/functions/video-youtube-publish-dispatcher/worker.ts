@@ -378,7 +378,7 @@ async function applyScheduledShortThumbnail(
   }
   const key = thumbnailIdempotencyKey(videoId, fileId);
   const sameKey = prev.idempotencyKey === key;
-  if (sameKey && !explicitReplacement && (prev.apiStatus === "api_accepted" || prev.apiStatus === "api_confirmed")) {
+  if (sameKey && !explicitReplacement && prev.apiStatus === "api_confirmed") {
     payload.thumbnail_api_status = String(prev.apiStatus);
     return null; // already applied for this exact video + image: idempotent across retries/restarts
   }
@@ -448,6 +448,10 @@ async function applyScheduledShortThumbnail(
     return await waitForYoutube(ctx, { ok: true, action: "waiting_for_youtube_processing", publicationId: pub.id, videoId, processingStatus: details.processingStatus });
   }
 
+  if (!explicitReplacement && sameKey && prev.apiStatus === "api_accepted" && priorAttempts >= MAX_SHORT_THUMBNAIL_ATTEMPTS) {
+    return await degradeToManual("confirmation_retries_exhausted", "YouTube did not confirm the uploaded thumbnail after repeated checks.", null);
+  }
+
   // Sticky across retries of the same key: once a pre-existing custom thumbnail was seen (or the
   // prior state is unknown), later ticks can never infer success from hasCustomThumbnail alone.
   const sentPriorCustom = pendingSameSend ? !priorCustomKnownFalse : details.hasCustomThumbnail !== false;
@@ -485,6 +489,9 @@ async function applyScheduledShortThumbnail(
   await insertEvent(ctx, apiStatus === "api_confirmed" ? "thumbnail_api_confirmed" : "thumbnail_api_accepted", {
     videoId, thumbnailFileId: fileId, hasCustomThumbnail: hasCustom, explicitReplacement, contentFormat: "short",
   });
+  if (!explicitReplacement && hasCustom !== true) {
+    return await waitForYoutube(ctx, { ok: true, action: "waiting_for_thumbnail_confirmation", publicationId: pub.id, videoId, thumbnailApiStatus: apiStatus });
+  }
   return null;
 }
 
@@ -895,7 +902,7 @@ export async function runPublishTick(deps: PublishWorkerDeps): Promise<TickResul
 }
 
 /** Actions that moved media; one of these is enough work for a single invocation. */
-const HEAVY_ACTIONS = new Set(["chunk_uploaded", "video_created"]);
+const HEAVY_ACTIONS = new Set(["video_created"]);
 
 /**
  * Runs ticks until the queue is idle, a heavy upload step ran, or the time budget is
@@ -905,7 +912,7 @@ export async function runPublishTicks(
   deps: PublishWorkerDeps,
   options: { maxJobs?: number; budgetMs?: number } = {},
 ): Promise<TickResult[]> {
-  const maxJobs = options.maxJobs ?? 5;
+  const maxJobs = options.maxJobs ?? 8;
   const budgetMs = options.budgetMs ?? 25_000;
   const startedAt = deps.now();
   const results: TickResult[] = [];
