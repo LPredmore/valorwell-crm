@@ -1,0 +1,32 @@
+name: CRM research and donor integration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/domain/pipelines/donor-enrichment*'
+      - 'src/pages/crm/pipelines/**'
+      - 'src/repositories/supabase/pipeline-research.ts'
+      - 'supabase/migrations/*crm_research_pipeline_reconciliation.sql'
+      - '.github/workflows/crm-research-donor-integration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Changed file lint
+        run: npx eslint src/pages/crm/pipelines src/repositories/supabase/pipeline-research.ts src/domain/pipelines/donor-enrichment.ts src/domain/pipelines/donor-enrichment.test.ts --max-warnings=0
+      - name: TypeScript
+        run: npx tsc -p tsconfig.app.json --noEmit
+      - name: Pipeline and donor regression tests
+        run: npx vitest run src/domain/pipelines
+      - name: Production build
+        run: npm run build
