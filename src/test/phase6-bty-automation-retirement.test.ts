@@ -18,7 +18,7 @@ describe('retired BTY discovery automation UI', () => {
   it('retains duplicate cleanup and redirects the old bookmark to the renamed route', () => {
     const client = source('src/lib/crm/bty-automation.ts');
     const page = source('src/pages/crm/business-development/BtyAutomationPage.tsx');
-    const sidebar = source('src/components/crm/layout/CrmSidebar.tsx');
+    const navigation = source('src/components/crm/layout/crmNavigation.ts');
     const app = source('src/App.tsx');
 
     expect(client).toContain('bty_preview_organization_duplicates');
