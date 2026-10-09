@@ -6,6 +6,7 @@ import {PGlite} from '@electric-sql/pglite';
 
 const base=readFileSync(resolve(process.cwd(),'supabase/migrations/20261009043000_crm_configurable_pipelines.sql'),'utf8');
 const seed=readFileSync(resolve(process.cwd(),'supabase/migrations/20261009062000_seed_valorwell_pipeline_configuration.sql'),'utf8');
+const association=readFileSync(resolve(process.cwd(),'supabase/migrations/20261009062500_crm_personal_pipeline_optional_organization.sql'),'utf8');
 const tenant='00000000-0000-0000-0000-000000000001';
 const admin='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const fixture=`
@@ -33,6 +34,7 @@ describe('ValorWell seven pipeline seed is data, not hardcoded application logic
     try{
       await db.exec(fixture);
       await db.exec(base);
+      await db.exec(association);
       await db.exec(seed);
       const rows=await db.query<{name:string;subject_type:string;source_mode:string;source_key:string|null}>(
         'select name,subject_type,source_mode,source_key from public.crm_pipelines order by name');
@@ -49,11 +51,20 @@ describe('ValorWell seven pipeline seed is data, not hardcoded application logic
       expect(stageCounts.rows.reduce((sum,row)=>sum+row.count,0)).toBe(49);
       const totalFields=await db.query<{c:number}>('select count(*)::int c from public.crm_pipeline_fields');
       expect(totalFields.rows[0].c).toBe(20);
+      const donor=await db.query<{id:string}>("select id from public.crm_pipelines where name='Donors'");
+      const first=await db.query<{id:string}>("select id from public.crm_pipeline_stages where pipeline_id=$1 and position=0",[donor.rows[0].id]);
+      const person='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+      const organization='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+      await db.query('insert into public.relationship_contacts(tenant_id,id) values($1,$2)',[tenant,person]);
+      await db.query('insert into public.relationship_organizations(tenant_id,id) values($1,$2)',[tenant,organization]);
+      await db.query(`insert into public.crm_pipeline_records(tenant_id,pipeline_id,stage_id,contact_id,associated_organization_id)
+        values($1,$2,$3,$4,$5)`,[tenant,donor.rows[0].id,first.rows[0].id,person,organization]);
+      expect((await db.query<{associated_organization_id:string}>('select associated_organization_id from public.crm_pipeline_records')).rows[0].associated_organization_id).toBe(organization);
       await db.exec(seed);
       expect((await db.query('select id from public.crm_pipelines')).rows).toHaveLength(7);
       expect((await db.query('select id from public.crm_pipeline_stages')).rows).toHaveLength(49);
       expect((await db.query('select id from public.crm_pipeline_fields')).rows).toHaveLength(20);
-      expect((await db.query('select id from public.crm_pipeline_records')).rows).toHaveLength(0);
+      expect((await db.query('select id from public.crm_pipeline_records')).rows).toHaveLength(1);
       expect(seed).not.toMatch(/update\s+public\.(clients|staff|provider_applicants|relationship_opportunities)\b/i);
     }finally{await db.close();}
   },60000);
