@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { pipelinesRepository } from '@/repositories/supabase/pipelines';
-import { listPipelineSubjects,getPipelineCardSubjects } from '@/repositories/supabase/pipeline-subjects';
+import { listPipelineSubjects,getPipelineCardSubjects,listAssociatedOrganizations } from '@/repositories/supabase/pipeline-subjects';
 import { listConnectedPipelineCards,type ConnectedPipelineCard } from '@/repositories/supabase/connected-pipeline-cards';
 import {
   availableSortFields,builtinSortFields,cardFieldLabels,comparePipelineRecords,
@@ -40,11 +40,13 @@ export default function PipelineHubPage(){
   const [fieldOptions,setFieldOptions]=useState('');
   const [findSubject,setFindSubject]=useState('');
   const [enrollId,setEnrollId]=useState('');
+  const [associatedOrgId,setAssociatedOrgId]=useState('');
   const [sortKey,setSortKey]=useState('updated_at');
   const list=useQuery({queryKey:['crm-pipelines',currentTenantId],queryFn:()=>pipelinesRepository.list(currentTenantId!),enabled:!!currentTenantId,retry:false});
   const p=list.data?.find(x=>x.id===selected)??list.data?.[0]??null;
   const {stages,fields,records,subjects,connected}=usePipeData(p);
   const candidates=useQuery({queryKey:['pipeline-subject-picker',p?.id,findSubject],queryFn:()=>listPipelineSubjects(p!,findSubject),enabled:!!p&&p.source_mode==='manual',retry:false});
+  const relatedOrganizations=useQuery({queryKey:['pipeline-optional-organizations',currentTenantId],queryFn:()=>listAssociatedOrganizations(currentTenantId!),enabled:!!p&&p.source_mode==='manual'&&p.subject_type==='person'&&!!currentTenantId,retry:false});
   const mutation=useMutation({
     mutationFn:async (fn:()=>Promise<unknown>)=>fn(),
     onSuccess:()=>qc.invalidateQueries({queryKey:['crm-pipelines']}),
@@ -158,8 +160,12 @@ export default function PipelineHubPage(){
           <option value="">Choose {p.subject_type==='person'?'a person':'an organization'}</option>
           {(candidates.data??[]).map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
         </select>
+        {p.subject_type==='person'&&<select aria-label="Optional associated organization" className="rounded border bg-background p-2" value={associatedOrgId} onChange={e=>setAssociatedOrgId(e.target.value)}>
+          <option value="">No associated organization</option>
+          {(relatedOrganizations.data??[]).map(org=><option key={org.id} value={org.id}>{org.name}</option>)}
+        </select>}
         <Button disabled={busy||!enrollId} onClick={()=>act(async()=>{
-          await pipelinesRepository.enroll(p,stages.data![0].id,enrollId);setEnrollId('');
+          await pipelinesRepository.enroll(p,stages.data![0].id,enrollId,associatedOrgId||null);setEnrollId('');setAssociatedOrgId('');
         })}>Add to pipeline</Button>
       </CardContent></Card>}
       <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -174,6 +180,7 @@ export default function PipelineHubPage(){
               return <div key={record.id} className="rounded-lg border p-3 space-y-2">
                 <p className="font-medium">{source?.displayName??identity?.label??'Loading subject…'}</p>
                 {p.subject_type==='organization'&&<p className="text-sm text-muted-foreground">Primary: {source?.primaryContact??identity?.primaryContact??'Loading…'}</p>}
+                {manual?.associated_organization_id&&<p className="text-xs text-muted-foreground">Organization: {relatedOrganizations.data?.find(org=>org.id===manual.associated_organization_id)?.name??'Linked organization'}</p>}
                 {source?.sourceUrl&&<Link to={source.sourceUrl} className="text-xs underline">Open source record</Link>}
                 {visibleFields.map(f=><p key={f.id} className="text-sm">{f.label}: {String(record.field_values[f.field_key]??'—')}</p>)}
                 {record.next_action&&<p className="text-xs text-muted-foreground">Next: {record.next_action}</p>}
