@@ -61,9 +61,23 @@ export const pipelinesRepository={
     assert(error);
   },
   async records(p:CrmPipeline,limit=200):Promise<CrmPipelineRecord[]>{
-    const {data,error}=await db.from('crm_pipeline_records').select('*').eq('tenant_id',p.tenant_id)
-      .eq('pipeline_id',p.id).order('updated_at',{ascending:false}).limit(Math.min(Math.max(limit,1),2000));
-    assert(error);return (data??[]) as CrmPipelineRecord[];
+    const total=Math.min(Math.max(limit,1),2000);
+    const chunk=200;
+    const out:CrmPipelineRecord[]=[];
+    // Bounded range requests avoid Supabase project's default row limit. The
+    // pair (updated_at,id) gives deterministic ties between adjacent pages.
+    for(let offset=0;offset<total;offset+=chunk){
+      const end=Math.min(offset+chunk,total)-1;
+      const {data,error}=await db.from('crm_pipeline_records').select('*')
+        .eq('tenant_id',p.tenant_id).eq('pipeline_id',p.id)
+        .order('updated_at',{ascending:false}).order('id',{ascending:true})
+        .range(offset,end);
+      assert(error);
+      const rows=(data??[]) as CrmPipelineRecord[];
+      out.push(...rows);
+      if(rows.length<end-offset+1)break;
+    }
+    return out;
   },
   async enroll(p:CrmPipeline,stageId:string,subjectId:string,associatedOrganizationId?:string|null){
     if(p.source_mode!=='manual')throw new Error('Connected pipelines must be synchronized from their authoritative source.');
@@ -115,6 +129,13 @@ export const pipelinesRepository={
     const {error}=await db.from('crm_pipeline_saved_views').insert({
       ...view,tenant_id:p.tenant_id,pipeline_id:p.id,owner_profile_id:userId,
     } as never);assert(error);
+  },
+  async updateWorkflow(record:CrmPipelineRecord,patch:Pick<CrmPipelineRecord,'owner_profile_id'|'next_action'|'next_action_due_at'>){
+    if(record.source_record_id)throw new Error('Connected source workflows must be edited in their authoritative system.');
+    const {data,error}=await db.from('crm_pipeline_records')
+      .update(patch as never).eq('tenant_id',record.tenant_id).eq('pipeline_id',record.pipeline_id)
+      .eq('id',record.id).eq('version',record.version).select('id').maybeSingle();
+    assert(error);if(!data)throw new Error('This record changed. Refresh and retry.');
   },
   async updateSavedView(view:CrmPipelineSavedView,patch:Pick<CrmPipelineSavedView,'view_mode'|'sort_key'|'search_text'|'stage_id'|'attention'|'owner_filter'>){
     const {data,error}=await db.from('crm_pipeline_saved_views').update(patch as never)
