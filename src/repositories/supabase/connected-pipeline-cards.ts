@@ -67,7 +67,7 @@ export async function listConnectedPipelineCards(
           field_values:{license_type:row.licenseType,primary_state:row.primaryState,source:row.source},
           created_at:row.createdAt,updated_at:row.lastActivityAt??row.createdAt,
           next_action:row.nextAction,next_action_due_at:row.nextActionDueAt,
-          sourceUrl:'/crm/therapist-matches'});
+          sourceUrl:'https://emr.valorwell.org/staff/provider-applicants'});
       }
       if(items.length<100)break;
     }

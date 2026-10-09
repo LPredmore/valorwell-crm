@@ -181,7 +181,9 @@ export default function PipelineHubPage(){
                 <p className="font-medium">{source?.displayName??identity?.label??'Loading subject…'}</p>
                 {p.subject_type==='organization'&&<p className="text-sm text-muted-foreground">Primary: {source?.primaryContact??identity?.primaryContact??'Loading…'}</p>}
                 {manual?.associated_organization_id&&<p className="text-xs text-muted-foreground">Organization: {relatedOrganizations.data?.find(org=>org.id===manual.associated_organization_id)?.name??'Linked organization'}</p>}
-                {source?.sourceUrl&&<Link to={source.sourceUrl} className="text-xs underline">Open source record</Link>}
+                {source?.sourceUrl&&(source.sourceUrl.startsWith("https://")
+                  ?<a href={source.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline">Open source workspace</a>
+                  :<Link to={source.sourceUrl} className="text-xs underline">Open source record</Link>)}
                 {visibleFields.map(f=><p key={f.id} className="text-sm">{f.label}: {String(record.field_values[f.field_key]??'—')}</p>)}
                 {record.next_action&&<p className="text-xs text-muted-foreground">Next: {record.next_action}</p>}
                 {p.source_mode==='manual'&&capabilities.mutate&&(fields.data?.length??0)>0&&
