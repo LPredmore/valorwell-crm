@@ -98,6 +98,57 @@ create table public.crm_pipeline_stage_events (
 );
 create index crm_pipeline_events_record_idx on public.crm_pipeline_stage_events(tenant_id,record_id,occurred_at desc);
 
+-- Global primary-contact policy (not one primary per pipeline).
+-- Existing historical duplicate organizations are NOT auto-resolved: the
+-- user must decide which relationship is the actual primary. For all future
+-- writes, serialize by organization to prevent two simultaneous primaries.
+create function private.crm_guard_global_primary_contact()
+returns trigger language plpgsql security invoker set search_path=''
+as $f$
+begin
+  if new.is_primary and (tg_op='INSERT' or old.is_primary is distinct from true) then
+    perform pg_advisory_xact_lock(hashtextextended(new.organization_id::text,0));
+    if exists(
+      select 1 from public.relationship_contact_organizations a
+      where a.organization_id=new.organization_id and a.tenant_id=new.tenant_id
+        and a.is_primary and a.contact_id<>new.contact_id
+    ) then
+      raise exception 'ORGANIZATION_ALREADY_HAS_PRIMARY_CONTACT' using errcode='23514';
+    end if;
+  end if;
+  return new;
+end;
+$f$;
+revoke all on function private.crm_guard_global_primary_contact() from public,anon,authenticated;
+create trigger crm_guard_global_primary_contact
+  before insert or update of is_primary on public.relationship_contact_organizations
+  for each row execute function private.crm_guard_global_primary_contact();
+
+-- Organization-wide primary replacement is one transaction, under a row lock.
+-- Every pipeline reads its primary from the same affiliation table.
+create function public.crm_set_organization_primary_contact(p_organization_id uuid,p_contact_id uuid)
+returns uuid language plpgsql security invoker set search_path=''
+as $f$
+declare v_tenant uuid;
+begin
+  select tenant_id into v_tenant from public.relationship_organizations
+    where id=p_organization_id for update;
+  if not found or not private.crm_has_relationship_permission((select auth.uid()),v_tenant,'edit_relationships')
+    then raise exception 'ORGANIZATION_NOT_EDITABLE' using errcode='42501'; end if;
+  if not exists(select 1 from public.relationship_contact_organizations
+    where organization_id=p_organization_id and contact_id=p_contact_id and tenant_id=v_tenant) then
+    raise exception 'PRIMARY_MUST_BE_A_LINKED_CONTACT' using errcode='23514';
+  end if;
+  update public.relationship_contact_organizations set is_primary=false,updated_at=now()
+    where organization_id=p_organization_id and tenant_id=v_tenant and is_primary;
+  update public.relationship_contact_organizations set is_primary=true,updated_at=now()
+    where organization_id=p_organization_id and contact_id=p_contact_id and tenant_id=v_tenant;
+  return p_contact_id;
+end;
+$f$;
+revoke all on function public.crm_set_organization_primary_contact(uuid,uuid) from public,anon;
+grant execute on function public.crm_set_organization_primary_contact(uuid,uuid) to authenticated;
+
 -- Pipeline identity is immutable after creation; configurations are data,
 -- but cannot be used to turn personal records into organization records.
 create function private.crm_validate_pipeline_config()
