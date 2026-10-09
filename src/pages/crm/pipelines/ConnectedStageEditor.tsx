@@ -33,7 +33,7 @@ export function ConnectedStageEditor({pipeline,card,stages,busy,save}:{
       <p className="text-xs text-muted-foreground">
         {isApplicant
           ?'Only Contacted → Screening is allowed here, through the existing staff-authorized update contract. First-contact delivery, approval and onboarding invitations must be handled in the staff applicant workspace. No messages are sent from this control.'
-          :'This updates the source BTY opportunity and its status history. It does not send outreach or mark a message as delivered. Only choose a state that reflects actual progress.'}
+          :'This updates the audited source BTY opportunity. Ready for Campaign is managed through the existing approval workflow because it can trigger campaign enrollment. No contact is automatically treated as delivered by this control.'}
       </p>
       {isApplicant&&!applicantReady&&<p role="status" className="text-xs text-destructive">
         The applicant requires an assigned owner and scheduled next action. Complete those fields in the staff applicant workspace before transitioning.
