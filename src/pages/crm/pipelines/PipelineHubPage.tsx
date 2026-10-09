@@ -13,7 +13,7 @@ import { listConnectedPipelineCards,type ConnectedPipelineCard } from '@/reposit
 import {getPipelineSourceKind,donorValuesByContact} from '@/repositories/supabase/pipeline-research';
 import {ResearchSourceReview} from './ResearchSourceReview';
 import {PipelineDragContext,KanbanRecordDrag,KanbanStageDrop} from './KanbanDnd';
-import {PipelineActionEditor} from './PipelineActionEditor';
+import {PipelineActionEditor,listTeamOwners} from './PipelineActionEditor';
 import {ConnectedStageEditor} from './ConnectedStageEditor';
 import {canMovePipelineCard,matchesPipelineView,type PipelineViewMode,type AttentionFilter,type OwnerFilter} from '@/domain/pipelines/board-view';
 import {
@@ -68,6 +68,8 @@ export default function PipelineHubPage(){
   const [ruleAllowed,setRuleAllowed]=useState(true);
   const [selectedRecords,setSelectedRecords]=useState<string[]>([]);
   const [bulkStage,setBulkStage]=useState('');
+  const teamOwners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId],queryFn:()=>listTeamOwners(currentTenantId!),enabled:!!currentTenantId,retry:false});
+  const ownerName=(id:string|null)=>id?(teamOwners.data?.find(member=>member.id===id)?.name??'Assigned team member'):'Unassigned';
   const list=useQuery({queryKey:['crm-pipelines',currentTenantId],queryFn:()=>pipelinesRepository.list(currentTenantId!),enabled:!!currentTenantId,retry:false});
   const p=list.data?.find(x=>x.id===selected)??list.data?.[0]??null;
   const {stages,fields,records,subjects,connected}=usePipeData(p,recordLimit);
@@ -347,7 +349,7 @@ export default function PipelineHubPage(){
             {p.source_mode==='manual'&&<th className="p-3">Select</th>}
             <th className="p-3">{p.subject_type==='person'?'Person':'Organization'}</th>
             {p.subject_type==='organization'&&<th className="p-3">Global primary</th>}
-            <th className="p-3">Stage</th><th className="p-3">Next action</th>
+            <th className="p-3">Stage</th><th className="p-3">Assigned owner</th><th className="p-3">Next action</th>
             {visibleFields.map(v=><th key={v.id} className="p-3">{v.label}</th>)}
           </tr></thead>
           <tbody>{filtered.map(row=>{
@@ -374,7 +376,8 @@ export default function PipelineHubPage(){
                   <ConnectedStageEditor key={source.id+':list:'+source.sourceVersion}
                     pipeline={p} card={source} stages={stages.data??[]} busy={busy} save={act}/>}
               </td>
-              <td className="p-3">{row.next_action??'—'}</td>
+              <td className="p-3">{manual?ownerName(manual.owner_profile_id):'Managed in source'}</td>
+               <td className="p-3">{row.next_action??'—'}</td>
               {visibleFields.map(field=><td key={field.id} className="p-3">{String(row.field_values[field.field_key]??'—')}</td>)}
             </tr>;
           })}</tbody>
@@ -409,7 +412,8 @@ export default function PipelineHubPage(){
                   ?<a href={source.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline">Open source workspace</a>
                   :<Link to={source.sourceUrl} className="text-xs underline">Open source record</Link>)}
                 {visibleFields.map(f=><p key={f.id} className="text-sm">{f.label}: {String(record.field_values[f.field_key]??'—')}</p>)}
-                {record.next_action&&<p className="text-xs text-muted-foreground">Next: {record.next_action}</p>}
+                {manual&&<p className="text-xs text-muted-foreground">Assigned owner: {ownerName(manual.owner_profile_id)}</p>}
+                 {record.next_action&&<p className="text-xs text-muted-foreground">Next: {record.next_action}</p>}
                 {source&&['relationship_opportunities','provider_applicants'].includes(p.source_key??'')&&capabilities.mutate&&
                   <ConnectedStageEditor key={source.id+':board:'+source.sourceVersion}
                     pipeline={p} card={source} stages={stages.data??[]} busy={busy} save={act}/>}
