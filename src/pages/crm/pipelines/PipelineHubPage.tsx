@@ -1,6 +1,6 @@
 import { useMemo,useState } from 'react';
 import { useMutation,useQuery,useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link,useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card,CardContent,CardDescription,CardHeader,CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -36,7 +36,14 @@ export default function PipelineHubPage(){
   const {currentTenantId,userId,crmRole,capabilities}=useCrmAuth();
   const admin=crmRole==='crm_admin';
   const qc=useQueryClient();
-  const [selected,setSelected]=useState<string>('');
+  // Keep the selected pipeline in the URL so deep links and Back/Forward are reliable.
+  const [searchParams,setSearchParams]=useSearchParams();
+  const selected=searchParams.get('pipeline')??'';
+  const setSelected=(id:string)=>setSearchParams(previous=>{
+    const next=new URLSearchParams(previous);
+    if(id)next.set('pipeline',id);else next.delete('pipeline');
+    return next;
+  });
   const [tab,setTab]=useState<'board'|'settings'>('board');
   const [newName,setNewName]=useState('');
   const [newSubject,setNewSubject]=useState<PipelineSubject>('organization');
