@@ -13,6 +13,9 @@ export interface ConnectedPipelineCard {
   displayName: string;
   primaryContact?: string;
   sourceUrl?: string;
+  sourceStatus?: string;
+  sourceVersion?: number;
+  owner_profile_id?: string|null;
 }
 
 const batchSize=250;
@@ -45,11 +48,17 @@ export async function listConnectedPipelineCards(
   const tenantId=pipeline.tenant_id;
   const cards:ConnectedPipelineCard[]=[];
   if(pipeline.source_key==='provider_applicants'){
+    // The staff RPC is scoped to its OWN tenant, which can differ from the
+    // selected CRM tenant. Check equality before returning any applicant.
+    const {data:staffTenant,error:tenantError}=await supabase.rpc('crm_staff_tenant_for_applicant_pipeline' as never);
+    if(tenantError)throw new Error('Staff tenant authorization failed: '+tenantError.message);
+    if(staffTenant!==tenantId)throw new Error('Staff applicant tenant and selected CRM tenant do not match.');
     // Provider applicants use the staff-authorized contract, not a broad CRM
     // SELECT policy on their protected application records.
     type Applicant={id:string;firstName:string;lastName:string;status:string;source:string;
       primaryState:string|null;licenseType:string|null;referralSource:string|null;
-      nextAction:string|null;nextActionDueAt:string|null;createdAt:string;lastActivityAt:string|null};
+      nextAction:string|null;nextActionDueAt:string|null;createdAt:string;lastActivityAt:string|null;
+      ownerProfileId:string|null;version:number};
     for(let page=1;page<=20;page++){
       const {data,error}=await supabase.rpc('staff_list_provider_applicants' as never,{
         p_status:null,p_search:null,p_page:page,p_page_size:100,
@@ -67,6 +76,7 @@ export async function listConnectedPipelineCards(
           field_values:{license_type:row.licenseType,primary_state:row.primaryState,source:row.source},
           created_at:row.createdAt,updated_at:row.lastActivityAt??row.createdAt,
           next_action:row.nextAction,next_action_due_at:row.nextActionDueAt,
+          sourceStatus:row.status,sourceVersion:row.version,owner_profile_id:row.ownerProfileId,
           sourceUrl:'https://emr.valorwell.org/staff/provider-applicants'});
       }
       if(items.length<100)break;
@@ -108,7 +118,7 @@ export async function listConnectedPipelineCards(
     }
   }else if(pipeline.source_key==='relationship_opportunities'){
     const rows=await pages((from,to)=>supabase.from('relationship_opportunities')
-      .select('id,organization_id,status,cause_area,veteran_priority,next_action,next_action_due_at,created_at,updated_at')
+      .select('id,organization_id,status,version,owner_profile_id,cause_area,veteran_priority,next_action,next_action_due_at,created_at,updated_at')
       .eq('tenant_id',tenantId).order('created_at').range(from,to));
     const subjectRecords=rows.map(r=>({
       organization_id:r.organization_id,
@@ -123,6 +133,7 @@ export async function listConnectedPipelineCards(
         field_values:{cause_area:row.cause_area,veteran_priority:row.veteran_priority},
         created_at:row.created_at,updated_at:row.updated_at,
         next_action:row.next_action,next_action_due_at:row.next_action_due_at,
+        sourceStatus:row.status,sourceVersion:row.version,owner_profile_id:row.owner_profile_id,
         sourceUrl:'/crm/business-development/opportunities/'+row.id});
     }
   }else{

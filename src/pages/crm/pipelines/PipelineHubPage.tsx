@@ -14,6 +14,7 @@ import {getPipelineSourceKind,donorValuesByContact} from '@/repositories/supabas
 import {ResearchSourceReview} from './ResearchSourceReview';
 import {PipelineDragContext,KanbanRecordDrag,KanbanStageDrop} from './KanbanDnd';
 import {PipelineActionEditor} from './PipelineActionEditor';
+import {ConnectedStageEditor} from './ConnectedStageEditor';
 import {canMovePipelineCard,matchesPipelineView,type PipelineViewMode,type AttentionFilter,type OwnerFilter} from '@/domain/pipelines/board-view';
 import {
   availableSortFields,builtinSortFields,cardFieldLabels,comparePipelineRecords,
@@ -88,6 +89,7 @@ export default function PipelineHubPage(){
       qc.invalidateQueries({queryKey:['pipeline-card-subjects',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-saved-views',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-stage-rules',p?.id]}),
+      qc.invalidateQueries({queryKey:['pipeline-connected-cards',p?.id]}),
     ]);}
     catch(e){setActionError(e instanceof Error?e.message:'Action failed');}
   };
@@ -281,7 +283,14 @@ export default function PipelineHubPage(){
             await pipelinesRepository.deleteView(v);setActiveSavedView('');
           })}>Delete saved view</Button>}
       </div>
-      {p.source_mode==='connected'&&<p className="rounded border p-3 text-sm">Live source-connected board: stages are read from the authoritative system, not copied or editable here. To change a stage, use the existing record workflow.</p>}
+      {p.source_mode==='connected'&&<p className="rounded border p-3 text-sm">
+        Connected cards always reflect their authoritative source.
+        {p.source_key==='relationship_opportunities'
+          ?' BTY changes use the existing permission-checked, version-checked source transition function and write its official history; no email is sent.'
+          :p.source_key==='provider_applicants'
+            ?' Contacted → Screening uses the authorized staff workflow, preserving its owner/follow-up and audit requirements. Outreach delivery and approval remain in the staff applicant workspace.'
+            :' This source requires its existing authorized workflow for status changes. Generic CRM stage movement is disabled.'}
+      </p>}
       {connected.isError&&<p role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">Source records could not be loaded with your current permissions: {connected.error.message}</p>}
       {p.source_mode==='manual'&&records.data?.length===recordLimit&&recordLimit<2000&&
         <Button variant="outline" onClick={()=>setRecordLimit(x=>Math.min(x+200,2000))}>Load 200 more records</Button>}
@@ -352,7 +361,12 @@ export default function PipelineHubPage(){
                     :<Link className="text-xs underline" to={source.sourceUrl}>Open source</Link>}
                 </span>}</td>
               {p.subject_type==='organization'&&<td className="p-3">{contact}</td>}
-              <td className="p-3">{stages.data?.find(stage=>stage.id===row.stage_id)?.name??'Unknown stage'}</td>
+              <td className="p-3 space-y-2">
+                <span>{stages.data?.find(stage=>stage.id===row.stage_id)?.name??'Unknown stage'}</span>
+                {source&&['relationship_opportunities','provider_applicants'].includes(p.source_key??'')&&capabilities.mutate&&
+                  <ConnectedStageEditor key={source.id+':list:'+source.sourceVersion}
+                    pipeline={p} card={source} stages={stages.data??[]} busy={busy} save={act}/>}
+              </td>
               <td className="p-3">{row.next_action??'—'}</td>
               {visibleFields.map(field=><td key={field.id} className="p-3">{String(row.field_values[field.field_key]??'—')}</td>)}
             </tr>;
@@ -389,6 +403,9 @@ export default function PipelineHubPage(){
                   :<Link to={source.sourceUrl} className="text-xs underline">Open source record</Link>)}
                 {visibleFields.map(f=><p key={f.id} className="text-sm">{f.label}: {String(record.field_values[f.field_key]??'—')}</p>)}
                 {record.next_action&&<p className="text-xs text-muted-foreground">Next: {record.next_action}</p>}
+                {source&&['relationship_opportunities','provider_applicants'].includes(p.source_key??'')&&capabilities.mutate&&
+                  <ConnectedStageEditor key={source.id+':board:'+source.sourceVersion}
+                    pipeline={p} card={source} stages={stages.data??[]} busy={busy} save={act}/>}
                 {manual&&capabilities.mutate&&<PipelineActionEditor key={record.id+':actions:'+(manual.version??0)}
                   record={manual} userId={userId??''} busy={busy} save={act}/>}
                 {p.source_mode==='manual'&&capabilities.mutate&&(fields.data?.length??0)>0&&
