@@ -7,7 +7,7 @@ export async function listTeamOwners(tenantId:string):Promise<TeamOwner[]>{
   if(error)throw new Error(error.message);
   const people=new Map<string,TeamOwner>();
   for(const row of data??[]){
-    if(!row.profile_id||row.prov_status==='inactive')continue;
+    if(!row.profile_id||row.prov_status==='Inactive')continue;
     const name=[row.prov_name_f,row.prov_name_l].filter(Boolean).join(' ').trim();
     people.set(row.profile_id,{id:row.profile_id,name:name||'Team member'});
   }
