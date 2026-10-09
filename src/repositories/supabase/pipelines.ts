@@ -116,6 +116,12 @@ export const pipelinesRepository={
       ...view,tenant_id:p.tenant_id,pipeline_id:p.id,owner_profile_id:userId,
     } as never);assert(error);
   },
+  async updateSavedView(view:CrmPipelineSavedView,patch:Pick<CrmPipelineSavedView,'view_mode'|'sort_key'|'search_text'|'stage_id'|'attention'|'owner_filter'>){
+    const {data,error}=await db.from('crm_pipeline_saved_views').update(patch as never)
+      .eq('tenant_id',view.tenant_id).eq('pipeline_id',view.pipeline_id)
+      .eq('id',view.id).eq('owner_profile_id',view.owner_profile_id).select('id').maybeSingle();
+    assert(error);if(!data)throw new Error('Saved view could not be updated with your permissions.');
+  },
   async deleteView(view:CrmPipelineSavedView){
     const {error}=await db.from('crm_pipeline_saved_views').delete().eq('id',view.id)
       .eq('tenant_id',view.tenant_id).eq('pipeline_id',view.pipeline_id)
