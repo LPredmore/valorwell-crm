@@ -1,6 +1,5 @@
 import type {ReactNode} from 'react';
 import {DndContext,KeyboardSensor,PointerSensor,closestCenter,useSensor,useSensors,useDroppable,useDraggable,type DragEndEvent} from '@dnd-kit/core';
-import {CSS} from '@dnd-kit/utilities';
 
 export function PipelineDragContext({enabled,onMove,children}:{
   enabled:boolean;onMove:(recordId:string,stageId:string)=>void;children:ReactNode;
@@ -27,7 +26,7 @@ export function KanbanRecordDrag({id,enabled,children}:{
 }){
   const {setNodeRef,listeners,attributes,transform,isDragging}=useDraggable({id,disabled:!enabled});
   return <div ref={setNodeRef}
-    style={{transform:CSS.Translate.toString(transform),opacity:isDragging?.55:1,position:'relative'}}
+    style={{transform:transform?`translate3d(${transform.x}px, ${transform.y}px, 0)`:undefined,opacity:isDragging?.55:1,position:'relative'}}
     className="rounded-lg border bg-background p-3 space-y-2">
     {enabled&&<button type="button" {...listeners} {...attributes}
       className="touch-none cursor-grab rounded border px-2 py-1 text-xs text-muted-foreground hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
