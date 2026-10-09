@@ -21,7 +21,7 @@ import type { OperatorActivityType } from '@/domain/relationships/orchestration-
 import { getOpportunityOrchestration, recordOperatorActivity, retryAutoEnrollment } from '@/lib/crm/relationship-orchestration';
 import { canRunOperatorAction } from '@/domain/relationships/activation-gating';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
-import { listTeamOwners } from '@/pages/crm/pipelines/PipelineActionEditor';
+import { listTeamOwners } from '@/repositories/supabase/pipeline-team-owners';
 
 
 const noteTypes: InteractionType[] = ['manual_note', 'phone_call', 'meeting', 'outbound_email', 'inbound_reply'];
