@@ -1,0 +1,35 @@
+name: CRM connected source stage actions
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/domain/pipelines/*source-transitions*'
+      - 'src/domain/pipelines/applicant-tenant-contract.test.ts'
+      - 'src/repositories/supabase/*connected-transition*'
+      - 'src/repositories/supabase/connected-pipeline-cards.ts'
+      - 'src/pages/crm/pipelines/ConnectedStageEditor.tsx'
+      - 'src/pages/crm/pipelines/PipelineHubPage.tsx'
+      - 'supabase/migrations/*crm_applicant_pipeline_staff_tenant_scope.sql'
+      - '.github/workflows/crm-connected-source-actions.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Source action ESLint
+        run: npx eslint src/pages/crm/pipelines/ConnectedStageEditor.tsx src/pages/crm/pipelines/PipelineHubPage.tsx src/repositories/supabase/connected-pipeline-cards.ts src/repositories/supabase/bty-connected-transition.ts src/repositories/supabase/applicant-connected-transition.ts src/domain/pipelines/*source-transitions* src/domain/pipelines/applicant-tenant-contract.test.ts --max-warnings=0
+      - name: TypeScript
+        run: npx tsc -p tsconfig.app.json --noEmit
+      - name: Authorized tenant, status and regression tests
+        run: npx vitest run src/domain/pipelines
+      - name: Production build
+        run: npm run build
