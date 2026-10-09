@@ -269,6 +269,14 @@ export default function PipelineHubPage(){
         {activeSavedView&&<Button size="sm" variant="outline" disabled={busy}
           onClick={()=>act(async()=>{
             const v=saved.data?.find(x=>x.id===activeSavedView);if(!v)return;
+            await pipelinesRepository.updateSavedView(v,{
+              view_mode:viewMode,sort_key:sortKey,search_text:searchText,
+              stage_id:stageFilter||null,attention,owner_filter:ownerFilter,
+            });
+          })}>Update saved view</Button>}
+        {activeSavedView&&<Button size="sm" variant="outline" disabled={busy}
+          onClick={()=>act(async()=>{
+            const v=saved.data?.find(x=>x.id===activeSavedView);if(!v)return;
             await pipelinesRepository.deleteView(v);setActiveSavedView('');
           })}>Delete saved view</Button>}
       </div>
