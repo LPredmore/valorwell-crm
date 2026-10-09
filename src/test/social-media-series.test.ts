@@ -30,7 +30,7 @@ const part = (n: number, extra: Partial<SocialMediaLibraryItem> = {}) =>
   lib({ sourceId: `part-${n}`, contentFormat: 'long_form', partNumber: n, ...extra });
 const short = (n: number, extra: Partial<SocialMediaLibraryItem> = {}) => lib({ sourceId: `short-${n}`, ...extra });
 const full = (extra: Partial<SocialMediaLibraryItem> = {}) =>
-  lib({ sourceId: PROJECT, sourceType: 'project', clipId: null, contentFormat: 'full_episode', title: 'Full Episode', thumbnailFileId: null, ...extra });
+  lib({ sourceId: PROJECT, sourceType: 'project', clipId: null, contentFormat: 'full_episode', title: 'Full Episode', thumbnailFileId: 'full-thumb', ...extra });
 const project = { id: PROJECT, organizationName: 'Org', guestName: 'G', expectedPartCount: null, expectedShortCount: null };
 
 function plan(items: SocialMediaLibraryItem[], extra: Partial<Parameters<typeof buildSeriesPlan>[0]> = {}) {
@@ -94,6 +94,7 @@ describe('buildSeriesPlan', () => {
   it('blocks the whole series on any unready, untitled or thumbnail-less item', () => {
     expect(plan([part(1), short(1, { thumbnailFileId: null })]).blockers.join()).toMatch(/thumbnail/);
     expect(plan([part(1, { description: '' })]).blockers.join()).toMatch(/description/);
+    expect(plan([part(1), full({ thumbnailFileId: null })]).blockers.join()).toMatch(/thumbnail/);
     expect(plan([part(1, { readiness: { ready: false, reasons: ['not rendered'] } })]).blockers.join()).toMatch(/not rendered/);
     expect(plan([part(1), full({ title: null })]).blockers.join()).toMatch(/Full episode needs a title/);
   });
