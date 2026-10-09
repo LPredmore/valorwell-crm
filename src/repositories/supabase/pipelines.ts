@@ -97,7 +97,7 @@ export const pipelinesRepository={
     if(p.source_mode!=='manual')throw new Error('Source-connected pipeline transition rules belong to the source workflow.');
     const {error}=await db.from('crm_pipeline_stage_rules').upsert({
       tenant_id:p.tenant_id,pipeline_id:p.id,from_stage_id:fromId,to_stage_id:toId,is_allowed:isAllowed,
-    },{onConflict:'pipeline_id,from_stage_id,to_stage_id'});assert(error);
+    } as never,{onConflict:'pipeline_id,from_stage_id,to_stage_id'});assert(error);
   },
   async removeStageRule(rule:CrmPipelineStageRule){
     const {error}=await db.from('crm_pipeline_stage_rules').delete()
