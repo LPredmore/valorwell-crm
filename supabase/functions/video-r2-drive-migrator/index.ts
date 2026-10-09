@@ -106,7 +106,7 @@ async function finalize(admin:any,row:any,token:string,fileId:string){
 async function inventory(admin:any){
   const m=await legacyCall(admin,"manifest");const videos=Array.isArray(m.videos)?m.videos:[];const now=new Date().toISOString();
   for(let i=0;i<videos.length;i+=100){
-    const rows=videos.slice(i,i+100).map((o:any)=>({tenant_id:TENANT_ID,source_provider:"cloudflare_r2",source_bucket:String(m.bucket??"valorwell-videos"),source_key:String(o.key),source_size_bytes:0,source_url:"legacy-r2://"+String(m.bucket??"valorwell-videos")+"/"+String(o.key),target_provider:"google_drive",target_file_name:String(o.original_filename??safeName(String(o.key))),metadata:{original_filename:o.original_filename??null,mime_type:o.mime_type??"video/mp4",youtube_video_id:o.youtube_video_id??null,legacy_ref_count:o.ref_count??0,source_project:"Therapist CRM"},updated_at:now}));
+    const rows=videos.slice(i,i+100).map((o:any)=>({tenant_id:TENANT_ID,source_provider:"cloudflare_r2",source_bucket:String(m.bucket??"valorwell-videos"),source_key:String(o.key),source_size_bytes:0,source_url:"legacy-r2://"+String(m.bucket??"valorwell-videos")+"/"+String(o.key),target_provider:"google_drive",target_file_name:String(o.original_filename??safeName(String(o.key))),metadata:{original_filename:o.original_filename??null,mime_type:o.mime_type??"video/mp4",youtube_video_id:o.youtube_video_id??null,legacy_ref_count:o.ref_count??0,source_project:"retired_video_archive"},updated_at:now}));
     const {error}=await admin.from("ai_operations_video_storage_migrations").upsert(rows,{onConflict:"tenant_id,source_bucket,source_key",ignoreDuplicates:false});if(error) throw new Error(error.message);
   }
   return {bucket:m.bucket,totalVideos:videos.length,upserted:videos.length};
