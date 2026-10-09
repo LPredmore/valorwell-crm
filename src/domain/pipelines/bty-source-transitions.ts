@@ -5,7 +5,9 @@
 const allowed:Readonly<Record<string,readonly string[]>>={
   identified:['researching','qualified','nurture','disqualified'],
   researching:['qualified','nurture','disqualified'],
-  qualified:['ready_for_campaign','contacted','nurture','disqualified'],
+  // ready_for_campaign is intentionally excluded: the existing source trigger
+  // may auto-enroll approved opportunities into a live outreach campaign.
+  qualified:['contacted','nurture','disqualified'],
   ready_for_campaign:['contacted','nurture','disqualified'],
   contacted:['responded','nurture','declined','disqualified'],
   responded:['interested','nurture','declined'],
@@ -23,6 +25,8 @@ export function allowedBtySourceStatuses(current:string):readonly string[]{
 export function requireBtySourceTransition(
   current:string,destination:string,reason:string,version:number|null,
 ):void{
+  if(destination==='ready_for_campaign')
+    throw new Error('Campaign readiness is managed through the BTY review and outreach approval workflow.');
   if(!allowedBtySourceStatuses(current).includes(destination))
     throw new Error('That transition is not supported by the authoritative BTY workflow.');
   if(!reason.trim()||reason.trim().length<8)
