@@ -29,11 +29,11 @@ export const pipelinesRepository={
     const {data,error}=await db.from('crm_pipelines').insert({
       tenant_id:tenantId,created_by:userId,name:name.trim(),subject_type:subject,
       source_mode:'manual',card_field_keys:[],sort_field_keys:['updated_at'],
-    }).select('*').single();
+    } as never).select('*').single();
     assert(error);if(!data)throw new Error('Pipeline was not created');return data as CrmPipeline;
   },
   async update(p:CrmPipeline,patch:Partial<Pick<CrmPipeline,'name'|'card_field_keys'|'sort_field_keys'|'archived_at'>>){
-    const {error}=await db.from('crm_pipelines').update(patch).eq('tenant_id',p.tenant_id).eq('id',p.id);
+    const {error}=await db.from('crm_pipelines').update(patch as never).eq('tenant_id',p.tenant_id).eq('id',p.id);
     assert(error);
   },
   async stages(p:CrmPipeline):Promise<CrmPipelineStage[]>{
@@ -41,7 +41,7 @@ export const pipelinesRepository={
     assert(error);return (data??[]) as CrmPipelineStage[];
   },
   async addStage(p:CrmPipeline,name:string,position:number){
-    const {error}=await db.from('crm_pipeline_stages').insert({tenant_id:p.tenant_id,pipeline_id:p.id,name:name.trim(),position});assert(error);
+    const {error}=await db.from('crm_pipeline_stages').insert({tenant_id:p.tenant_id,pipeline_id:p.id,name:name.trim(),position} as never);assert(error);
   },
   async fields(p:CrmPipeline):Promise<CrmPipelineField[]>{
     const {data,error}=await db.from('crm_pipeline_fields').select('*').eq('tenant_id',p.tenant_id).eq('pipeline_id',p.id).order('position');
@@ -52,10 +52,10 @@ export const pipelinesRepository={
       tenant_id:p.tenant_id,pipeline_id:p.id,label:input.label.trim(),field_key:input.fieldKey,
       field_type:input.type,options:input.options,position:input.position,
       show_on_card:false,allow_sort:false,required:false,
-    });assert(error);
+    } as never);assert(error);
   },
   async updateField(f:CrmPipelineField,patch:Partial<Pick<CrmPipelineField,'show_on_card'|'allow_sort'|'required'|'label'>>){
-    const {error}=await db.from('crm_pipeline_fields').update(patch).eq('tenant_id',f.tenant_id).eq('id',f.id);
+    const {error}=await db.from('crm_pipeline_fields').update(patch as never).eq('tenant_id',f.tenant_id).eq('id',f.id);
     assert(error);
   },
   async records(p:CrmPipeline):Promise<CrmPipelineRecord[]>{
@@ -70,16 +70,16 @@ export const pipelinesRepository={
       contact_id:p.subject_type==='person'?subjectId:null,
       organization_id:p.subject_type==='organization'?subjectId:null,
       field_values:{},
-    });assert(error);
+    } as never);assert(error);
   },
   async move(record:CrmPipelineRecord,stageId:string){
     if(record.source_record_id)throw new Error('Connected source stages cannot be manually overwritten.');
-    const {error}=await db.from('crm_pipeline_records').update({stage_id:stageId}).eq('tenant_id',record.tenant_id)
+    const {error}=await db.from('crm_pipeline_records').update({stage_id:stageId} as never).eq('tenant_id',record.tenant_id)
       .eq('id',record.id).eq('version',record.version);
     assert(error);
   },
   async updateValues(record:CrmPipelineRecord,values:Record<string,unknown>){
-    const {error}=await db.from('crm_pipeline_records').update({field_values:values})
+    const {error}=await db.from('crm_pipeline_records').update({field_values:values} as never)
       .eq('tenant_id',record.tenant_id).eq('id',record.id).eq('version',record.version);
     assert(error);
   },
