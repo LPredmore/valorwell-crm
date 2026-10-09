@@ -57,8 +57,7 @@ export function ResearchSourceReview({pipeline,kind,canEdit}:{
       <CardTitle>Research records awaiting CRM relationship linking</CardTitle>
       <CardDescription>
         {kind==='va_facilities'?'VA regional facility contact research':'State-by-state therapist employment and career-office research'}.
-        Choose a CRM organization that already has exactly one global primary contact, or explicitly confirm a real person to create a new organization and set that person as its primary.
-        No source contact becomes primary automatically.
+        Link to an existing CRM organization, or confirm a real person's contact details to create a new one. An organization's only linked contact becomes Primary automatically. Research names and shared departmental inboxes are not imported without review.
       </CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
@@ -92,21 +91,21 @@ export function ResearchSourceReview({pipeline,kind,canEdit}:{
         </div>}
         {canEdit&&<div className="space-y-3 rounded border p-3">
           <h4 className="font-semibold text-sm">Create a new organization from this research</h4>
-          <p className="text-sm text-muted-foreground">Only use this for a new organization, and confirm the named person is actually who you want as the ONE global primary. Department/office inboxes should not be entered as a person.</p>
-          <div className="space-y-1"><Label htmlFor="research-primary-name">Designated primary person's full name</Label>
+          <p className="text-sm text-muted-foreground">Confirm this is a real, correctly associated contact—not a department mailbox. The first/only contact is automatically Primary for the entire organization, across all pipelines.</p>
+          <div className="space-y-1"><Label htmlFor="research-primary-name">Contact person's full name</Label>
             <Input id="research-primary-name" value={primaryName} onChange={e=>{setPrimaryName(e.target.value);setConfirmPrimary(false);}}/></div>
-          <div className="space-y-1"><Label htmlFor="research-primary-email">Primary person's email</Label>
+          <div className="space-y-1"><Label htmlFor="research-primary-email">Contact person's email</Label>
             <Input id="research-primary-email" type="email" value={primaryEmail} onChange={e=>{setPrimaryEmail(e.target.value);setConfirmPrimary(false);}}/></div>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmPrimary}
             onChange={e=>setConfirmPrimary(e.target.checked)}/>
-            <span>I confirm this is a real person and designate them as the single primary relationship contact for the new organization.</span>
+            <span>I confirm this is a real person associated with this organization, not a shared department inbox. As the only contact, they will automatically be Primary.</span>
           </label>
           {kind==='va_facilities'&&<label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmRegional} onChange={e=>setConfirmRegional(e.target.checked)}/>
             <span>I confirm this organization represents the regional VA referral facility, not a separate subordinate clinic. Otherwise, link this source entry to its existing parent regional facility above.</span>
           </label>}
           <Button size="sm" disabled={mutation.isPending||!confirmPrimary||(kind==='va_facilities'&&!confirmRegional)||!primaryName.trim()||!primaryEmail.includes('@')}
             onClick={()=>submit(()=>createSourceOrganization(pipeline,source.id,primaryName,primaryEmail,confirmRegional))}>
-            Create organization, designate primary, and enroll
+            Create organization and enroll
           </Button>
         </div>}
         {error&&<p role="alert" className="rounded border border-destructive p-2 text-sm text-destructive">{error}</p>}

@@ -1,0 +1,34 @@
+name: CRM single contact primary guard
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/*auto_primary_single_contact_organization.sql'
+      - 'src/domain/pipelines/auto-primary-single-contact.test.ts'
+      - 'src/pages/crm/pipelines/ResearchSourceReview.tsx'
+      - '.github/workflows/crm-auto-primary-single-contact.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auto-primary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Lint modified source files
+        run: npx eslint src/domain/pipelines/auto-primary-single-contact.test.ts src/pages/crm/pipelines/ResearchSourceReview.tsx --max-warnings=0
+      - name: TypeScript
+        run: npx tsc -p tsconfig.app.json --noEmit
+      - name: Embedded Postgres regression
+        run: npx vitest run src/domain/pipelines/auto-primary-single-contact.test.ts src/domain/pipelines/pipeline-migration.test.ts src/domain/pipelines/research-reconciliation.test.ts
+      - name: Production build
+        run: npm run build
