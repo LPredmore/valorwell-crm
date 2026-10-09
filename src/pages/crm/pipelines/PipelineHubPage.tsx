@@ -57,6 +57,8 @@ export default function PipelineHubPage(){
   const [fromStage,setFromStage]=useState('');
   const [toStage,setToStage]=useState('');
   const [ruleAllowed,setRuleAllowed]=useState(true);
+  const [selectedRecords,setSelectedRecords]=useState<string[]>([]);
+  const [bulkStage,setBulkStage]=useState('');
   const list=useQuery({queryKey:['crm-pipelines',currentTenantId],queryFn:()=>pipelinesRepository.list(currentTenantId!),enabled:!!currentTenantId,retry:false});
   const p=list.data?.find(x=>x.id===selected)??list.data?.[0]??null;
   const {stages,fields,records,subjects,connected}=usePipeData(p,recordLimit);
@@ -123,7 +125,7 @@ export default function PipelineHubPage(){
         <select id="pipeline-choice" className="w-full rounded-md border bg-background p-2" value={p?.id??''}
           onChange={e=>{setSelected(e.target.value);setTab('board');setSortKey('updated_at');
             setViewMode('board');setSearchText('');setStageFilter('');setAttention('all');setOwnerFilter('all');setActiveSavedView('');
-            setRecordLimit(200);setFindSubject('');setEnrollId('');}}>
+            setRecordLimit(200);setSelectedRecords([]);setBulkStage('');setFindSubject('');setEnrollId('');}}>
           {(list.data??[]).map(x=><option key={x.id} value={x.id}>{x.name} ({x.subject_type})</option>)}
         </select></div>
       {p&&<><Button size="sm" variant={tab==='board'?'default':'outline'} onClick={()=>setTab('board')}>Board</Button>
@@ -298,16 +300,78 @@ export default function PipelineHubPage(){
       </CardContent></Card>}
       {(sourceBinding.data==='institutional_recruiting'||sourceBinding.data==='va_facilities')&&p.source_mode==='manual'&&
         <ResearchSourceReview pipeline={p} kind={sourceBinding.data} canEdit={capabilities.mutate}/>}
+      {p.source_mode==='manual'&&viewMode==='list'&&capabilities.mutate&&<div className="flex flex-wrap items-center gap-2 rounded border p-2">
+        <Badge variant="outline">{selectedRecords.length} selected (limit 20)</Badge>
+        <select aria-label="Bulk target stage" className="rounded border bg-background p-2" value={bulkStage} onChange={e=>setBulkStage(e.target.value)}>
+          <option value="">Bulk move to stage</option>{(stages.data??[]).map(stage=><option key={stage.id} value={stage.id}>{stage.name}</option>)}
+        </select>
+        <Button size="sm" disabled={busy||!bulkStage||selectedRecords.length===0}
+          onClick={()=>act(async()=>{
+            const moving=(records.data??[]).filter(r=>selectedRecords.includes(r.id));
+            for(const record of moving){
+              if(canMovePipelineCard(record.stage_id,bulkStage,stages.data??[],rules.data??[])){
+                await pipelinesRepository.move(record,bulkStage);
+              } else throw new Error('A selected record has a blocked stage transition. No further records were moved.');
+            }
+            setSelectedRecords([]);
+          })}>Move selected (up to 20)</Button>
+      </div>}
+      {viewMode==='list'&&<div className="overflow-x-auto rounded border">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead className="bg-muted text-left"><tr>
+            {p.source_mode==='manual'&&<th className="p-3">Select</th>}
+            <th className="p-3">{p.subject_type==='person'?'Person':'Organization'}</th>
+            {p.subject_type==='organization'&&<th className="p-3">Global primary</th>}
+            <th className="p-3">Stage</th><th className="p-3">Next action</th>
+            {visibleFields.map(v=><th key={v.id} className="p-3">{v.label}</th>)}
+          </tr></thead>
+          <tbody>{filtered.map(row=>{
+            const source=p.source_mode==='connected'?row as ConnectedPipelineCard:null;
+            const manual=source?null:row as CrmPipelineRecord;
+            const contact=p.subject_type==='organization'
+              ?(source?.primaryContact??subjects.data?.[manual?.organization_id??'']?.primaryContact??'Needs review')
+              :null;
+            return <tr key={row.id} className="border-t">
+              {manual&&<td className="p-3"><input type="checkbox" aria-label={'Select '+labelOf(row)}
+                checked={selectedRecords.includes(row.id)}
+                disabled={!capabilities.mutate||(!selectedRecords.includes(row.id)&&selectedRecords.length>=20)}
+                onChange={e=>setSelectedRecords(xs=>e.target.checked?[...xs,row.id]:xs.filter(x=>x!==row.id))}/></td>}
+              <td className="p-3 font-medium">{labelOf(row)}
+                {source?.sourceUrl&&<span className="block">
+                  {source.sourceUrl.startsWith('https://')
+                    ?<a className="text-xs underline" href={source.sourceUrl} target="_blank" rel="noopener noreferrer">Open source</a>
+                    :<Link className="text-xs underline" to={source.sourceUrl}>Open source</Link>}
+                </span>}</td>
+              {p.subject_type==='organization'&&<td className="p-3">{contact}</td>}
+              <td className="p-3">{stages.data?.find(stage=>stage.id===row.stage_id)?.name??'Unknown stage'}</td>
+              <td className="p-3">{row.next_action??'—'}</td>
+              {visibleFields.map(field=><td key={field.id} className="p-3">{String(row.field_values[field.field_key]??'—')}</td>)}
+            </tr>;
+          })}</tbody>
+        </table>
+        {filtered.length===0&&<p className="p-4 text-sm text-muted-foreground">No records match these filters.</p>}
+      </div>}
+      {viewMode==='board'&&<PipelineDragContext enabled={p.source_mode==='manual'&&capabilities.mutate&&!busy}
+        onMove={(recordId,stageId)=>{
+          const row=records.data?.find(r=>r.id===recordId);
+          if(!row||!canMovePipelineCard(row.stage_id,stageId,stages.data??[],rules.data??[])){
+            setActionError('That stage move is not permitted by this pipeline’s transition rules.');return;
+          }
+          void act(()=>pipelinesRepository.move(row,stageId));
+        }}>
       <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {(stages.data??[]).map(stage=><Card key={stage.id} className="min-w-0">
-          <CardHeader><CardTitle className="text-base">{stage.name}</CardTitle><CardDescription>{sorted.filter(r=>r.stage_id===stage.id).length} records</CardDescription></CardHeader>
+        {(stages.data??[]).filter(stage=>!stageFilter||stage.id===stageFilter).map(stage=><KanbanStageDrop key={stage.id} id={stage.id}
+          enabled={p.source_mode==='manual'&&capabilities.mutate}>
+          <Card className="min-w-0">
+          <CardHeader><CardTitle className="text-base">{stage.name}</CardTitle><CardDescription>{filtered.filter(r=>r.stage_id===stage.id).length} records</CardDescription></CardHeader>
           <CardContent className="space-y-3">
-            {sorted.filter(r=>r.stage_id===stage.id).map(record=>{
+            {filtered.filter(r=>r.stage_id===stage.id).map(record=>{
               const source=p.source_mode==='connected'?record as ConnectedPipelineCard:null;
               const manual=source?null:record as CrmPipelineRecord;
               const subjectId=manual?(p.subject_type==='person'?manual.contact_id:manual.organization_id):null;
               const identity=subjects.data?.[subjectId??''];
-              return <div key={record.id} className="rounded-lg border p-3 space-y-2">
+              return <KanbanRecordDrag key={record.id} id={record.id}
+                enabled={p.source_mode==='manual'&&capabilities.mutate&&!busy}>
                 <p className="font-medium">{source?.displayName??identity?.label??'Loading subject…'}</p>
                 {p.subject_type==='organization'&&<p className="text-sm text-muted-foreground">Primary: {source?.primaryContact??identity?.primaryContact??'Loading…'}</p>}
                 {manual?.associated_organization_id&&<p className="text-xs text-muted-foreground">Organization: {relatedOrganizations.data?.find(org=>org.id===manual.associated_organization_id)?.name??'Linked organization'}</p>}
@@ -321,12 +385,14 @@ export default function PipelineHubPage(){
                     busy={busy} save={act}/>}
                 {manual&&capabilities.mutate&&<select aria-label={'Move '+(identity?.label??'record')} className="w-full rounded border bg-background p-2 text-xs" value={record.stage_id}
                   onChange={e=>act(()=>pipelinesRepository.move(manual,e.target.value))}>
-                  {(stages.data??[]).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                  {(stages.data??[]).map(s=><option key={s.id} value={s.id}
+                    disabled={s.id!==record.stage_id&&!canMovePipelineCard(record.stage_id,s.id,stages.data??[],rules.data??[])}>{s.name}</option>)}
                 </select>}
-              </div>;
+              </KanbanRecordDrag>;
             })}
-          </CardContent></Card>)}
+          </CardContent></Card></KanbanStageDrop>)}
       </div>
+      </PipelineDragContext>}
       {!stages.data?.length&&<p className="text-muted-foreground">Configure your first stage to start using this pipeline.</p>}
     </section>}
   </div>;
