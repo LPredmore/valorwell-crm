@@ -7,7 +7,7 @@ import type {CrmPipelineRecord} from '@/domain/pipelines/models';
 import {pipelinesRepository} from '@/repositories/supabase/pipelines';
 
 type TeamOwner={id:string;name:string};
-async function listTeamOwners(tenantId:string):Promise<TeamOwner[]>{
+export async function listTeamOwners(tenantId:string):Promise<TeamOwner[]>{
   const {data,error}=await supabase.from('staff').select('profile_id,prov_name_f,prov_name_l,prov_status')
     .eq('tenant_id',tenantId).not('profile_id','is',null).limit(500);
   if(error)throw new Error(error.message);
