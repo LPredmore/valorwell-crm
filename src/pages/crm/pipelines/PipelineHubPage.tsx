@@ -305,7 +305,7 @@ export default function PipelineHubPage(){
       </div>
       {p.source_key==='provider_applicants'&&<p className="rounded border p-3 text-sm">
         Outreach prospects are sourced from the protected recruitment staging table, not from submitted clinician applications.
-        The board previews the 200 most recent prospects; <Link className="underline" to="/crm/recruitment/prospects">open the full paginated recruitment queue</Link> to search and edit all 1,279 existing prospects.
+        The board previews the 200 most recent prospects; <Link className="underline" to="/crm/recruitment/prospects">open the full paginated recruitment queue</Link> to search and edit the complete, continuously updated prospect source.
         Email and SMS campaigns are paused; review stages do not send messages.
       </p>}
       {p.source_mode==='connected'&&<p className="rounded border p-3 text-sm">
