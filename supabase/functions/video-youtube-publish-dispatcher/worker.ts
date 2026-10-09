@@ -218,6 +218,21 @@ async function runUploadStage(ctx: Ctx): Promise<TickResult> {
   await assertThumbnailUploadable(ctx);
   const payload = { ...jobPayload(ctx) };
 
+  // If a prior upload returned an id and YouTube later reported 404, check that
+  // exact id again before starting a second video. YouTube indexing can lag.
+  const previousVideoId = typeof payload.recovery_from_deleted_video_id === "string"
+    ? payload.recovery_from_deleted_video_id : "";
+  if (previousVideoId && !payload.upload_session_url) {
+    try {
+      await ctx.youtube.getYoutubeDeliveryStatus(await ctx.youtubeToken(), previousVideoId);
+      await insertEvent(ctx, "youtube_prior_upload_recovered", { videoId: previousVideoId });
+      return await recordCreatedVideo(ctx, previousVideoId, null, true);
+    } catch (error) {
+      if (!(error instanceof PermanentYoutubeError && error.status === 404)) throw error;
+      await insertEvent(ctx, "youtube_prior_upload_still_missing", { videoId: previousVideoId });
+    }
+  }
+
   const driveToken = await ctx.driveToken();
   let fileId = payload.drive_file_id as string | undefined;
   let totalBytes = payload.total_bytes as number | undefined;
@@ -516,7 +531,18 @@ async function runFinishingSteps(ctx: Ctx): Promise<TickResult> {
   // confirms: private visibility + the requested future publishAt value. Thumbnail-only
   // jobs run long after this and must not re-verify a video that may already be live.
   if (scheduled && !thumbnailOnly) {
-    const actual = await ctx.youtube.getYoutubeDeliveryStatus(youtubeToken, videoId);
+    let actual: YoutubeDeliveryStatus;
+    try {
+      actual = await ctx.youtube.getYoutubeDeliveryStatus(youtubeToken, videoId);
+    } catch (error) {
+      const uploadedMs = typeof pub.uploaded_at === "string" ? Date.parse(pub.uploaded_at) : NaN;
+      if (error instanceof PermanentYoutubeError && error.status === 404 &&
+          Number.isFinite(uploadedMs) && ctx.now() - uploadedMs < 10 * 60_000) {
+        await insertEvent(ctx, "youtube_indexing_retry", { videoId, uploadedAt: pub.uploaded_at });
+        return await waitForYoutube(ctx, { ok: true, action: "waiting_for_youtube_indexing", publicationId: pub.id, videoId });
+      }
+      throw error;
+    }
     const decision = verifyScheduledDelivery(
       actual,
       typeof pub.scheduled_for === "string" ? pub.scheduled_for : null,
