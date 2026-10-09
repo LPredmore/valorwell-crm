@@ -1,6 +1,6 @@
 /**
  * Pure planning rules for "Schedule Series": one Beyond The Yellow project per
- * Monday-Sunday week (America/Chicago), dispatched at 16:00 Central on the Friday before.
+ * Monday-Sunday week (America/Chicago), dispatched at 18:00 Central on the Friday before.
  * No I/O here so the rules are unit-testable; series.ts wires them to the database.
  */
 import type { SocialMediaLibraryItem } from "../types.ts";
@@ -61,20 +61,20 @@ export function currentCentralWeekStart(nowMs = Date.now()): string {
   return mondayWeekStart(centralDateKeyOf(nowMs));
 }
 
-/** 16:00 America/Chicago on the Friday before the assigned Monday (DST aware). */
+/** 18:00 America/Chicago on the Friday before the assigned Monday (DST aware). */
 export function seriesDispatchAt(weekStart: string): string {
   if (!isMondayKey(weekStart)) throw new Error(`Series week must start on a Monday: ${weekStart}`);
-  return zonedDateTimeToIso(addDaysToKey(weekStart, -3), "16:00", SERIES_TIMEZONE);
+  return zonedDateTimeToIso(addDaysToKey(weekStart, -3), "18:00", SERIES_TIMEZONE);
 }
 
-export const SERIES_CUTOFF_MESSAGE = "Cutoff passed: this week can only be changed before 4:00 PM Central on the Friday before it.";
+export const SERIES_CUTOFF_MESSAGE = "Cutoff passed: this week can only be changed before 6:00 PM Central on the Friday before it.";
 
-/** HARD cutoff: assign/change/remove only strictly before the week's Friday 16:00 Central dispatch_at. */
+/** HARD cutoff: assign/change/remove only strictly before the week's Friday 18:00 Central dispatch_at. */
 export function isPastSeriesCutoff(dispatchAt: string, nowMs: number): boolean {
   return nowMs >= Date.parse(dispatchAt);
 }
 
-/** The first Monday week whose Friday 4:00 PM cutoff is still in the future. */
+/** The first Monday week whose Friday 6:00 PM cutoff is still in the future. */
 export function firstAssignableWeekStart(nowMs: number): string {
   let week = currentCentralWeekStart(nowMs);
   while (isPastSeriesCutoff(seriesDispatchAt(week), nowMs)) week = addDaysToKey(week, 7);
