@@ -11,6 +11,9 @@ import { backfillShortThumbnails, fetchShortsThumbnailFeature, type SocialPublic
 
 /** Eligible only for an older scheduled/published Short stuck on the manual Studio step,
  * with a saved cover and an existing YouTube video. The server re-checks everything. */
+// Pure eligibility helper is intentionally co-located with the component and
+// exported for regression tests; this is not a React Fast Refresh boundary.
+// eslint-disable-next-line react-refresh/only-export-components
 export function isBackfillEligible(p: Pick<SocialPublication, 'contentFormat' | 'status' | 'thumbnailStatus' | 'thumbnailFileId' | 'externalVideoId'>): boolean {
   return p.contentFormat === 'short'
     && (p.status === 'scheduled' || p.status === 'published')

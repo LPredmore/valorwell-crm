@@ -282,7 +282,7 @@ describe('Phase 7 integrated release gate', () => {
     expect(bty).not.toContain('Daily 6:00 AM');
     expect(btyClient).not.toContain('bty_automation_overview');
     expect(routes).toContain('business-development/duplicate-cleanup');
-    expect(routes).toContain('Navigate replace to="/crm/business-development/duplicate-cleanup"');
+    expect(routes).toContain('CrmLegacyRouteRedirect to="/crm/business-development/duplicate-cleanup"');
 
     expect(drivePage).toContain("connect.mutate('drive')");
     expect(oauthStart).toContain('https://www.googleapis.com/auth/drive');

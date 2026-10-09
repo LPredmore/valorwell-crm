@@ -4,7 +4,9 @@ import { createClient } from "npm:@supabase/supabase-js@2.93.1";
 
 const TENANT_ID="00000000-0000-0000-0000-000000000001";
 const AUTH_HASH="e330cb8e006ec406ddd7d1eb357d82a7986bcdf22b0f34338e7c528f8adc332e";
-const LEGACY_EXPORT_URL="https://asjhkidpuhqodryczuth.supabase.co/functions/v1/legacy-r2-video-export";
+// Legacy export is retired. Opt in only for an explicitly configured migration
+// endpoint; never embed a retired Supabase project URL in the active codebase.
+const LEGACY_EXPORT_URL=Deno.env.get("LEGACY_R2_VIDEO_EXPORT_URL")??"";
 const MIGRATION_FOLDER_NAME="Legacy R2 Video Migration";
 const CHUNK_BYTES=64*1024*1024;
 const MAX_CHUNKS_PER_TICK=4;
@@ -27,6 +29,9 @@ async function migrationToken(admin:any){
   return String(data);
 }
 async function legacyCall(admin:any,action:string,payload:Record<string,unknown>={}){
+  if(!LEGACY_EXPORT_URL) throw new Error("Legacy video export migration endpoint is not configured.");
+  const target=new URL(LEGACY_EXPORT_URL);
+  if(target.protocol!=="https:") throw new Error("Legacy migration endpoint must use HTTPS.");
   const token=await migrationToken(admin);
   const r=await fetch(LEGACY_EXPORT_URL,{method:"POST",headers:{"content-type":"application/json","x-video-migration-token":token},body:JSON.stringify({action,...payload})});
   const body=await r.json().catch(()=>({}));
@@ -101,7 +106,7 @@ async function finalize(admin:any,row:any,token:string,fileId:string){
 async function inventory(admin:any){
   const m=await legacyCall(admin,"manifest");const videos=Array.isArray(m.videos)?m.videos:[];const now=new Date().toISOString();
   for(let i=0;i<videos.length;i+=100){
-    const rows=videos.slice(i,i+100).map((o:any)=>({tenant_id:TENANT_ID,source_provider:"cloudflare_r2",source_bucket:String(m.bucket??"valorwell-videos"),source_key:String(o.key),source_size_bytes:0,source_url:"legacy-r2://"+String(m.bucket??"valorwell-videos")+"/"+String(o.key),target_provider:"google_drive",target_file_name:String(o.original_filename??safeName(String(o.key))),metadata:{original_filename:o.original_filename??null,mime_type:o.mime_type??"video/mp4",youtube_video_id:o.youtube_video_id??null,legacy_ref_count:o.ref_count??0,source_project:"Therapist CRM"},updated_at:now}));
+    const rows=videos.slice(i,i+100).map((o:any)=>({tenant_id:TENANT_ID,source_provider:"cloudflare_r2",source_bucket:String(m.bucket??"valorwell-videos"),source_key:String(o.key),source_size_bytes:0,source_url:"legacy-r2://"+String(m.bucket??"valorwell-videos")+"/"+String(o.key),target_provider:"google_drive",target_file_name:String(o.original_filename??safeName(String(o.key))),metadata:{original_filename:o.original_filename??null,mime_type:o.mime_type??"video/mp4",youtube_video_id:o.youtube_video_id??null,legacy_ref_count:o.ref_count??0,source_project:"retired_video_archive"},updated_at:now}));
     const {error}=await admin.from("ai_operations_video_storage_migrations").upsert(rows,{onConflict:"tenant_id,source_bucket,source_key",ignoreDuplicates:false});if(error) throw new Error(error.message);
   }
   return {bucket:m.bucket,totalVideos:videos.length,upserted:videos.length};

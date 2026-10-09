@@ -21,6 +21,28 @@ vi.mock('@/hooks/relationships/useRelationshipCapabilities', () => ({
   useRelationshipCapability: (...args: unknown[]) => useRelationshipCapability(...args),
 }));
 
+// The contact detail test verifies lifecycle and organization affiliation.
+// Isolate unrelated editors/timelines, which have their own authorization
+// context and their own component regression tests.
+vi.mock('@/components/crm/identity/ContactProfileEditor', () => ({
+  ContactProfileEditor: () => <div>Contact profile editor</div>,
+}));
+vi.mock('@/components/crm/identity/IdentityReviewPanel', () => ({
+  IdentityReviewPanel: () => <div>Identity review</div>,
+}));
+vi.mock('@/components/crm/relationships/RelationshipTimelinePanel', () => ({
+  RelationshipTimelinePanel: () => <div>Contact timeline</div>,
+}));
+vi.mock('@/components/crm/relationships/RelationshipTasksPanel', () => ({
+  RelationshipTasksPanel: () => <div>Relationship tasks</div>,
+}));
+vi.mock('@/components/crm/relationships/RelationshipReferralPanel', () => ({
+  RelationshipReferralPanel: () => <div>Relationship referrals</div>,
+}));
+vi.mock('@/components/crm/relationships/RelationshipOpportunityPanel', () => ({
+  RelationshipOpportunityPanel: () => <div>Linked opportunities</div>,
+}));
+
 vi.mock('@/components/crm/relationships/RelationshipLifecyclePanel', () => ({
   RelationshipLifecyclePanel: ({ entityLabel }: { entityLabel: string }) => (
     <div>Lifecycle workflow for {entityLabel}</div>

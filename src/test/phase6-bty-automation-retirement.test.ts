@@ -18,14 +18,14 @@ describe('retired BTY discovery automation UI', () => {
   it('retains duplicate cleanup and redirects the old bookmark to the renamed route', () => {
     const client = source('src/lib/crm/bty-automation.ts');
     const page = source('src/pages/crm/business-development/BtyAutomationPage.tsx');
-    const sidebar = source('src/components/crm/layout/CrmSidebar.tsx');
+    const navigation = source('src/components/crm/layout/crmNavigation.ts');
     const app = source('src/App.tsx');
 
     expect(client).toContain('bty_preview_organization_duplicates');
     expect(client).toContain('bty_merge_organization_duplicates');
     expect(page).toContain('BTY Duplicate Cleanup');
-    expect(sidebar).toContain("label: 'BTY Duplicate Cleanup'");
-    expect(sidebar).toContain("href: '/crm/business-development/duplicate-cleanup'");
+    expect(navigation).toContain("label: 'BTY Duplicate Cleanup'");
+    expect(navigation).toContain("href: '/crm/business-development/duplicate-cleanup'");
     expect(app).toContain('path="business-development/automation"');
     expect(app).toContain('to="/crm/business-development/duplicate-cleanup"');
     expect(app).toContain('path="business-development/duplicate-cleanup"');

@@ -1,34 +1,46 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
-import { CrmSidebar } from '@/components/crm/layout/CrmSidebar';
+import {fireEvent,render,screen} from '@testing-library/react';
+import {MemoryRouter} from 'react-router-dom';
+import {beforeEach,describe,expect,it,vi} from 'vitest';
+import {CrmSidebar} from '@/components/crm/layout/CrmSidebar';
 
-function renderSidebar(path = '/crm/business-development') {
-  return render(<MemoryRouter initialEntries={[path]}><CrmSidebar /></MemoryRouter>);
+// Sidebar navigation is a capability-filtered UI. Use an authorized operator
+// contract rather than rendering a protected component without its provider.
+vi.mock('@/hooks/crm/useCrmAuth',()=>({
+  useCrmAuth:()=>({capabilities:{
+    view:true,mutate:true,communicate:true,report:true,manage_campaigns:true,
+  }}),
+}));
+
+function renderSidebar(path='/crm/business-development'){
+  return render(<MemoryRouter initialEntries={[path]}><CrmSidebar/></MemoryRouter>);
 }
 
-describe('Business Development sidebar navigation', () => {
-  it('renders a separate Business Development group and preserves inbound interest as a clinical-adjacent lane', () => {
+describe('CRM relationship and BTY sidebar navigation',()=>{
+  beforeEach(()=>{localStorage.clear();});
+  it('keeps people/organizations, configurable pipelines, BTY and system health navigable',()=>{
     renderSidebar();
-    expect(screen.getAllByText('Business Development')).toHaveLength(2);
-    expect(screen.getByText('Clinical CRM')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Inbound Creator & Community Interest' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'System Status' })).toHaveAttribute('href', '/crm/business-development/status');
-    expect(screen.getByRole('link', { name: 'BTY Duplicate Cleanup' })).toHaveAttribute('href', '/crm/business-development/duplicate-cleanup');
-    expect(screen.queryByRole('link', { name: 'BTY Automation' })).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation',{name:'CRM navigation'})).toBeInTheDocument();
+    expect(screen.getByRole('link',{name:'Contacts'})).toHaveAttribute('href','/crm/business-development/contacts');
+    expect(screen.getByRole('link',{name:'Organizations'})).toHaveAttribute('href','/crm/business-development/organizations');
+    expect(screen.getByRole('link',{name:'Pipelines'})).toHaveAttribute('href','/crm/pipelines');
+    expect(screen.getByRole('link',{name:'Beyond The Yellow'})).toHaveAttribute('href','/crm/business-development');
+    expect(screen.getByRole('link',{name:'System Health'})).toHaveAttribute('href','/crm/business-development/status');
+    fireEvent.click(screen.getByRole('button',{name:'Show additional Operations tools'}));
+    expect(screen.getByRole('link',{name:'BTY Duplicate Cleanup'})).toHaveAttribute('href','/crm/business-development/duplicate-cleanup');
+    expect(screen.getByRole('link',{name:'Creator & Community Interest'})).toHaveAttribute('href','/crm/creator-community-interest');
+    expect(screen.queryByRole('link',{name:'BTY Automation'})).not.toBeInTheDocument();
   });
-
-  it('marks nested Business Development routes active without marking the dashboard active', () => {
+  it('highlights a nested organization without selecting the BTY dashboard',()=>{
     renderSidebar('/crm/business-development/organizations/org-1');
-    expect(screen.getByRole('link', { name: 'Organizations' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Business Development' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link',{name:'Organizations'})).toHaveAttribute('aria-current','page');
+    expect(screen.getByRole('link',{name:'Beyond The Yellow'})).not.toHaveAttribute('aria-current');
   });
-
-  it('keeps collapsed navigation understandable through accessible labels and titles', () => {
+  it('makes icon-only collapsed links accessible with title and label',()=>{
     renderSidebar();
-    fireEvent.click(screen.getByRole('button', { name: 'Collapse CRM navigation' }));
-    expect(screen.getByRole('button', { name: 'Expand CRM navigation' })).toBeInTheDocument();
-    expect(screen.getByTitle('Organizations')).toBeInTheDocument();
-    expect(screen.queryByText('Business Development')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Collapse CRM navigation'}));
+    expect(screen.getByRole('button',{name:'Expand CRM navigation'})).toBeInTheDocument();
+    const organizations=screen.getByRole('link',{name:'Organizations'});
+    expect(organizations).toHaveAttribute('title','Organizations');
+    expect(organizations).toHaveAttribute('aria-label','Organizations');
   });
 });
