@@ -29,6 +29,9 @@ async function migrationToken(admin:any){
   return String(data);
 }
 async function legacyCall(admin:any,action:string,payload:Record<string,unknown>={}){
+  if(!LEGACY_EXPORT_URL) throw new Error("Legacy video export migration endpoint is not configured.");
+  const target=new URL(LEGACY_EXPORT_URL);
+  if(target.protocol!=="https:") throw new Error("Legacy migration endpoint must use HTTPS.");
   const token=await migrationToken(admin);
   const r=await fetch(LEGACY_EXPORT_URL,{method:"POST",headers:{"content-type":"application/json","x-video-migration-token":token},body:JSON.stringify({action,...payload})});
   const body=await r.json().catch(()=>({}));
