@@ -4,6 +4,7 @@ describe('BTY source-driven stage permissions',()=>{
   it('matches authoritative known opportunity transition graph',()=>{
     expect(allowedBtySourceStatuses('ready_for_campaign')).toEqual(['contacted','nurture','disqualified']);
     expect(allowedBtySourceStatuses('booked')).toContain('completed');
+    expect(allowedBtySourceStatuses('qualified')).not.toContain('ready_for_campaign');
     expect(allowedBtySourceStatuses('declined')).toEqual(['nurture','researching']);
     expect(allowedBtySourceStatuses('bad_source_status')).toEqual([]);
   });
