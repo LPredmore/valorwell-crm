@@ -80,10 +80,10 @@ describe('CRM navigation configuration (Tasks 07, 08)', () => {
     expect(within(nav).getByRole('link', { name: 'Schedule Series' })).toHaveAttribute(
       'href', '/crm/social-media?action=schedule-series',
     );
-    const crmToggle = within(nav).getByRole('button', { name: 'Collapse CRM navigation' });
+    const crmToggle = within(nav).getByRole('button', { name: 'Collapse CRM group' });
     fireEvent.click(crmToggle);
     expect(within(nav).queryByRole('link', { name: 'Contacts' })).not.toBeInTheDocument();
-    fireEvent.click(within(nav).getByRole('button', { name: 'Expand CRM navigation' }));
+    fireEvent.click(within(nav).getByRole('button', { name: 'Expand CRM group' }));
     expect(within(nav).getByRole('link', { name: 'Contacts' })).toBeInTheDocument();
     fireEvent.click(within(nav).getByRole('button', { name: 'Show additional CRM tools' }));
     expect(within(nav).getByRole('link', { name: 'Imports' })).toBeInTheDocument();
