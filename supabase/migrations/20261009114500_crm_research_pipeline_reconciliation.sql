@@ -129,7 +129,8 @@ grant execute on function public.crm_enroll_research_source(uuid,uuid,uuid) to a
 -- source contact information to the organization's global primary contact.
 -- No bulk import, background primary selection or emails are triggered.
 create function public.crm_create_research_organization(
-  p_pipeline_id uuid,p_source_id uuid,p_primary_name text,p_primary_email text
+  p_pipeline_id uuid,p_source_id uuid,p_primary_name text,p_primary_email text,
+  p_confirm_regional_facility boolean default false
 ) returns uuid
 language plpgsql security invoker set search_path=''
 as $f$
@@ -173,6 +174,9 @@ begin
      from public.crm_va_vaccn_referral_contacts where id=p_source_id and tenant_id=v_tenant for update;
   end if;
   if not found then raise exception 'SOURCE_NOT_FOUND' using errcode='42501'; end if;
+  if v_kind='va_facilities' and not p_confirm_regional_facility then
+    raise exception 'VA_PRIMARY_REGIONAL_FACILITY_CONFIRMATION_REQUIRED' using errcode='23514';
+  end if;
   if v_existing is not null then
     -- A previously accepted source cannot create duplicates on retries.
     perform public.crm_enroll_research_source(p_pipeline_id,p_source_id,v_existing);
@@ -211,6 +215,6 @@ begin
   return v_org;
 end;
 $f$;
-revoke all on function public.crm_create_research_organization(uuid,uuid,text,text)
+revoke all on function public.crm_create_research_organization(uuid,uuid,text,text,boolean)
   from public,anon;
-grant execute on function public.crm_create_research_organization(uuid,uuid,text,text) to authenticated;
+grant execute on function public.crm_create_research_organization(uuid,uuid,text,text,boolean) to authenticated;
