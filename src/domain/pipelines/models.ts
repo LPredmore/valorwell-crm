@@ -11,3 +11,13 @@ export function normalizePipelineFieldKey(value:string):string { return value.tr
 export function availableSortFields(pipeline:CrmPipeline,fields:CrmPipelineField[]):Array<{key:string;label:string}>{ const valid=new Map<string,string>([...builtinSortFields.map(f=>[f.key,f.label] as const),...fields.filter(f=>f.allow_sort).map(f=>[f.field_key,f.label] as const)]); return [...new Set(pipeline.sort_field_keys)].filter(k=>valid.has(k)).map(key=>({key,label:valid.get(key)!})); }
 export function cardFieldLabels(pipeline:CrmPipeline,fields:CrmPipelineField[]) { const enabled=new Set(pipeline.card_field_keys); return fields.filter(f=>f.show_on_card&&enabled.has(f.field_key)); }
 export function comparePipelineRecords(a:CrmPipelineRecord,b:CrmPipelineRecord,sortKey:string) { const value=(r:CrmPipelineRecord) => sortKey==='created_at'||sortKey==='updated_at'||sortKey==='next_action_due_at'?r[sortKey]:r.field_values[sortKey]; const va=value(a),vb=value(b); if(va==null&&vb==null)return a.id.localeCompare(b.id); if(va==null)return 1; if(vb==null)return -1; if(typeof va==='number'&&typeof vb==='number')return va-vb; return String(va).localeCompare(String(vb),undefined,{numeric:true,sensitivity:'base'}); }
+export interface CrmPipelineStageRule {
+  tenant_id:string;pipeline_id:string;from_stage_id:string;to_stage_id:string;
+  is_allowed:boolean;created_at:string;
+}
+export interface CrmPipelineSavedView {
+  id:string;tenant_id:string;pipeline_id:string;owner_profile_id:string;
+  name:string;view_mode:'board'|'list';sort_key:string;search_text:string;
+  stage_id:string|null;attention:'all'|'overdue'|'no_next_action';
+  owner_filter:'all'|'mine'|'unassigned';created_at:string;updated_at:string;
+}
