@@ -58,3 +58,11 @@ export async function donorValuesByContact(p:CrmPipeline,contactIds:string[]):Pr
   }
   return result;
 }
+
+export async function createSourceOrganization(p:CrmPipeline,sourceId:string,personName:string,email:string){
+  const {data,error}=await supabase.rpc('crm_create_research_organization' as never,{
+    p_pipeline_id:p.id,p_source_id:sourceId,p_primary_name:personName.trim(),p_primary_email:email.trim(),
+  } as never);
+  if(error)throw new Error(error.message);
+  return data as string;
+}
