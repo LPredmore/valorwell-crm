@@ -10,7 +10,7 @@ import type { CrmCapabilities } from '@/lib/crm/types';
 /**
  * Navigation is presentation-only; the server's existing RLS/RPC and social-media
  * bootstrap remain the authority for access. Never infer permissions from a URL.
- * Link to existing routes only: unified pipelines/recruitment are delivered later.
+ * The configurable pipeline builder is available at /crm/pipelines; source adapters arrive in later phases.
  */
 export type CrmNavGroupId = 'workspace' | 'crm' | 'operations' | 'social' | 'administration';
 
