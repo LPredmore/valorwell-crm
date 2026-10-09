@@ -200,7 +200,8 @@ export function buildSeriesPlan(input: {
     }
     if (!item.readiness.ready) blockers.push(`${label(item)} is not ready: ${item.readiness.reasons[0] ?? "readiness check failed"}`);
     if (!base.title) blockers.push(`${label(item)} needs a title.`);
-    if (item.contentFormat === "short" && !item.thumbnailFileId) blockers.push(`${label(item)} needs a thumbnail.`);
+    if (item.sourceType === "clip" && !(item.description ?? "").trim()) blockers.push(`${label(item)} needs its YouTube description.`);
+    if (!item.thumbnailFileId) blockers.push(`${label(item)} needs a thumbnail.`);
     if (!item.sourceFileId) blockers.push(`${label(item)} has no source video file.`);
     planItems.push({ ...base, kind: "schedule", publicationId: active?.id ?? null, scheduledFor: null, localDate: null, localTime: null });
   });
