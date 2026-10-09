@@ -378,7 +378,7 @@ async function applyScheduledShortThumbnail(
   }
   const key = thumbnailIdempotencyKey(videoId, fileId);
   const sameKey = prev.idempotencyKey === key;
-  if (sameKey && (prev.apiStatus === "api_accepted" || prev.apiStatus === "api_confirmed")) {
+  if (sameKey && !explicitReplacement && (prev.apiStatus === "api_accepted" || prev.apiStatus === "api_confirmed")) {
     payload.thumbnail_api_status = String(prev.apiStatus);
     return null; // already applied for this exact video + image: idempotent across retries/restarts
   }
