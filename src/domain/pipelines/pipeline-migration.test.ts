@@ -44,7 +44,7 @@ grant execute on function auth.uid() to authenticated;
 grant execute on function private.crm_has_relationship_permission(uuid,uuid,text) to authenticated;
 grant select on public.crm_user_capabilities,public.relationship_contacts,public.relationship_organizations,
   public.relationship_contact_organizations,public.tenant_memberships to authenticated;
-grant insert on public.relationship_contact_organizations to authenticated;
+grant insert,update on public.relationship_contact_organizations to authenticated;
 `;
 
 describe('pipeline migration with embedded PostgreSQL',()=>{
