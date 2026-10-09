@@ -120,6 +120,12 @@ export default function PipelineHubPage(){
   const filtered=sorted.filter(r=>matchesPipelineView({
     ...r,owner_profile_id:'owner_profile_id' in r?r.owner_profile_id:null,
   },labelOf(r),{search_text:searchText,stage_id:stageFilter||null,attention,owner_filter:ownerFilter},userId??''));
+  const actionHealth=useMemo(()=>{
+    const overdue=filtered.filter(row=>row.next_action_due_at&&new Date(row.next_action_due_at).getTime()<Date.now()).length;
+    const missing=filtered.filter(row=>!row.next_action?.trim()).length;
+    const withoutOwner=filtered.filter(row=>!row.owner_profile_id).length;
+    return {overdue,missing,withoutOwner};
+  },[filtered]);
   const visibleFields= p?cardFieldLabels(p,fields.data??[]):[];
   const sortOptions=p?availableSortFields(p,fields.data??[]):[];
   const missingCount=sorted.filter(r=>p?.subject_type==='organization'&&((p.source_mode==='connected'?(r as ConnectedPipelineCard).primaryContact:subjects.data?.[(r as CrmPipelineRecord).organization_id??'']?.primaryContact)==='Primary contact needs review')).length;
@@ -257,7 +263,11 @@ export default function PipelineHubPage(){
           </select></div>}
         <Badge variant="secondary">{p.subject_type==='organization'?'Organization':'Personal'}</Badge>
         <Badge variant="outline">{filtered.length} of {sorted.length} loaded</Badge>
+        <Badge variant="outline">Overdue: {actionHealth.overdue}</Badge>
+        <Badge variant="outline">Missing next step: {actionHealth.missing}</Badge>
+        <Badge variant="outline">Unassigned: {actionHealth.withoutOwner}</Badge>
       </div>
+      <p className="text-xs text-muted-foreground" role="status">Action-health counts reflect only currently loaded, filtered records in this pipeline. They are not full-funnel conversion metrics.</p>
       <div className="flex flex-wrap items-end gap-2 rounded border p-3">
         <div className="space-y-1"><Label htmlFor="pipeline-saved-view">Saved views</Label>
           <select id="pipeline-saved-view" className="rounded border bg-background p-2" value={activeSavedView}
