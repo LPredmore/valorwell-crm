@@ -13,6 +13,7 @@ import { listConnectedPipelineCards,type ConnectedPipelineCard } from '@/reposit
 import {getPipelineSourceKind,donorValuesByContact} from '@/repositories/supabase/pipeline-research';
 import {ResearchSourceReview} from './ResearchSourceReview';
 import {PipelineDragContext,KanbanRecordDrag,KanbanStageDrop} from './KanbanDnd';
+import {PipelineActionEditor} from './PipelineActionEditor';
 import {canMovePipelineCard,matchesPipelineView,type PipelineViewMode,type AttentionFilter,type OwnerFilter} from '@/domain/pipelines/board-view';
 import {
   availableSortFields,builtinSortFields,cardFieldLabels,comparePipelineRecords,
@@ -388,6 +389,8 @@ export default function PipelineHubPage(){
                   :<Link to={source.sourceUrl} className="text-xs underline">Open source record</Link>)}
                 {visibleFields.map(f=><p key={f.id} className="text-sm">{f.label}: {String(record.field_values[f.field_key]??'—')}</p>)}
                 {record.next_action&&<p className="text-xs text-muted-foreground">Next: {record.next_action}</p>}
+                {manual&&capabilities.mutate&&<PipelineActionEditor key={record.id+':actions:'+(manual.version??0)}
+                  record={manual} userId={userId??''} busy={busy} save={act}/>}
                 {p.source_mode==='manual'&&capabilities.mutate&&(fields.data?.length??0)>0&&
                   <PipelineValueEditor key={record.id+':'+(manual?.version??0)} record={manual!} fields={fields.data??[]}
                     busy={busy} save={act}/>}
