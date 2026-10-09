@@ -29,7 +29,9 @@ export async function listPipelineResearch(p:CrmPipeline,kind:PipelineSourceKind
     .select('id,facility_name,station_number,state,visn,contact_name,email,contact_role,department,relationship_organization_id')
     .eq('tenant_id',p.tenant_id).order('facility_name').limit(250);
   if(error)throw new Error(error.message);
-  return (data??[]).map(x=>({id:x.id,name:x.facility_name,state:x.state??'',
+  type VaSourceRow={id:string;facility_name:string;state:string|null;contact_name:string|null;email:string|null;contact_role:string|null;station_number:string|null;visn:number|null;department:string|null;relationship_organization_id:string|null};
+  const rows=(data??[]) as unknown as VaSourceRow[];
+  return rows.map(x=>({id:x.id,name:x.facility_name,state:x.state??'',
     sourceContact:x.contact_name??'',sourceEmail:x.email??'',
     sourceRole:x.contact_role??'',detail:`Station ${x.station_number??'?'} · VISN ${x.visn??'?'} · ${x.department??''}`,
     linkedOrganizationId:x.relationship_organization_id}));
