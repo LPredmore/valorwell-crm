@@ -25,7 +25,7 @@ describe('retired BTY discovery automation UI', () => {
     expect(client).toContain('bty_merge_organization_duplicates');
     expect(page).toContain('BTY Duplicate Cleanup');
     expect(navigation).toContain("label: 'BTY Duplicate Cleanup'");
-    expect(sidebar).toContain("href: '/crm/business-development/duplicate-cleanup'");
+    expect(navigation).toContain("href: '/crm/business-development/duplicate-cleanup'");
     expect(app).toContain('path="business-development/automation"');
     expect(app).toContain('to="/crm/business-development/duplicate-cleanup"');
     expect(app).toContain('path="business-development/duplicate-cleanup"');
