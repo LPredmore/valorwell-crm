@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { getPipelineCardSubjects } from './pipeline-subjects';
+import {listTherapistProspects} from './therapist-prospects';
 import type { CrmPipeline, CrmPipelineStage, CrmPipelineRecord } from '@/domain/pipelines/models';
 
 export interface ConnectedPipelineCard {
@@ -16,6 +17,7 @@ export interface ConnectedPipelineCard {
   sourceStatus?: string;
   sourceVersion?: number;
   owner_profile_id?: string|null;
+  sourceKind?: 'therapist_prospect' | 'provider_applicant';
 }
 
 const batchSize=250;
@@ -80,6 +82,28 @@ export async function listConnectedPipelineCards(
           sourceUrl:'https://emr.valorwell.org/staff/provider-applicants'});
       }
       if(items.length<100)break;
+    }
+    // Review-only prospect source. It remains physically separate from actual
+    // provider applicants: no campaign, enrollment or applicant mutation here.
+    // The full tenant-authorized 50-row paged directory is available at
+    // /crm/recruitment/prospects; cap board preview to 200 cards.
+    const prospectPage=await listTherapistProspects(tenantId,1,200);
+    for(const row of prospectPage.items){
+      const key=row.status==='ready'?'outreach_ready':row.status==='blocked'?'outreach_blocked':'outreach_review';
+      const id=stage(key);
+      if(!id)continue;
+      cards.push({
+        id:'prospect:'+row.id,stage_id:id,
+        sourceKind:'therapist_prospect',
+        displayName:mapName(row.firstName,row.lastName),
+        field_values:{license_type:row.licenseType,primary_state:row.state,
+          source:'outreach staging',contactable:row.contactable&&!row.exclusionReason},
+        created_at:row.createdAt,updated_at:row.updatedAt,
+        next_action:row.nextAction,next_action_due_at:row.nextActionDueAt,
+        owner_profile_id:row.ownerProfileId,
+        sourceStatus:row.status,
+        sourceUrl:'/crm/recruitment/prospects/'+row.id,
+      });
     }
   }else if(pipeline.source_key==='staff'){
     const roles=await supabase.from('staff_roles').select('id').eq('code','CLINICIAN');

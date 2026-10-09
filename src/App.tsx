@@ -27,6 +27,7 @@ import ContactDirectoryPage from "./pages/crm/business-development/ContactDirect
 import ContactDetailPage from "./pages/crm/business-development/ContactDetailPage";
 import OpportunityDirectoryPage from "./pages/crm/business-development/OpportunityDirectoryPage";
 import PipelineHubPage from "./pages/crm/pipelines/PipelineHubPage";
+import TherapistProspectsPage from "./pages/crm/recruitment/TherapistProspectsPage";
 import OpportunityDetailPage from "./pages/crm/business-development/OpportunityDetailPage";
 import RelationshipImportPage from "./pages/crm/business-development/RelationshipImportPage";
 import RelationshipReplyQueuePage from "./pages/crm/business-development/RelationshipReplyQueuePage";
@@ -118,6 +119,8 @@ const App = () => (
             <Route path="business-development/contacts/:id" element={<ContactDetailPage />} />
             <Route path="business-development/opportunities" element={<OpportunityDirectoryPage />} />
             <Route path="pipelines" element={<PipelineHubPage />} />
+             <Route path="recruitment/prospects" element={<TherapistProspectsPage />} />
+             <Route path="recruitment/prospects/:id" element={<TherapistProspectsPage />} />
             <Route path="business-development/opportunities/:id" element={<OpportunityDetailPage />} />
             <Route path="business-development/imports" element={<RelationshipImportPage />} />
             <Route path="business-development/bulk-enrollment" element={<RelationshipBulkEnrollmentPage />} />
