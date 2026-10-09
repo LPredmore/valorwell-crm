@@ -93,7 +93,7 @@ describe('source reconciliation is tenant safe and keeps one global primary',()=
       await expect(db.query(`select public.crm_enroll_research_source($1,$2,$3)`,[vaPipeline,research,organization]))
         .rejects.toThrow(/SOURCE_NOT_FOUND/);
       const result=await db.query<{id:string}>(`select public.crm_create_research_organization($1,$2,$3,$4) id`,
-        [vaPipeline,va,'Maya Johnson','maya@example.org']);
+        [vaPipeline,va,'Maya Johnson','maya@example.org',true]);
       expect(result.rows[0].id).toBeTruthy();
       const primary=await db.query<{organization_id:string}>(`select organization_id from public.relationship_contact_organizations
         where is_primary and organization_id=$1`,[result.rows[0].id]);
