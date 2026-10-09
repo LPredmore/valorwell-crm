@@ -13,7 +13,8 @@ import { listConnectedPipelineCards,type ConnectedPipelineCard } from '@/reposit
 import {getPipelineSourceKind,donorValuesByContact} from '@/repositories/supabase/pipeline-research';
 import {ResearchSourceReview} from './ResearchSourceReview';
 import {PipelineDragContext,KanbanRecordDrag,KanbanStageDrop} from './KanbanDnd';
-import {PipelineActionEditor,listTeamOwners} from './PipelineActionEditor';
+import {PipelineActionEditor} from './PipelineActionEditor';
+import {listTeamOwners} from '@/repositories/supabase/pipeline-team-owners';
 import {ConnectedStageEditor} from './ConnectedStageEditor';
 import {canMovePipelineCard,matchesPipelineView,type PipelineViewMode,type AttentionFilter,type OwnerFilter} from '@/domain/pipelines/board-view';
 import {
