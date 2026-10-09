@@ -12,6 +12,8 @@ import { listPipelineSubjects,getPipelineCardSubjects,listAssociatedOrganization
 import { listConnectedPipelineCards,type ConnectedPipelineCard } from '@/repositories/supabase/connected-pipeline-cards';
 import {getPipelineSourceKind,donorValuesByContact} from '@/repositories/supabase/pipeline-research';
 import {ResearchSourceReview} from './ResearchSourceReview';
+import {PipelineDragContext,KanbanRecordDrag,KanbanStageDrop} from './KanbanDnd';
+import {canMovePipelineCard,matchesPipelineView,type PipelineViewMode,type AttentionFilter,type OwnerFilter} from '@/domain/pipelines/board-view';
 import {
   availableSortFields,builtinSortFields,cardFieldLabels,comparePipelineRecords,
   mandatoryCardFields,normalizePipelineFieldKey,
@@ -19,11 +21,11 @@ import {
 } from '@/domain/pipelines/models';
 
 const fieldTypes:PipelineFieldType[]=['text','number','currency','date','datetime','boolean','url','select','multiselect'];
-function usePipeData(p:CrmPipeline|null) {
+function usePipeData(p:CrmPipeline|null,limit:number) {
   const enabled=!!p;
   const stages=useQuery({queryKey:['pipeline-stages',p?.id],queryFn:()=>pipelinesRepository.stages(p!),enabled,retry:false});
   const fields=useQuery({queryKey:['pipeline-fields',p?.id],queryFn:()=>pipelinesRepository.fields(p!),enabled,retry:false});
-  const records=useQuery({queryKey:['pipeline-records',p?.id],queryFn:()=>pipelinesRepository.records(p!),enabled:enabled&&p?.source_mode==='manual',retry:false});
+  const records=useQuery({queryKey:['pipeline-records',p?.id,limit],queryFn:()=>pipelinesRepository.records(p!,limit),enabled:enabled&&p?.source_mode==='manual',retry:false});
   const connected=useQuery({queryKey:['pipeline-connected-cards',p?.id],queryFn:()=>listConnectedPipelineCards(p!,stages.data??[]),enabled:enabled&&p?.source_mode==='connected'&&!!stages.data,retry:false});
   const subjects=useQuery({queryKey:['pipeline-card-subjects',p?.id,records.dataUpdatedAt],queryFn:()=>getPipelineCardSubjects(p!,records.data??[]),enabled:enabled&&p?.source_mode==='manual'&&!!records.data,retry:false});
   return {stages,fields,records,subjects,connected};
@@ -44,9 +46,22 @@ export default function PipelineHubPage(){
   const [enrollId,setEnrollId]=useState('');
   const [associatedOrgId,setAssociatedOrgId]=useState('');
   const [sortKey,setSortKey]=useState('updated_at');
+  const [viewMode,setViewMode]=useState<PipelineViewMode>('board');
+  const [searchText,setSearchText]=useState('');
+  const [stageFilter,setStageFilter]=useState('');
+  const [attention,setAttention]=useState<AttentionFilter>('all');
+  const [ownerFilter,setOwnerFilter]=useState<OwnerFilter>('all');
+  const [recordLimit,setRecordLimit]=useState(200);
+  const [saveName,setSaveName]=useState('');
+  const [activeSavedView,setActiveSavedView]=useState('');
+  const [fromStage,setFromStage]=useState('');
+  const [toStage,setToStage]=useState('');
+  const [ruleAllowed,setRuleAllowed]=useState(true);
   const list=useQuery({queryKey:['crm-pipelines',currentTenantId],queryFn:()=>pipelinesRepository.list(currentTenantId!),enabled:!!currentTenantId,retry:false});
   const p=list.data?.find(x=>x.id===selected)??list.data?.[0]??null;
-  const {stages,fields,records,subjects,connected}=usePipeData(p);
+  const {stages,fields,records,subjects,connected}=usePipeData(p,recordLimit);
+  const rules=useQuery({queryKey:['pipeline-stage-rules',p?.id],queryFn:()=>pipelinesRepository.stageRules(p!),enabled:!!p&&p.source_mode==='manual',retry:false});
+  const saved=useQuery({queryKey:['pipeline-saved-views',p?.id,userId],queryFn:()=>pipelinesRepository.savedViews(p!,userId!),enabled:!!p&&!!userId,retry:false});
   const sourceBinding=useQuery({queryKey:['pipeline-source-binding',p?.id],
     queryFn:()=>getPipelineSourceKind(p!),enabled:!!p,retry:false});
   const giving=useQuery({queryKey:['pipeline-donor-giving',p?.id,records.dataUpdatedAt],
@@ -68,6 +83,8 @@ export default function PipelineHubPage(){
       qc.invalidateQueries({queryKey:['pipeline-fields',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-records',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-card-subjects',p?.id]}),
+      qc.invalidateQueries({queryKey:['pipeline-saved-views',p?.id]}),
+      qc.invalidateQueries({queryKey:['pipeline-stage-rules',p?.id]}),
     ]);}
     catch(e){setActionError(e instanceof Error?e.message:'Action failed');}
   };
@@ -80,6 +97,15 @@ export default function PipelineHubPage(){
     });
     return [...values].sort((a,b)=>comparePipelineRecords(a as CrmPipelineRecord,b as CrmPipelineRecord,sortKey));
   },[p?.source_mode,connected.data,records.data,giving.data,sortKey]);
+  const labelOf=(r:(typeof sorted)[number])=>{
+    if('displayName' in r&&typeof r.displayName==='string')return r.displayName;
+    const manual=r as CrmPipelineRecord;
+    const id=p?.subject_type==='person'?manual.contact_id:manual.organization_id;
+    return subjects.data?.[id??'']?.label??'Loading subject…';
+  };
+  const filtered=sorted.filter(r=>matchesPipelineView({
+    ...r,owner_profile_id:'owner_profile_id' in r?r.owner_profile_id:null,
+  },labelOf(r),{search_text:searchText,stage_id:stageFilter||null,attention,owner_filter:ownerFilter},userId??''));
   const visibleFields= p?cardFieldLabels(p,fields.data??[]):[];
   const sortOptions=p?availableSortFields(p,fields.data??[]):[];
   const missingCount=sorted.filter(r=>p?.subject_type==='organization'&&((p.source_mode==='connected'?(r as ConnectedPipelineCard).primaryContact:subjects.data?.[(r as CrmPipelineRecord).organization_id??'']?.primaryContact)==='Primary contact needs review')).length;
@@ -95,7 +121,9 @@ export default function PipelineHubPage(){
     <div className="flex flex-wrap items-end gap-3">
       <div className="min-w-[210px] space-y-1"><Label htmlFor="pipeline-choice">Pipeline</Label>
         <select id="pipeline-choice" className="w-full rounded-md border bg-background p-2" value={p?.id??''}
-          onChange={e=>{setSelected(e.target.value);setTab('board');setSortKey('updated_at');setFindSubject('');setEnrollId('');}}>
+          onChange={e=>{setSelected(e.target.value);setTab('board');setSortKey('updated_at');
+            setViewMode('board');setSearchText('');setStageFilter('');setAttention('all');setOwnerFilter('all');setActiveSavedView('');
+            setRecordLimit(200);setFindSubject('');setEnrollId('');}}>
           {(list.data??[]).map(x=><option key={x.id} value={x.id}>{x.name} ({x.subject_type})</option>)}
         </select></div>
       {p&&<><Button size="sm" variant={tab==='board'?'default':'outline'} onClick={()=>setTab('board')}>Board</Button>
@@ -121,12 +149,34 @@ export default function PipelineHubPage(){
         <CardContent className="space-y-3">
           <p className="text-sm">Required card identity: <strong>{mandatoryCardFields(p.subject_type).join(' + ')}</strong></p>
           <div className="space-y-1"><Label htmlFor="rename-pipeline">Rename pipeline</Label>
-            <PipelineRename p={p} save={act} busy={busy}/></div>
+            <PipelineRename key={p.id} p={p} save={act} busy={busy}/></div>
         </CardContent>
       </Card>
       <Card><CardHeader><CardTitle>Stages</CardTitle><CardDescription>Stage names are configuration data, not application code. Connected workflows will map to the existing authoritative statuses.</CardDescription></CardHeader>
         <CardContent className="space-y-3">
           {(stages.data??[]).map(s=><p key={s.id} className="rounded border px-3 py-2">{s.position+1}. {s.name} {s.is_terminal?'· Terminal':''}</p>)}
+          {p.source_mode==='manual'&&<div className="space-y-2 rounded border p-3">
+            <p className="text-sm font-semibold">Transition rules</p>
+            <p className="text-xs text-muted-foreground">By default, manual cards may move between non-terminal stages. Leaving a terminal stage requires an explicit Allow rule. Deny can block any specific move.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <select aria-label="Rule source stage" className="rounded border bg-background p-2" value={fromStage} onChange={e=>setFromStage(e.target.value)}>
+                <option value="">From stage</option>{(stages.data??[]).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
+              </select>
+              <select aria-label="Rule destination stage" className="rounded border bg-background p-2" value={toStage} onChange={e=>setToStage(e.target.value)}>
+                <option value="">To stage</option>{(stages.data??[]).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
+              </select>
+              <select aria-label="Rule decision" className="rounded border bg-background p-2" value={ruleAllowed?'allow':'deny'} onChange={e=>setRuleAllowed(e.target.value==='allow')}>
+                <option value="allow">Allow</option><option value="deny">Deny</option>
+              </select>
+              <Button size="sm" disabled={busy||!fromStage||!toStage||fromStage===toStage}
+                onClick={()=>act(()=>pipelinesRepository.setStageRule(p,fromStage,toStage,ruleAllowed))}>Save rule</Button>
+            </div>
+            {(rules.data??[]).map(rule=><div key={rule.from_stage_id+rule.to_stage_id} className="flex flex-wrap items-center gap-2 text-sm">
+              <span>{stages.data?.find(x=>x.id===rule.from_stage_id)?.name} → {stages.data?.find(x=>x.id===rule.to_stage_id)?.name}:
+                <strong> {rule.is_allowed?'Allowed':'Blocked'}</strong></span>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={()=>act(()=>pipelinesRepository.removeStageRule(rule))}>Remove rule</Button>
+            </div>)}
+          </div>}
           {p.source_mode==='manual'&&<div className="flex gap-2"><Input aria-label="New stage name" placeholder="Add a stage" value={stageName} maxLength={100} onChange={e=>setStageName(e.target.value)}/>
             <Button disabled={busy||!stageName.trim()} onClick={()=>act(async()=>{await pipelinesRepository.addStage(p,stageName,stages.data?.length??0);setStageName('');})}>Add stage</Button></div>}
         </CardContent>
@@ -160,14 +210,72 @@ export default function PipelineHubPage(){
     </section>}
     {p&&tab==='board'&&<section className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1"><Label htmlFor="pipeline-sort">Sort by</Label><select id="pipeline-sort" value={sortOptions.some(s=>s.key===sortKey)?sortKey:sortOptions[0]?.key??'updated_at'}
-          onChange={e=>setSortKey(e.target.value)} className="rounded border bg-background p-2">{sortOptions.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></div>
-        <Badge variant="secondary">{p.subject_type==='organization'?'Organization':'Personal'} pipeline</Badge>
-        <Badge variant="outline">{sorted.length} records loaded</Badge>
+        <div className="space-y-1"><Label htmlFor="pipeline-view-mode">View</Label>
+          <select id="pipeline-view-mode" className="rounded border bg-background p-2" value={viewMode}
+            onChange={e=>setViewMode(e.target.value as PipelineViewMode)}>
+            <option value="board">Kanban board</option><option value="list">List</option>
+          </select></div>
+        <div className="space-y-1"><Label htmlFor="pipeline-sort">Sort by</Label>
+          <select id="pipeline-sort" className="rounded border bg-background p-2"
+            value={sortOptions.some(f=>f.key===sortKey)?sortKey:sortOptions[0]?.key??'updated_at'}
+            onChange={e=>setSortKey(e.target.value)}>
+            {sortOptions.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}
+          </select></div>
+        <div className="space-y-1"><Label htmlFor="pipeline-search">Search</Label>
+          <Input id="pipeline-search" value={searchText} maxLength={200} onChange={e=>setSearchText(e.target.value)}
+            placeholder="Search name or card fields"/></div>
+        <div className="space-y-1"><Label htmlFor="pipeline-stage-filter">Stage</Label>
+          <select id="pipeline-stage-filter" className="rounded border bg-background p-2" value={stageFilter}
+            onChange={e=>setStageFilter(e.target.value)}>
+            <option value="">All stages</option>{(stages.data??[]).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
+          </select></div>
+        <div className="space-y-1"><Label htmlFor="pipeline-attention">Action</Label>
+          <select id="pipeline-attention" className="rounded border bg-background p-2" value={attention}
+            onChange={e=>setAttention(e.target.value as AttentionFilter)}>
+            <option value="all">All</option><option value="overdue">Overdue</option>
+            <option value="no_next_action">No next action</option>
+          </select></div>
+        {p.source_mode==='manual'&&<div className="space-y-1"><Label htmlFor="pipeline-owner-filter">Owner</Label>
+          <select id="pipeline-owner-filter" className="rounded border bg-background p-2" value={ownerFilter}
+            onChange={e=>setOwnerFilter(e.target.value as OwnerFilter)}>
+            <option value="all">All owners</option><option value="mine">Assigned to me</option>
+            <option value="unassigned">Unassigned</option>
+          </select></div>}
+        <Badge variant="secondary">{p.subject_type==='organization'?'Organization':'Personal'}</Badge>
+        <Badge variant="outline">{filtered.length} of {sorted.length} loaded</Badge>
+      </div>
+      <div className="flex flex-wrap items-end gap-2 rounded border p-3">
+        <div className="space-y-1"><Label htmlFor="pipeline-saved-view">Saved views</Label>
+          <select id="pipeline-saved-view" className="rounded border bg-background p-2" value={activeSavedView}
+            onChange={e=>{
+              const id=e.target.value;setActiveSavedView(id);
+              const v=saved.data?.find(x=>x.id===id);if(!v)return;
+              setViewMode(v.view_mode);setSortKey(v.sort_key);setSearchText(v.search_text);
+              setStageFilter(v.stage_id??'');setAttention(v.attention);setOwnerFilter(v.owner_filter);
+            }}>
+            <option value="">Current / unsaved filters</option>
+            {(saved.data??[]).map(v=><option key={v.id} value={v.id}>{v.name}</option>)}
+          </select></div>
+        <Input aria-label="Save view as" className="max-w-56" maxLength={100}
+          value={saveName} placeholder="New view name" onChange={e=>setSaveName(e.target.value)}/>
+        <Button size="sm" disabled={busy||!saveName.trim()||!userId} onClick={()=>act(async()=>{
+          await pipelinesRepository.saveView(p,userId!,{
+            name:saveName.trim(),view_mode:viewMode,sort_key:sortKey,search_text:searchText,
+            stage_id:stageFilter||null,attention,owner_filter:ownerFilter,
+          });setSaveName('');
+        })}>Save current view</Button>
+        {activeSavedView&&<Button size="sm" variant="outline" disabled={busy}
+          onClick={()=>act(async()=>{
+            const v=saved.data?.find(x=>x.id===activeSavedView);if(!v)return;
+            await pipelinesRepository.deleteView(v);setActiveSavedView('');
+          })}>Delete saved view</Button>}
       </div>
       {p.source_mode==='connected'&&<p className="rounded border p-3 text-sm">Live source-connected board: stages are read from the authoritative system, not copied or editable here. To change a stage, use the existing record workflow.</p>}
       {connected.isError&&<p role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">Source records could not be loaded with your current permissions: {connected.error.message}</p>}
-      {p.source_mode==='manual'&&records.data?.length===500&&<p role="status" className="text-sm text-amber-700">Showing up to 500 records. Pagination will be included in the next board phase.</p>}
+      {p.source_mode==='manual'&&records.data?.length===recordLimit&&recordLimit<2000&&
+        <Button variant="outline" onClick={()=>setRecordLimit(x=>Math.min(x+200,2000))}>Load 200 more records</Button>}
+      {p.source_mode==='manual'&&records.data?.length===2000&&<p role="status" className="text-sm text-amber-700">
+        First 2,000 records loaded. Server-side pagination is required for larger pipelines.</p>}
       {missingCount>0&&<p role="alert" className="text-destructive">{missingCount} organizations need primary-contact review.</p>}
       {sourceBinding.isError&&<p role="alert" className="text-destructive">Source binding unavailable: {sourceBinding.error.message}</p>}
       {giving.isError&&<p role="alert" className="text-destructive">Verified donation enrichment could not be loaded: {giving.error.message}</p>}
