@@ -20,6 +20,7 @@ export function ResearchSourceReview({pipeline,kind,canEdit}:{
   const [primaryName,setPrimaryName]=useState('');
   const [primaryEmail,setPrimaryEmail]=useState('');
   const [confirmPrimary,setConfirmPrimary]=useState(false);
+  const [confirmRegional,setConfirmRegional]=useState(false);
   const [error,setError]=useState('');
   const research=useQuery({queryKey:['pipeline-research',pipeline.id,kind],
     queryFn:()=>listPipelineResearch(pipeline,kind),retry:false});
@@ -45,7 +46,7 @@ export function ResearchSourceReview({pipeline,kind,canEdit}:{
     const row=(research.data??[]).find(x=>x.id===id);
     setSelected(id);setExistingOrg('');
     setPrimaryName(row?.sourceContact??'');setPrimaryEmail(row?.sourceEmail??'');
-    setConfirmPrimary(false);setError('');
+    setConfirmPrimary(false);setConfirmRegional(false);setError('');
   };
   const total=(research.data??[]).length;
   const linked=(research.data??[]).filter(x=>x.linkedOrganizationId).length;
@@ -100,8 +101,11 @@ export function ResearchSourceReview({pipeline,kind,canEdit}:{
             onChange={e=>setConfirmPrimary(e.target.checked)}/>
             <span>I confirm this is a real person and designate them as the single primary relationship contact for the new organization.</span>
           </label>
-          <Button size="sm" disabled={mutation.isPending||!confirmPrimary||!primaryName.trim()||!primaryEmail.includes('@')}
-            onClick={()=>submit(()=>createSourceOrganization(pipeline,source.id,primaryName,primaryEmail))}>
+          {kind==='va_facilities'&&<label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmRegional} onChange={e=>setConfirmRegional(e.target.checked)}/>
+            <span>I confirm this organization represents the regional VA referral facility, not a separate subordinate clinic. Otherwise, link this source entry to its existing parent regional facility above.</span>
+          </label>}
+          <Button size="sm" disabled={mutation.isPending||!confirmPrimary||(kind==='va_facilities'&&!confirmRegional)||!primaryName.trim()||!primaryEmail.includes('@')}
+            onClick={()=>submit(()=>createSourceOrganization(pipeline,source.id,primaryName,primaryEmail,confirmRegional))}>
             Create organization, designate primary, and enroll
           </Button>
         </div>}
