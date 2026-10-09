@@ -33,6 +33,6 @@ jobs:
       - name: Types
         run: npx tsc -p tsconfig.app.json --noEmit
       - name: Unit tests
-        run: npm test -- src/domain/pipelines/models.test.ts
+        run: npm test -- src/domain/pipelines/models.test.ts src/domain/pipelines/pipeline-migration.test.ts
       - name: Production build
         run: npm run build
