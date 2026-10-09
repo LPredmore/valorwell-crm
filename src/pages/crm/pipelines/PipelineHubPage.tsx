@@ -173,7 +173,7 @@ export default function PipelineHubPage(){
       {giving.isError&&<p role="alert" className="text-destructive">Verified donation enrichment could not be loaded: {giving.error.message}</p>}
       {sourceBinding.data==='donor_giving'&&<p className="rounded border p-3 text-sm">
         Donor relationship stages remain manually managed. Verified giving totals, donor type and last donation are read live from your existing donor database when a donor is linked to the CRM person; temporary test donors are excluded.
-      </p>
+      </p>}
       {p.source_mode==='manual'&&capabilities.mutate&&(stages.data?.length??0)>0&&<Card><CardContent className="grid gap-2 pt-4 md:grid-cols-[1fr_2fr_auto]">
         <Input aria-label="Find CRM person or organization" placeholder="Search existing CRM records" value={findSubject} onChange={e=>{setFindSubject(e.target.value);setEnrollId('');}}/>
         <select aria-label="Record to add" className="rounded border bg-background p-2" value={enrollId} onChange={e=>setEnrollId(e.target.value)}>
