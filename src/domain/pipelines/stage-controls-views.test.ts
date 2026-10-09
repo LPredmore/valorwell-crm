@@ -80,6 +80,16 @@ describe('secure CRM transition and saved views',()=>{
     expect(Number(back.rows[0].version)).toBe(3);
     const hist=await db.query<{n:number}>(`select count(*)::int n from public.crm_pipeline_stage_events where record_id=$1`,[id]);
     expect(hist.rows[0].n).toBe(3); // enrolled + two successful moves, rejected moves not audited
+    await db.query(`update public.crm_pipeline_records set owner_profile_id=$1,
+      next_action='Call partner',next_action_due_at='2026-10-15T15:00:00Z'
+      where id=$2 and version=3`,[u,id]);
+    const updated=await db.query<{owner_profile_id:string;next_action:string;version:number}>(`select
+      owner_profile_id,next_action,version from public.crm_pipeline_records where id=$1`,[id]);
+    expect(updated.rows[0]).toMatchObject({owner_profile_id:u,next_action:'Call partner',version:4});
+    expect((await db.query(`select id from public.crm_pipeline_stage_events where record_id=$1`,[id])).rows).toHaveLength(3);
+    await expect(db.query(`update public.crm_pipeline_records set owner_profile_id=$1 where id=$2`,[other,id]))
+      .rejects.toThrow(/OWNER_CROSS_TENANT/);
+
     await db.query(`insert into public.crm_pipeline_stage_rules
       (tenant_id,pipeline_id,from_stage_id,to_stage_id,is_allowed)
       values($1,$2,$3,$4,false)`,[a,pipeline,stage,terminal]);
