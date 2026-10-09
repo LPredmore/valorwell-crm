@@ -20,7 +20,7 @@ const AT_DISPATCH = Date.parse('2026-10-16T23:00:00Z'); // Fri 18:00 CDT
 function lib(overrides: Partial<SocialMediaLibraryItem> & { sourceId: string }): SocialMediaLibraryItem {
   return {
     sourceType: 'clip', projectId: PROJECT, clipId: overrides.sourceId, partNumber: null, contentFormat: 'short',
-    title: `Title ${overrides.sourceId}`, description: '', thumbnailUrl: null, thumbnailFileId: 'thumb', guestName: 'G',
+    title: `Title ${overrides.sourceId}`, description: 'Prepared YouTube description', thumbnailUrl: null, thumbnailFileId: 'thumb', guestName: 'G',
     organizationName: 'Org', durationSeconds: 60, sourceFileId: 'file', sourceFileUrl: null,
     readiness: { ready: true, reasons: [] }, activePublication: null, publishedPublication: null,
     failedPublication: null, latestPublication: null, defaultPlaylistName: null, ...overrides,
@@ -93,6 +93,7 @@ describe('buildSeriesPlan', () => {
 
   it('blocks the whole series on any unready, untitled or thumbnail-less item', () => {
     expect(plan([part(1), short(1, { thumbnailFileId: null })]).blockers.join()).toMatch(/thumbnail/);
+    expect(plan([part(1, { description: '' })]).blockers.join()).toMatch(/description/);
     expect(plan([part(1, { readiness: { ready: false, reasons: ['not rendered'] } })]).blockers.join()).toMatch(/not rendered/);
     expect(plan([part(1), full({ title: null })]).blockers.join()).toMatch(/Full episode needs a title/);
   });
