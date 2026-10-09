@@ -166,7 +166,7 @@ export function ScheduleSeriesDialog({ open, onOpenChange }: { open: boolean; on
         <DialogHeader>
           <DialogTitle>Schedule Series</DialogTitle>
           <DialogDescription>
-            Assign one Beyond The Yellow project per Monday–Sunday week (Central time). At 12:00 PM Central on the
+            Assign one Beyond The Yellow project per Monday–Sunday week (Central time). At 4:00 PM Central on the
             Friday before, every current Part, Short and the full episode are scheduled across that week automatically.
           </DialogDescription>
         </DialogHeader>
