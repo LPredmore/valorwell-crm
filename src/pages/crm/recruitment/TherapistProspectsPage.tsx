@@ -13,6 +13,7 @@ import {listRecruitmentReviewProspects} from '@/repositories/supabase/recruitmen
 import {RecruitmentPreviewPanel,RecruitmentQualificationPanel} from './RecruitmentQualificationPanel';
 import {RecruitmentFilters} from './RecruitmentFilters';
 import {RecruitmentCommunicationsPanel} from './RecruitmentCommunicationsPanel';
+import {RecruitmentDeliverySafetyPanel} from './RecruitmentDeliverySafetyPanel';
 
 const US_STATES:ReadonlyArray<readonly [string,string]>=[["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["DC","District of Columbia"],["FL","Florida"],["GA","Georgia"],["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["PR","Puerto Rico"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"]];
 const pipelineLink='/crm/pipelines?pipeline=197bfeb7-a1d2-4c26-842f-045b5256d9e4';
@@ -147,6 +148,7 @@ export default function TherapistProspectsPage(){
       </CardContent></Card>
       <RecruitmentCommunicationsPanel tenantId={currentTenantId} row={row} canEdit={canEdit}/>
       <RecruitmentQualificationPanel tenantId={currentTenantId} row={row} canEdit={canEdit}/>
+      <RecruitmentDeliverySafetyPanel tenantId={currentTenantId} prospectId={row.id} canEdit={canEdit}/>
       <Card><CardHeader><CardTitle>Review, ownership and next action</CardTitle>
         <CardDescription>Changes create an audit event; no email, SMS or campaign enrolment occurs. Ready only represents a human review decision.</CardDescription></CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2">
