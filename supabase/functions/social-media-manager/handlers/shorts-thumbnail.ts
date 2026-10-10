@@ -166,18 +166,28 @@ export async function confirmShortsThumbnailVisual(auth: AuthContext, params: Re
     if (!run.apiAccepted) throw new Error("YouTube did not accept this test upload, so it cannot enable automatic thumbnails.");
     if (params.confirmation !== VISUAL_CONFIRMATION_PHRASE) throw new Error(`Type exactly "${VISUAL_CONFIRMATION_PHRASE}" to confirm.`);
     const reviewed = { ...run, visualResult: "confirmed" as const, visualReviewedBy: auth.userId, visualReviewedAt: reviewedAt };
-    next = {
-      ...feature, state: "api_verified", enabledBy: auth.userId, enabledAt: reviewedAt, enabledFromTestRunId: run.id,
-      disabledBy: null, disabledAt: null, note: null,
-      testRuns: feature.testRuns.map((candidate) => candidate.id === run.id ? reviewed : candidate),
-    };
+    next = feature.state === "api_verified"
+      ? { ...feature, testRuns: feature.testRuns.map((candidate) => candidate.id === run.id ? reviewed : candidate) }
+      : {
+        ...feature, state: "api_verified", enabledBy: auth.userId, enabledAt: reviewedAt, enabledFromTestRunId: run.id,
+        disabledBy: null, disabledAt: null, note: null,
+        testRuns: feature.testRuns.map((candidate) => candidate.id === run.id ? reviewed : candidate),
+      };
   } else if (params.result === "not_visible") {
     const reviewed = { ...run, visualResult: "not_visible" as const, visualReviewedBy: auth.userId, visualReviewedAt: reviewedAt };
-    next = {
-      ...feature, state: "disabled", enabledBy: null, enabledAt: null, enabledFromTestRunId: null,
-      disabledBy: auth.userId, disabledAt: reviewedAt, note: "Test thumbnail was not visible on Shorts surfaces.",
-      testRuns: feature.testRuns.map((candidate) => candidate.id === run.id ? reviewed : candidate),
-    };
+    // An explicit retest is diagnostic, not an instruction to change the
+    // previously verified channel-wide publishing configuration. Disable
+    // separately with the existing "Turn off" button if desired.
+    next = feature.state === "api_verified"
+      ? {
+        ...feature, note: "Latest Shorts thumbnail retest did not visibly render. Automatic upload settings are unchanged.",
+        testRuns: feature.testRuns.map((candidate) => candidate.id === run.id ? reviewed : candidate),
+      }
+      : {
+        ...feature, state: "disabled", enabledBy: null, enabledAt: null, enabledFromTestRunId: null,
+        disabledBy: auth.userId, disabledAt: reviewedAt, note: "Test thumbnail was not visible on Shorts surfaces.",
+        testRuns: feature.testRuns.map((candidate) => candidate.id === run.id ? reviewed : candidate),
+      };
   } else {
     throw new Error("Choose whether the thumbnail was visible.");
   }
