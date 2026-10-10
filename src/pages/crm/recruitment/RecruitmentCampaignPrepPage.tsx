@@ -7,6 +7,7 @@ import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {Textarea} from '@/components/ui/textarea';
 import {useCrmAuth} from '@/hooks/crm/useCrmAuth';
+import {RecruitmentDeliveryLedgerPanel} from './RecruitmentDeliveryLedgerPanel';
 import {
  listRecruitmentDrafts,listRecruitmentReplies,previewRecruitmentDraft,
  reviewRecruitmentReply,saveRecruitmentDraft,
@@ -145,6 +146,7 @@ export default function RecruitmentCampaignPrepPage(){
       <p><strong>{preview.data.matched}</strong> in audience</p>
       <p><strong>{preview.data.formatValid}</strong> format-valid emails</p>
       <p><strong>{preview.data.manuallyVerified}</strong> manually reviewed</p>
+      <p><strong>{preview.data.documentedPermission}</strong> documented permissions</p>
       <p><strong>{preview.data.technicallyReady}</strong> technically ready</p>
       <p><strong>{preview.data.missing}</strong> missing emails</p>
       <p><strong>{preview.data.invalid}</strong> invalid emails</p>
@@ -153,6 +155,7 @@ export default function RecruitmentCampaignPrepPage(){
      </div>}
      <p className="text-sm font-medium">Sending disabled. A valid email or manually verified identity is not sufficient consent.</p>
     </CardContent></Card>}
+  {selectedId&&<RecruitmentDeliveryLedgerPanel tenantId={currentTenantId} sequenceId={selectedId}/>}
   <Card><CardHeader><CardTitle>Incoming clinician replies</CardTitle>
    <CardDescription>Future inbound emails are matched only to a uniquely identified, manually verified prospect.
     Possible interest or declines are suggested for review, not treated as confirmed decisions.
