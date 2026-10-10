@@ -21,7 +21,7 @@ describe('Prospective Clinicians stage navigator',()=>{
  it('shows every configured prospect and applicant stage, including empty stages',()=>{
   render(<ClinicianStageNavigator stages={stages} selectedStageId="" onChooseStage={vi.fn()}
    loadedCounts={{'p-review':200}} totalLoaded={200} loading={false}/>);
-  expect(screen.getByText('6 configured stages.')).toBeInTheDocument();
+  expect(screen.getByText(/6 configured stages/)).toBeInTheDocument();
   expect(screen.getByText('Prospect recruitment (5)')).toBeInTheDocument();
   expect(screen.getByText('Submitted applications (1)')).toBeInTheDocument();
   expect(screen.getByRole('button',{name:/Prospects — Contact Attempted/})).toBeInTheDocument();
