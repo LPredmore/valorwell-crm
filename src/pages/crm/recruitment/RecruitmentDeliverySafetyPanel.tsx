@@ -7,7 +7,7 @@ import {Label} from '@/components/ui/label';
 import {listRecruitmentDrafts} from '@/repositories/supabase/recruitment-campaign-prep';
 import {
  getRecruitmentContactPermission,getRecruitmentDeliveryGate,recordRecruitmentContactPermission,
- recruitmentGateReasonLabels,stageRecruitmentHeldPlan,
+ recruitmentGateReasonLabels,isSafeToStageHeldPlan,stageRecruitmentHeldPlan,
  type RecruitmentPermissionStatus,
 } from '@/repositories/supabase/recruitment-delivery';
 
@@ -109,7 +109,7 @@ export function RecruitmentDeliverySafetyPanel({tenantId,prospectId,canEdit}:{
      {gate.data.reasons.map(reason=><li key={reason}>{recruitmentGateReasonLabels[reason]??reason}</li>)}
     </ul>}
     <p className="font-medium">Provider delivery: disabled, even when the held-plan check passes.</p>
-    {canEdit&&<Button variant="outline" disabled={!gate.data.canCreateHeldPlan||hold.isPending}
+    {canEdit&&<Button variant="outline" disabled={!isSafeToStageHeldPlan(gate.data)||hold.isPending}
      onClick={()=>hold.mutate()}>{hold.isPending?'Staging…':'Create held delivery plan (no sending)'}</Button>}
    </>}
    {hold.isError&&<p role="alert" className="text-destructive">{hold.error.message}</p>}
