@@ -41,7 +41,7 @@ const TASK_TYPE_B2D: Record<TaskDbType, TaskType> = {
 
 const COLS = `
   id, tenant_id, title, description, client_id, staff_id, campaign_id, exception_id,
-  type, priority, status, owner_id, collaborator_ids, created_by_profile_id,
+  type, priority, status, owner_id, collaborator_ids, relationship_contact_id, relationship_organization_id, created_by_profile_id,
   start_at, due_at, completed_at, recurrence, checklist, tags, created_at, updated_at
 `;
 
