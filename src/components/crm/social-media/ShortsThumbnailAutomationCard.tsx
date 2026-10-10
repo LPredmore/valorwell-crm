@@ -56,7 +56,6 @@ export function ShortsThumbnailAutomationCard() {
   if (error) return <SocialMediaErrorState error={error} />;
   if (!feature) return null;
   const pending = feature.testRuns.find((run) => run.visualResult === 'pending');
-  const latest = feature.testRuns[0];
   const mutationError = (test.error ?? review.error ?? disable.error) as Error | null;
 
   return (
@@ -79,7 +78,7 @@ export function ShortsThumbnailAutomationCard() {
         )}
         <CrmMutationGate>
             <div className="space-y-2 rounded border p-3">
-              <p className="font-medium">1. Test or retest a Shorts thumbnail (admins only)</p>
+              <p className="font-medium">1. Re-run the exact original Shorts thumbnail test (admins only)</p>
               <p className="text-xs text-destructive">This replaces the real thumbnail of your chosen test video. Choose a disposable Short that you own and that is Private, unscheduled, and fully processed. Scheduled and published CRM videos are protected.</p>
               {feature.automaticUploadsEnabled && <p className="text-xs text-muted-foreground">Retesting does not turn automatic uploads off. If the image is not visible, choose “Not visible — keep manual” below to turn automation off.</p>}
               <div className="grid gap-2 sm:grid-cols-2">
@@ -111,22 +110,26 @@ export function ShortsThumbnailAutomationCard() {
                   <Input id="sst-confirm" value={testConfirm} onChange={(e) => setTestConfirm(e.target.value)} />
                 </div>
               </div>
-              <Button size="sm" onClick={() => test.mutate()} disabled={test.isPending || !!pending || testConfirm !== SHORTS_TEST_CONFIRMATION_PREFIX + videoId.trim() || !selected}>
+              <Button size="sm" onClick={() => test.mutate()} disabled={test.isPending || testConfirm !== SHORTS_TEST_CONFIRMATION_PREFIX + videoId.trim() || !selected}>
                 {test.isPending ? 'Testing…' : 'Run test on this video'}
               </Button>
             </div>
         </CrmMutationGate>
 
-        {latest && (
-          <div className="rounded border p-3 text-xs space-y-1">
-            <p className="font-medium text-sm">Latest test</p>
-            <p>Video {latest.videoId} · HTTP {latest.httpStatus ?? '—'} · API {latest.apiAccepted ? 'accepted' : 'refused'} · custom-thumbnail flag {String(latest.hasCustomThumbnail)}</p>
-            {latest.error && <p className="text-destructive">{latest.error}</p>}
-            <p>Visual review: {latest.visualResult}</p>
-            <div className="flex gap-2">
-              <a className="underline" href={`https://www.youtube.com/shorts/${encodeURIComponent(latest.videoId)}`} target="_blank" rel="noopener noreferrer">Open as Short</a>
-              <a className="underline" href={`https://studio.youtube.com/video/${encodeURIComponent(latest.videoId)}/edit`} target="_blank" rel="noopener noreferrer">Open in Studio</a>
-            </div>
+        {feature.testRuns.length > 0 && (
+          <div className="rounded border p-3 text-xs space-y-2">
+            <p className="font-medium text-sm">Test history — compare with the original successful test</p>
+            {feature.testRuns.slice(0, 5).map((run) => (
+              <div key={run.id} className="space-y-1 border-t pt-2 first:border-t-0 first:pt-0">
+                <p><strong>Video {run.videoId}</strong> · {new Date(run.requestedAt).toLocaleString()} · HTTP {run.httpStatus ?? '—'} · API {run.apiAccepted ? 'accepted' : 'refused'}</p>
+                <p>Custom-thumbnail flag: {String(run.hasCustomThumbnail)} · Visual review: <strong>{run.visualResult}</strong></p>
+                {run.error && <p className="text-destructive">{run.error}</p>}
+                <div className="flex flex-wrap gap-3">
+                  <a className="underline" href={`https://www.youtube.com/shorts/${encodeURIComponent(run.videoId)}`} target="_blank" rel="noopener noreferrer">Open Short</a>
+                  <a className="underline" href={`https://studio.youtube.com/video/${encodeURIComponent(run.videoId)}/edit`} target="_blank" rel="noopener noreferrer">Open in Studio</a>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
