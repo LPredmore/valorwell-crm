@@ -8,7 +8,9 @@ import {Label} from '@/components/ui/label';
 import {Textarea} from '@/components/ui/textarea';
 import {useCrmAuth} from '@/hooks/crm/useCrmAuth';
 import {listTeamOwners} from '@/repositories/supabase/pipeline-team-owners';
-import {listTherapistProspects,therapistProspectHistory,updateTherapistProspect,type TherapistProspect} from '@/repositories/supabase/therapist-prospects';
+import {therapistProspectHistory,updateTherapistProspect,type TherapistProspect} from '@/repositories/supabase/therapist-prospects';
+import {listRecruitmentReviewProspects} from '@/repositories/supabase/recruitment-review';
+import {RecruitmentPreviewPanel,RecruitmentQualificationPanel} from './RecruitmentQualificationPanel';
 
 const US_STATES:ReadonlyArray<readonly [string,string]>=[["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["DC","District of Columbia"],["FL","Florida"],["GA","Georgia"],["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["PR","Puerto Rico"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"]];
 const pipelineLink='/crm/pipelines?pipeline=197bfeb7-a1d2-4c26-842f-045b5256d9e4';
@@ -20,15 +22,23 @@ function toLocal(iso:string|null){
 }
 export default function TherapistProspectsPage(){
   const {id}=useParams();
-  const {currentTenantId,capabilities}=useCrmAuth();
+  const {currentTenantId,capabilities,userId}=useCrmAuth();
   const [page,setPage]=useState(1);
   const [searchInput,setSearchInput]=useState('');
   const [search,setSearch]=useState('');
   const [stateFilter,setStateFilter]=useState('');
+  const [workflowFilter,setWorkflowFilter]=useState('');
+  const [qualityFilter,setQualityFilter]=useState('');
+  const [dueFilter,setDueFilter]=useState('');
+  const [mineOnly,setMineOnly]=useState(false);
   const qc=useQueryClient();
   const query=useQuery({
-    queryKey:['therapist-prospect-review',currentTenantId,id??'',page,search,stateFilter],
-    queryFn:()=>listTherapistProspects(currentTenantId!,id?1:page,id?1:50,id?'':search,id,id?'':stateFilter),
+    queryKey:['therapist-prospect-review',currentTenantId,id??'',page,search,stateFilter,workflowFilter,qualityFilter,dueFilter,mineOnly,userId],
+    queryFn:()=>listRecruitmentReviewProspects(currentTenantId!,id?1:page,id?1:50,{
+      search:id?'':search,state:id?'':stateFilter,
+      workflow:id?'':workflowFilter,quality:id?'':qualityFilter,due:id?'':dueFilter,
+      owner:id||!mineOnly?'':userId,
+    },id),
     enabled:!!currentTenantId,retry:false,
   });
   const owners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId],
