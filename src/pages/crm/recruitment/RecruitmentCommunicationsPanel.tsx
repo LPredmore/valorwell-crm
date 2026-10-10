@@ -62,7 +62,7 @@ export function RecruitmentCommunicationsPanel({tenantId,row,canEdit}:{
  });
  const canRecord=canEdit&&summary.trim().length>=3&&
   (stage!=='application_handoff'||outcome==='handoff')&&
-  stage!=='applicant_linked';
+  (stage!=='applicant_linked'||row.recruitingStage==='applicant_linked');
  return <div className="space-y-4">
   <Card><CardHeader><CardTitle>Recruitment communications timeline</CardTitle>
    <CardDescription>Verified CRM messages, linked applicant activity, and manually logged conversations.
