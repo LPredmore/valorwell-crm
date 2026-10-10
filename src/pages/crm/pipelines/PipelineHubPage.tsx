@@ -238,8 +238,8 @@ export default function PipelineHubPage(){
     {p&&tab==='board'&&<section className="space-y-4">
       {p.source_key==='provider_applicants'&&<ClinicianStageNavigator
         stages={stages.data??[]} selectedStageId={stageFilter} loadedCounts={loadedStageCounts}
-        totalLoaded={sorted.length} loading={connected.isLoading}
-        error={connected.isError?connected.error.message:undefined}
+        totalLoaded={sorted.length} loading={stages.isLoading||connected.isLoading}
+        error={stages.isError?stages.error.message:connected.isError?connected.error.message:undefined}
         onChooseStage={id=>{
           setStageFilter(id);
           setSearchText('');setAttention('all');setOwnerFilter('all');
