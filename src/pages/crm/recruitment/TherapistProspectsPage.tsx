@@ -117,7 +117,7 @@ export default function TherapistProspectsPage(){
         <RecruitmentFilters workflow={workflowFilter} quality={qualityFilter} due={dueFilter} mineOnly={mineOnly}
           onWorkflow={v=>{setWorkflowFilter(v);setPage(1)}} onQuality={v=>{setQualityFilter(v);setPage(1)}}
           onDue={v=>{setDueFilter(v);setPage(1)}} onMine={v=>{setMineOnly(v);setPage(1)}}/>
-        <p role="status" className="text-sm">{query.data?.total??0} matching prospects · Page {page}</p>
+        <p role="status" className="text-sm">{query.isLoading?'Loading prospects…':query.isError?'Prospects could not be loaded':`${query.data?.total??0} matching prospects · Page ${page}`}</p>
         <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-sm">
           <thead><tr className="border-b text-left"><th className="p-2">Prospect</th><th className="p-2">State</th><th className="p-2">Licence</th><th className="p-2">Review stage</th><th className="p-2">Email quality</th><th className="p-2">Follow-up</th><th className="p-2">Owner</th></tr></thead>
           <tbody>{(query.data?.items??[]).map(p=><tr key={p.id} className="border-b">
