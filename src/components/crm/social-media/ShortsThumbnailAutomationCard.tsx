@@ -100,7 +100,7 @@ export function ShortsThumbnailAutomationCard() {
                   {!controlCover && <p className="text-xs text-destructive">The original source image is not in the current Library results.</p>}
                 </div>
               )}
-              {feature.automaticUploadsEnabled && <p className="text-xs text-muted-foreground">Retesting does not turn automatic uploads off. If the image is not visible, choose “Not visible — keep manual” below to turn automation off.</p>}
+              {feature.automaticUploadsEnabled && <p className="text-xs text-muted-foreground">This diagnostic retest does not change automatic publishing. Record the visual outcome below; use the separate “Turn off” button if you want to disable automation.</p>}
               <div className="grid gap-2 sm:grid-cols-2">
                 <div><Label htmlFor="sst-video">Test Short video id</Label><Input id="sst-video" value={videoId} onChange={(e) => setVideoId(e.target.value)} placeholder="11-character id" /></div>
                 <div className="space-y-1 sm:col-span-2">
@@ -164,7 +164,7 @@ export function ShortsThumbnailAutomationCard() {
                 <Button size="sm" disabled={!pending.apiAccepted || visualConfirm !== SHORTS_VISUAL_CONFIRMATION_PHRASE || review.isPending}
                   onClick={() => review.mutate({ testRunId: pending.id, result: 'confirmed' })}>I saw it — turn on</Button>
                 <Button size="sm" variant="outline" disabled={review.isPending}
-                  onClick={() => review.mutate({ testRunId: pending.id, result: 'not_visible' })}>Not visible — keep manual</Button>
+                  onClick={() => review.mutate({ testRunId: pending.id, result: 'not_visible' })}>Not visible — record failed test</Button>
               </div>
             </div>
           </CrmMutationGate>
