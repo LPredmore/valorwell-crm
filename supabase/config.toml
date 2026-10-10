@@ -52,3 +52,9 @@ verify_jwt = false
 [functions.youtube-oauth-callback]
 # Receives Google's OAuth redirect; authorizes via state/PKCE, not a CRM session.
 verify_jwt = false
+
+
+[functions.video-thumbnail-generation-dispatcher]
+# Scheduled thumbnail worker. JWT verification is disabled because the function
+# authorizes either the service-role bearer or the Vault-backed X-Cron-Secret in code.
+verify_jwt = false
