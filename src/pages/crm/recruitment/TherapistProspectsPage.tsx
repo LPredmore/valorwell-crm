@@ -10,6 +10,7 @@ import {useCrmAuth} from '@/hooks/crm/useCrmAuth';
 import {listTeamOwners} from '@/repositories/supabase/pipeline-team-owners';
 import {listTherapistProspects,therapistProspectHistory,updateTherapistProspect,type TherapistProspect} from '@/repositories/supabase/therapist-prospects';
 
+const US_STATES:ReadonlyArray<readonly [string,string]>=[["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["DC","District of Columbia"],["FL","Florida"],["GA","Georgia"],["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["PR","Puerto Rico"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"]];
 const pipelineLink='/crm/pipelines?pipeline=197bfeb7-a1d2-4c26-842f-045b5256d9e4';
 function displayName(p:TherapistProspect){return [p.firstName,p.lastName].filter(Boolean).join(' ')||'Unnamed prospect'}
 function toLocal(iso:string|null){
@@ -23,10 +24,11 @@ export default function TherapistProspectsPage(){
   const [page,setPage]=useState(1);
   const [searchInput,setSearchInput]=useState('');
   const [search,setSearch]=useState('');
+  const [stateFilter,setStateFilter]=useState('');
   const qc=useQueryClient();
   const query=useQuery({
-    queryKey:['therapist-prospect-review',currentTenantId,id??'',page,search],
-    queryFn:()=>listTherapistProspects(currentTenantId!,id?1:page,id?1:50,id?'':search,id),
+    queryKey:['therapist-prospect-review',currentTenantId,id??'',page,search,stateFilter],
+    queryFn:()=>listTherapistProspects(currentTenantId!,id?1:page,id?1:50,id?'':search,id,id?'':stateFilter),
     enabled:!!currentTenantId,retry:false,
   });
   const owners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId],
@@ -82,11 +84,23 @@ export default function TherapistProspectsPage(){
     {query.isLoading&&<p>Loading tenant-authorized prospects…</p>}
     {query.isError&&<p role="alert" className="text-destructive">{query.error.message}</p>}
     {!id&&<Card><CardHeader><CardTitle>Recruitment review queue</CardTitle>
-      <CardDescription>Search is server-side across all prospects; 50 records per page. No campaigns are triggered by reviewing a prospect.</CardDescription></CardHeader>
+      <CardDescription>Search names, full state names or abbreviations, and narrow results by primary or licensed state. Filters can be combined. Results are server-paged (50 per page), and no campaigns are triggered.</CardDescription></CardHeader>
       <CardContent className="space-y-3">
-        <form className="flex gap-2" onSubmit={event=>{event.preventDefault();setPage(1);setSearch(searchInput.trim())}}>
-          <Input aria-label="Search prospects" placeholder="Search name, email, state or licence" value={searchInput} onChange={event=>setSearchInput(event.target.value)}/>
+        <form className="flex flex-wrap items-end gap-2" onSubmit={event=>{event.preventDefault();setPage(1);setSearch(searchInput.trim())}}>
+          <div className="min-w-[220px] flex-1 space-y-1">
+            <Label htmlFor="prospect-search">Name, email, licence or state</Label>
+            <Input id="prospect-search" aria-label="Search prospects" placeholder="e.g. Missouri or a clinician name" value={searchInput} onChange={event=>setSearchInput(event.target.value)}/>
+          </div>
+          <div className="min-w-[190px] space-y-1">
+            <Label htmlFor="prospect-state-filter">Primary or licensed state</Label>
+            <select id="prospect-state-filter" aria-label="Filter by state" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={stateFilter}
+              onChange={event=>{setStateFilter(event.target.value);setPage(1);}}>
+              <option value="">All states</option>
+              {US_STATES.map(([code,name])=><option key={code} value={code}>{name} ({code})</option>)}
+            </select>
+          </div>
           <Button type="submit">Search</Button>
+          {(stateFilter||search)&&<Button type="button" variant="outline" onClick={()=>{setStateFilter('');setSearch('');setSearchInput('');setPage(1);}}>Clear filters</Button>}
         </form>
         <p role="status" className="text-sm">{query.data?.total??0} matching prospects · Page {page}</p>
         <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-sm">
