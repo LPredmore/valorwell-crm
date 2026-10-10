@@ -8,7 +8,10 @@ import {Label} from '@/components/ui/label';
 import {Textarea} from '@/components/ui/textarea';
 import {useCrmAuth} from '@/hooks/crm/useCrmAuth';
 import {listTeamOwners} from '@/repositories/supabase/pipeline-team-owners';
-import {listTherapistProspects,therapistProspectHistory,updateTherapistProspect,type TherapistProspect} from '@/repositories/supabase/therapist-prospects';
+import {therapistProspectHistory,updateTherapistProspect,type TherapistProspect} from '@/repositories/supabase/therapist-prospects';
+import {listRecruitmentReviewProspects} from '@/repositories/supabase/recruitment-review';
+import {RecruitmentPreviewPanel,RecruitmentQualificationPanel} from './RecruitmentQualificationPanel';
+import {RecruitmentFilters} from './RecruitmentFilters';
 
 const US_STATES:ReadonlyArray<readonly [string,string]>=[["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["DC","District of Columbia"],["FL","Florida"],["GA","Georgia"],["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["PR","Puerto Rico"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"]];
 const pipelineLink='/crm/pipelines?pipeline=197bfeb7-a1d2-4c26-842f-045b5256d9e4';
@@ -20,15 +23,23 @@ function toLocal(iso:string|null){
 }
 export default function TherapistProspectsPage(){
   const {id}=useParams();
-  const {currentTenantId,capabilities}=useCrmAuth();
+  const {currentTenantId,capabilities,userId}=useCrmAuth();
   const [page,setPage]=useState(1);
   const [searchInput,setSearchInput]=useState('');
   const [search,setSearch]=useState('');
   const [stateFilter,setStateFilter]=useState('');
+  const [workflowFilter,setWorkflowFilter]=useState('');
+  const [qualityFilter,setQualityFilter]=useState('');
+  const [dueFilter,setDueFilter]=useState('');
+  const [mineOnly,setMineOnly]=useState(false);
   const qc=useQueryClient();
   const query=useQuery({
-    queryKey:['therapist-prospect-review',currentTenantId,id??'',page,search,stateFilter],
-    queryFn:()=>listTherapistProspects(currentTenantId!,id?1:page,id?1:50,id?'':search,id,id?'':stateFilter),
+    queryKey:['therapist-prospect-review',currentTenantId,id??'',page,search,stateFilter,workflowFilter,qualityFilter,dueFilter,mineOnly,userId],
+    queryFn:()=>listRecruitmentReviewProspects(currentTenantId!,id?1:page,id?1:50,{
+      search:id?'':search,state:id?'':stateFilter,
+      workflow:id?'':workflowFilter,quality:id?'':qualityFilter,due:id?'':dueFilter,
+      owner:id||!mineOnly?'':userId,
+    },id),
     enabled:!!currentTenantId,retry:false,
   });
   const owners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId],
@@ -83,6 +94,7 @@ export default function TherapistProspectsPage(){
     </div>
     {query.isLoading&&<p>Loading tenant-authorized prospects…</p>}
     {query.isError&&<p role="alert" className="text-destructive">{query.error.message}</p>}
+    {!id&&<RecruitmentPreviewPanel tenantId={currentTenantId}/>}
     {!id&&<Card><CardHeader><CardTitle>Recruitment review queue</CardTitle>
       <CardDescription>Search names, full state names or abbreviations, and narrow results by primary or licensed state. Filters can be combined. Results are server-paged (50 per page), and no campaigns are triggered.</CardDescription></CardHeader>
       <CardContent className="space-y-3">
@@ -100,16 +112,20 @@ export default function TherapistProspectsPage(){
             </select>
           </div>
           <Button type="submit">Search</Button>
-          {(stateFilter||search)&&<Button type="button" variant="outline" onClick={()=>{setStateFilter('');setSearch('');setSearchInput('');setPage(1);}}>Clear filters</Button>}
+          {(stateFilter||search||workflowFilter||qualityFilter||dueFilter||mineOnly)&&<Button type="button" variant="outline" onClick={()=>{setStateFilter('');setSearch('');setSearchInput('');setWorkflowFilter('');setQualityFilter('');setDueFilter('');setMineOnly(false);setPage(1);}}>Clear filters</Button>}
         </form>
+        <RecruitmentFilters workflow={workflowFilter} quality={qualityFilter} due={dueFilter} mineOnly={mineOnly}
+          onWorkflow={v=>{setWorkflowFilter(v);setPage(1)}} onQuality={v=>{setQualityFilter(v);setPage(1)}}
+          onDue={v=>{setDueFilter(v);setPage(1)}} onMine={v=>{setMineOnly(v);setPage(1)}}/>
         <p role="status" className="text-sm">{query.data?.total??0} matching prospects · Page {page}</p>
         <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-sm">
-          <thead><tr className="border-b text-left"><th className="p-2">Prospect</th><th className="p-2">State</th><th className="p-2">Licence</th><th className="p-2">Review stage</th><th className="p-2">Email</th><th className="p-2">Owner</th></tr></thead>
+          <thead><tr className="border-b text-left"><th className="p-2">Prospect</th><th className="p-2">State</th><th className="p-2">Licence</th><th className="p-2">Review stage</th><th className="p-2">Email quality</th><th className="p-2">Follow-up</th><th className="p-2">Owner</th></tr></thead>
           <tbody>{(query.data?.items??[]).map(p=><tr key={p.id} className="border-b">
             <td className="p-2"><Link className="text-primary underline" to={'/crm/recruitment/prospects/'+p.id}>{displayName(p)}</Link></td>
             <td className="p-2">{p.state??'—'}</td><td className="p-2">{p.licenseType??'—'}</td>
             <td className="p-2">{p.status==='blocked'?'Blocked':p.status==='ready'?'Ready for review':'Needs review'}</td>
-            <td className="p-2">{p.email&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.email)?'Present':'Unavailable'}</td>
+            <td className="p-2">{p.emailQuality}{p.suppressed?' · suppressed':''}</td>
+            <td className="p-2">{p.nextActionDueAt?new Date(p.nextActionDueAt).toLocaleDateString():(p.nextAction?'Unscheduled':'No next action')}</td>
             <td className="p-2">{owners.data?.find(x=>x.id===p.ownerProfileId)?.name??(p.ownerProfileId?'Assigned team member':'Unassigned')}</td>
           </tr>)}</tbody></table></div>
         <div className="flex gap-2"><Button variant="outline" disabled={page<=1} onClick={()=>setPage(n=>n-1)}>Previous</Button>
@@ -127,6 +143,7 @@ export default function TherapistProspectsPage(){
         <p><strong>Contactability:</strong> {row.contactable&&!row.exclusionReason?'Not suppressed':'Suppressed / excluded'}</p>
         {row.exclusionReason&&<p className="sm:col-span-2 text-destructive">Exclusion reason: {row.exclusionReason}</p>}
       </CardContent></Card>
+      <RecruitmentQualificationPanel tenantId={currentTenantId} row={row} canEdit={canEdit}/>
       <Card><CardHeader><CardTitle>Review, ownership and next action</CardTitle>
         <CardDescription>Changes create an audit event; no email, SMS or campaign enrolment occurs. Ready only represents a human review decision.</CardDescription></CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2">
