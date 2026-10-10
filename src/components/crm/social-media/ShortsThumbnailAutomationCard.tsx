@@ -37,6 +37,12 @@ export function ShortsThumbnailAutomationCard() {
     const q = coverSearch.trim().toLowerCase();
     return q ? options.filter((o) => `${o.label} ${o.detail}`.toLowerCase().includes(q)) : options;
   }, [options, coverSearch]);
+  // The October 7 confirmed test is our golden control. Reuse its exact YouTube ID
+  // and exact saved Library source to distinguish backend regressions from video-specific rendering.
+  const confirmedControl = feature?.testRuns.find((run) => run.videoId === 'SpzT1xyRGAc' && run.visualResult === 'confirmed') ?? null;
+  const controlCover = confirmedControl
+    ? options.find((o) => o.sourceType === confirmedControl.sourceType && o.sourceId === confirmedControl.sourceId) ?? null
+    : null;
   const selected = options.find((o) => o.key === coverKey) ?? null;
   const sourceType: SourceType | null = selected?.sourceType ?? null;
   const sourceId = selected?.sourceId ?? '';
@@ -80,6 +86,20 @@ export function ShortsThumbnailAutomationCard() {
             <div className="space-y-2 rounded border p-3">
               <p className="font-medium">1. Re-run the exact original Shorts thumbnail test (admins only)</p>
               <p className="text-xs text-destructive">This replaces the real thumbnail of your chosen test video. Choose a disposable Short that you own and that is Private, unscheduled, and fully processed. Scheduled and published CRM videos are protected.</p>
+              {confirmedControl && (
+                <div className="rounded border p-2 space-y-1">
+                  <p className="font-medium">Original confirmed control: {confirmedControl.videoId}</p>
+                  <p className="text-xs text-muted-foreground">Run the exact October 7 test again on the same video with the same saved image, then compare its display in the same YouTube Studio app.</p>
+                  <Button type="button" variant="outline" size="sm" disabled={!controlCover} onClick={() => {
+                    if (!controlCover) return;
+                    setVideoId(confirmedControl.videoId);
+                    setCoverSearch('');
+                    setCoverKey(controlCover.key);
+                    setTestConfirm('');
+                  }}>Load original successful test (same video + image)</Button>
+                  {!controlCover && <p className="text-xs text-destructive">The original source image is not in the current Library results.</p>}
+                </div>
+              )}
               {feature.automaticUploadsEnabled && <p className="text-xs text-muted-foreground">Retesting does not turn automatic uploads off. If the image is not visible, choose “Not visible — keep manual” below to turn automation off.</p>}
               <div className="grid gap-2 sm:grid-cols-2">
                 <div><Label htmlFor="sst-video">Test Short video id</Label><Input id="sst-video" value={videoId} onChange={(e) => setVideoId(e.target.value)} placeholder="11-character id" /></div>
