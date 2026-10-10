@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CrmMutationGate } from '@/components/crm/auth/CrmMutationGate';
 import {
-  confirmShortsThumbnailVisual, coverSourceOptions, disableShortsThumbnailApi, fetchShortsThumbnailFeature, fetchSocialMediaLibrary, runShortsThumbnailTest,
+  confirmShortsThumbnailVisual, coverSourceOptions, disableShortsThumbnailApi, fetchShortsThumbnailEvidence, fetchShortsThumbnailFeature, fetchSocialMediaLibrary, fetchSocialThumbnailUrl, runShortsThumbnailTest,
   SHORTS_TEST_CONFIRMATION_PREFIX, SHORTS_VISUAL_CONFIRMATION_PHRASE, type SourceType,
 } from '@/lib/crm/social-media';
 import { SocialMediaErrorState } from './SocialMediaErrorState';
@@ -26,6 +26,7 @@ export function ShortsThumbnailAutomationCard() {
   const [coverKey, setCoverKey] = useState('');
   const [testConfirm, setTestConfirm] = useState('');
   const [visualConfirm, setVisualConfirm] = useState('');
+  const [evidenceRunId, setEvidenceRunId] = useState<string | null>(null);
   const library = useQuery({
     queryKey: ['social-media', 'shorts-thumbnail-cover-sources'],
     queryFn: () => fetchSocialMediaLibrary({}),
@@ -44,13 +45,26 @@ export function ShortsThumbnailAutomationCard() {
     ? options.find((o) => o.sourceType === confirmedControl.sourceType && o.sourceId === confirmedControl.sourceId) ?? null
     : null;
   const selected = options.find((o) => o.key === coverKey) ?? null;
+  const evidenceRun = feature?.testRuns.find((r) => r.id === evidenceRunId) ?? null;
+  const evidence = useQuery({
+    queryKey: ['social-media', 'shorts-thumbnail-evidence', evidenceRunId],
+    queryFn: () => fetchShortsThumbnailEvidence(evidenceRunId as string),
+    enabled: !!evidenceRunId,
+    retry: 1, staleTime: 0,
+  });
+  const expectedCover = useQuery({
+    queryKey: ['social-media', 'shorts-thumbnail-evidence-cover', evidenceRun?.sourceType, evidenceRun?.sourceId],
+    queryFn: () => fetchSocialThumbnailUrl(evidenceRun!.sourceType as SourceType, evidenceRun!.sourceId),
+    enabled: !!evidenceRun,
+    retry: 1, staleTime: 60_000,
+  });
   const sourceType: SourceType | null = selected?.sourceType ?? null;
   const sourceId = selected?.sourceId ?? '';
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['social-media', 'shorts-thumbnail-feature'] });
 
   const test = useMutation({
     mutationFn: () => runShortsThumbnailTest({ videoId: videoId.trim(), sourceType: sourceType as SourceType, sourceId, confirmation: testConfirm }),
-    onSuccess: refresh,
+    onSuccess: (data) => { refresh(); setEvidenceRunId(data.run.id); },
   });
   const review = useMutation({
     mutationFn: (p: { testRunId: string; result: 'confirmed' | 'not_visible' }) =>
@@ -147,9 +161,47 @@ export function ShortsThumbnailAutomationCard() {
                 <div className="flex flex-wrap gap-3">
                   <a className="underline" href={`https://www.youtube.com/shorts/${encodeURIComponent(run.videoId)}`} target="_blank" rel="noopener noreferrer">Open Short</a>
                   <a className="underline" href={`https://studio.youtube.com/video/${encodeURIComponent(run.videoId)}/edit`} target="_blank" rel="noopener noreferrer">Open in Studio</a>
+                  <button type="button" className="underline" onClick={() => {
+                    setEvidenceRunId(run.id);
+                    void queryClient.invalidateQueries({ queryKey: ['social-media', 'shorts-thumbnail-evidence', run.id] });
+                  }}>Compare actual images</button>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {evidenceRunId && (
+          <div className="rounded border p-3 text-xs space-y-3">
+            <p className="font-medium text-sm">Actual image comparison — {evidenceRun?.videoId ?? 'test'}</p>
+            <p className="text-muted-foreground">
+              The left image is the JPEG selected in the CRM. The right image is downloaded from YouTube's authenticated thumbnail URL.
+              Neither an HTTP 200 response nor a matching CDN preview proves that the Shorts thumbnail appears in YouTube Studio.
+            </p>
+            {evidence.isLoading && <p>Checking YouTube's currently served image…</p>}
+            {evidence.error && <p className="text-destructive">YouTube evidence check failed: {(evidence.error as Error).message}</p>}
+            {expectedCover.error && <p className="text-destructive">Source image preview failed: {(expectedCover.error as Error).message}</p>}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <p className="font-medium">CRM-selected JPEG</p>
+                {expectedCover.data?.signedUrl ? (
+                  <img src={expectedCover.data.signedUrl} alt="Exact source image selected for this test" className="h-48 w-full rounded border object-contain bg-muted" />
+                ) : <p className="text-muted-foreground">Source preview unavailable</p>}
+                <p className="break-all text-muted-foreground">Drive file: {evidenceRun?.thumbnailFileId}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium">YouTube's served thumbnail</p>
+                {evidence.data?.youtubePreviewUrl ? (
+                  <img src={evidence.data.youtubePreviewUrl} alt="Image actually served by YouTube's authenticated thumbnail CDN" className="h-48 w-full rounded border object-contain bg-muted" />
+                ) : <p className="text-muted-foreground">YouTube preview unavailable</p>}
+                <p className="text-muted-foreground">
+                  CDN: {evidence.data?.served?.httpStatus ?? '—'} · {evidence.data?.served?.byteCount ?? '—'} bytes · custom flag: {String(evidence.data?.hasCustomThumbnail ?? 'unknown')}
+                </p>
+              </div>
+            </div>
+            {evidence.data?.served?.sha256 && <p className="break-all text-muted-foreground">YouTube served image SHA-256: {evidence.data.served.sha256}</p>}
+            <Button size="sm" variant="outline" onClick={() => void evidence.refetch()} disabled={evidence.isFetching}>Refresh YouTube evidence</Button>
+            <p className="font-medium">Visual verdict: {evidenceRun?.visualResult ?? 'awaiting operator review'}</p>
           </div>
         )}
 
