@@ -72,6 +72,12 @@ export function stageRecruitmentHeldPlan(tenantId:string,sequenceId:string,prosp
  });
 }
 
+/** Local UI guard, in addition to mandatory server-side eligibility checks. */
+export function isSafeToStageHeldPlan(gate:RecruitmentGate|null|undefined):boolean{
+ return !!gate && gate.canCreateHeldPlan === true && gate.canSend === false &&
+  gate.sendingEnabled === false && gate.reasons.length === 0;
+}
+
 export const recruitmentGateReasonLabels:Record<string,string>={
  invalid_or_missing_email:'Missing or malformed email address',
  duplicate_identity:'Another prospect uses the same email',
@@ -84,6 +90,8 @@ export const recruitmentGateReasonLabels:Record<string,string>={
  suppressed_or_do_not_contact:'Suppressed or marked do not contact',
  reply_already_received:'An inbound reply is already recorded',
  applicant_already_linked:'The prospect already has an application',
+ possible_existing_identity:'A matching existing applicant or CRM contact needs review',
+ prior_outbound_contact:'This email has already received a CRM message',
  already_planned:'A plan already exists for this sequence and prospect',
  prior_delivery_failure:'A prior email bounced, failed, or was suppressed',
  recruitment_bounce_or_complaint:'A recruitment message bounced or was complained about',
