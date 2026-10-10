@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+distribution-worker-token.sha256
 dist
 dist-ssr
 *.local

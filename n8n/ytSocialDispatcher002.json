@@ -1,0 +1,1796 @@
+{
+  "id": "ytSocialDispatcher002",
+  "name": "Social Delivery Dispatcher - Billing Hub",
+  "active": false,
+  "nodes": [
+    {
+      "id": "da8a3372-0d79-4343-9a9e-d75de50e8e64",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "bb327455-8d7b-4b68-ae98-376be6c8faa9",
+      "name": "Every 1 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b5e2802d-ebb7-4490-95b8-6d6e6f5ecf1e",
+      "name": "Claim Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/release-distributor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {action:'claim',worker_id:'n8n-'+$execution.id} }}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      },
+      "retryOnFail": false
+    },
+    {
+      "id": "804a83fa-0d34-4ad7-a518-59123cc10d24",
+      "name": "Require Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const job=$json.job; return job?[{json:job}]:[];"
+      }
+    },
+    {
+      "id": "e9a36ffd-0ad3-48dc-b1e4-e39180acd3f4",
+      "name": "Instagram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2e6156ca-a213-4f01-9df1-8821cd2c7676",
+              "leftValue": "={{ $json.platform === 'instagram' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ae4d92ae-a564-49f9-96e0-384e9e930141",
+      "name": "Fence Publishing Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/release-distributor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {action:'begin',delivery_id:$('Claim Job').first().json.job.id,lease_token:$('Claim Job').first().json.job.lease_token} }}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      },
+      "retryOnFail": false
+    },
+    {
+      "id": "aa8567b0-e02c-4895-9efc-f1a02af55434",
+      "name": "Require Send Permission",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        0
+      ],
+      "parameters": {
+        "jsCode": "if(!$json.allowed) return []; return [{json:$('Claim Job').first().json.job}];"
+      }
+    },
+    {
+      "id": "175bb2ca-b9c8-4265-8188-0ccfb7161f20",
+      "name": "Facebook?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1820,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6d5d018d-acb8-4cfe-9580-4daa46d805d8",
+              "leftValue": "={{ $json.platform === 'facebook' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "18c604fc-a8af-4428-a635-0f792e55fb30",
+      "name": "Publish Facebook Link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        220
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "POST",
+        "url": "={{ 'https://graph.facebook.com/v25.0/'+$json.external_account_id+'/feed' }}",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{ $json.description_snapshot }}"
+            },
+            {
+              "name": "link",
+              "value": "={{ $json.video_url }}"
+            },
+            {
+              "name": "published",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "6voUSGFRvzWmX5nr",
+          "name": "Facebook - ValorWell Page"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "fea01998-43b3-43ef-a47f-e03fe6a6327e",
+      "name": "Publish LinkedIn Link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        220
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "POST",
+        "url": "https://api.linkedin.com/rest/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "LinkedIn-Version",
+              "value": "202608"
+            },
+            {
+              "name": "X-Restli-Protocol-Version",
+              "value": "2.0.0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {author:$json.external_account_id,commentary:$json.description_snapshot,visibility:'PUBLIC',distribution:{feedDistribution:'MAIN_FEED',targetEntities:[],thirdPartyDistributionChannels:[]},content:{article:{source:$json.video_url,title:$json.title,thumbnail:$json.linkedin_image_urn} },lifecycleState:'PUBLISHED',isReshareDisabledByAuthor:false} }}"
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "lT3xuNtEX1Vk7oR9",
+          "name": "LinkedIn - ValorWell Publisher"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "93737df3-8821-41e5-859d-cd5505438029",
+      "name": "Classify Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        220
+      ],
+      "parameters": {
+        "jsCode": "const j=$('Claim Job').first().json.job; const r=$json; const s=Number(r.statusCode||0); const b=r.body||{}; const id=j.platform==='facebook'?b.id:r.headers?.['x-restli-id']; let outcome='NEEDS_REVIEW',error_category='platform_ambiguous'; if(s>=200&&s<300&&id&&!b.error){outcome='PUBLISHED';error_category=null;} else if(s===401||s===403||b.error?.code===190){outcome='BLOCKED_AUTH';error_category='platform_auth';} else if(s===429){outcome='RETRY_WAIT';error_category='platform_rate_limit';} else if(s>=400&&s<500){outcome='FAILED';error_category='platform_rejected';} const external_post_url=id?(j.platform==='facebook'?'https://www.facebook.com/'+id:'https://www.linkedin.com/feed/update/'+id+'/'):null; return [{json:{outcome,http_status:s||null,external_post_id:id||null,external_post_url,error_category}}];"
+      }
+    },
+    {
+      "id": "38029a6f-56a9-4b04-b4b0-15267c3f1931",
+      "name": "Persist Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/release-distributor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {action:'finish',delivery_id:$('Claim Job').first().json.job.id,lease_token:$('Claim Job').first().json.job.lease_token,outcome:$json.outcome,http_status:$json.http_status,external_post_id:$json.external_post_id,external_post_url:$json.external_post_url,error_category:$json.error_category} }}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      },
+      "retryOnFail": false
+    },
+    {
+      "id": "21b0f974-adec-4149-af3c-29716cb62ad5",
+      "name": "Existing Reel Container?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        220
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eb21dad4-55f4-464d-a6be-a9e7f1699085",
+              "leftValue": "={{ !!$json.external_container_id }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "210c07cc-4119-456c-b22e-e89e9d34e8fe",
+      "name": "Prepare Private MP4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/release-distributor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {action:'media',delivery_id:$('Claim Job').first().json.job.id,lease_token:$('Claim Job').first().json.job.lease_token} }}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      },
+      "retryOnFail": false
+    },
+    {
+      "id": "b14783f7-61ff-42d7-a44b-1342d578f627",
+      "name": "MP4 Available?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1560,
+        220
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5fcf201d-f3ad-4176-bcfb-19e8e1fed9cf",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d8c5a7d7-72bb-41cb-8acf-16da84c97a97",
+      "name": "Missing MP4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        220
+      ],
+      "parameters": {
+        "jsCode": "return [{json:{outcome:'NEEDS_MEDIA',error_category:'media_unavailable'}}];"
+      }
+    },
+    {
+      "id": "a321ea9f-92d9-497b-8f55-840a5e7f4698",
+      "name": "Create Reel Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        440
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "POST",
+        "url": "={{ 'https://graph.facebook.com/v25.0/'+$('Claim Job').first().json.job.external_account_id+'/media' }}",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "media_type",
+              "value": "REELS"
+            },
+            {
+              "name": "video_url",
+              "value": "={{ $json.media_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $('Claim Job').first().json.job.description_snapshot }}"
+            },
+            {
+              "name": "share_to_feed",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "6voUSGFRvzWmX5nr",
+          "name": "Facebook - ValorWell Page"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "ff0657eb-d85e-455f-aaeb-e111b7cbb244",
+      "name": "Require Container ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        440
+      ],
+      "parameters": {
+        "jsCode": "const id=$json.body?.id;return [{json:{container_id:id||null,ok:!!id}}];"
+      }
+    },
+    {
+      "id": "9e3a0998-5a31-4ed3-bf0d-76bd695e2dc7",
+      "name": "Container Created?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        440
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "dcd168df-e27a-4563-bc59-46c238140fe4",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ba036c1a-c451-484e-b849-a39b96717162",
+      "name": "Save Reel Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        440
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/release-distributor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {action:'container',delivery_id:$('Claim Job').first().json.job.id,lease_token:$('Claim Job').first().json.job.lease_token,container_id:$json.container_id} }}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      },
+      "retryOnFail": false
+    },
+    {
+      "id": "2412ecfb-af8e-4ae8-a6a1-6ff4ce17cf6c",
+      "name": "Require Saved Container",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        440
+      ],
+      "parameters": {
+        "jsCode": "if(!$json.recorded)throw new Error('container_checkpoint_failed');return [{json:{}}];"
+      }
+    },
+    {
+      "id": "5b0a0c29-c9a4-41ea-a77d-514110cd4550",
+      "name": "Wait for Reel Processing",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        440
+      ],
+      "parameters": {
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "webhookId": "477f9695-7fce-42e6-9b50-0df3d23a72f3"
+    },
+    {
+      "id": "0dfa2df7-7317-4d64-82af-b96dbd2b935e",
+      "name": "Check Reel Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        440
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "GET",
+        "url": "={{ 'https://graph.facebook.com/v25.0/'+($('Claim Job').first().json.job.external_container_id || $('Require Container ID').first().json.container_id)+'?fields=status_code' }}"
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "6voUSGFRvzWmX5nr",
+          "name": "Facebook - ValorWell Page"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "7d01ab41-2d47-4e1f-93eb-e8908e58e37a",
+      "name": "Evaluate Reel Processing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        440
+      ],
+      "parameters": {
+        "jsCode": "const status=$json.body?.status_code;return [{json:{ready:status==='FINISHED',again:status==='IN_PROGRESS'&&$runIndex<35}}];"
+      }
+    },
+    {
+      "id": "d6cf07ab-c2b6-481c-933e-e45494772558",
+      "name": "Reel Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        660
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "16e6d0b4-6416-4091-9e8c-10f4de217bd0",
+              "leftValue": "={{ $json.ready === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "64d37a2f-c219-4611-840e-efe6e230caa5",
+      "name": "Keep Polling?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        260,
+        660
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "63742294-840a-45e0-8089-859cf4f01d14",
+              "leftValue": "={{ $json.again === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7fd3f960-252f-4887-bc40-908adff568ee",
+      "name": "Reel Needs Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        660
+      ],
+      "parameters": {
+        "jsCode": "return [{json:{outcome:'NEEDS_REVIEW',error_category:'platform_ambiguous'}}];"
+      }
+    },
+    {
+      "id": "a25444eb-1cf5-4d08-901b-1e8ef689929b",
+      "name": "Fence Reel Publish",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        660
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/release-distributor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {action:'begin',delivery_id:$('Claim Job').first().json.job.id,lease_token:$('Claim Job').first().json.job.lease_token} }}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      },
+      "retryOnFail": false
+    },
+    {
+      "id": "3c25a517-93c5-45df-912f-b670b296c651",
+      "name": "Require Reel Permission",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        660
+      ],
+      "parameters": {
+        "jsCode": "if(!$json.allowed)return [];return [{json:{}}];"
+      }
+    },
+    {
+      "id": "4affd142-b44b-42da-a486-0e18682abe1f",
+      "name": "Publish Instagram Reel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        660
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "POST",
+        "url": "={{ 'https://graph.facebook.com/v25.0/'+$('Claim Job').first().json.job.external_account_id+'/media_publish' }}",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $('Claim Job').first().json.job.external_container_id || $('Require Container ID').first().json.container_id }}"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "6voUSGFRvzWmX5nr",
+          "name": "Facebook - ValorWell Page"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "7d8bc2a3-ca17-4379-9979-4be813aca7dd",
+      "name": "Inspect Reel Publication",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        660
+      ],
+      "parameters": {
+        "jsCode": "const r=$json;return [{json:{id:r.body?.id||null,ok:!!r.body?.id&&r.statusCode>=200&&r.statusCode<300}}];"
+      }
+    },
+    {
+      "id": "d216f9c5-f7fe-4674-8da4-e7b79d1894f2",
+      "name": "Reel Published?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1820,
+        660
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b01d39ef-d704-40c8-a2f6-5321ba04bc44",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "545f5dd6-5e8e-4881-8476-6d704f11da9c",
+      "name": "Read Reel Permalink",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        880
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "GET",
+        "url": "={{ 'https://graph.facebook.com/v25.0/'+$json.id+'?fields=id,permalink,media_type' }}"
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "6voUSGFRvzWmX5nr",
+          "name": "Facebook - ValorWell Page"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "7c88f1b7-ddab-43bf-9632-1a88d85d3308",
+      "name": "Confirm Reel Publication",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        880
+      ],
+      "parameters": {
+        "jsCode": "const r=$json;const id=$('Inspect Reel Publication').first().json.id;return [{json:{outcome:r.statusCode===200&&r.body?.id===id&&r.body?.permalink?'PUBLISHED':'NEEDS_REVIEW',external_post_id:id,external_post_url:r.body?.permalink||null,http_status:r.statusCode||null,error_category:r.statusCode===200?null:'platform_ambiguous'}}];"
+      }
+    },
+    {
+      "id": "378fb870-9691-480d-9fe5-de74a9570685",
+      "name": "Initialize LinkedIn Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        880
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "POST",
+        "url": "https://api.linkedin.com/rest/images?action=initializeUpload",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "LinkedIn-Version",
+              "value": "202608"
+            },
+            {
+              "name": "X-Restli-Protocol-Version",
+              "value": "2.0.0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {initializeUploadRequest:{owner:$('Claim Job').first().json.job.external_account_id} } }}"
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "lT3xuNtEX1Vk7oR9",
+          "name": "LinkedIn - ValorWell Publisher"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "e428b1dc-bef9-496a-8cba-5caa9cb6beaf",
+      "name": "Validate LinkedIn Image Upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        880
+      ],
+      "parameters": {
+        "jsCode": "const v=$json.body?.value;if(!v?.image||!v?.uploadUrl)throw new Error('linkedin_image_initialization_failed');const authority=String(v.uploadUrl).split('/')[2]||'';if(!v.uploadUrl.startsWith('https://')||!(authority==='linkedin.com'||/^[a-z0-9.-]+\\.linkedin\\.com$/.test(authority))||v.uploadUrl.includes(String.fromCharCode(92)))throw new Error('untrusted_image_upload_url');return [{json:{image:v.image,uploadUrl:v.uploadUrl}}];"
+      }
+    },
+    {
+      "id": "1c1f0de2-7d9b-42a8-a616-6d0276a11638",
+      "name": "Download YouTube Thumbnail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        880
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://i.ytimg.com/vi/'+$('Claim Job').first().json.job.youtube_video_id+'/hqdefault.jpg' }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "e21557c0-bc0f-4d6d-b851-7ec57a089769",
+      "name": "Upload LinkedIn Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        880
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        },
+        "method": "PUT",
+        "url": "={{ $('Validate LinkedIn Image Upload').first().json.uploadUrl }}",
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data"
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "lT3xuNtEX1Vk7oR9",
+          "name": "LinkedIn - ValorWell Publisher"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f75a26ce-63f3-4f42-b97e-b61bea8078ca",
+      "name": "Restore LinkedIn Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        880
+      ],
+      "parameters": {
+        "jsCode": "if($json.statusCode<200||$json.statusCode>=300)throw new Error('linkedin_image_upload_failed');return [{json:{...$('Claim Job').first().json.job,linkedin_image_urn:$('Validate LinkedIn Image Upload').first().json.image}}];"
+      }
+    },
+    {
+      "id": "010935c9-2a67-4ba4-badb-4af958a86dd4",
+      "name": "LinkedIn Image Initialized?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1820,
+        880
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0f5fd52c-a69a-4012-aec9-43c03e3c3afe",
+              "leftValue": "={{ $json.statusCode >= 200 && $json.statusCode < 300 && !!$json.body?.value?.image && !!$json.body?.value?.uploadUrl }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "0e559bcb-154b-4912-ad9d-272fc031bd5f",
+      "name": "LinkedIn Image Uploaded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        1100
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "efeabc95-93b8-4520-ab09-1b6aa830504b",
+              "leftValue": "={{ $json.statusCode >= 200 && $json.statusCode < 300 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "dcafcded-fb2b-450b-a704-fa88726adacf",
+      "name": "Classify Setup Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        1100
+      ],
+      "parameters": {
+        "jsCode": "const s=Number($json.statusCode||0),e=$json.body?.error?.code;const auth=s===401||s===403||[190,10,200].includes(e);const retry=s===0||s===429||s>=500;return [{json:{outcome:auth?'BLOCKED_AUTH':retry?'RETRY_WAIT':'FAILED',http_status:s||null,error_category:auth?'platform_auth':retry?'platform_rate_limit':'platform_rejected'}}];"
+      }
+    },
+    {
+      "id": "67c9fb6f-86e8-4e60-8eed-7cddea9cd4a5",
+      "name": "Fence LinkedIn Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        1100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/release-distributor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {action:'begin',delivery_id:$('Claim Job').first().json.job.id,lease_token:$('Claim Job').first().json.job.lease_token} }}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      },
+      "retryOnFail": false
+    },
+    {
+      "id": "b4bf27d4-15ab-4562-92df-4506a97b364c",
+      "name": "Require LinkedIn Permission",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        1100
+      ],
+      "parameters": {
+        "jsCode": "if(!$json.allowed)return [];return [{json:$('Restore LinkedIn Job').first().json}];"
+      }
+    },
+    {
+      "id": "9478efaa-2b09-4d61-a15e-ca899de13574",
+      "name": "Reel Container Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        1100
+      ],
+      "parameters": {
+        "jsCode": "const r=$('Create Reel Container').first().json;const s=Number(r.statusCode||0),e=r.body?.error?.code;const auth=s===401||s===403||[190,10,200].includes(e);return [{json:{outcome:auth?'BLOCKED_AUTH':s===429?'RETRY_WAIT':'NEEDS_REVIEW',http_status:s||null,error_category:auth?'platform_auth':s===429?'platform_rate_limit':'platform_ambiguous'}}];"
+      }
+    },
+    {
+      "id": "c374a460-d609-4c65-9f7a-b633d8e714d5",
+      "name": "Reel Publish Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        1100
+      ],
+      "parameters": {
+        "jsCode": "const r=$('Publish Instagram Reel').first().json;const s=Number(r.statusCode||0),e=r.body?.error?.code;const auth=s===401||s===403||[190,10,200].includes(e);return [{json:{outcome:auth?'BLOCKED_AUTH':s===429?'RETRY_WAIT':'NEEDS_REVIEW',http_status:s||null,error_category:auth?'platform_auth':s===429?'platform_rate_limit':'platform_ambiguous'}}];"
+      }
+    },
+    {
+      "id": "b5d59586-887c-4291-acfd-a722217bee82",
+      "name": "Authenticated Wake Up",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "valorwell-social-dispatch-v2",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "20d8c249-6c57-48b3-b001-db07750a05d3",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Claim Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 1 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Claim Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim Job": {
+      "main": [
+        [
+          {
+            "node": "Require Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Require Job": {
+      "main": [
+        [
+          {
+            "node": "Instagram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram?": {
+      "main": [
+        [
+          {
+            "node": "Existing Reel Container?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Facebook?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fence Publishing Request": {
+      "main": [
+        [
+          {
+            "node": "Require Send Permission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Require Send Permission": {
+      "main": [
+        [
+          {
+            "node": "Publish Facebook Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook?": {
+      "main": [
+        [
+          {
+            "node": "Fence Publishing Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Initialize LinkedIn Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Facebook Link": {
+      "main": [
+        [
+          {
+            "node": "Classify Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish LinkedIn Link": {
+      "main": [
+        [
+          {
+            "node": "Classify Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Result": {
+      "main": [
+        [
+          {
+            "node": "Persist Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Existing Reel Container?": {
+      "main": [
+        [
+          {
+            "node": "Wait for Reel Processing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Private MP4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Private MP4": {
+      "main": [
+        [
+          {
+            "node": "MP4 Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MP4 Available?": {
+      "main": [
+        [
+          {
+            "node": "Create Reel Container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Missing MP4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Missing MP4": {
+      "main": [
+        [
+          {
+            "node": "Persist Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Reel Container": {
+      "main": [
+        [
+          {
+            "node": "Require Container ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Require Container ID": {
+      "main": [
+        [
+          {
+            "node": "Container Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Container Created?": {
+      "main": [
+        [
+          {
+            "node": "Save Reel Container",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reel Container Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Reel Container": {
+      "main": [
+        [
+          {
+            "node": "Require Saved Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Require Saved Container": {
+      "main": [
+        [
+          {
+            "node": "Wait for Reel Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Reel Processing": {
+      "main": [
+        [
+          {
+            "node": "Check Reel Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Reel Status": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Reel Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Reel Processing": {
+      "main": [
+        [
+          {
+            "node": "Reel Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reel Ready?": {
+      "main": [
+        [
+          {
+            "node": "Fence Reel Publish",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keep Polling?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep Polling?": {
+      "main": [
+        [
+          {
+            "node": "Wait for Reel Processing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reel Needs Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reel Needs Review": {
+      "main": [
+        [
+          {
+            "node": "Persist Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fence Reel Publish": {
+      "main": [
+        [
+          {
+            "node": "Require Reel Permission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Require Reel Permission": {
+      "main": [
+        [
+          {
+            "node": "Publish Instagram Reel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Instagram Reel": {
+      "main": [
+        [
+          {
+            "node": "Inspect Reel Publication",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inspect Reel Publication": {
+      "main": [
+        [
+          {
+            "node": "Reel Published?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reel Published?": {
+      "main": [
+        [
+          {
+            "node": "Read Reel Permalink",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reel Publish Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Reel Permalink": {
+      "main": [
+        [
+          {
+            "node": "Confirm Reel Publication",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Reel Publication": {
+      "main": [
+        [
+          {
+            "node": "Persist Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initialize LinkedIn Image": {
+      "main": [
+        [
+          {
+            "node": "LinkedIn Image Initialized?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate LinkedIn Image Upload": {
+      "main": [
+        [
+          {
+            "node": "Download YouTube Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download YouTube Thumbnail": {
+      "main": [
+        [
+          {
+            "node": "Upload LinkedIn Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload LinkedIn Image": {
+      "main": [
+        [
+          {
+            "node": "LinkedIn Image Uploaded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore LinkedIn Job": {
+      "main": [
+        [
+          {
+            "node": "Fence LinkedIn Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LinkedIn Image Initialized?": {
+      "main": [
+        [
+          {
+            "node": "Validate LinkedIn Image Upload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify Setup Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LinkedIn Image Uploaded?": {
+      "main": [
+        [
+          {
+            "node": "Restore LinkedIn Job",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify Setup Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fence LinkedIn Post": {
+      "main": [
+        [
+          {
+            "node": "Require LinkedIn Permission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Require LinkedIn Permission": {
+      "main": [
+        [
+          {
+            "node": "Publish LinkedIn Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Setup Failure": {
+      "main": [
+        [
+          {
+            "node": "Persist Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reel Container Failure": {
+      "main": [
+        [
+          {
+            "node": "Persist Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reel Publish Failure": {
+      "main": [
+        [
+          {
+            "node": "Persist Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authenticated Wake Up": {
+      "main": [
+        [
+          {
+            "node": "Claim Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "executionTimeout": 600
+  }
+}

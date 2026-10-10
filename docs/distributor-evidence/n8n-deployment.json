@@ -1,0 +1,25 @@
+{
+  "at": "2026-10-10T14:14:50.997Z",
+  "workflows": [
+    {
+      "id": "ytReleaseMonitor002",
+      "active": true,
+      "source_matches": true
+    },
+    {
+      "id": "ytSocialDispatcher002",
+      "active": false,
+      "source_matches": true
+    },
+    {
+      "id": "ytDeliveryRecovery002",
+      "active": true,
+      "source_matches": true
+    },
+    {
+      "id": "ytDistributorPreflight002",
+      "active": false,
+      "source_matches": true
+    }
+  ]
+}

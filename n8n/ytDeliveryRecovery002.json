@@ -1,0 +1,340 @@
+{
+  "id": "ytDeliveryRecovery002",
+  "name": "Delivery Reconciliation - Billing Hub",
+  "active": false,
+  "nodes": [
+    {
+      "id": "c7d986cc-ee1b-45cd-bc62-e98dd0dbcdd5",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "352dd781-ddf9-49e3-956f-9a88943aec25",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        100
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "16958a55-61eb-4ce3-847f-c423cdc13ec7",
+      "name": "Recover and Resolve",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/release-distributor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"action\":\"recover\"}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      },
+      "retryOnFail": false
+    },
+    {
+      "id": "4176ec23-56cf-4acd-98cd-7b7a0fb83f9d",
+      "name": "Review Known Posts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        100
+      ],
+      "parameters": {
+        "jsCode": "return ($json.review||[]).map(r=>({json:r}));"
+      }
+    },
+    {
+      "id": "453543a9-e461-4640-8848-96d26ab5a6b5",
+      "name": "Review LinkedIn?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6e0e8aed-1cbe-4eeb-b6aa-4ddb4aa7b410",
+              "leftValue": "={{ $json.platform === 'linkedin' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a1622113-0dae-48ea-90d4-f8117ad6e60f",
+      "name": "Read Existing LinkedIn Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        100
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "GET",
+        "url": "={{ 'https://api.linkedin.com/rest/posts/'+encodeURIComponent($json.external_post_id) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "LinkedIn-Version",
+              "value": "202608"
+            },
+            {
+              "name": "X-Restli-Protocol-Version",
+              "value": "2.0.0"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "lT3xuNtEX1Vk7oR9",
+          "name": "LinkedIn - ValorWell Publisher"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "58d661b7-d457-4cd3-b03c-4ac2fb5d1009",
+      "name": "Read Existing Meta Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        0
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "GET",
+        "url": "={{ 'https://graph.facebook.com/v25.0/'+$json.external_post_id+'?fields=id,'+($json.platform==='instagram'?'permalink':'permalink_url,is_published') }}"
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "6voUSGFRvzWmX5nr",
+          "name": "Facebook - ValorWell Page"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "0052b301-7a82-4422-a426-efe8cee7e75b",
+      "name": "Verify Existing Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        100
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().flatMap((item,index)=>{const r=item.json;const d=$('Review Known Posts').itemMatching(index).json;const b=r.body||{};const ok=r.statusCode===200&&b.id===d.external_post_id&&(d.platform==='linkedin'?b.lifecycleState==='PUBLISHED':d.platform==='facebook'?b.is_published===true:!!b.permalink);if(!ok)return [];return [{json:{action:'confirm_existing',delivery_id:d.id,external_post_id:d.external_post_id,external_post_url:b.permalink||b.permalink_url||('https://www.linkedin.com/feed/update/'+d.external_post_id+'/')},pairedItem:{item:index}}];});"
+      }
+    },
+    {
+      "id": "d2b8f6d7-01b6-4740-a27d-6cf7fc4d7566",
+      "name": "Save Reconciled Publication",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/release-distributor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      },
+      "retryOnFail": false
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Recover and Resolve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Recover and Resolve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recover and Resolve": {
+      "main": [
+        [
+          {
+            "node": "Review Known Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Known Posts": {
+      "main": [
+        [
+          {
+            "node": "Review LinkedIn?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review LinkedIn?": {
+      "main": [
+        [
+          {
+            "node": "Read Existing LinkedIn Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Existing Meta Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Existing LinkedIn Post": {
+      "main": [
+        [
+          {
+            "node": "Verify Existing Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Existing Meta Post": {
+      "main": [
+        [
+          {
+            "node": "Verify Existing Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Existing Post": {
+      "main": [
+        [
+          {
+            "node": "Save Reconciled Publication",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "executionTimeout": 600
+  }
+}

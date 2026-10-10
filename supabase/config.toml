@@ -1,5 +1,9 @@
 project_id = "ahqauomkgflopxgnlndd"
 
+[functions.release-distributor]
+# Custom tenant-bound worker token; GET media URLs use expiring file-specific capabilities.
+verify_jwt = false
+
 [functions.crm-resend-email]
 # Public Resend webhooks share this endpoint with JWT-authenticated CRM actions.
 # The function performs signature verification or user/capability authorization internally.

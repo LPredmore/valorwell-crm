@@ -1,0 +1,36 @@
+{
+  "at": "2026-10-10T14:06:08.962Z",
+  "external_public_posts": 0,
+  "results": [
+    {
+      "scenario": "facebook",
+      "status": "PASS",
+      "send_count": 1,
+      "outcome": "PUBLISHED"
+    },
+    {
+      "scenario": "linkedin",
+      "status": "PASS",
+      "send_count": 1,
+      "outcome": "PUBLISHED"
+    },
+    {
+      "scenario": "instagram",
+      "status": "PASS",
+      "send_count": 1,
+      "outcome": "PUBLISHED"
+    },
+    {
+      "scenario": "facebook429",
+      "status": "PASS",
+      "send_count": 1,
+      "outcome": "RETRY_WAIT"
+    },
+    {
+      "scenario": "facebook500",
+      "status": "PASS",
+      "send_count": 1,
+      "outcome": "NEEDS_REVIEW"
+    }
+  ]
+}
