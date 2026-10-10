@@ -88,8 +88,8 @@ export default function TherapistProspectsPage(){
       <CardContent className="space-y-3">
         <form className="flex flex-wrap items-end gap-2" onSubmit={event=>{event.preventDefault();setPage(1);setSearch(searchInput.trim())}}>
           <div className="min-w-[220px] flex-1 space-y-1">
-            <Label htmlFor="prospect-search">Name, email, licence or state</Label>
-            <Input id="prospect-search" aria-label="Search prospects" placeholder="e.g. Missouri or a clinician name" value={searchInput} onChange={event=>setSearchInput(event.target.value)}/>
+            <Label htmlFor="prospect-search">Search prospects</Label>
+            <Input id="prospect-search" aria-label="Search prospects" placeholder="Search by name, email, or license type" value={searchInput} onChange={event=>setSearchInput(event.target.value)}/>
           </div>
           <div className="min-w-[190px] space-y-1">
             <Label htmlFor="prospect-state-filter">Primary or licensed state</Label>
