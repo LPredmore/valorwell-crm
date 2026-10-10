@@ -138,6 +138,7 @@ export default function TherapistProspectsPage(){
         <p><strong>Contactability:</strong> {row.contactable&&!row.exclusionReason?'Not suppressed':'Suppressed / excluded'}</p>
         {row.exclusionReason&&<p className="sm:col-span-2 text-destructive">Exclusion reason: {row.exclusionReason}</p>}
       </CardContent></Card>
+      <RecruitmentQualificationPanel tenantId={currentTenantId} row={row} canEdit={canEdit}/>
       <Card><CardHeader><CardTitle>Review, ownership and next action</CardTitle>
         <CardDescription>Changes create an audit event; no email, SMS or campaign enrolment occurs. Ready only represents a human review decision.</CardDescription></CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2">
