@@ -16,6 +16,7 @@ import {PipelineDragContext,KanbanRecordDrag,KanbanStageDrop} from './KanbanDnd'
 import {PipelineActionEditor} from './PipelineActionEditor';
 import {listTeamOwners} from '@/repositories/supabase/pipeline-team-owners';
 import {ConnectedStageEditor} from './ConnectedStageEditor';
+import {ClinicianStageNavigator} from './ClinicianStageNavigator';
 import {canMovePipelineCard,matchesPipelineView,type PipelineViewMode,type AttentionFilter,type OwnerFilter} from '@/domain/pipelines/board-view';
 import {
   availableSortFields,builtinSortFields,cardFieldLabels,comparePipelineRecords,
@@ -127,6 +128,11 @@ export default function PipelineHubPage(){
     const withoutOwner=filtered.filter(row=>!row.owner_profile_id).length;
     return {overdue,missing,withoutOwner};
   },[filtered]);
+  // These counts cover the currently loaded board preview, not the full recruitment source.
+  const loadedStageCounts=sorted.reduce<Record<string,number>>((acc,row)=>{
+    acc[row.stage_id]=(acc[row.stage_id]??0)+1;
+    return acc;
+  },{});
   const visibleFields= p?cardFieldLabels(p,fields.data??[]):[];
   const sortOptions=p?availableSortFields(p,fields.data??[]):[];
   const missingCount=sorted.filter(r=>p?.subject_type==='organization'&&((p.source_mode==='connected'?(r as ConnectedPipelineCard).primaryContact:subjects.data?.[(r as CrmPipelineRecord).organization_id??'']?.primaryContact)==='Primary contact needs review')).length;
@@ -230,6 +236,16 @@ export default function PipelineHubPage(){
       </Card>
     </section>}
     {p&&tab==='board'&&<section className="space-y-4">
+      {p.source_key==='provider_applicants'&&<ClinicianStageNavigator
+        stages={stages.data??[]} selectedStageId={stageFilter} loadedCounts={loadedStageCounts}
+        totalLoaded={sorted.length} loading={connected.isLoading}
+        error={connected.isError?connected.error.message:undefined}
+        onChooseStage={id=>{
+          setStageFilter(id);
+          setSearchText('');setAttention('all');setOwnerFilter('all');
+          setActiveSavedView('');setViewMode('board');
+        }}
+      />}
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1"><Label htmlFor="pipeline-view-mode">View</Label>
           <select id="pipeline-view-mode" className="rounded border bg-background p-2" value={viewMode}
