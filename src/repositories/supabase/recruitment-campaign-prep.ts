@@ -9,7 +9,7 @@ export interface RecruitmentDraft{
 }
 export interface RecruitmentDraftPreview{
  matched:number;formatValid:number;missing:number;invalid:number;suppressed:number;
- manuallyVerified:number;technicallyReady:number;approvedForSending:0;
+ manuallyVerified:number;documentedPermission:number;technicallyReady:number;approvedForSending:0;
  sendingEnabled:false;notice:string;
 }
 export interface RecruitmentInboundReply{
