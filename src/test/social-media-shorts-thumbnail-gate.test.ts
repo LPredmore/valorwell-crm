@@ -97,18 +97,18 @@ describe('Compatibility test workflow', () => {
     expect(calls.setThumbnail).toBe(0);
   });
 
-  it('refuses CRM-scheduled videos, other tenants\' videos and manual-confirmed thumbnails', async () => {
+  it('refuses all CRM-linked videos, even uploaded or manual-confirmed, and rejects other tenants', async () => {
     const h = publishHarness();
     const id = await scheduledShort(h);
     await h.drain(id);
     const videoId = String(h.pub(id).external_video_id).padEnd(11, 'x');
     h.pub(id).external_video_id = videoId;
     const { client, calls } = fakeClient();
-    await expect(runShortsThumbnailCompatTest(admin(h), testParams(videoId), client)).rejects.toThrow('live or scheduled');
+    await expect(runShortsThumbnailCompatTest(admin(h), testParams(videoId), client)).rejects.toThrow('linked to a CRM publication');
     h.pub(id).status = 'uploaded';
     await markThumbnailManualDone(h.auth, { id }).catch(() => undefined);
     (h.pub(id).platform_payload as Payload).thumbnail = { apiStatus: 'manual_confirmed' };
-    await expect(runShortsThumbnailCompatTest(admin(h), testParams(videoId), client)).rejects.toThrow('manually confirmed');
+    await expect(runShortsThumbnailCompatTest(admin(h), testParams(videoId), client)).rejects.toThrow('linked to a CRM publication');
     h.pub(id).tenant_id = TENANT_B;
     await expect(runShortsThumbnailCompatTest(admin(h), testParams(videoId), client)).rejects.toThrow('does not belong');
     expect(calls.setThumbnail).toBe(0);
