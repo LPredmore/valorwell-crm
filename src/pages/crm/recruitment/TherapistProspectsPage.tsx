@@ -11,6 +11,7 @@ import {listTeamOwners} from '@/repositories/supabase/pipeline-team-owners';
 import {therapistProspectHistory,updateTherapistProspect,type TherapistProspect} from '@/repositories/supabase/therapist-prospects';
 import {listRecruitmentReviewProspects} from '@/repositories/supabase/recruitment-review';
 import {RecruitmentPreviewPanel,RecruitmentQualificationPanel} from './RecruitmentQualificationPanel';
+import {RecruitmentFilters} from './RecruitmentFilters';
 
 const US_STATES:ReadonlyArray<readonly [string,string]>=[["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["DC","District of Columbia"],["FL","Florida"],["GA","Georgia"],["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["PR","Puerto Rico"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"]];
 const pipelineLink='/crm/pipelines?pipeline=197bfeb7-a1d2-4c26-842f-045b5256d9e4';
@@ -113,6 +114,9 @@ export default function TherapistProspectsPage(){
           <Button type="submit">Search</Button>
           {(stateFilter||search)&&<Button type="button" variant="outline" onClick={()=>{setStateFilter('');setSearch('');setSearchInput('');setPage(1);}}>Clear filters</Button>}
         </form>
+        <RecruitmentFilters workflow={workflowFilter} quality={qualityFilter} due={dueFilter} mineOnly={mineOnly}
+          onWorkflow={v=>{setWorkflowFilter(v);setPage(1)}} onQuality={v=>{setQualityFilter(v);setPage(1)}}
+          onDue={v=>{setDueFilter(v);setPage(1)}} onMine={v=>{setMineOnly(v);setPage(1)}}/>
         <p role="status" className="text-sm">{query.data?.total??0} matching prospects · Page {page}</p>
         <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-sm">
           <thead><tr className="border-b text-left"><th className="p-2">Prospect</th><th className="p-2">State</th><th className="p-2">Licence</th><th className="p-2">Review stage</th><th className="p-2">Email</th><th className="p-2">Owner</th></tr></thead>
