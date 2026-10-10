@@ -15,8 +15,8 @@ describe('recruitment held delivery safeguards',()=>{
   expect(isSafeToStageHeldPlan(undefined)).toBe(false);
   expect(isSafeToStageHeldPlan({...approved,canCreateHeldPlan:false})).toBe(false);
   expect(isSafeToStageHeldPlan({...approved,reasons:['suppressed_or_do_not_contact']})).toBe(false);
-  expect(isSafeToStageHeldPlan({...approved,sendingEnabled:true})).toBe(false);
-  expect(isSafeToStageHeldPlan({...approved,canSend:true})).toBe(false);
+  expect(isSafeToStageHeldPlan({...approved,sendingEnabled:true} as unknown as RecruitmentGate)).toBe(false);
+  expect(isSafeToStageHeldPlan({...approved,canSend:true} as unknown as RecruitmentGate)).toBe(false);
  });
  it('surfaces every high-risk eligibility blocker in plain language',()=>{
   for(const key of [
