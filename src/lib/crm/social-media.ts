@@ -517,6 +517,17 @@ export type ShortsThumbnailFeature = {
 export const SHORTS_TEST_CONFIRMATION_PREFIX = 'CHANGE THUMBNAIL ';
 export const SHORTS_VISUAL_CONFIRMATION_PHRASE = 'I SAW THE CUSTOM THUMBNAIL ON SHORTS';
 
+export type ShortsThumbnailEvidence = {
+  testRunId: string; videoId: string; sourceType: SourceType; sourceId: string;
+  sourceFileId: string; videoPrivacy: string | null; videoPublishAt: string | null;
+  apiAccepted: boolean; hasCustomThumbnail: boolean | null; youtubePreviewUrl: string | null;
+  served: { httpStatus: number; contentType: string | null; byteCount: number; sha256: string | null } | null;
+  visualResult: 'pending' | 'confirmed' | 'not_visible'; caveat: string;
+};
+/** Read-only evidence of what YouTube is currently serving, not a Studio visual confirmation. */
+export const fetchShortsThumbnailEvidence = (testRunId: string) =>
+  invoke<ShortsThumbnailEvidence>('get_shorts_thumbnail_evidence', { testRunId });
+
 export const fetchShortsThumbnailFeature = () => invoke<ShortsThumbnailFeature>('get_shorts_thumbnail_feature');
 export const runShortsThumbnailTest = (params: { videoId: string; sourceType: SourceType; sourceId: string; confirmation: string }) =>
   invoke<{ run: ShortsThumbnailTestRun; feature: ShortsThumbnailFeature; studioUrl: string; shortsUrl: string }>('run_shorts_thumbnail_test', params, 60000);
