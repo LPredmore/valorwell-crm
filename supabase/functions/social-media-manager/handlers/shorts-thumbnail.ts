@@ -15,6 +15,7 @@ import {
 
 export type ShortsThumbnailClient = {
   getVideo(videoId: string): Promise<YoutubeVideoOwnership | null>;
+  getThumbnailStatus(videoId: string): Promise<{ hasCustomThumbnail: boolean | null; processingStatus: string | null; thumbnails: Record<string, { url?: string }> | null }>;
   setThumbnail(videoId: string, bytes: ArrayBuffer, mimeType: string): Promise<void>;
   fileMetadata(fileId: string): Promise<{ size: number; mimeType: string }>;
   fileBytes(fileId: string): Promise<ArrayBuffer>;
@@ -151,6 +152,45 @@ export async function runShortsThumbnailCompatTest(auth: AuthContext, params: Re
   };
   await saveFeature(auth, account.id, metadata, next);
   return { run, feature: view(next, account.id), studioUrl: `https://studio.youtube.com/video/${encodeURIComponent(videoId)}/edit`, shortsUrl: `https://www.youtube.com/shorts/${encodeURIComponent(videoId)}` };
+}
+
+/** Read-only diagnosis: compare the operator-selected cover with the authenticated
+ * thumbnail image currently served by YouTube's own image CDN. API acceptance alone
+ * cannot pass a Shorts visual test; that decision remains with the operator. */
+export async function getShortsThumbnailEvidence(auth: AuthContext, params: Record<string, unknown>, client: ShortsThumbnailClient) {
+  requireAdmin(auth);
+  const runId = typeof params.testRunId === "string" ? params.testRunId : "";
+  const { account, metadata } = await loadAccountSettings(auth);
+  const run = resolveShortsThumbnailFeature(metadata).testRuns.find((item) => item.id === runId);
+  if (!run) throw new Error("Unknown thumbnail test run.");
+  const video = await client.getVideo(run.videoId);
+  if (!video || !account.external_account_id || video.channelId !== account.external_account_id) {
+    throw new Error("Test video is not owned by the connected YouTube channel.");
+  }
+  const status = await client.getThumbnailStatus(run.videoId);
+  const signedUrl = status.thumbnails?.high?.url ?? status.thumbnails?.medium?.url ?? status.thumbnails?.default?.url ?? null;
+  let served: { httpStatus: number; contentType: string | null; byteCount: number; sha256: string | null } | null = null;
+  if (signedUrl) {
+    const response = await fetch(signedUrl, { headers: { "user-agent": "Mozilla/5.0" } });
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const digest = response.ok && bytes.length
+      ? await crypto.subtle.digest("SHA-256", bytes)
+      : null;
+    served = {
+      httpStatus: response.status,
+      contentType: response.headers.get("content-type"),
+      byteCount: bytes.length,
+      sha256: digest ? Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("") : null,
+    };
+  }
+  return {
+    testRunId: run.id, videoId: run.videoId,
+    sourceType: run.sourceType, sourceId: run.sourceId, sourceFileId: run.thumbnailFileId,
+    videoPrivacy: video.privacyStatus, videoPublishAt: video.publishAt,
+    apiAccepted: run.apiAccepted, hasCustomThumbnail: status.hasCustomThumbnail,
+    youtubePreviewUrl: signedUrl, served, visualResult: run.visualResult,
+    caveat: "The YouTube CDN preview is evidence of stored artwork, not proof of its presentation inside YouTube Studio or Shorts feeds.",
+  };
 }
 
 export async function confirmShortsThumbnailVisual(auth: AuthContext, params: Record<string, unknown>) {
