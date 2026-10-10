@@ -180,7 +180,7 @@ export function ShortsThumbnailAutomationCard() {
             <p className="font-medium text-sm">Actual image comparison — {evidenceRun?.videoId ?? 'test'}</p>
             <p className="text-muted-foreground">
               The left image is the JPEG selected in the CRM. The right image is downloaded from YouTube's authenticated thumbnail URL.
-              Neither an HTTP 200 response nor a matching CDN preview proves that the Shorts thumbnail appears in YouTube Studio.
+              This is a live YouTube readback, not a snapshot from when the historical test ran. If a later test changed the thumbnail, the images may differ for that reason. Neither HTTP 200 nor a matching CDN preview proves how YouTube Studio displays the Short.
             </p>
             {evidence.isLoading && <p>Checking YouTube's currently served image…</p>}
             {evidence.error && <p className="text-destructive">YouTube evidence check failed: {(evidence.error as Error).message}</p>}
