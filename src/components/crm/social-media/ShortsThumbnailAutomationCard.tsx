@@ -76,6 +76,10 @@ export function ShortsThumbnailAutomationCard() {
   if (error) return <SocialMediaErrorState error={error} />;
   if (!feature) return null;
   const pending = feature.testRuns.find((run) => run.visualResult === 'pending');
+  const latestVisualFailure = feature.testRuns.some((run) => run.visualResult === 'not_visible');
+  const statusLabel = feature.automaticUploadsEnabled && latestVisualFailure
+    ? 'Automatic on — failed visual retest recorded'
+    : STATE_LABEL[feature.state];
   const mutationError = (test.error ?? review.error ?? disable.error) as Error | null;
 
   return (
@@ -83,7 +87,7 @@ export function ShortsThumbnailAutomationCard() {
       <CardHeader><CardTitle className="text-sm">Automatic Shorts thumbnails</CardTitle></CardHeader>
       <CardContent className="space-y-3 text-sm">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={feature.automaticUploadsEnabled ? 'default' : 'secondary'}>{STATE_LABEL[feature.state]}</Badge>
+          <Badge variant={feature.automaticUploadsEnabled ? 'default' : 'secondary'}>{statusLabel}</Badge>
           {feature.enabledAt && <span className="text-xs text-muted-foreground">Enabled {new Date(feature.enabledAt).toLocaleString()}</span>}
         </div>
         <p className="text-xs text-muted-foreground">
