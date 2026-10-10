@@ -62,6 +62,7 @@ export function RecruitmentCommunicationsPanel({tenantId,row,canEdit}:{
  });
  const canRecord=canEdit&&summary.trim().length>=3&&
   (stage!=='application_handoff'||outcome==='handoff')&&
+  (outcome!=='not_interested'||stage==='closed')&&
   (stage!=='applicant_linked'||row.recruitingStage==='applicant_linked');
  return <div className="space-y-4">
   <Card><CardHeader><CardTitle>Recruitment communications timeline</CardTitle>
@@ -97,7 +98,7 @@ export function RecruitmentCommunicationsPanel({tenantId,row,canEdit}:{
       <option value="outbound">Outgoing (already occurred)</option><option value="inbound">Incoming</option><option value="internal">Internal only</option>
      </select></div>
     <div className="space-y-1"><Label htmlFor="activity-outcome">Recorded outcome</Label>
-     <select id="activity-outcome" className="w-full rounded border bg-background p-2" value={outcome} onChange={e=>setOutcome(e.target.value as RecruitmentOutcome)}>
+     <select id="activity-outcome" className="w-full rounded border bg-background p-2" value={outcome} onChange={e=>{const next=e.target.value as RecruitmentOutcome;setOutcome(next);if(next==='not_interested')setStage('closed')}}>
       <option value="attempted">Attempted</option><option value="responded">Response received</option>
       <option value="interested">Expressed interest</option><option value="not_interested">Not interested</option>
       <option value="handoff">Application handoff discussed</option><option value="note">Internal note</option>
@@ -112,6 +113,7 @@ export function RecruitmentCommunicationsPanel({tenantId,row,canEdit}:{
     <Input id="activity-summary" value={summary} maxLength={3000} placeholder="Example: Spoke by phone; clinician requested application information" onChange={e=>{setSummary(e.target.value);clientActionId.current=null;}}/>
    </div>
    {stage==='application_handoff'&&outcome!=='handoff'&&<p className="text-sm text-destructive">Select “Application handoff discussed” as the recorded outcome.</p>}
+   {outcome==='not_interested'&&stage!=='closed'&&<p className="text-sm text-destructive">Not-interested outcomes must be Closed. If they requested no further contact, also mark them Blocked in the review section.</p>}
    {stage==='applicant_linked'&&<p className="text-sm text-muted-foreground">Linked-applicant status is set automatically after you verify and link an existing application below.</p>}
    {record.isError&&<p role="alert" className="text-destructive">{record.error.message} Refresh before retrying if the record was changed by someone else.</p>}
    {record.isSuccess&&<p role="status" className="text-sm">Contact activity recorded. No message sent.</p>}
