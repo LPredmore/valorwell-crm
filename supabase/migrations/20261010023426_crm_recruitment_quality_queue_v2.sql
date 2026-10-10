@@ -107,3 +107,6 @@ BEGIN
  RETURN v_out;
 END $function$
 ;
+REVOKE ALL ON FUNCTION public.crm_recruitment_review_queue(uuid,integer,integer,text,uuid,text,text,text,text,uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.crm_recruitment_review_queue(uuid,integer,integer,text,uuid,text,text,text,text,uuid) TO authenticated;
+NOTIFY pgrst,'reload schema';
