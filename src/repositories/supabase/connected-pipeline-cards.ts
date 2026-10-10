@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { getPipelineCardSubjects } from './pipeline-subjects';
-import {listTherapistProspects} from './therapist-prospects';
+import {listRecruitmentReviewProspects} from './recruitment-review';
 import type { CrmPipeline, CrmPipelineStage, CrmPipelineRecord } from '@/domain/pipelines/models';
 
 export interface ConnectedPipelineCard {
@@ -87,9 +87,15 @@ export async function listConnectedPipelineCards(
     // provider applicants: no campaign, enrollment or applicant mutation here.
     // The full tenant-authorized 50-row paged directory is available at
     // /crm/recruitment/prospects; cap board preview to 200 cards.
-    const prospectPage=await listTherapistProspects(tenantId,1,200);
+    const prospectPage=await listRecruitmentReviewProspects(tenantId,1,200);
+    const lifecycleKeys:Record<string,string>={
+      contact_attempted:'outreach_contact_attempted',replied:'outreach_replied',
+      interested:'outreach_interested',application_handoff:'outreach_application_handoff',
+      applicant_linked:'outreach_applicant_linked',closed:'outreach_closed',
+    };
     for(const row of prospectPage.items){
-      const key=row.status==='ready'?'outreach_ready':row.status==='blocked'?'outreach_blocked':'outreach_review';
+      const key=row.status==='blocked'?'outreach_blocked'
+       :lifecycleKeys[row.recruitingStage]??(row.status==='ready'?'outreach_ready':'outreach_review');
       const id=stage(key);
       if(!id)continue;
       cards.push({
@@ -97,11 +103,11 @@ export async function listConnectedPipelineCards(
         sourceKind:'therapist_prospect',
         displayName:mapName(row.firstName,row.lastName),
         field_values:{license_type:row.licenseType,primary_state:row.state,
-          source:'outreach staging',contactable:row.contactable&&!row.exclusionReason},
+          source:'outreach staging',recruiting_stage:row.recruitingStage,contactable:row.contactable&&!row.exclusionReason},
         created_at:row.createdAt,updated_at:row.updatedAt,
         next_action:row.nextAction,next_action_due_at:row.nextActionDueAt,
         owner_profile_id:row.ownerProfileId,
-        sourceStatus:row.status,
+        sourceStatus:row.recruitingStage,
         sourceUrl:'/crm/recruitment/prospects/'+row.id,
       });
     }

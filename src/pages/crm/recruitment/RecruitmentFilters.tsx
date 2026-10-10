@@ -7,8 +7,19 @@ export function RecruitmentFilters(props:Props){
  return <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
   <label className="space-y-1 text-xs">Recruitment stage
    <select aria-label="Filter by review stage" className="w-full h-10 rounded border bg-background p-2" value={props.workflow} onChange={e=>props.onWorkflow(e.target.value)}>
-    <option value="">All stages</option><option value="review">Needs review</option>
-    <option value="ready">Ready</option><option value="blocked">Blocked</option>
+    <option value="">All stages</option>
+    <optgroup label="Review status">
+     <option value="review">Needs review</option><option value="ready">Ready</option><option value="blocked">Blocked</option>
+    </optgroup>
+    <optgroup label="Recruitment progress">
+     <option value="recruiting:not_contacted">Not yet contacted</option>
+     <option value="recruiting:contact_attempted">Contact attempted</option>
+     <option value="recruiting:replied">Responded</option>
+     <option value="recruiting:interested">Interested</option>
+     <option value="recruiting:application_handoff">Application handoff discussed</option>
+     <option value="recruiting:applicant_linked">Existing application linked</option>
+     <option value="recruiting:closed">Closed</option>
+    </optgroup>
    </select>
   </label>
   <label className="space-y-1 text-xs">Contact quality

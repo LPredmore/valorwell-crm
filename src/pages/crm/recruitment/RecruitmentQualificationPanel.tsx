@@ -62,6 +62,8 @@ export function RecruitmentQualificationPanel({tenantId,row,canEdit}:{
    qc.invalidateQueries({queryKey:['recruitment-applicant-candidates']}),
    qc.invalidateQueries({queryKey:['therapist-prospect-history']}),
    qc.invalidateQueries({queryKey:['therapist-prospect-review']}),
+   qc.invalidateQueries({queryKey:['recruitment-communication-timeline',tenantId,row.id]}),
+   qc.invalidateQueries({queryKey:['pipeline-connected-cards']}),
   ])},
  });
  return <div className="space-y-4">
@@ -98,7 +100,7 @@ export function RecruitmentQualificationPanel({tenantId,row,canEdit}:{
    <CardContent className="space-y-3 text-sm">
     {candidates.isLoading&&<p>Checking the existing applicant directory…</p>}
     {candidates.isError&&<p role="alert" className="text-destructive">{candidates.error.message}</p>}
-    {candidates.data?.linkedApplicantId&&<p role="status">Linked applicant ID: {candidates.data.linkedApplicantId}</p>}
+    {candidates.data?.linkedApplicantId&&<p role="status">Linked existing application: {candidates.data.linkedApplicantId}. <a className="text-primary underline" href="https://emr.valorwell.org/staff/provider-applicants">Open applicant workspace</a>. No invitation or email was sent by linking.</p>}
     {candidates.data?.matches.length===0&&<p>No matching applicant found. Do not create a duplicate applicant without reviewing the original application process.</p>}
     {(candidates.data?.matches??[]).map(a=><div key={a.id} className="rounded border p-3 space-y-2">
      <p><strong>{a.name}</strong> · {a.status} · {a.reason}</p>
