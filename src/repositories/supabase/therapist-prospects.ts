@@ -17,11 +17,11 @@ export interface ProspectEvent{
 /** Protected service-owned staging is exposed only through permission-checked,
  * tenant-matched RPCs. Never grant authenticated access to the source table. */
 export async function listTherapistProspects(
-  tenantId:string,page=1,pageSize=50,search='',prospectId?:string,
+  tenantId:string,page=1,pageSize=50,search='',prospectId?:string,stateFilter='',
 ):Promise<ProspectPage>{
-  const {data,error}=await supabase.rpc('crm_list_therapist_prospects' as never,{
+  const {data,error}=await supabase.rpc('crm_list_therapist_prospects_filtered' as never,{
     p_tenant_id:tenantId,p_page:page,p_page_size:pageSize,
-    p_search:search,p_prospect_id:prospectId??null,
+    p_search:search,p_prospect_id:prospectId??null,p_state:stateFilter||null,
   } as never);
   if(error)throw new Error(error.message);
   const result=data as unknown as ProspectPage|null;
