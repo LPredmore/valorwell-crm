@@ -85,7 +85,7 @@ export function ShortsThumbnailAutomationCard() {
         <CrmMutationGate>
             <div className="space-y-2 rounded border p-3">
               <p className="font-medium">1. Re-run the exact original Shorts thumbnail test (admins only)</p>
-              <p className="text-xs text-destructive">This replaces the real thumbnail of your chosen test video. Choose a disposable Short that you own and that is Private, unscheduled, and fully processed. Scheduled and published CRM videos are protected.</p>
+              <p className="text-xs text-destructive">This replaces the real thumbnail of your chosen test video. Choose a disposable Short that you own and that is Private, unscheduled, and fully processed. All CRM-linked videos are protected, even if they are currently Private and unscheduled.</p>
               {confirmedControl && (
                 <div className="rounded border p-2 space-y-1">
                   <p className="font-medium">Original confirmed control: {confirmedControl.videoId}</p>
