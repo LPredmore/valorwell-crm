@@ -1,0 +1,240 @@
+{
+  "id": "ytDistributorPreflight002",
+  "name": "Release Distributor - Read Only Preflight",
+  "active": false,
+  "nodes": [
+    {
+      "id": "9272235d-adb4-46da-b5a9-8016205c3f9a",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "d1fda3fb-c5b0-4c00-a12d-c9af797b20f2",
+      "name": "Inspect Facebook Account",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        100
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "GET",
+        "url": "https://graph.facebook.com/v25.0/119382491255956?fields=id,name,instagram_business_account"
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "6voUSGFRvzWmX5nr",
+          "name": "Facebook - ValorWell Page"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "4753880f-8e07-40b8-b6e8-c9130a42d183",
+      "name": "Sanitize Facebook",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const r=$json;return [{json:{platform:'facebook',http_status:r.statusCode,id:r.body?.id,name:r.body?.name,instagram_account_id:r.body?.instagram_business_account?.id,error_code:r.body?.error?.code}}];"
+      }
+    },
+    {
+      "id": "acdf6f6d-29f0-492f-b675-91300bf5d3ca",
+      "name": "Inspect LinkedIn Organization",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        100
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "method": "GET",
+        "url": "https://api.linkedin.com/rest/organizations/98694960",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "LinkedIn-Version",
+              "value": "202608"
+            },
+            {
+              "name": "X-Restli-Protocol-Version",
+              "value": "2.0.0"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "lT3xuNtEX1Vk7oR9",
+          "name": "LinkedIn - ValorWell Publisher"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "a471691b-71c0-44ab-b007-e4006cb8013e",
+      "name": "Sanitize LinkedIn",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const r=$json;return [{json:{platform:'linkedin',http_status:r.statusCode,id:r.body?.id,error_code:r.body?.serviceErrorCode}}];"
+      }
+    },
+    {
+      "id": "506eddcb-18d4-4adc-9dea-935b33e0c20c",
+      "name": "Inspect Gateway",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/release-distributor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"action\":\"status\"}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      },
+      "retryOnFail": false
+    },
+    {
+      "id": "44dec961-339b-470a-bacf-6aa6d438d2d8",
+      "name": "Inspect Original MP4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/release-distributor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"action\":\"media_preflight\"}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      },
+      "retryOnFail": false
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Inspect Facebook Account",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Inspect LinkedIn Organization",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Inspect Gateway",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Inspect Original MP4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inspect Facebook Account": {
+      "main": [
+        [
+          {
+            "node": "Sanitize Facebook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inspect LinkedIn Organization": {
+      "main": [
+        [
+          {
+            "node": "Sanitize LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "executionTimeout": 600
+  }
+}

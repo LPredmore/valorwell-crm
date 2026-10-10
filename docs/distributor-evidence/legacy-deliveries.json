@@ -1,0 +1,266 @@
+[
+  {
+    "video_id": "hLvZfGcycOQ",
+    "destination": "linkedin_organization",
+    "delivery_status": "SKIPPED_BASELINE",
+    "post_id": "",
+    "attempt_count": 0,
+    "last_attempt_at": ""
+  },
+  {
+    "video_id": "hLvZfGcycOQ",
+    "destination": "facebook_page",
+    "delivery_status": "SKIPPED_BASELINE",
+    "post_id": "",
+    "attempt_count": 0,
+    "last_attempt_at": ""
+  },
+  {
+    "video_id": "19JpCgF-d9Q",
+    "destination": "linkedin_person",
+    "delivery_status": "SKIPPED_BASELINE",
+    "post_id": "",
+    "attempt_count": 0,
+    "last_attempt_at": ""
+  },
+  {
+    "video_id": "19JpCgF-d9Q",
+    "destination": "facebook_page",
+    "delivery_status": "SKIPPED_BASELINE",
+    "post_id": "",
+    "attempt_count": 0,
+    "last_attempt_at": ""
+  },
+  {
+    "video_id": "D2xrhpC4QNU",
+    "destination": "linkedin_person",
+    "delivery_status": "SKIPPED_BASELINE",
+    "post_id": "",
+    "attempt_count": 0,
+    "last_attempt_at": ""
+  },
+  {
+    "video_id": "D2xrhpC4QNU",
+    "destination": "linkedin_organization",
+    "delivery_status": "SKIPPED_BASELINE",
+    "post_id": "",
+    "attempt_count": 0,
+    "last_attempt_at": ""
+  },
+  {
+    "video_id": "D2xrhpC4QNU",
+    "destination": "facebook_page",
+    "delivery_status": "SKIPPED_BASELINE",
+    "post_id": "",
+    "attempt_count": 0,
+    "last_attempt_at": ""
+  },
+  {
+    "video_id": "zsaTKjNVeew",
+    "destination": "facebook_page",
+    "delivery_status": "POSTED",
+    "post_id": "119382491255956_122319742106021516",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-01T18:26:08.878Z"
+  },
+  {
+    "video_id": "A4CUe3c8rJE",
+    "destination": "linkedin_organization",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-01T18:26:09.811Z"
+  },
+  {
+    "video_id": "iVDPZL_PEWo",
+    "destination": "linkedin_organization",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-01T18:26:09.810Z"
+  },
+  {
+    "video_id": "iVDPZL_PEWo",
+    "destination": "facebook_page",
+    "delivery_status": "POSTED",
+    "post_id": "119382491255956_122319742094021516",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-01T18:26:08.879Z"
+  },
+  {
+    "video_id": "19JpCgF-d9Q",
+    "destination": "linkedin_organization",
+    "delivery_status": "SKIPPED_BASELINE",
+    "post_id": "",
+    "attempt_count": 0,
+    "last_attempt_at": ""
+  },
+  {
+    "video_id": "A4CUe3c8rJE",
+    "destination": "facebook_page",
+    "delivery_status": "POSTED",
+    "post_id": "119382491255956_122319742118021516",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-01T18:26:08.880Z"
+  },
+  {
+    "video_id": "A4CUe3c8rJE",
+    "destination": "linkedin_person",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-01T18:26:10.230Z"
+  },
+  {
+    "video_id": "iVDPZL_PEWo",
+    "destination": "linkedin_person",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-01T18:26:10.230Z"
+  },
+  {
+    "video_id": "zsaTKjNVeew",
+    "destination": "linkedin_person",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-01T18:26:10.229Z"
+  },
+  {
+    "video_id": "zsaTKjNVeew",
+    "destination": "linkedin_organization",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-01T18:26:09.809Z"
+  },
+  {
+    "video_id": "hLvZfGcycOQ",
+    "destination": "linkedin_person",
+    "delivery_status": "SKIPPED_BASELINE",
+    "post_id": "",
+    "attempt_count": 0,
+    "last_attempt_at": ""
+  },
+  {
+    "video_id": "3SsvFlorjco",
+    "destination": "linkedin_person",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-21T15:00:09.407Z"
+  },
+  {
+    "video_id": "JHuLEqw2yG8",
+    "destination": "facebook_page",
+    "delivery_status": "BLOCKED_AUTH",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-08T12:15:07.457Z"
+  },
+  {
+    "video_id": "JHuLEqw2yG8",
+    "destination": "linkedin_person",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-08T12:15:08.467Z"
+  },
+  {
+    "video_id": "JHuLEqw2yG8",
+    "destination": "linkedin_organization",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-08T12:15:07.993Z"
+  },
+  {
+    "video_id": "PJ2VVCptHPA",
+    "destination": "linkedin_person",
+    "delivery_status": "SKIPPED_BASELINE",
+    "post_id": "",
+    "attempt_count": 0,
+    "last_attempt_at": ""
+  },
+  {
+    "video_id": "PJ2VVCptHPA",
+    "destination": "facebook_page",
+    "delivery_status": "SKIPPED_BASELINE",
+    "post_id": "",
+    "attempt_count": 0,
+    "last_attempt_at": ""
+  },
+  {
+    "video_id": "oT4TSM3Q82k",
+    "destination": "facebook_page",
+    "delivery_status": "BLOCKED_AUTH",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-28T22:30:08.007Z"
+  },
+  {
+    "video_id": "0E9YWKQ5iXY",
+    "destination": "linkedin_person",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-28T23:30:09.726Z"
+  },
+  {
+    "video_id": "3SsvFlorjco",
+    "destination": "linkedin_organization",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-21T15:00:08.994Z"
+  },
+  {
+    "video_id": "0E9YWKQ5iXY",
+    "destination": "linkedin_organization",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-28T23:30:09.023Z"
+  },
+  {
+    "video_id": "3SsvFlorjco",
+    "destination": "facebook_page",
+    "delivery_status": "BLOCKED_AUTH",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-21T15:00:08.381Z"
+  },
+  {
+    "video_id": "oT4TSM3Q82k",
+    "destination": "linkedin_person",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-28T22:30:10.128Z"
+  },
+  {
+    "video_id": "oT4TSM3Q82k",
+    "destination": "linkedin_organization",
+    "delivery_status": "FAILED_PERMANENT",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-28T22:30:09.433Z"
+  },
+  {
+    "video_id": "0E9YWKQ5iXY",
+    "destination": "facebook_page",
+    "delivery_status": "BLOCKED_AUTH",
+    "post_id": "",
+    "attempt_count": 1,
+    "last_attempt_at": "2026-09-28T23:30:07.938Z"
+  },
+  {
+    "video_id": "PJ2VVCptHPA",
+    "destination": "linkedin_organization",
+    "delivery_status": "SKIPPED_BASELINE",
+    "post_id": "",
+    "attempt_count": 0,
+    "last_attempt_at": ""
+  }
+]

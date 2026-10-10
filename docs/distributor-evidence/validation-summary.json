@@ -1,0 +1,14 @@
+{
+  "verified_date": "2026-10-10",
+  "repository_tests": {"files":135,"tests":817,"status":"passed"},
+  "lint_application":"passed",
+  "lint_new_edge_function":"passed",
+  "typescript_application":"passed",
+  "typescript_tooling":"passed",
+  "deno_check":"passed, 2.5.4",
+  "production_build":"passed, existing large chunk advisory",
+  "billing_hub_boundary":"passed",
+  "clinical_recovery_provenance":"passed, six invariants",
+  "edge_deployment":{"version":3,"bundle_sha256":"9b53f6bbddf60c2a012a9fd3024b408cb03b708864193f0ae013f174a4c2adf1","all_four_source_files_match":true},
+  "new_public_posts":0
+}

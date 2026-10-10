@@ -1,0 +1,10 @@
+import {execFileSync} from 'node:child_process';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {isDeepStrictEqual} from 'node:util';
+import {strict as assert} from 'node:assert';
+const ids=['ytReleaseMonitor002','ytSocialDispatcher002','ytDeliveryRecovery002','ytDistributorPreflight002'];
+const rows=JSON.parse(execFileSync('docker',['exec','n8n-postgres','psql','-U','n8n','-d','n8n','-At','-c',`select json_agg(t) from (select id,name,active,nodes,connections,settings from workflow_entity where id in (${ids.map(id=>"'"+id+"'").join(',')})) t`],{encoding:'utf8'}));
+const workflows=ids.map(id=>{const local=JSON.parse(readFileSync(new URL(`../n8n/${id}.json`,import.meta.url),'utf8'));const live=rows.find(r=>r.id===id);assert(live);const match=['name','nodes','connections'].every(k=>isDeepStrictEqual(local[k],live[k]))&&Object.entries(local.settings).every(([k,v])=>isDeepStrictEqual(v,live.settings[k]));assert(match,`${id} deployed graph differs`);assert.equal(live.active,id==='ytReleaseMonitor002'||id==='ytDeliveryRecovery002');return {id,active:live.active,source_matches:true};});
+const report={at:new Date().toISOString(),workflows};
+writeFileSync(new URL('../docs/distributor-evidence/n8n-deployment.json',import.meta.url),JSON.stringify(report,null,2));
+console.log(JSON.stringify(report,null,2));

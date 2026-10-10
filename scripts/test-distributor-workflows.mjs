@@ -1,0 +1,21 @@
+import {readFileSync} from 'node:fs';
+import {strict as assert} from 'node:assert';
+const ids=['ytReleaseMonitor002','ytSocialDispatcher002','ytDeliveryRecovery002','ytDistributorPreflight002'];
+for(const id of ids){const w=JSON.parse(readFileSync(new URL(`../n8n/${id}.json`,import.meta.url),'utf8'));assert.equal(w.active,false);const names=new Set(w.nodes.map(n=>n.name));assert.equal(names.size,w.nodes.length);for(const [from,outputs] of Object.entries(w.connections)){assert(names.has(from),from);for(const edge of outputs.main.flat())assert(names.has(edge.node),edge.node);}assert.equal(w.settings.saveDataErrorExecution,'none');assert.equal(w.settings.saveDataSuccessExecution,'none');assert.equal(w.settings.saveManualExecutions,false);for(const n of w.nodes)if(n.type==='n8n-nodes-base.httpRequest'&&n.parameters.method==='POST')assert.notEqual(n.retryOnFail,true);}
+const w=JSON.parse(readFileSync(new URL('../n8n/ytSocialDispatcher002.json',import.meta.url),'utf8'));
+const classify=w.nodes.find(n=>n.name==='Classify Result').parameters.jsCode;
+const run=(platform,response)=>new Function('$json','$',classify)(response,()=>({first:()=>({json:{job:{platform}}})}))[0].json;
+assert.equal(run('facebook',{statusCode:200,body:{id:'page_post'}}).outcome,'PUBLISHED');
+assert.equal(run('facebook',{statusCode:200,body:{}}).outcome,'NEEDS_REVIEW');
+assert.equal(run('linkedin',{statusCode:201,headers:{'x-restli-id':'urn:li:share:123'}}).outcome,'PUBLISHED');
+assert.equal(run('linkedin',{statusCode:201,headers:{}}).outcome,'NEEDS_REVIEW');
+assert.equal(run('facebook',{statusCode:400,body:{error:{code:190}}}).outcome,'BLOCKED_AUTH');
+assert.equal(run('facebook',{statusCode:429}).outcome,'RETRY_WAIT');
+assert.equal(run('facebook',{statusCode:500}).outcome,'NEEDS_REVIEW');
+assert.equal(run('facebook',{error:{message:'timeout'}}).outcome,'NEEDS_REVIEW');
+const permission=w.nodes.find(n=>n.name==='Require Send Permission').parameters.jsCode;
+assert.deepEqual(new Function('$json','$',permission)({allowed:false},()=>{throw new Error('must not read job or publish');}),[]);
+const ready=w.nodes.find(n=>n.name==='Evaluate Reel Processing').parameters.jsCode;
+const state=(status,index)=>new Function('$json','$runIndex',ready)({body:{status_code:status}},index)[0].json;
+assert.equal(state('IN_PROGRESS',0).ready,false);assert.equal(state('IN_PROGRESS',36).again,false);assert.equal(state('FINISHED',0).ready,true);assert.equal(state('ERROR',0).ready,false);
+console.log('PASS: workflow graph integrity, disabled activation, no saved credentials/media, no automatic POST retries, publication proof, rate-limit-only retry, ambiguous failures, send fencing, bounded Reel processing.');

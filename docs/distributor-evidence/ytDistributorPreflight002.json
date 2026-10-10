@@ -1,0 +1,59 @@
+{
+  "workflow": "ytDistributorPreflight002",
+  "status": "success",
+  "finished": true,
+  "at": "2026-10-10T14:02:56.621Z",
+  "results": {
+    "Sanitize Facebook": [
+      {
+        "status": "success",
+        "items": [
+          {
+            "platform": "facebook",
+            "http_status": 401,
+            "error_code": 190
+          }
+        ]
+      }
+    ],
+    "Sanitize LinkedIn": [
+      {
+        "status": "success",
+        "items": [
+          {
+            "platform": "linkedin",
+            "http_status": 200,
+            "id": 98694960
+          }
+        ]
+      }
+    ],
+    "Inspect Gateway": [
+      {
+        "status": "success",
+        "items": [
+          {
+            "publishing_enabled": false,
+            "baseline_completed_at": "2026-10-09T22:17:29.668+00:00",
+            "sampled_delivery_count": 100
+          }
+        ]
+      }
+    ],
+    "Inspect Original MP4": [
+      {
+        "status": "success",
+        "items": [
+          {
+            "ok": true,
+            "mime_type": "video/mp4",
+            "size_bytes": 28528276,
+            "duration_seconds": 70.799,
+            "width": 1080,
+            "height": 1920
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "workflow": "ytReleaseMonitor002",
+  "status": "success",
+  "finished": true,
+  "at": "2026-10-10T14:04:26.085Z",
+  "results": {
+    "Verify Channel Releases": [
+      {
+        "status": "success",
+        "items": [
+          {
+            "observed": 239,
+            "deep_scan": true,
+            "inventory_complete": true,
+            "baseline_complete": true
+          }
+        ]
+      }
+    ]
+  }
+}

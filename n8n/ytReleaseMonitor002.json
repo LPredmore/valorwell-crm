@@ -1,0 +1,133 @@
+{
+  "id": "ytReleaseMonitor002",
+  "name": "YouTube Release Monitor - Billing Hub",
+  "active": false,
+  "nodes": [
+    {
+      "id": "711dce25-650f-449d-b63e-573ba0dcbbd5",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "35e9f82c-d8d2-48c1-9b49-62609992da5e",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        100
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6d1ecf1b-a6c0-427d-bb45-5d97306fa71f",
+      "name": "Verify Channel Releases",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/release-distributor",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"action\":\"monitor\"}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      },
+      "retryOnFail": false
+    },
+    {
+      "id": "a930e9d8-21a3-4ef1-83db-0cdb9bf9b3ea",
+      "name": "Authenticated Wake Up",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "valorwell-youtube-release-v2",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "e6b25541-d92a-4f07-83c7-cd77328b9589",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "billingHubDistributor",
+          "name": "Billing Hub - Release Distributor"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Verify Channel Releases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Verify Channel Releases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authenticated Wake Up": {
+      "main": [
+        [
+          {
+            "node": "Verify Channel Releases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "executionTimeout": 600
+  }
+}

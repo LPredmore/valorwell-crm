@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-10T14:12:57.063Z",
+  "results": [
+    {
+      "name": "missing_worker_token",
+      "status": 401
+    },
+    {
+      "name": "invalid_media_capability",
+      "status": 404
+    }
+  ]
+}
