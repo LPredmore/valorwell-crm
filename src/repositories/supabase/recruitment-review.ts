@@ -4,6 +4,7 @@ import type {ProspectPage,TherapistProspect} from './therapist-prospects';
 export interface ReviewedProspect extends TherapistProspect{
   emailQuality:'missing'|'invalid'|'duplicate'|'valid';
   emailReviewStatus:'unverified'|'verified'|'invalid';
+  recruitingStage:'not_contacted'|'contact_attempted'|'replied'|'interested'|'application_handoff'|'applicant_linked'|'closed';
   phoneValid:boolean;duplicateEmailCount:number;suppressed:boolean;
   possibleApplicant:boolean;possibleContact:boolean;emailPreviewEligible:boolean;
 }
