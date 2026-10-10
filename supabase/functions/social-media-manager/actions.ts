@@ -7,7 +7,7 @@ export const VIEW_ACTIONS: ReadonlySet<string> = new Set([
   "list_publication_events", "get_settings", "get_youtube_connection_status",
   "get_thumbnail_url", "validate_publication",
   "list_series_schedules", "get_series_schedule", "get_series_readiness",
-  "get_shorts_thumbnail_feature",
+  "get_shorts_thumbnail_feature", "get_shorts_thumbnail_evidence",
 ]);
 
 /** Mutation actions: require capabilities.mutate (crm_admin/crm_operator today). */
