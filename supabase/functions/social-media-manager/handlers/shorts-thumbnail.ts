@@ -86,7 +86,11 @@ export async function runShortsThumbnailCompatTest(auth: AuthContext, params: Re
   }
   const { account, metadata } = await loadAccountSettings(auth);
   const feature = resolveShortsThumbnailFeature(metadata);
-  if (feature.state === "api_verified") throw new Error("Automatic Shorts thumbnails are already enabled. Disable them before running another test.");
+  // A previously verified channel may be retested without disabling current publishing.
+  // Keep the existing feature state until the operator reviews this particular result.
+  if (feature.testRuns.some((run) => run.visualResult === "pending")) {
+    throw new Error("Review the pending Shorts thumbnail test before starting another one.");
+  }
 
   // A test video must never be one the CRM is publishing or that an operator already finished.
   const { data: linked, error: linkedError } = await auth.db.from("ai_operations_social_publications")
@@ -139,9 +143,13 @@ export async function runShortsThumbnailCompatTest(auth: AuthContext, params: Re
       run.error = `Readback failed: ${safeError(error)}`.slice(0, 500);
     }
   }
-  // Even an accepted request leaves the account in "testing": only a human looking at the
-  // rendered Short can enable automatic uploads.
-  const next: ShortsThumbnailFeature = { ...feature, state: "testing", testRuns: [run, ...feature.testRuns] };
+  // First-time tests remain in "testing". Retesting an already verified channel
+  // does not silently turn off automatic uploads while visual review is pending.
+  // Explicit "Not visible" feedback still disables them for safety.
+  const next: ShortsThumbnailFeature = {
+    ...feature, state: feature.state === "api_verified" ? "api_verified" : "testing",
+    testRuns: [run, ...feature.testRuns],
+  };
   await saveFeature(auth, account.id, metadata, next);
   return { run, feature: view(next, account.id), studioUrl: `https://studio.youtube.com/video/${encodeURIComponent(videoId)}/edit`, shortsUrl: `https://www.youtube.com/shorts/${encodeURIComponent(videoId)}` };
 }
