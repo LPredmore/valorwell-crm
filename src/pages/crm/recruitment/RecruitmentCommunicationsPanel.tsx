@@ -24,6 +24,7 @@ const SOURCES:Record<string,string>={
  crm_change:'CRM update',manual_activity:'Recruiter-logged activity',
  relationship_email:'Matched stored CRM email',applicant_email:'Linked applicant email',
  applicant_activity:'Linked applicant activity',
+ recruitment_reply:'Matched inbound recruitment reply',
 };
 export function RecruitmentCommunicationsPanel({tenantId,row,canEdit}:{
  tenantId:string;row:ReviewedProspect;canEdit:boolean;

@@ -5,7 +5,7 @@ export type RecruitmentChannel='email'|'sms'|'phone'|'linkedin'|'meeting'|'other
 export type RecruitmentOutcome='attempted'|'responded'|'interested'|'not_interested'|'handoff'|'note';
 export type RecruitmentDirection='outbound'|'inbound'|'internal';
 export interface RecruitmentTimelineEntry{
- at:string;id:string;source:'crm_change'|'manual_activity'|'applicant_email'|'applicant_activity'|'relationship_email';
+ at:string;id:string;source:'crm_change'|'manual_activity'|'applicant_email'|'applicant_activity'|'relationship_email'|'recruitment_reply';
  channel:string;direction:string;status:string;subject:string;summary:string;threadId:string|null;
 }
 export interface RecruitmentContactInput{

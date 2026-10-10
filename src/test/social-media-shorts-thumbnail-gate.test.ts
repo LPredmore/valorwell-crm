@@ -33,6 +33,11 @@ function fakeClient(over: Partial<Awaited<ReturnType<ShortsThumbnailClient['getV
   const video = { id: 'testVideo01', channelId: 'UC-A', privacyStatus: 'private', publishAt: null, uploadStatus: 'processed', durationSeconds: 30, hasCustomThumbnail: true, ...over };
   const client: ShortsThumbnailClient = {
     getVideo: async () => video,
+    getThumbnailStatus: async () => ({
+      hasCustomThumbnail: video.hasCustomThumbnail,
+      processingStatus: video.uploadStatus,
+      thumbnails: null,
+    }),
     setThumbnail: async () => { calls.setThumbnail += 1; if (setError) throw setError; },
     fileMetadata: async () => ({ size: 2048, mimeType: 'image/png' }),
     fileBytes: async () => new ArrayBuffer(2048),
