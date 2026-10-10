@@ -93,6 +93,7 @@ export default function TherapistProspectsPage(){
     </div>
     {query.isLoading&&<p>Loading tenant-authorized prospects…</p>}
     {query.isError&&<p role="alert" className="text-destructive">{query.error.message}</p>}
+    {!id&&<RecruitmentPreviewPanel tenantId={currentTenantId}/>}
     {!id&&<Card><CardHeader><CardTitle>Recruitment review queue</CardTitle>
       <CardDescription>Search names, full state names or abbreviations, and narrow results by primary or licensed state. Filters can be combined. Results are server-paged (50 per page), and no campaigns are triggered.</CardDescription></CardHeader>
       <CardContent className="space-y-3">
