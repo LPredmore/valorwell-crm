@@ -112,7 +112,7 @@ export default function TherapistProspectsPage(){
             </select>
           </div>
           <Button type="submit">Search</Button>
-          {(stateFilter||search)&&<Button type="button" variant="outline" onClick={()=>{setStateFilter('');setSearch('');setSearchInput('');setPage(1);}}>Clear filters</Button>}
+          {(stateFilter||search||workflowFilter||qualityFilter||dueFilter||mineOnly)&&<Button type="button" variant="outline" onClick={()=>{setStateFilter('');setSearch('');setSearchInput('');setWorkflowFilter('');setQualityFilter('');setDueFilter('');setMineOnly(false);setPage(1);}}>Clear filters</Button>}
         </form>
         <RecruitmentFilters workflow={workflowFilter} quality={qualityFilter} due={dueFilter} mineOnly={mineOnly}
           onWorkflow={v=>{setWorkflowFilter(v);setPage(1)}} onQuality={v=>{setQualityFilter(v);setPage(1)}}
