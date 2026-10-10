@@ -141,6 +141,215 @@ export type Database = {
           },
         ]
       }
+      ai_operations_distribution_config: {
+        Row: {
+          baseline_completed_at: string | null
+          channel_id: string
+          created_at: string
+          last_full_scan_at: string | null
+          monitor_cursor: string | null
+          publishing_enabled: boolean
+          tenant_id: string
+          test_approval_reference: string | null
+          test_delivery_id: string | null
+          worker_token_hash: string | null
+        }
+        Insert: {
+          baseline_completed_at?: string | null
+          channel_id: string
+          created_at?: string
+          last_full_scan_at?: string | null
+          monitor_cursor?: string | null
+          publishing_enabled?: boolean
+          tenant_id: string
+          test_approval_reference?: string | null
+          test_delivery_id?: string | null
+          worker_token_hash?: string | null
+        }
+        Update: {
+          baseline_completed_at?: string | null
+          channel_id?: string
+          created_at?: string
+          last_full_scan_at?: string | null
+          monitor_cursor?: string | null
+          publishing_enabled?: boolean
+          tenant_id?: string
+          test_approval_reference?: string | null
+          test_delivery_id?: string | null
+          worker_token_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_distribution_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribution_test_same_tenant"
+            columns: ["tenant_id", "test_delivery_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_distribution_deliveries"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      ai_operations_distribution_destinations: {
+        Row: {
+          credential_verified_at: string | null
+          display_name: string
+          enabled: boolean
+          external_account_id: string
+          id: string
+          platform: string
+          tenant_id: string
+        }
+        Insert: {
+          credential_verified_at?: string | null
+          display_name: string
+          enabled?: boolean
+          external_account_id: string
+          id?: string
+          platform: string
+          tenant_id: string
+        }
+        Update: {
+          credential_verified_at?: string | null
+          display_name?: string
+          enabled?: boolean
+          external_account_id?: string
+          id?: string
+          platform?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_distribution_destinations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_distribution_events: {
+        Row: {
+          delivery_id: string
+          from_status: string | null
+          id: number
+          occurred_at: string
+          tenant_id: string
+          to_status: string
+        }
+        Insert: {
+          delivery_id: string
+          from_status?: string | null
+          id?: never
+          occurred_at?: string
+          tenant_id: string
+          to_status: string
+        }
+        Update: {
+          delivery_id?: string
+          from_status?: string | null
+          id?: never
+          occurred_at?: string
+          tenant_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_distribution_events_tenant_id_delivery_id_fkey"
+            columns: ["tenant_id", "delivery_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_distribution_deliveries"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      ai_operations_distribution_media_leases: {
+        Row: {
+          created_at: string
+          delivery_id: string
+          drive_file_id: string
+          expires_at: string
+          id: string
+          size_bytes: number
+          tenant_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_id: string
+          drive_file_id: string
+          expires_at: string
+          id?: string
+          size_bytes: number
+          tenant_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          delivery_id?: string
+          drive_file_id?: string
+          expires_at?: string
+          id?: string
+          size_bytes?: number
+          tenant_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_distribution_media_lea_tenant_id_delivery_id_fkey"
+            columns: ["tenant_id", "delivery_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_distribution_deliveries"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      ai_operations_distribution_overrides: {
+        Row: {
+          classification: string | null
+          drive_file_id: string | null
+          facebook_description: string | null
+          instagram_description: string | null
+          linkedin_description: string | null
+          release_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          classification?: string | null
+          drive_file_id?: string | null
+          facebook_description?: string | null
+          instagram_description?: string | null
+          linkedin_description?: string | null
+          release_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          classification?: string | null
+          drive_file_id?: string | null
+          facebook_description?: string | null
+          instagram_description?: string | null
+          linkedin_description?: string | null
+          release_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_distribution_overrides_tenant_id_release_id_fkey"
+            columns: ["tenant_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_youtube_release_registry"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       ai_operations_finding_events: {
         Row: {
           actor_kind: string
@@ -618,6 +827,149 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_operations_social_distribution_attempts: {
+        Row: {
+          attempt_number: number
+          completed_at: string | null
+          delivery_id: string
+          error_category: string | null
+          external_post_id: string | null
+          http_status: number | null
+          id: string
+          lease_token: string
+          outcome: string
+          started_at: string
+          tenant_id: string
+          worker_id: string
+        }
+        Insert: {
+          attempt_number: number
+          completed_at?: string | null
+          delivery_id: string
+          error_category?: string | null
+          external_post_id?: string | null
+          http_status?: number | null
+          id?: string
+          lease_token: string
+          outcome?: string
+          started_at?: string
+          tenant_id: string
+          worker_id: string
+        }
+        Update: {
+          attempt_number?: number
+          completed_at?: string | null
+          delivery_id?: string
+          error_category?: string | null
+          external_post_id?: string | null
+          http_status?: number | null
+          id?: string
+          lease_token?: string
+          outcome?: string
+          started_at?: string
+          tenant_id?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_social_distribution_at_tenant_id_delivery_id_fkey"
+            columns: ["tenant_id", "delivery_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_distribution_deliveries"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      ai_operations_social_distribution_deliveries: {
+        Row: {
+          attempt_count: number
+          content_type: string
+          created_at: string
+          description_snapshot: string | null
+          destination_id: string
+          drive_file_id: string | null
+          external_container_id: string | null
+          external_post_id: string | null
+          external_post_url: string | null
+          id: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_token: string | null
+          next_retry_at: string | null
+          platform: string
+          published_at: string | null
+          release_id: string
+          request_started_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          youtube_video_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          content_type: string
+          created_at?: string
+          description_snapshot?: string | null
+          destination_id: string
+          drive_file_id?: string | null
+          external_container_id?: string | null
+          external_post_id?: string | null
+          external_post_url?: string | null
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          next_retry_at?: string | null
+          platform: string
+          published_at?: string | null
+          release_id: string
+          request_started_at?: string | null
+          status: string
+          tenant_id: string
+          updated_at?: string
+          youtube_video_id: string
+        }
+        Update: {
+          attempt_count?: number
+          content_type?: string
+          created_at?: string
+          description_snapshot?: string | null
+          destination_id?: string
+          drive_file_id?: string | null
+          external_container_id?: string | null
+          external_post_id?: string | null
+          external_post_url?: string | null
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          next_retry_at?: string | null
+          platform?: string
+          published_at?: string | null
+          release_id?: string
+          request_started_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          youtube_video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_social_distribution_del_tenant_id_release_id_fkey"
+            columns: ["tenant_id", "release_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_youtube_release_registry"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_operations_social_distribution_tenant_id_destination_id_fkey"
+            columns: ["tenant_id", "destination_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_distribution_destinations"
+            referencedColumns: ["tenant_id", "id"]
           },
         ]
       }
@@ -2498,6 +2850,101 @@ export type Database = {
           video_title?: string | null
         }
         Relationships: []
+      }
+      ai_operations_youtube_release_registry: {
+        Row: {
+          baseline_excluded: boolean
+          channel_id: string
+          classification: string
+          clip_id: string | null
+          detection_method: string
+          duration_seconds: number | null
+          excluded: boolean
+          first_observed_at: string
+          first_public_at: string | null
+          id: string
+          last_checked_at: string | null
+          project_id: string | null
+          source_publication_id: string | null
+          tenant_id: string
+          title: string
+          verification_requested_at: string | null
+          video_url: string
+          visibility: string
+          youtube_video_id: string
+        }
+        Insert: {
+          baseline_excluded?: boolean
+          channel_id: string
+          classification?: string
+          clip_id?: string | null
+          detection_method?: string
+          duration_seconds?: number | null
+          excluded?: boolean
+          first_observed_at?: string
+          first_public_at?: string | null
+          id?: string
+          last_checked_at?: string | null
+          project_id?: string | null
+          source_publication_id?: string | null
+          tenant_id: string
+          title?: string
+          verification_requested_at?: string | null
+          video_url: string
+          visibility?: string
+          youtube_video_id: string
+        }
+        Update: {
+          baseline_excluded?: boolean
+          channel_id?: string
+          classification?: string
+          clip_id?: string | null
+          detection_method?: string
+          duration_seconds?: number | null
+          excluded?: boolean
+          first_observed_at?: string
+          first_public_at?: string | null
+          id?: string
+          last_checked_at?: string | null
+          project_id?: string | null
+          source_publication_id?: string | null
+          tenant_id?: string
+          title?: string
+          verification_requested_at?: string | null
+          video_url?: string
+          visibility?: string
+          youtube_video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_operations_youtube_release_regist_source_publication_id_fkey"
+            columns: ["source_publication_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_social_publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_youtube_release_registry_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_clips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_youtube_release_registry_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "ai_operations_video_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_operations_youtube_release_registry_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_operations_youtube_video_metrics: {
         Row: {
@@ -13552,6 +13999,494 @@ export type Database = {
           },
         ]
       }
+      crm_pipeline_fields: {
+        Row: {
+          allow_sort: boolean
+          created_at: string
+          field_key: string
+          field_type: string
+          id: string
+          label: string
+          options: Json
+          pipeline_id: string
+          position: number
+          required: boolean
+          show_on_card: boolean
+          tenant_id: string
+        }
+        Insert: {
+          allow_sort?: boolean
+          created_at?: string
+          field_key: string
+          field_type: string
+          id?: string
+          label: string
+          options?: Json
+          pipeline_id: string
+          position?: number
+          required?: boolean
+          show_on_card?: boolean
+          tenant_id: string
+        }
+        Update: {
+          allow_sort?: boolean
+          created_at?: string
+          field_key?: string
+          field_type?: string
+          id?: string
+          label?: string
+          options?: Json
+          pipeline_id?: string
+          position?: number
+          required?: boolean
+          show_on_card?: boolean
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipeline_fields_tenant_id_pipeline_id_fkey"
+            columns: ["tenant_id", "pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      crm_pipeline_records: {
+        Row: {
+          associated_organization_id: string | null
+          contact_id: string | null
+          created_at: string
+          field_values: Json
+          id: string
+          next_action: string | null
+          next_action_due_at: string | null
+          organization_id: string | null
+          owner_profile_id: string | null
+          pipeline_id: string
+          source_record_id: string | null
+          source_record_type: string | null
+          stage_id: string
+          tenant_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          associated_organization_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          field_values?: Json
+          id?: string
+          next_action?: string | null
+          next_action_due_at?: string | null
+          organization_id?: string | null
+          owner_profile_id?: string | null
+          pipeline_id: string
+          source_record_id?: string | null
+          source_record_type?: string | null
+          stage_id: string
+          tenant_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          associated_organization_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          field_values?: Json
+          id?: string
+          next_action?: string | null
+          next_action_due_at?: string | null
+          organization_id?: string | null
+          owner_profile_id?: string | null
+          pipeline_id?: string
+          source_record_id?: string | null
+          source_record_type?: string | null
+          stage_id?: string
+          tenant_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipeline_associated_org_tenant_fk"
+            columns: ["tenant_id", "associated_organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organization_directory_v"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_associated_org_tenant_fk"
+            columns: ["tenant_id", "associated_organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_records_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_records_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_records_tenant_id_contact_id_fkey"
+            columns: ["tenant_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contact_directory_v"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_records_tenant_id_contact_id_fkey"
+            columns: ["tenant_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_records_tenant_id_organization_id_fkey"
+            columns: ["tenant_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organization_directory_v"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_records_tenant_id_organization_id_fkey"
+            columns: ["tenant_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_records_tenant_id_pipeline_id_fkey"
+            columns: ["tenant_id", "pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_records_tenant_id_pipeline_id_stage_id_fkey"
+            columns: ["tenant_id", "pipeline_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_stages"
+            referencedColumns: ["tenant_id", "pipeline_id", "id"]
+          },
+        ]
+      }
+      crm_pipeline_saved_views: {
+        Row: {
+          attention: string
+          created_at: string
+          id: string
+          name: string
+          owner_filter: string
+          owner_profile_id: string
+          pipeline_id: string
+          search_text: string
+          sort_key: string
+          stage_id: string | null
+          tenant_id: string
+          updated_at: string
+          view_mode: string
+        }
+        Insert: {
+          attention?: string
+          created_at?: string
+          id?: string
+          name: string
+          owner_filter?: string
+          owner_profile_id: string
+          pipeline_id: string
+          search_text?: string
+          sort_key?: string
+          stage_id?: string | null
+          tenant_id: string
+          updated_at?: string
+          view_mode?: string
+        }
+        Update: {
+          attention?: string
+          created_at?: string
+          id?: string
+          name?: string
+          owner_filter?: string
+          owner_profile_id?: string
+          pipeline_id?: string
+          search_text?: string
+          sort_key?: string
+          stage_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+          view_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipeline_saved_views_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_saved_views_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_saved_views_tenant_id_pipeline_id_fkey"
+            columns: ["tenant_id", "pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_saved_views_tenant_id_pipeline_id_stage_id_fkey"
+            columns: ["tenant_id", "pipeline_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_stages"
+            referencedColumns: ["tenant_id", "pipeline_id", "id"]
+          },
+        ]
+      }
+      crm_pipeline_source_bindings: {
+        Row: {
+          created_at: string
+          id: string
+          pipeline_id: string
+          source_kind: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pipeline_id: string
+          source_kind: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pipeline_id?: string
+          source_kind?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipeline_source_bindings_tenant_id_pipeline_id_fkey"
+            columns: ["tenant_id", "pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      crm_pipeline_stage_events: {
+        Row: {
+          actor_profile_id: string | null
+          from_stage_id: string | null
+          id: string
+          occurred_at: string
+          pipeline_id: string
+          record_id: string
+          tenant_id: string
+          to_stage_id: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          from_stage_id?: string | null
+          id?: string
+          occurred_at?: string
+          pipeline_id: string
+          record_id: string
+          tenant_id: string
+          to_stage_id: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          from_stage_id?: string | null
+          id?: string
+          occurred_at?: string
+          pipeline_id?: string
+          record_id?: string
+          tenant_id?: string
+          to_stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipeline_stage_events_tenant_id_pipeline_id_record_id_fkey"
+            columns: ["tenant_id", "pipeline_id", "record_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_records"
+            referencedColumns: ["tenant_id", "pipeline_id", "id"]
+          },
+        ]
+      }
+      crm_pipeline_stage_rules: {
+        Row: {
+          created_at: string
+          from_stage_id: string
+          is_allowed: boolean
+          pipeline_id: string
+          tenant_id: string
+          to_stage_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_stage_id: string
+          is_allowed: boolean
+          pipeline_id: string
+          tenant_id: string
+          to_stage_id: string
+        }
+        Update: {
+          created_at?: string
+          from_stage_id?: string
+          is_allowed?: boolean
+          pipeline_id?: string
+          tenant_id?: string
+          to_stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipeline_stage_rules_tenant_id_pipeline_id_fkey"
+            columns: ["tenant_id", "pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_stage_rules_tenant_id_pipeline_id_from_stage__fkey"
+            columns: ["tenant_id", "pipeline_id", "from_stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_stages"
+            referencedColumns: ["tenant_id", "pipeline_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_pipeline_stage_rules_tenant_id_pipeline_id_to_stage_id_fkey"
+            columns: ["tenant_id", "pipeline_id", "to_stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_stages"
+            referencedColumns: ["tenant_id", "pipeline_id", "id"]
+          },
+        ]
+      }
+      crm_pipeline_stages: {
+        Row: {
+          created_at: string
+          id: string
+          is_terminal: boolean
+          name: string
+          pipeline_id: string
+          position: number
+          source_stage_key: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_terminal?: boolean
+          name: string
+          pipeline_id: string
+          position: number
+          source_stage_key?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_terminal?: boolean
+          name?: string
+          pipeline_id?: string
+          position?: number
+          source_stage_key?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipeline_stages_tenant_id_pipeline_id_fkey"
+            columns: ["tenant_id", "pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      crm_pipelines: {
+        Row: {
+          archived_at: string | null
+          card_field_keys: string[]
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          sort_field_keys: string[]
+          source_key: string | null
+          source_mode: string
+          subject_type: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          card_field_keys?: string[]
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          sort_field_keys?: string[]
+          source_key?: string | null
+          source_mode?: string
+          subject_type: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          card_field_keys?: string[]
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          sort_field_keys?: string[]
+          source_key?: string | null
+          source_mode?: string
+          subject_type?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipelines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_pipelines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_pipelines_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_provider_applicant_communication_jobs: {
         Row: {
           applicant_id: string
@@ -13663,6 +14598,196 @@ export type Database = {
           },
         ]
       }
+      crm_recruitment_draft_sequences: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          license_filter: string | null
+          name: string
+          state_filter: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string
+          id?: string
+          license_filter?: string | null
+          name: string
+          state_filter?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          license_filter?: string | null
+          name?: string
+          state_filter?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_recruitment_draft_sequences_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_draft_sequences_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_draft_sequences_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_draft_sequences_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_draft_sequences_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_recruitment_draft_steps: {
+        Row: {
+          body_text: string
+          created_at: string
+          delay_days: number
+          sequence_id: string
+          step_order: number
+          subject: string
+          tenant_id: string
+        }
+        Insert: {
+          body_text: string
+          created_at?: string
+          delay_days: number
+          sequence_id: string
+          step_order: number
+          subject: string
+          tenant_id: string
+        }
+        Update: {
+          body_text?: string
+          created_at?: string
+          delay_days?: number
+          sequence_id?: string
+          step_order?: number
+          subject?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_recruitment_draft_steps_tenant_id_sequence_id_fkey"
+            columns: ["tenant_id", "sequence_id"]
+            isOneToOne: false
+            referencedRelation: "crm_recruitment_draft_sequences"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      crm_recruitment_inbound_triage: {
+        Row: {
+          classification: string
+          created_at: string
+          decision: string | null
+          email_message_id: string
+          id: string
+          occurred_at: string
+          prospect_id: string
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          summary: string
+          tenant_id: string
+        }
+        Insert: {
+          classification: string
+          created_at?: string
+          decision?: string | null
+          email_message_id: string
+          id?: string
+          occurred_at: string
+          prospect_id: string
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          summary: string
+          tenant_id: string
+        }
+        Update: {
+          classification?: string
+          created_at?: string
+          decision?: string | null
+          email_message_id?: string
+          id?: string
+          occurred_at?: string
+          prospect_id?: string
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          summary?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_recruitment_inbound_triage_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_inbound_triage_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_inbound_triage_tenant_id_email_message_id_fkey"
+            columns: ["tenant_id", "email_message_id"]
+            isOneToOne: true
+            referencedRelation: "crm_email_messages"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_inbound_triage_tenant_id_prospect_id_fkey"
+            columns: ["tenant_id", "prospect_id"]
+            isOneToOne: false
+            referencedRelation: "crm_therapist_prospect_workflow"
+            referencedColumns: ["tenant_id", "prospect_id"]
+          },
+        ]
+      }
       crm_resend_email_settings: {
         Row: {
           connection_status: string
@@ -13732,6 +14857,8 @@ export type Database = {
           owner_id: string | null
           priority: Database["public"]["Enums"]["crm_task_priority_enum"]
           recurrence: string | null
+          relationship_contact_id: string | null
+          relationship_organization_id: string | null
           staff_id: string | null
           start_at: string | null
           status: Database["public"]["Enums"]["crm_task_status_enum"]
@@ -13756,6 +14883,8 @@ export type Database = {
           owner_id?: string | null
           priority?: Database["public"]["Enums"]["crm_task_priority_enum"]
           recurrence?: string | null
+          relationship_contact_id?: string | null
+          relationship_organization_id?: string | null
           staff_id?: string | null
           start_at?: string | null
           status?: Database["public"]["Enums"]["crm_task_status_enum"]
@@ -13780,6 +14909,8 @@ export type Database = {
           owner_id?: string | null
           priority?: Database["public"]["Enums"]["crm_task_priority_enum"]
           recurrence?: string | null
+          relationship_contact_id?: string | null
+          relationship_organization_id?: string | null
           staff_id?: string | null
           start_at?: string | null
           status?: Database["public"]["Enums"]["crm_task_status_enum"]
@@ -13814,6 +14945,333 @@ export type Database = {
           {
             foreignKeyName: "crm_tasks_owner_id_profiles_fkey"
             columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_relationship_contact_id_fkey"
+            columns: ["relationship_contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contact_directory_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_relationship_contact_id_fkey"
+            columns: ["relationship_contact_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_relationship_organization_id_fkey"
+            columns: ["relationship_organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organization_directory_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_relationship_organization_id_fkey"
+            columns: ["relationship_organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_therapist_prospect_applicant_links: {
+        Row: {
+          applicant_id: string
+          link_reason: string
+          linked_at: string
+          linked_by: string
+          prospect_id: string
+          tenant_id: string
+        }
+        Insert: {
+          applicant_id: string
+          link_reason: string
+          linked_at?: string
+          linked_by: string
+          prospect_id: string
+          tenant_id: string
+        }
+        Update: {
+          applicant_id?: string
+          link_reason?: string
+          linked_at?: string
+          linked_by?: string
+          prospect_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_therapist_prospect_applicant_li_tenant_id_applicant_id_fkey"
+            columns: ["tenant_id", "applicant_id"]
+            isOneToOne: true
+            referencedRelation: "provider_applicants"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_applicant_lin_tenant_id_prospect_id_fkey"
+            columns: ["tenant_id", "prospect_id"]
+            isOneToOne: true
+            referencedRelation: "therapist_outreach_prospects"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_applicant_links_linked_by_fkey"
+            columns: ["linked_by"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_applicant_links_linked_by_fkey"
+            columns: ["linked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_applicant_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_therapist_prospect_contact_events: {
+        Row: {
+          actor_profile_id: string
+          channel: string
+          client_action_id: string
+          created_at: string
+          direction: string
+          id: string
+          occurred_at: string
+          outcome: string
+          prospect_id: string
+          summary: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_profile_id: string
+          channel: string
+          client_action_id: string
+          created_at?: string
+          direction: string
+          id?: string
+          occurred_at?: string
+          outcome: string
+          prospect_id: string
+          summary: string
+          tenant_id: string
+        }
+        Update: {
+          actor_profile_id?: string
+          channel?: string
+          client_action_id?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          occurred_at?: string
+          outcome?: string
+          prospect_id?: string
+          summary?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_therapist_prospect_contact_event_tenant_id_prospect_id_fkey"
+            columns: ["tenant_id", "prospect_id"]
+            isOneToOne: false
+            referencedRelation: "crm_therapist_prospect_workflow"
+            referencedColumns: ["tenant_id", "prospect_id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_contact_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_contact_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_therapist_prospect_events: {
+        Row: {
+          actor_profile_id: string
+          created_at: string
+          id: number
+          new_owner_profile_id: string | null
+          new_status: string
+          old_owner_profile_id: string | null
+          old_status: string | null
+          prospect_id: string
+          reason: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_profile_id: string
+          created_at?: string
+          id?: never
+          new_owner_profile_id?: string | null
+          new_status: string
+          old_owner_profile_id?: string | null
+          old_status?: string | null
+          prospect_id: string
+          reason: string
+          tenant_id: string
+        }
+        Update: {
+          actor_profile_id?: string
+          created_at?: string
+          id?: never
+          new_owner_profile_id?: string | null
+          new_status?: string
+          old_owner_profile_id?: string | null
+          old_status?: string | null
+          prospect_id?: string
+          reason?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_therapist_prospect_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_events_tenant_id_prospect_id_fkey"
+            columns: ["tenant_id", "prospect_id"]
+            isOneToOne: false
+            referencedRelation: "crm_therapist_prospect_workflow"
+            referencedColumns: ["tenant_id", "prospect_id"]
+          },
+        ]
+      }
+      crm_therapist_prospect_workflow: {
+        Row: {
+          created_at: string
+          email_review_status: string
+          email_reviewed_at: string | null
+          email_reviewed_by: string | null
+          next_action: string | null
+          next_action_due_at: string | null
+          notes: string | null
+          owner_profile_id: string | null
+          prospect_id: string
+          recruiting_stage: string
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+          workflow_status: string
+        }
+        Insert: {
+          created_at?: string
+          email_review_status?: string
+          email_reviewed_at?: string | null
+          email_reviewed_by?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
+          notes?: string | null
+          owner_profile_id?: string | null
+          prospect_id: string
+          recruiting_stage?: string
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+          workflow_status?: string
+        }
+        Update: {
+          created_at?: string
+          email_review_status?: string
+          email_reviewed_at?: string | null
+          email_reviewed_by?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
+          notes?: string | null
+          owner_profile_id?: string | null
+          prospect_id?: string
+          recruiting_stage?: string
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+          workflow_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_therapist_prospect_workflow_email_reviewed_by_fkey"
+            columns: ["email_reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_workflow_email_reviewed_by_fkey"
+            columns: ["email_reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_workflow_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_workflow_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_workflow_source_fk"
+            columns: ["tenant_id", "prospect_id"]
+            isOneToOne: true
+            referencedRelation: "therapist_outreach_prospects"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_workflow_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_workflow_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_therapist_prospect_workflow_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -13864,6 +15322,7 @@ export type Database = {
           last_verified_date: string
           notes: string | null
           phone: string | null
+          relationship_organization_id: string | null
           source_name: string
           source_url: string
           state: string
@@ -13886,6 +15345,7 @@ export type Database = {
           last_verified_date: string
           notes?: string | null
           phone?: string | null
+          relationship_organization_id?: string | null
           source_name?: string
           source_url: string
           state: string
@@ -13908,6 +15368,7 @@ export type Database = {
           last_verified_date?: string
           notes?: string | null
           phone?: string | null
+          relationship_organization_id?: string | null
           source_name?: string
           source_url?: string
           state?: string
@@ -13918,6 +15379,20 @@ export type Database = {
           visn?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_va_referral_org_tenant_fk"
+            columns: ["tenant_id", "relationship_organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organization_directory_v"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_va_referral_org_tenant_fk"
+            columns: ["tenant_id", "relationship_organization_id"]
+            isOneToOne: false
+            referencedRelation: "relationship_organizations"
+            referencedColumns: ["tenant_id", "id"]
+          },
           {
             foreignKeyName: "crm_va_vaccn_referral_contacts_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -24354,6 +25829,7 @@ export type Database = {
           outreach_exclusion_reason: string | null
           phone: string | null
           state: string | null
+          tenant_id: string
           updated_at: string
         }
         Insert: {
@@ -24370,6 +25846,7 @@ export type Database = {
           outreach_exclusion_reason?: string | null
           phone?: string | null
           state?: string | null
+          tenant_id: string
           updated_at?: string
         }
         Update: {
@@ -24386,9 +25863,18 @@ export type Database = {
           outreach_exclusion_reason?: string | null
           phone?: string | null
           state?: string | null
+          tenant_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "therapist_outreach_prospects_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       training_videos: {
         Row: {
@@ -28858,6 +30344,16 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_create_research_organization: {
+        Args: {
+          p_confirm_regional_facility?: boolean
+          p_pipeline_id: string
+          p_primary_email: string
+          p_primary_name: string
+          p_source_id: string
+        }
+        Returns: string
+      }
       crm_donor_overview: { Args: never; Returns: Json }
       crm_email_studio_context: { Args: never; Returns: Json }
       crm_email_template_archive: {
@@ -28934,6 +30430,14 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_enroll_research_source: {
+        Args: {
+          p_organization_id: string
+          p_pipeline_id: string
+          p_source_id: string
+        }
+        Returns: string
+      }
       crm_evaluate_campaign_concurrency: {
         Args: {
           p_campaign_registry_id: string
@@ -28991,6 +30495,27 @@ export type Database = {
       }
       crm_list_campaign_trigger_rules: { Args: never; Returns: Json }
       crm_list_newsletters: { Args: never; Returns: Json }
+      crm_list_therapist_prospects: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_prospect_id?: string
+          p_search?: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      crm_list_therapist_prospects_filtered: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_prospect_id?: string
+          p_search?: string
+          p_state?: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       crm_mark_enrollment_responded: {
         Args: {
           p_enrollment_id: string
@@ -28998,6 +30523,14 @@ export type Database = {
           p_reason: string
         }
         Returns: Json
+      }
+      crm_move_manual_pipeline_record: {
+        Args: {
+          p_expected_version: number
+          p_record_id: string
+          p_to_stage_id: string
+        }
+        Returns: number
       }
       crm_newsletter_audience_preview: {
         Args: { p_audience_domains: string[]; p_sample_limit?: number }
@@ -29094,6 +30627,85 @@ export type Database = {
         }
         Returns: undefined
       }
+      crm_recruitment_applicant_candidates: {
+        Args: { p_prospect_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      crm_recruitment_campaign_preview: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
+      crm_recruitment_communication_timeline: {
+        Args: { p_limit?: number; p_prospect_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      crm_recruitment_draft_preview: {
+        Args: { p_sequence_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      crm_recruitment_draft_workspace: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
+      crm_recruitment_link_existing_applicant: {
+        Args: {
+          p_applicant_id: string
+          p_prospect_id: string
+          p_reason: string
+          p_tenant_id: string
+        }
+        Returns: boolean
+      }
+      crm_recruitment_log_contact: {
+        Args: {
+          p_channel: string
+          p_client_action_id: string
+          p_direction: string
+          p_expected_version: number
+          p_new_stage: string
+          p_occurred_at: string
+          p_outcome: string
+          p_prospect_id: string
+          p_summary: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      crm_recruitment_reply_inbox: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
+      crm_recruitment_review_queue: {
+        Args: {
+          p_due?: string
+          p_owner?: string
+          p_page?: number
+          p_page_size?: number
+          p_prospect_id?: string
+          p_quality?: string
+          p_search?: string
+          p_state?: string
+          p_tenant_id: string
+          p_workflow?: string
+        }
+        Returns: Json
+      }
+      crm_recruitment_review_reply: {
+        Args: { p_decision: string; p_reply_id: string; p_tenant_id: string }
+        Returns: boolean
+      }
+      crm_recruitment_save_draft: {
+        Args: {
+          p_description: string
+          p_license_filter: string
+          p_name: string
+          p_sequence_id: string
+          p_state_filter: string
+          p_steps: Json
+          p_tenant_id: string
+        }
+        Returns: string
+      }
       crm_release_stale_newsletter_claims: {
         Args: { p_older_than_minutes?: number }
         Returns: Json
@@ -29123,6 +30735,16 @@ export type Database = {
           p_reason: string
         }
         Returns: Json
+      }
+      crm_review_therapist_prospect_email: {
+        Args: {
+          p_email_review_status: string
+          p_expected_version: number
+          p_prospect_id: string
+          p_reason: string
+          p_tenant_id: string
+        }
+        Returns: number
       }
       crm_save_campaign_steps: {
         Args: { p_campaign_id: string; p_steps: Json; p_tenant_id: string }
@@ -29238,6 +30860,10 @@ export type Database = {
         Args: { p_reason: string; p_state: string }
         Returns: Json
       }
+      crm_set_organization_primary_contact: {
+        Args: { p_contact_id: string; p_organization_id: string }
+        Returns: string
+      }
       crm_set_service_policy: {
         Args: {
           p_client_id: string
@@ -29249,8 +30875,13 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_staff_tenant_for_applicant_pipeline: { Args: never; Returns: string }
       crm_suppress_newsletter_mailbox: {
         Args: { p_email: string; p_reason: string; p_source?: string }
+        Returns: Json
+      }
+      crm_therapist_prospect_history: {
+        Args: { p_prospect_id: string; p_tenant_id: string }
         Returns: Json
       }
       crm_transition_lifecycle: {
@@ -29268,6 +30899,20 @@ export type Database = {
       crm_unsuppress_newsletter_mailbox: {
         Args: { p_email: string; p_reason: string }
         Returns: Json
+      }
+      crm_update_therapist_prospect: {
+        Args: {
+          p_expected_version: number
+          p_next_action: string
+          p_next_action_due_at: string
+          p_notes: string
+          p_owner_profile_id: string
+          p_prospect_id: string
+          p_reason: string
+          p_status: string
+          p_tenant_id: string
+        }
+        Returns: number
       }
       crm_upsert_audience_campaign: {
         Args: {
@@ -29335,6 +30980,45 @@ export type Database = {
         Args: { p_reason: string; p_row_id: string }
         Returns: undefined
       }
+      distribution_begin_request: {
+        Args: { p_delivery: string; p_lease: string; p_tenant: string }
+        Returns: boolean
+      }
+      distribution_claim: {
+        Args: { p_tenant: string; p_worker: string }
+        Returns: Json
+      }
+      distribution_confirm_existing: {
+        Args: {
+          p_delivery: string
+          p_external_id: string
+          p_tenant: string
+          p_url: string
+        }
+        Returns: boolean
+      }
+      distribution_finish: {
+        Args: {
+          p_delivery: string
+          p_error?: string
+          p_external_id?: string
+          p_http?: number
+          p_lease: string
+          p_outcome: string
+          p_tenant: string
+          p_url?: string
+        }
+        Returns: boolean
+      }
+      distribution_observe: {
+        Args: { p_method?: string; p_tenant: string; p_video: Json }
+        Returns: string
+      }
+      distribution_prepare: {
+        Args: { p_release: string; p_tenant: string }
+        Returns: undefined
+      }
+      distribution_recover: { Args: { p_tenant: string }; Returns: number }
       document_appointment: {
         Args: {
           p_appointment_id: string
