@@ -88,9 +88,8 @@ export async function runShortsThumbnailCompatTest(auth: AuthContext, params: Re
   const feature = resolveShortsThumbnailFeature(metadata);
   // A previously verified channel may be retested without disabling current publishing.
   // Keep the existing feature state until the operator reviews this particular result.
-  if (feature.testRuns.some((run) => run.visualResult === "pending")) {
-    throw new Error("Review the pending Shorts thumbnail test before starting another one.");
-  }
+  // Preserve previous pending test runs so repeat tests can be conducted on
+  // the original control video. Do not change automatic upload state on rerun.
 
   // A test video must never be one the CRM is publishing or that an operator already finished.
   const { data: linked, error: linkedError } = await auth.db.from("ai_operations_social_publications")
