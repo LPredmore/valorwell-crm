@@ -119,12 +119,13 @@ export default function TherapistProspectsPage(){
           onDue={v=>{setDueFilter(v);setPage(1)}} onMine={v=>{setMineOnly(v);setPage(1)}}/>
         <p role="status" className="text-sm">{query.data?.total??0} matching prospects · Page {page}</p>
         <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-sm">
-          <thead><tr className="border-b text-left"><th className="p-2">Prospect</th><th className="p-2">State</th><th className="p-2">Licence</th><th className="p-2">Review stage</th><th className="p-2">Email</th><th className="p-2">Owner</th></tr></thead>
+          <thead><tr className="border-b text-left"><th className="p-2">Prospect</th><th className="p-2">State</th><th className="p-2">Licence</th><th className="p-2">Review stage</th><th className="p-2">Email quality</th><th className="p-2">Follow-up</th><th className="p-2">Owner</th></tr></thead>
           <tbody>{(query.data?.items??[]).map(p=><tr key={p.id} className="border-b">
             <td className="p-2"><Link className="text-primary underline" to={'/crm/recruitment/prospects/'+p.id}>{displayName(p)}</Link></td>
             <td className="p-2">{p.state??'—'}</td><td className="p-2">{p.licenseType??'—'}</td>
             <td className="p-2">{p.status==='blocked'?'Blocked':p.status==='ready'?'Ready for review':'Needs review'}</td>
-            <td className="p-2">{p.email&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.email)?'Present':'Unavailable'}</td>
+            <td className="p-2">{p.emailQuality}{p.suppressed?' · suppressed':''}</td>
+            <td className="p-2">{p.nextActionDueAt?new Date(p.nextActionDueAt).toLocaleDateString():(p.nextAction?'Unscheduled':'No next action')}</td>
             <td className="p-2">{owners.data?.find(x=>x.id===p.ownerProfileId)?.name??(p.ownerProfileId?'Assigned team member':'Unassigned')}</td>
           </tr>)}</tbody></table></div>
         <div className="flex gap-2"><Button variant="outline" disabled={page<=1} onClick={()=>setPage(n=>n-1)}>Previous</Button>
