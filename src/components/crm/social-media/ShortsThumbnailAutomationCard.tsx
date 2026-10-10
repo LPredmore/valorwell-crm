@@ -29,7 +29,7 @@ export function ShortsThumbnailAutomationCard() {
   const library = useQuery({
     queryKey: ['social-media', 'shorts-thumbnail-cover-sources'],
     queryFn: () => fetchSocialMediaLibrary({}),
-    enabled: !!feature && !feature.automaticUploadsEnabled,
+    enabled: !!feature,
     staleTime: 60_000,
   });
   const options = useMemo(() => coverSourceOptions(library.data ?? []), [library.data]);
@@ -68,20 +68,20 @@ export function ShortsThumbnailAutomationCard() {
           {feature.enabledAt && <span className="text-xs text-muted-foreground">Enabled {new Date(feature.enabledAt).toLocaleString()}</span>}
         </div>
         <p className="text-xs text-muted-foreground">
-          YouTube's help still says custom Shorts thumbnails can only be set in desktop Studio. Until you test on a disposable
-          private Short and confirm with your own eyes that the thumbnail shows on Shorts, scheduled Shorts stay on the manual
-          Studio step. An accepted API request alone never turns this on.
+          You can run this original compatibility test again whenever you need to, including while automatic uploads are enabled.
+          It uploads a saved Library image to an existing, private, unscheduled test Short. An API success alone does not prove that the artwork appears in YouTube Studio.
         </p>
 
-        {feature.automaticUploadsEnabled ? (
+        {feature.automaticUploadsEnabled && (
           <CrmMutationGate>
             <Button size="sm" variant="outline" onClick={() => disable.mutate()} disabled={disable.isPending}>Turn off (back to manual)</Button>
           </CrmMutationGate>
-        ) : (
-          <CrmMutationGate>
+        )}
+        <CrmMutationGate>
             <div className="space-y-2 rounded border p-3">
-              <p className="font-medium">1. Run a compatibility test (admins only)</p>
-              <p className="text-xs text-destructive">Warning: this changes the real thumbnail on the test video you name. Use a private, unscheduled Short you own and can discard.</p>
+              <p className="font-medium">1. Test or retest a Shorts thumbnail (admins only)</p>
+              <p className="text-xs text-destructive">This replaces the real thumbnail of your chosen test video. Choose a disposable Short that you own and that is Private, unscheduled, and fully processed. Scheduled and published CRM videos are protected.</p>
+              {feature.automaticUploadsEnabled && <p className="text-xs text-muted-foreground">Retesting does not turn automatic uploads off. If the image is not visible, choose “Not visible — keep manual” below to turn automation off.</p>}
               <div className="grid gap-2 sm:grid-cols-2">
                 <div><Label htmlFor="sst-video">Test Short video id</Label><Input id="sst-video" value={videoId} onChange={(e) => setVideoId(e.target.value)} placeholder="11-character id" /></div>
                 <div className="space-y-1 sm:col-span-2">
@@ -111,12 +111,11 @@ export function ShortsThumbnailAutomationCard() {
                   <Input id="sst-confirm" value={testConfirm} onChange={(e) => setTestConfirm(e.target.value)} />
                 </div>
               </div>
-              <Button size="sm" onClick={() => test.mutate()} disabled={test.isPending || testConfirm !== SHORTS_TEST_CONFIRMATION_PREFIX + videoId.trim() || !selected}>
+              <Button size="sm" onClick={() => test.mutate()} disabled={test.isPending || !!pending || testConfirm !== SHORTS_TEST_CONFIRMATION_PREFIX + videoId.trim() || !selected}>
                 {test.isPending ? 'Testing…' : 'Run test on this video'}
               </Button>
             </div>
-          </CrmMutationGate>
-        )}
+        </CrmMutationGate>
 
         {latest && (
           <div className="rounded border p-3 text-xs space-y-1">
