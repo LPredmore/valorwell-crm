@@ -24,7 +24,7 @@ export async function listRecruitmentReviewProspects(
   p_tenant_id:tenantId,p_page:page,p_page_size:pageSize,
   p_search:filters.search??null,p_prospect_id:prospectId??null,p_state:filters.state??null,
   p_workflow:filters.workflow??null,p_quality:filters.quality??null,p_due:filters.due??null,
-  p_owner:filters.owner??null,
+  p_owner:filters.owner?.trim()||null,
  } as never);
  if(error)throw new Error(error.message);
  const result=data as unknown as ReviewedProspectPage|null;
