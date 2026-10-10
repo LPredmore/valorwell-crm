@@ -97,11 +97,11 @@ export async function runShortsThumbnailCompatTest(auth: AuthContext, params: Re
   if (linkedError) throw new Error(linkedError.message);
   for (const pub of (linked ?? []) as Record<string, unknown>[]) {
     if (pub.tenant_id !== auth.tenantId) throw new Error("This video does not belong to your organization.");
-    const thumb = ((pub.platform_payload ?? {}) as Record<string, unknown>).thumbnail as Record<string, unknown> | undefined;
-    if (["scheduled", "published", "upload_queued", "uploading"].includes(String(pub.status))) {
-      throw new Error("This video is a live or scheduled CRM publication. Use a disposable private test Short instead.");
-    }
-    if (thumb?.apiStatus === "manual_confirmed") throw new Error("This video has a manually confirmed thumbnail and will not be overwritten.");
+    // The October 7 control was not linked to a CRM publication. ALL linked
+    // publications, including status "uploaded" and previously failed/cancelled
+    // rows, must be excluded so a production Short cannot masquerade as a
+    // disposable, private, unscheduled thumbnail test.
+    throw new Error("This YouTube video is linked to a CRM publication. Use the original private test video or another disposable Short that is not in the CRM.");
   }
 
   const fileId = await resolveTenantCover(auth, params.sourceType, params.sourceId);
