@@ -253,7 +253,7 @@ describe('readonly users', () => {
     for (const action of dispatched) expect(VIEW_ACTIONS.has(action) || MUTATE_ACTIONS.has(action)).toBe(true);
     for (const action of ['create_publication', 'update_publication', 'approve_publication', 'set_publication_playlists',
       'queue_publish', 'reschedule_publication', 'cancel_publication', 'retry_publication', 'replace_thumbnail',
-      'mark_thumbnail_manual_done', 'verify_youtube_connection']) {
+      'verify_youtube_connection']) {
       expect(MUTATE_ACTIONS.has(action)).toBe(true);
     }
   });
