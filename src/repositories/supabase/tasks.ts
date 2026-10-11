@@ -5,7 +5,8 @@ import type { CrmTask, TaskStatus, TaskPriority, TaskType } from '@/domain/opera
 import { buildTaskViewPlan } from '../taskViewSemantics';
 import { assertEntityTenant, requireOperatingTenant } from '../tenantScope';
 
-type Row = Tables<'crm_tasks'>;
+// Columns added for relationship links are not selected by this repository's COLS list.
+type Row = Omit<Tables<'crm_tasks'>, 'relationship_contact_id' | 'relationship_organization_id'>;
 type TaskInsert = TablesInsert<'crm_tasks'>;
 type TaskUpdate = TablesUpdate<'crm_tasks'>;
 type TaskDbStatus = Row['status'];
