@@ -500,7 +500,7 @@ export const SERIES_STATUS_LABELS: Record<SeriesScheduleStatus, string> = {
   failed: 'Failed', cancelled: 'Removed',
 };
 
-/** Operator-facing label for platform_payload.thumbnail.apiStatus. API states never claim visual proof. */
+/** Operator-facing YouTube thumbnail status for long-form videos; Shorts show CRM cover storage separately. */
 export function thumbnailStatusLabel(apiStatus: string | null | undefined): string | null {
   switch (apiStatus) {
     case 'queued': case 'pending': case 'waiting_processing': case 'retry_pending': return 'Thumbnail Pending';
@@ -514,20 +514,4 @@ export function thumbnailStatusLabel(apiStatus: string | null | undefined): stri
     case 'failed': case 'not_applied': return 'Thumbnail Failed';
     default: return null;
   }
-}
-
-export type CoverSourceOption = { key: string; sourceType: SourceType; sourceId: string; label: string; detail: string };
-
-/** Library items that have a saved cover, as readable picker options (server re-validates ownership). */
-export function coverSourceOptions(items: SocialMediaLibraryItem[]): CoverSourceOption[] {
-  return items
-    .filter((item) => !!item.thumbnailFileId && (item.sourceType === 'clip' || item.sourceType === 'project'))
-    .map((item) => {
-      const kind = item.sourceType === 'clip' ? (item.partNumber ? `Part ${item.partNumber}` : CONTENT_FORMAT_LABELS[item.contentFormat] ?? 'Clip') : 'Episode';
-      return {
-        key: `${item.sourceType}:${item.sourceId}`, sourceType: item.sourceType, sourceId: item.sourceId,
-        label: item.title?.trim() || 'Untitled',
-        detail: [item.organizationName || item.guestName, kind].filter(Boolean).join(' · '),
-      };
-    });
 }
