@@ -50,7 +50,7 @@ describe('Social Media Library photo editor access', () => {
     expect(screen.getByRole('button', { name: 'Add photo' })).toBeInTheDocument();
   });
 
-  it('shows Thumbnail needed for a scheduled Short awaiting the manual Studio step', () => {
+  it('shows the CRM-only stored cover for a scheduled Short', () => {
     auth.capabilities.mutate = true;
     render(<SocialMediaLibraryCard item={{
       ...item,
@@ -65,7 +65,8 @@ describe('Social Media Library photo editor access', () => {
         thumbnailStatus: 'manual_required',
       },
     }} onSelect={vi.fn()} onChangePhoto={vi.fn()} />);
-    expect(screen.getByText('Thumbnail needed')).toBeInTheDocument();
+    expect(screen.getByText('Cover saved in CRM')).toBeInTheDocument();
+    expect(screen.queryByText('Thumbnail needed')).not.toBeInTheDocument();
   });
 
   it('does not offer the mutation to read-only CRM users', () => {
