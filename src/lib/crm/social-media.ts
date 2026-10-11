@@ -400,8 +400,6 @@ export const cancelSocialPublication = (id: string) => invoke<SocialPublication>
 export const retrySocialPublication = (id: string) =>
   invoke<{ jobId: number; publication: SocialPublication }>("retry_publication", { id });
 
-export const markThumbnailManualDone = (id: string) =>
-  invoke<SocialPublication>("mark_thumbnail_manual_done", { id });
 
 export const STATUS_LABELS: Record<PublicationStatus, string> = {
   draft: "Draft",
@@ -502,41 +500,6 @@ export const SERIES_STATUS_LABELS: Record<SeriesScheduleStatus, string> = {
   failed: 'Failed', cancelled: 'Removed',
 };
 
-// ---- Shorts thumbnail API gate (default OFF; per YouTube account) ----
-export type ShortsThumbnailTestRun = {
-  id: string; videoId: string; thumbnailFileId: string; sourceType: string; sourceId: string;
-  requestedBy: string; requestedAt: string; httpStatus: number | null; apiAccepted: boolean;
-  hasCustomThumbnail: boolean | null; error: string | null;
-  visualResult: 'pending' | 'confirmed' | 'not_visible'; visualReviewedBy: string | null; visualReviewedAt: string | null;
-};
-export type ShortsThumbnailFeature = {
-  accountId: string; state: 'disabled' | 'testing' | 'api_verified'; automaticUploadsEnabled: boolean;
-  enabledBy: string | null; enabledAt: string | null; enabledFromTestRunId: string | null;
-  disabledBy: string | null; disabledAt: string | null; note: string | null; testRuns: ShortsThumbnailTestRun[];
-};
-export const SHORTS_TEST_CONFIRMATION_PREFIX = 'CHANGE THUMBNAIL ';
-export const SHORTS_VISUAL_CONFIRMATION_PHRASE = 'I SAW THE CUSTOM THUMBNAIL ON SHORTS';
-
-export type ShortsThumbnailEvidence = {
-  testRunId: string; videoId: string; sourceType: SourceType; sourceId: string;
-  sourceFileId: string; videoPrivacy: string | null; videoPublishAt: string | null;
-  apiAccepted: boolean; hasCustomThumbnail: boolean | null; youtubePreviewUrl: string | null;
-  served: { httpStatus: number; contentType: string | null; byteCount: number; sha256: string | null } | null;
-  visualResult: 'pending' | 'confirmed' | 'not_visible'; caveat: string;
-};
-/** Read-only evidence of what YouTube is currently serving, not a Studio visual confirmation. */
-export const fetchShortsThumbnailEvidence = (testRunId: string) =>
-  invoke<ShortsThumbnailEvidence>('get_shorts_thumbnail_evidence', { testRunId });
-
-export const fetchShortsThumbnailFeature = () => invoke<ShortsThumbnailFeature>('get_shorts_thumbnail_feature');
-export const runShortsThumbnailTest = (params: { videoId: string; sourceType: SourceType; sourceId: string; confirmation: string }) =>
-  invoke<{ run: ShortsThumbnailTestRun; feature: ShortsThumbnailFeature; studioUrl: string; shortsUrl: string }>('run_shorts_thumbnail_test', params, 60000);
-export const confirmShortsThumbnailVisual = (params: { testRunId: string; result: 'confirmed' | 'not_visible'; confirmation?: string }) =>
-  invoke<ShortsThumbnailFeature>('confirm_shorts_thumbnail_visual', params);
-export const disableShortsThumbnailApi = () => invoke<ShortsThumbnailFeature>('disable_shorts_thumbnail_api');
-export const backfillShortThumbnails = (publicationIds: string[]) =>
-  invoke<{ queued: string[]; skipped: { id: string; reason: string }[] }>('backfill_short_thumbnails', { publicationIds, confirmation: 'BACKFILL' });
-
 /** Operator-facing label for platform_payload.thumbnail.apiStatus. API states never claim visual proof. */
 export function thumbnailStatusLabel(apiStatus: string | null | undefined): string | null {
   switch (apiStatus) {
@@ -546,6 +509,7 @@ export function thumbnailStatusLabel(apiStatus: string | null | undefined): stri
     case 'confirmed_by_youtube': case 'api_confirmed': return 'Thumbnail API Confirmed';
     case 'manual_required': return 'Thumbnail Manual Required';
     case 'manual_confirmed': return 'Thumbnail Done';
+    case 'stored_in_crm': return 'Cover saved in CRM';
     case 'already_present_not_overwritten': return 'Thumbnail Preserved';
     case 'failed': case 'not_applied': return 'Thumbnail Failed';
     default: return null;
