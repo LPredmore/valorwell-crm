@@ -13,7 +13,7 @@ export const VIEW_ACTIONS: ReadonlySet<string> = new Set([
 export const MUTATE_ACTIONS: ReadonlySet<string> = new Set([
   "create_publication", "update_publication", "approve_publication",
   "set_publication_playlists", "queue_publish", "reschedule_publication",
-  "cancel_publication", "retry_publication", "replace_thumbnail",,
+  "cancel_publication", "retry_publication", "replace_thumbnail",
   "verify_youtube_connection", "preview_bulk_schedule", "bulk_schedule",
   "assign_series_schedule", "change_series_schedule", "remove_series_schedule",
 ]);
