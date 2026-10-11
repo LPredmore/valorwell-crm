@@ -415,7 +415,7 @@ export async function validatePublication(auth: AuthContext, params: { id: strin
     const sourceThumbnail = await loadSourceThumbnail(auth, row);
     const effectiveThumbnailFileId = (row.thumbnail_file_id as string | null) ?? sourceThumbnail.fileId;
     if (row.content_format === "short" && !effectiveThumbnailFileId) {
-      errors.push("Choose a thumbnail before scheduling this Short so it is ready for the manual YouTube Studio step.");
+      errors.push("Generate or save the Shorts cover in the CRM before scheduling.");
     }
   }
 
@@ -467,7 +467,7 @@ export async function validatePublication(auth: AuthContext, params: { id: strin
   const effectiveThumbnailFileId = (row.thumbnail_file_id as string | null) ?? sourceThumbnailForValidation.fileId;
   if (row.content_format !== "short" && !effectiveThumbnailFileId) warnings.push("No custom thumbnail is set.");
   if (row.content_format === "short" && row.delivery_mode === "scheduled") {
-    warnings.push("This Short will upload to YouTube immediately as private with the scheduled public time. Add its thumbnail manually in YouTube Studio before it publishes.");
+    warnings.push("The Shorts cover is stored in the CRM only and will not be uploaded to YouTube.");
   }
 
   const { data: playlistLinks, error: playlistError } = await auth.db
@@ -674,37 +674,6 @@ export async function retryPublication(auth: AuthContext, params: { id: string }
   if (error) throw new Error(error.message);
   if (!data?.length) throw new Error("Publication changed while retrying; reload and try again.");
   return queuePublish(auth, { id: params.id });
-}
-
-export async function markThumbnailManualDone(auth: AuthContext, params: { id: string }) {
-  const current = await loadPublication(auth, params.id);
-  if (current.content_format !== "short") throw new Error("Manual thumbnail confirmation is only used for Shorts.");
-  if (!current.external_video_id) throw new Error("This Short has not been uploaded to YouTube yet.");
-  if (!["scheduled", "uploaded", "published"].includes(String(current.status))) {
-    throw new Error(`Cannot confirm a thumbnail while status is "${current.status}".`);
-  }
-
-  const platformPayload = { ...((current.platform_payload ?? {}) as Record<string, unknown>) };
-  const existing = platformPayload.thumbnail && typeof platformPayload.thumbnail === "object"
-    ? platformPayload.thumbnail as Record<string, unknown> : {};
-  const confirmedAt = new Date().toISOString();
-  const thumbnail = {
-    ...existing,
-    apiStatus: "manual_confirmed",
-    manualRequired: false,
-    manualConfirmedAt: confirmedAt,
-    studioUrl: `https://studio.youtube.com/video/${encodeURIComponent(String(current.external_video_id))}/edit`,
-  };
-
-  const { error } = await auth.db
-    .from("ai_operations_social_publications")
-    .update({ platform_payload: { ...platformPayload, thumbnail } })
-    .eq("id", params.id)
-    .eq("tenant_id", auth.tenantId);
-  if (error) throw new Error(error.message);
-
-  await insertEvent(auth, params.id, "thumbnail_manual_confirmed", { confirmedAt });
-  return getPublication(auth, { id: params.id });
 }
 
 export async function listPublicationEvents(auth: AuthContext, params: { id: string }) {
