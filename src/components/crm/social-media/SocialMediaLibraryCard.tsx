@@ -30,13 +30,10 @@ export function SocialMediaLibraryCard({ item, onSelect, onChangePhoto }: { item
           {publication && (
             <Badge variant={publication.status === 'failed' ? 'destructive' : 'outline'}>{STATUS_LABELS[publication.status]}</Badge>
           )}
-          {publication?.thumbnailStatus === 'manual_required' && (
-            <Badge variant="outline" className="border-amber-500 text-amber-700">Thumbnail needed</Badge>
+          {item.contentFormat === 'short' && item.thumbnailFileId && (
+            <Badge variant="outline">Cover saved in CRM</Badge>
           )}
-          {publication?.thumbnailStatus === 'manual_confirmed' && (
-            <Badge variant="outline" className="border-emerald-500 text-emerald-700">Thumbnail done</Badge>
-          )}
-          {publication?.thumbnailStatus && !['manual_required', 'manual_confirmed'].includes(publication.thumbnailStatus) && thumbnailStatusLabel(publication.thumbnailStatus) && (
+          {item.contentFormat !== 'short' && publication?.thumbnailStatus && thumbnailStatusLabel(publication.thumbnailStatus) && (
             <Badge variant="outline">{thumbnailStatusLabel(publication.thumbnailStatus)}</Badge>
           )}
         </div>
