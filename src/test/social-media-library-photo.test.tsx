@@ -50,7 +50,7 @@ describe('Social Media Library photo editor access', () => {
     expect(screen.getByRole('button', { name: 'Add photo' })).toBeInTheDocument();
   });
 
-  it('shows Thumbnail needed for a scheduled Short awaiting the manual Studio step', () => {
+  it('shows a saved CRM cover for a scheduled Short without claiming a YouTube thumbnail', () => {
     auth.capabilities.mutate = true;
     render(<SocialMediaLibraryCard item={{
       ...item,
@@ -62,10 +62,10 @@ describe('Social Media Library photo editor access', () => {
         desiredPrivacyStatus: 'public',
         externalVideoId: 'yt-1',
         externalUrl: 'https://youtube.com/watch?v=yt-1',
-        thumbnailStatus: 'manual_required',
+        thumbnailStatus: 'stored_in_crm',
       },
     }} onSelect={vi.fn()} onChangePhoto={vi.fn()} />);
-    expect(screen.getByText('Thumbnail needed')).toBeInTheDocument();
+    expect(screen.getByText('Cover saved in CRM')).toBeInTheDocument();
   });
 
   it('does not offer the mutation to read-only CRM users', () => {
