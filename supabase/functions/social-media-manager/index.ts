@@ -3,7 +3,7 @@ import { authenticate, requireMutate, type AuthContext } from "./auth.ts";
 import { listLibrary } from "./handlers/library.ts";
 import {
   approvePublication, cancelPublication, createPublication, getPublication,
-  listPublicationEvents, listPublications, markThumbnailManualDone, queuePublish, reschedulePublication,
+  listPublicationEvents, listPublications, queuePublish, reschedulePublication,
   retryPublication, setPublicationPlaylists, updatePublication, validatePublication,
 } from "./handlers/publications.ts";
 import { getSettings } from "./handlers/settings.ts";
@@ -15,12 +15,8 @@ import { getThumbnailUrl } from "./handlers/thumbnails.ts";
 import { replaceLibraryThumbnail } from "./handlers/thumbnail-edit.ts";
 import { getYoutubeConnectionStatus, verifyYoutubeConnection } from "./handlers/youtube.ts";
 import { youtubeAccessToken } from "../_shared/ai-ops-youtube.ts";
-import { getYoutubeDeliveryStatus, getYoutubeThumbnailStatus, getYoutubeVideoOwnership, setThumbnail, updateVideoStatus } from "../_shared/youtube-publish/api.ts";
-import {
-  backfillShortThumbnails, confirmShortsThumbnailVisual, disableShortsThumbnailApi, getShortsThumbnailFeature,
-  runShortsThumbnailCompatTest, getShortsThumbnailEvidence, type ShortsThumbnailClient,
-} from "./handlers/shorts-thumbnail.ts";
-import { driveAccessToken, driveFileBytes, driveFileMetadata } from "./drive.ts";
+import { getYoutubeDeliveryStatus, updateVideoStatus } from "../_shared/youtube-publish/api.ts";
+
 import type { YoutubeScheduleClient } from "./handlers/publications.ts";
 import { resolveAllowHeaders } from "./cors.ts";
 import { runSeriesDispatchTick } from "./series-dispatch.ts";
@@ -67,16 +63,6 @@ const youtubeScheduleClient: YoutubeScheduleClient = {
   updateStatus: async (videoId, status) => updateVideoStatus(await youtubeAccessToken(), videoId, status),
 };
 
-function shortsThumbnailClient(auth: AuthContext): ShortsThumbnailClient {
-  return {
-    getVideo: async (videoId) => getYoutubeVideoOwnership(await youtubeAccessToken(), videoId),
-    getThumbnailStatus: async (videoId) => getYoutubeThumbnailStatus(await youtubeAccessToken(), videoId),
-    setThumbnail: async (videoId, bytes, mimeType) => setThumbnail(await youtubeAccessToken(), videoId, bytes, mimeType),
-    fileMetadata: async (fileId) => driveFileMetadata(await driveAccessToken(auth.db), fileId),
-    fileBytes: async (fileId) => driveFileBytes(await driveAccessToken(auth.db), fileId),
-  };
-}
-
 async function dispatch(auth: AuthContext, action: string, params: Record<string, unknown>) {
   switch (action) {
     case "bootstrap":
@@ -117,8 +103,6 @@ async function dispatch(auth: AuthContext, action: string, params: Record<string
       return cancelPublication(auth, params as { id: string });
     case "retry_publication":
       return retryPublication(auth, params as { id: string });
-    case "mark_thumbnail_manual_done":
-      return markThumbnailManualDone(auth, params as { id: string });
     case "preview_bulk_schedule":
       return previewBulkSchedule(auth, params as never);
     case "bulk_schedule":
@@ -135,18 +119,6 @@ async function dispatch(auth: AuthContext, action: string, params: Record<string
       return changeSeriesSchedule(auth, params as { id: string; projectId?: unknown });
     case "remove_series_schedule":
       return removeSeriesSchedule(auth, params as { id: string });
-    case "get_shorts_thumbnail_evidence":
-      return getShortsThumbnailEvidence(auth, params, shortsThumbnailClient(auth));
-    case "get_shorts_thumbnail_feature":
-      return getShortsThumbnailFeature(auth);
-    case "run_shorts_thumbnail_test":
-      return runShortsThumbnailCompatTest(auth, params, shortsThumbnailClient(auth));
-    case "confirm_shorts_thumbnail_visual":
-      return confirmShortsThumbnailVisual(auth, params);
-    case "disable_shorts_thumbnail_api":
-      return disableShortsThumbnailApi(auth);
-    case "backfill_short_thumbnails":
-      return backfillShortThumbnails(auth, params);
     default:
       throw new Error(`Unknown action: ${action}`);
   }
