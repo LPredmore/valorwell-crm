@@ -114,12 +114,18 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
   const table = sourceType === "clip" ? "ai_operations_video_clips" : "ai_operations_video_projects";
   const query = sourceType === "clip"
     ? db.from(table)
-      .select("id,project_id,cover_image_file_id,ai_operations_video_projects!inner(tenant_id)")
+      .select("id,project_id,clip_type,cover_image_file_id,ai_operations_video_projects!inner(tenant_id)")
       .eq("id", sourceId).eq("ai_operations_video_projects.tenant_id", tenantId)
     : db.from(table).select("id,cover_image_file_id").eq("id", sourceId).eq("tenant_id", tenantId);
   const { data: source, error: sourceError } = await query.maybeSingle();
   if (sourceError) throw new Error(sourceError.message);
   if (!source) throw new Error("Source video not found in your CRM tenant.");
+  const isShort = sourceType === "clip" && (source as { clip_type?: string }).clip_type === "short";
+  // Shorts cover images are exclusively CRM assets. Reject even a forged request
+  // to send their image to YouTube; long-form replacements retain their API route.
+  if (isShort && updateYoutube) {
+    throw new Error("Shorts artwork is stored in the CRM only and cannot be uploaded to YouTube.");
+  }
 
   let pubQuery = db.from("ai_operations_social_publications")
     .select("id,status,external_video_id,platform_payload")
@@ -150,9 +156,13 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
 
   // Preserve the thumbnail snapshot for already published videos unless the
   // operator explicitly requested updating that exact live YouTube publication.
-  const editableIds = linked.filter((p) => ["draft", "ready", "approved"].includes(p.status))
-    .map((p) => p.id);
-  if (updateYoutube && targetPublishedId) editableIds.push(targetPublishedId);
+  // A Shorts cover is CRM-only: keep its image link current on all existing
+  // publications (including already scheduled/published videos) without making
+  // any YouTube API call. For long-form, preserve existing published snapshots.
+  const editableIds = linked.filter((p) =>
+    isShort || ["draft", "ready", "approved"].includes(p.status)
+  ).map((p) => p.id);
+  if (updateYoutube && targetPublishedId && !editableIds.includes(targetPublishedId)) editableIds.push(targetPublishedId);
   if (editableIds.length) {
     const { error: pubUpdateError } = await db.from("ai_operations_social_publications").update({
       thumbnail_file_id: cover.fileId,
@@ -174,7 +184,7 @@ export async function replaceLibraryThumbnail(auth: AuthContext, params: Record<
 
   let youtubeQueued = 0;
   const warnings: string[] = [];
-  if (updateYoutube) {
+  if (updateYoutube && !isShort) {
     const published = linked.filter((p) => p.id === targetPublishedId && p.external_video_id &&
       ["published", "uploaded", "scheduled"].includes(p.status));
     for (const pub of published) {
