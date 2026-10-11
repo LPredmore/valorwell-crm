@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { httpFailure, MAX_PUBLISH_ATTEMPTS, PermanentYoutubeError, TransientYoutubeError } from '../../supabase/functions/_shared/youtube-publish/errors';
-import { markThumbnailManualDone, retryPublication } from '../../supabase/functions/social-media-manager/handlers/publications';
+import { retryPublication } from '../../supabase/functions/social-media-manager/handlers/publications';
 import { MAX_STALE_RECOVERIES, runPublishTicks } from '../../supabase/functions/video-youtube-publish-dispatcher/worker';
 import { networkError } from './helpers/fake-youtube';
 import { MB, publishHarness } from './helpers/publish-harness';
@@ -67,7 +67,7 @@ describe('YouTube publish worker: privacy modes', () => {
     expect(h.youtube.sessions[0].notifySubscribers).toBe(true);
   });
 
-  it('Scheduled Short: uploads Private with publishAt, requires the manual thumbnail, and reconciles to Published', async () => {
+  it('Scheduled Short: uploads Private with publishAt, retains manual-required thumbnail status and reconciles to Published', async () => {
     const h = publishHarness();
     const scheduledFor = new Date(h.now() + 20 * 60_000).toISOString();
     const id = await h.prepare('short', 'scheduled', { scheduledFor });
@@ -84,8 +84,9 @@ describe('YouTube publish worker: privacy modes', () => {
     expect(payload.youtubeSchedule).toMatchObject({ apiStatus: 'verified', youtubePublishAt: scheduledFor });
     expect(h.eventsFor(id).map((event) => event.event_type)).toContain('youtube_schedule_verified');
 
-    await markThumbnailManualDone(h.auth, { id });
-    expect(platformPayload(h.pub(id)).thumbnail.apiStatus).toBe('manual_confirmed');
+    // No manual-completion endpoint is present in the current CRM. Scheduling
+    // must not silently mark a pending thumbnail as manually confirmed.
+    expect(platformPayload(h.pub(id)).thumbnail.apiStatus).toBe('manual_required');
 
     // Before publishAt: still Scheduled, even if the clock is close.
     expect((await h.reconcile()).published).toBe(0);
@@ -100,7 +101,7 @@ describe('YouTube publish worker: privacy modes', () => {
     expect(summary.published).toBe(1);
     expect(h.pub(id).status).toBe('published');
     expect(h.pub(id).published_at).toBeTruthy();
-    expect(platformPayload(h.pub(id)).thumbnail.apiStatus).toBe('manual_confirmed');
+    expect(platformPayload(h.pub(id)).thumbnail.apiStatus).toBe('manual_required');
     expect(h.eventsFor(id).map((event) => event.event_type)).toContain('youtube_publication_reconciled');
     expect(h.youtube.videos.size).toBe(1);
   });
