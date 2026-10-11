@@ -38,6 +38,20 @@ describe('YouTube publish worker: privacy modes', () => {
     expect(h.jobsFor(id).find((job) => job.job_type === 'publish_youtube')?.status).toBe('complete');
   });
 
+  it('immediate Shorts keep generated artwork in the CRM without YouTube thumbnail upload', async () => {
+    const h = publishHarness();
+    const id = await h.prepare('short', 'public');
+    const savedCoverId = h.pub(id).thumbnail_file_id;
+    await h.drain(id);
+
+    expect(h.pub(id).status).toBe('published');
+    expect(h.youtube.count('setThumbnail')).toBe(0);
+    expect(h.pub(id).thumbnail_file_id).toBe(savedCoverId);
+    expect(platformPayload(h.pub(id)).thumbnail).toMatchObject({
+      apiStatus: 'stored_in_crm', fileId: savedCoverId, delivery: 'none',
+    });
+  });
+
   it('Unlisted: one upload with Unlisted privacy and recorded verification evidence', async () => {
     const h = publishHarness();
     const id = await h.prepare('part', 'unlisted');
@@ -428,6 +442,23 @@ describe('YouTube publish worker: failure classification and retry', () => {
     expect(result.action).toBe('short_cover_retained_in_crm');
     expect(h.pub(id).status).toBe('published');
     expect(h.youtube.count('setThumbnail')).toBe(0);
+  });
+
+  it('retired Shorts thumbnail verification jobs complete without YouTube thumbnail reads', async () => {
+    const h = publishHarness();
+    const id = await h.prepare('short', 'public');
+    await h.drain(id);
+    h.db.table('ai_operations_video_jobs').push({
+      id: 9003, tenant_id: h.pub(id).tenant_id, project_id: h.pub(id).project_id, clip_id: h.pub(id).clip_id,
+      job_type: 'publish_youtube', status: 'queued', social_publication_id: id,
+      payload: { thumbnail_verify_only: true }, attempts: 0, created_at: new Date(h.now()).toISOString(),
+    });
+    const before = h.youtube.count('getYoutubeThumbnailStatus');
+    const result = await h.tick();
+    expect(result.action).toBe('short_cover_retained_in_crm');
+    expect(h.youtube.count('getYoutubeThumbnailStatus')).toBe(before);
+    expect(h.youtube.count('setThumbnail')).toBe(0);
+    expect(h.pub(id).status).toBe('published');
   });
 
   it('cancelling before the worker starts cancels the job without touching YouTube', async () => {
