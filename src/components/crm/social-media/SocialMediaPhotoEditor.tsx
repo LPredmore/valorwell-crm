@@ -20,7 +20,7 @@ export function SocialMediaPhotoEditor({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [processingFile, setProcessingFile] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [applyToYoutube, setApplyToYoutube] = useState(Boolean(item.publishedPublication?.externalVideoId));
+  const [applyToYoutube, setApplyToYoutube] = useState(item.contentFormat !== 'short' && Boolean(item.publishedPublication?.externalVideoId));
 
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -31,7 +31,7 @@ export function SocialMediaPhotoEditor({
       sourceType: item.sourceType,
       sourceId: item.sourceId,
       file: prepared!.file,
-      updateYouTube: applyToYoutube,
+      updateYouTube: item.contentFormat !== 'short' && applyToYoutube,
       publishedPublicationId: item.publishedPublication?.id ?? undefined,
     }),
     onSuccess: (result) => {
@@ -126,7 +126,7 @@ export function SocialMediaPhotoEditor({
             </p>
           )}
         </div>
-        {published && (
+        {published && item.contentFormat !== 'short' && (
           <label className="flex items-start gap-2 text-sm rounded border p-3 cursor-pointer">
             <input
               type="checkbox"
@@ -145,7 +145,9 @@ export function SocialMediaPhotoEditor({
           </label>
         )}
         <p className="text-xs text-muted-foreground">
-          The previous cover is retained in Drive. Future publications use your newly selected photo.
+          {item.contentFormat === 'short'
+            ? 'Your new cover will be saved in Drive and linked to this Short in the CRM only. It will not be sent to YouTube.'
+            : 'The previous cover is retained in Drive. Future publications use your newly selected photo.'}
         </p>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={mutation.isPending}>Cancel</Button>
