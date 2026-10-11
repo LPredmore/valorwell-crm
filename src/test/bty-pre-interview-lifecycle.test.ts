@@ -36,14 +36,29 @@ describe('BTY pre-interview lifecycle', () => {
 });
 
 describe('BTY calendar classification', () => {
-  it('keeps StreamYard events as full recordings even if titled intro', () => {
-    expect(classifyBtyCalendarEvent({ streamyardPresent: true, summary: 'Intro + recording' })).toBe('bty_recording');
+  it('classifies explicit BTY intro events as pre-interviews even with the StreamYard room', () => {
+    expect(classifyBtyCalendarEvent({
+      streamyardPresent: true,
+      summary: 'Beyond The Yellow - FOCUS Marines Foundation',
+      description: 'Introductory call / initial discussion. This is NOT the final recorded episode. https://streamyard.com/frr4zf8e3s',
+    })).toBe('bty_preinterview');
+    expect(classifyBtyCalendarEvent({ streamyardPresent: true, summary: 'BTY Pre-Interview: The Boot' })).toBe('bty_preinterview');
   });
-  it('classifies intro / pre-interview events without StreamYard as pre-interviews', () => {
-    expect(classifyBtyCalendarEvent({ streamyardPresent: false, summary: 'BTY Introductory Call - FOCUS Marines' })).toBe('bty_preinterview');
-    expect(classifyBtyCalendarEvent({ streamyardPresent: false, summary: 'Pre-interview with The Boot' })).toBe('bty_preinterview');
+  it('keeps BTY full recordings on StreamYard as recordings', () => {
+    expect(classifyBtyCalendarEvent({
+      streamyardPresent: true,
+      summary: 'Beyond The Yellow Recording - Operation Hat Trick',
+      description: 'Join the StreamYard studio 10 minutes early.',
+    })).toBe('bty_recording');
   });
-  it('ignores unrelated meetings', () => {
+  it('treats non-BTY StreamYard events as recordings (existing fallback), never pre-interviews', () => {
+    expect(classifyBtyCalendarEvent({ streamyardPresent: true, summary: 'Intro to new studio' })).toBe('bty_recording');
+  });
+  it('never classifies generic non-BTY intro meetings', () => {
+    expect(classifyBtyCalendarEvent({ streamyardPresent: false, summary: 'Intro call with vendor' })).toBeNull();
     expect(classifyBtyCalendarEvent({ streamyardPresent: false, summary: 'Staff sync' })).toBeNull();
+  });
+  it('classifies BTY intro without StreamYard as pre-interview', () => {
+    expect(classifyBtyCalendarEvent({ streamyardPresent: false, summary: 'BTY Introductory Call - FOCUS Marines' })).toBe('bty_preinterview');
   });
 });
