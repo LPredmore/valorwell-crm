@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { fetchSocialMediaSettings, fetchYouTubeConnectionStatus } from '@/lib/crm/social-media';
 import { YouTubeConnectionStatus } from './YouTubeConnectionStatus';
 import { SocialMediaErrorState } from './SocialMediaErrorState';
-import { ShortsThumbnailAutomationCard } from './ShortsThumbnailAutomationCard';
 
 function displayTime(time: string): string {
   const [hour, minute] = time.split(':').map(Number);
@@ -40,7 +39,6 @@ export function SocialMediaSettings() {
     <div className="pt-4 space-y-4 max-w-2xl">
       {connectionError ? <SocialMediaErrorState error={connectionError} /> : <YouTubeConnectionStatus status={connection} />}
 
-      <ShortsThumbnailAutomationCard />
 
       <Card>
         <CardHeader><CardTitle className="text-sm">Account</CardTitle></CardHeader>
@@ -66,7 +64,7 @@ export function SocialMediaSettings() {
             <Badge variant="secondary">Embedding: {defaults.default_embeddable ? 'Enabled' : 'Disabled'}</Badge>
             <Badge variant="secondary">Public stats: {defaults.default_public_stats_viewable ? 'Enabled' : 'Disabled'}</Badge>
             <Badge variant="secondary">Notify subscribers: {defaults.default_notify_subscribers ? 'Yes' : 'No'}</Badge>
-            <Badge variant="secondary">Custom thumbnails: {defaults.default_use_custom_thumbnail ? 'Yes' : 'No'}</Badge>
+            <Badge variant="secondary">Custom long-form thumbnails: {defaults.default_use_custom_thumbnail ? 'Yes' : 'No'}</Badge>
             <Badge variant="secondary">Immediate visibility: {String(defaults.default_immediate_privacy_status)}</Badge>
             <Badge variant="secondary">Schedule strategy: {String(defaults.schedule_strategy)}</Badge>
           </CardContent>
