@@ -20,10 +20,7 @@ import {
   classifyPublishFailure, PermanentYoutubeError, retryDelayMs, safeError,
 } from "../_shared/youtube-publish/errors.ts";
 import {
-  classifyThumbnailFailure, isShortsThumbnailApiEnabled, MAX_SHORT_THUMBNAIL_ATTEMPTS, studioEditUrl, thumbnailIdempotencyKey,
-} from "../_shared/youtube-publish/shorts-thumbnail.ts";
-import {
-  thumbnailProcessingDecision, verifyImmediateDelivery, verifyScheduledDelivery,
+  verifyImmediateDelivery, verifyScheduledDelivery,
 } from "../_shared/youtube-publish/status.ts";
 
 type Db = SupabaseClient;
@@ -344,183 +341,25 @@ async function runVerifyOnly(ctx: Ctx, youtubeToken: string, videoId: string): P
   };
 }
 
-/** Reads the per-account Shorts thumbnail gate. Any lookup problem fails closed (manual). */
-async function loadShortsThumbnailGate(ctx: Ctx): Promise<boolean> {
-  if (!ctx.pub.account_id) return false;
-  try {
-    const { data, error } = await ctx.db.from("ai_operations_social_settings")
-      .select("metadata").eq("account_id", ctx.pub.account_id as string).maybeSingle();
-    if (error) {
-      ctx.log?.("shorts_thumbnail_gate_lookup_failed", { error: error.message });
-      return false;
-    }
-    return isShortsThumbnailApiEnabled((data as Record<string, unknown> | null)?.metadata ?? null);
-  } catch (error) {
-    ctx.log?.("shorts_thumbnail_gate_lookup_failed", { error: safeError(error) });
-    return false;
-  }
-}
-
-/**
- * Gate-enabled thumbnail step for a scheduled Short. Runs only after YouTube itself confirmed
- * private + publishAt (unchanged above). Never re-uploads the video and never touches
- * visibility, publishAt or playlists. Thumbnail outcomes are recorded in
- * platform_payload.thumbnail and never fail the video: permanent API refusals degrade to
- * manual_required; transient ones retry a bounded number of times, then degrade.
- * Returns a TickResult only when the job must yield (processing wait or transient backoff).
- */
-async function applyScheduledShortThumbnail(
-  ctx: Ctx, youtubeToken: string, videoId: string, payload: Record<string, unknown>, thumbnailOnly: boolean,
-): Promise<TickResult | null> {
-  const { pub } = ctx;
-  const fileId = typeof pub.thumbnail_file_id === "string" ? pub.thumbnail_file_id : "";
-  const existing = platformPayload(ctx).thumbnail;
-  const prev = existing && typeof existing === "object" ? existing as Record<string, unknown> : {};
-  const studioUrl = studioEditUrl(videoId);
-  // Only an explicit operator replacement (Change Photo) may overwrite a thumbnail that is
-  // already on the video. Background work and opt-in backfill preserve it.
-  const explicitReplacement = thumbnailOnly && payload.source === "crm_library_cover_editor";
-  const forceRetry = thumbnailOnly && payload.source === "operator_backfill";
-  const save = (state: Record<string, unknown>) => savePlatformPayloadKey(ctx, "thumbnail", {
-    ...((platformPayload(ctx).thumbnail ?? {}) as Record<string, unknown>), ...state, mode: "api", fileId, studioUrl, visuallyVerified: false,
-  });
-
-  if (!fileId) return null;
-  if (prev.apiStatus === "manual_confirmed" && !explicitReplacement) {
-    payload.thumbnail_api_status = "manual_confirmed_preserved";
-    await insertEvent(ctx, "thumbnail_manual_confirmed_preserved", { videoId });
-    return null;
-  }
-  const key = thumbnailIdempotencyKey(videoId, fileId);
-  const sameKey = prev.idempotencyKey === key;
-  if (sameKey && !explicitReplacement && prev.apiStatus === "api_confirmed") {
-    payload.thumbnail_api_status = String(prev.apiStatus);
-    return null; // already applied for this exact video + image: idempotent across retries/restarts
-  }
-  if (sameKey && prev.apiStatus === "manual_required" && !forceRetry && !explicitReplacement) {
-    payload.thumbnail_api_status = "manual_required";
-    return null; // degraded once already; never loop
-  }
-  const priorAttempts = sameKey && !forceRetry ? Number(prev.attempts ?? 0) : 0;
-
-  const degradeToManual = async (reason: string, error: string | null, status: number | null) => {
-    payload.thumbnail_api_status = "manual_required";
-    payload.thumbnail_error = null; // a manual fallback is not a job failure
-    await save({
-      apiStatus: "manual_required", manualRequired: true, idempotencyKey: key, degradedReason: reason,
-      error, httpStatus: status, attempts: priorAttempts + 1, checkedAt: ctx.nowIso(), nextRetryAt: null,
-    });
-    await insertEvent(ctx, "thumbnail_api_degraded_manual_required", { videoId, reason, httpStatus: status, error });
-    return null;
-  };
-  const transient = async (error: unknown, status: number | null, retryAfterMs: number | null) => {
-    const attempts = priorAttempts + 1;
-    if (attempts >= MAX_SHORT_THUMBNAIL_ATTEMPTS) return await degradeToManual("retries_exhausted", safeError(error), status);
-    const delay = retryDelayMs(attempts, retryAfterMs);
-    const nextRetryAt = new Date(ctx.now() + delay).toISOString();
-    await save({
-      apiStatus: "retry_pending", manualRequired: false, idempotencyKey: key, attempts,
-      error: safeError(error), httpStatus: status, nextRetryAt, checkedAt: ctx.nowIso(),
-    });
-    await insertEvent(ctx, "thumbnail_api_retry_scheduled", { videoId, attempts, httpStatus: status, nextRetryAt });
-    await updatePublication(ctx, { next_attempt_at: nextRetryAt });
-    return { ok: true, action: "thumbnail_retry_scheduled", publicationId: pub.id, videoId, nextCheckAt: nextRetryAt } as TickResult;
-  };
-
-  let details: Awaited<ReturnType<PublishYoutubeClient["getYoutubeThumbnailStatus"]>>;
-  try {
-    details = await ctx.youtube.getYoutubeThumbnailStatus(youtubeToken, videoId);
-  } catch (error) {
-    const c = classifyThumbnailFailure(error);
-    return c.kind === "manual" ? await degradeToManual("lookup_refused", safeError(error), c.status) : await transient(error, c.status, c.retryAfterMs);
-  }
-
-  // Crash recovery: we may have sent thumbnails.set for this key but died before recording success.
-  // sentKey + sentPriorCustom are written before thumbnails.set and kept through retry states.
-  // hasCustomThumbnail=true only proves OUR image landed if the video had NO custom thumbnail
-  // before our first attempt. If an old custom thumbnail existed (explicit replacement), or the
-  // prior state is unknown (legacy record), the flag may describe the OLD image: retry the set.
-  const pendingSameSend = prev.sentKey === key;
-  const priorCustomKnownFalse = pendingSameSend && prev.sentPriorCustom === false;
-  const pendingReplacement = pendingSameSend && !priorCustomKnownFalse;
-  if (!explicitReplacement && priorCustomKnownFalse && details.hasCustomThumbnail === true) {
-    payload.thumbnail_api_status = "api_confirmed";
-    await save({ apiStatus: "api_confirmed", manualRequired: false, idempotencyKey: key, hasCustomThumbnail: true, recoveredAfterRestart: true, confirmedAt: ctx.nowIso(), error: null });
-    await insertEvent(ctx, "thumbnail_api_recovered_after_restart", { videoId });
-    return null;
-  }
-  if (details.hasCustomThumbnail === true && !explicitReplacement && !pendingReplacement) {
-    payload.thumbnail_api_status = "already_present_not_overwritten";
-    await save({ apiStatus: "already_present_not_overwritten", manualRequired: false, idempotencyKey: key, error: null, checkedAt: ctx.nowIso(), note: "YouTube already reports a custom thumbnail; not overwritten." });
-    await insertEvent(ctx, "thumbnail_preexisting_preserved", { videoId });
-    return null;
-  }
-
-  const decision = thumbnailProcessingDecision(details.processingStatus, typeof pub.uploaded_at === "string" ? pub.uploaded_at : null, ctx.now());
-  if (decision === "processing_failed") return await degradeToManual("processing_failed", "YouTube reports processing failed.", null);
-  if (decision === "wait") {
-    await save({ apiStatus: "waiting_processing", manualRequired: false, idempotencyKey: key, processingStatus: details.processingStatus, checkedAt: ctx.nowIso() });
-    return await waitForYoutube(ctx, { ok: true, action: "waiting_for_youtube_processing", publicationId: pub.id, videoId, processingStatus: details.processingStatus });
-  }
-
-  if (!explicitReplacement && sameKey && prev.apiStatus === "api_accepted" && priorAttempts >= MAX_SHORT_THUMBNAIL_ATTEMPTS) {
-    return await degradeToManual("confirmation_retries_exhausted", "YouTube did not confirm the uploaded thumbnail after repeated checks.", null);
-  }
-
-  // Sticky across retries of the same key: once a pre-existing custom thumbnail was seen (or the
-  // prior state is unknown), later ticks can never infer success from hasCustomThumbnail alone.
-  const sentPriorCustom = pendingSameSend ? !priorCustomKnownFalse : details.hasCustomThumbnail !== false;
-  await save({ apiStatus: "uploading", manualRequired: false, idempotencyKey: key, sentKey: key, sentPriorCustom, attempts: priorAttempts, attemptedAt: ctx.nowIso(), error: null });
-  try {
-    const driveToken = await ctx.driveToken();
-    const meta = await ctx.drive.fileMetadata(driveToken, fileId);
-    if (!meta.size || meta.size <= 0 || meta.size > YOUTUBE_THUMBNAIL_MAX_BYTES || !["image/jpeg", "image/png"].includes(meta.mimeType)) {
-      return await degradeToManual("invalid_image", `Thumbnail must be a JPG/PNG of at most 2 MB (got ${meta.mimeType || "unknown"}, ${meta.size} bytes).`, null);
-    }
-    const bytes = await ctx.drive.fileRange(driveToken, fileId, 0, meta.size - 1);
-    await ctx.youtube.setThumbnail(youtubeToken, videoId, bytes, meta.mimeType);
-  } catch (error) {
-    const c = classifyThumbnailFailure(error);
-    return c.kind === "manual" ? await degradeToManual("api_refused", safeError(error), c.status) : await transient(error, c.status, c.retryAfterMs);
-  }
-
-  const acceptedAt = ctx.nowIso();
-  payload.thumbnail_applied = true;
-  payload.thumbnail_uploaded_file_id = fileId;
-  payload.thumbnail_error = null;
-  let hasCustom: boolean | null = null;
-  try {
-    hasCustom = (await ctx.youtube.getYoutubeThumbnailStatus(youtubeToken, videoId)).hasCustomThumbnail;
-  } catch (error) {
-    ctx.log?.("thumbnail_readback_failed", { videoId, error: safeError(error) });
-  }
-  const apiStatus = hasCustom === true ? "api_confirmed" : "api_accepted";
-  payload.thumbnail_api_status = apiStatus;
-  await save({
-    apiStatus, manualRequired: false, idempotencyKey: key, acceptedAt, hasCustomThumbnail: hasCustom,
-    attempts: priorAttempts + 1, error: null, nextRetryAt: null,
-    note: "API accepted/confirmed only. Visible Shorts rendering is not proven by the API.",
-  });
-  await insertEvent(ctx, apiStatus === "api_confirmed" ? "thumbnail_api_confirmed" : "thumbnail_api_accepted", {
-    videoId, thumbnailFileId: fileId, hasCustomThumbnail: hasCustom, explicitReplacement, contentFormat: "short",
-  });
-  if (!explicitReplacement && hasCustom !== true) {
-    return await waitForYoutube(ctx, { ok: true, action: "waiting_for_thumbnail_confirmation", publicationId: pub.id, videoId, thumbnailApiStatus: apiStatus });
-  }
-  return null;
-}
-
 async function runFinishingSteps(ctx: Ctx): Promise<TickResult> {
   const { pub } = ctx;
   const youtubeToken = await ctx.youtubeToken();
   const videoId = pub.external_video_id as string;
   const payload = { ...jobPayload(ctx) };
 
+  // Historical thumbnail-only/verification jobs for Shorts are made harmless:
+  // complete them without contacting YouTube's thumbnail endpoint.
+  if (pub.content_format === "short" && (payload.thumbnail_only === true || payload.thumbnail_verify_only === true)) {
+    await updateLeasedJob(ctx, {
+      payload: { ...payload, thumbnail_api_status: "stored_in_crm", thumbnail_error: null },
+      status: "complete", completed_at: ctx.nowIso(), error_message: null,
+    });
+    return { ok: true, action: "short_cover_retained_in_crm", publicationId: pub.id, videoId };
+  }
   if (payload.thumbnail_verify_only === true) return await runVerifyOnly(ctx, youtubeToken, videoId);
 
   const thumbnailOnly = payload.thumbnail_only === true;
   const scheduled = pub.delivery_mode === "scheduled";
-  const scheduledShort = scheduled && pub.content_format === "short";
   const saveThumbnailState = (thumbnail: Record<string, unknown>) => savePlatformPayloadKey(ctx, "thumbnail", thumbnail);
   const previousThumbnail = () => {
     const existing = platformPayload(ctx).thumbnail;
@@ -582,108 +421,24 @@ async function runFinishingSteps(ctx: Ctx): Promise<TickResult> {
     }
   }
 
-  // Custom Shorts thumbnail display has not been reliable through thumbnails.set
-  // for this channel. Scheduled Shorts deliberately skip the thumbnail API:
-  // upload/schedule the video now, then let the operator use YouTube Studio while
-  // it is private. This is a manual finishing step, not a publishing failure.
-  // Channel gate (default OFF): only an account whose operator completed the compatibility
-  // test AND visually confirmed a rendered Short thumbnail gets the API path below.
-  const shortsThumbnailApi = scheduledShort ? await loadShortsThumbnailGate(ctx) : false;
-  if (scheduledShort && shortsThumbnailApi) {
-    const waiting = await applyScheduledShortThumbnail(ctx, youtubeToken, videoId, payload, thumbnailOnly);
-    if (waiting) return waiting;
-  } else if (scheduledShort) {
+  // Shorts covers are generated and stored in the CRM/Drive only.
+  // Never send Shorts artwork to YouTube via thumbnails.set, regardless of
+  // immediate/scheduled delivery or a legacy thumbnail-only job.
+  if (pub.content_format === "short") {
     const previous = previousThumbnail();
-    if (previous.apiStatus !== "manual_confirmed") {
+    if (pub.thumbnail_file_id && (previous.apiStatus !== "stored_in_crm" || previous.fileId !== pub.thumbnail_file_id)) {
       await saveThumbnailState({
-        ...previous,
-        apiStatus: "manual_required",
-        manualRequired: true,
-        fileId: pub.thumbnail_file_id ?? null,
-        attemptedAt: null,
+        apiStatus: "stored_in_crm",
+        delivery: "none",
+        fileId: pub.thumbnail_file_id,
+        manualRequired: false,
         error: null,
-        studioUrl: `https://studio.youtube.com/video/${encodeURIComponent(videoId)}/edit`,
+        note: "Cover retained with the video in the CRM; no Shorts thumbnail upload to YouTube.",
       });
-      if (previous.apiStatus !== "manual_required") {
-        await insertEvent(ctx, "thumbnail_manual_required", { videoId, thumbnailFileId: pub.thumbnail_file_id ?? null });
-      }
     }
-
-    // If Change Photo queued a thumbnail-only job for a scheduled Short, complete it
-    // without sending thumbnails.set. The saved photo stays available for Studio.
-    if (thumbnailOnly) {
-      await updateLeasedJob(ctx, {
-        payload: { ...payload, thumbnail_api_status: "skipped_scheduled_short_manual", thumbnail_error: null },
-        status: "complete",
-        completed_at: ctx.nowIso(),
-        error_message: null,
-      });
-      return { ok: true, action: "scheduled_short_thumbnail_manual", publicationId: pub.id, videoId };
-    }
-  }
-
-  // For immediate Shorts, keep the existing best-effort API behavior. Wait for
-  // YouTube processing so we do not send thumbnails.set while the video is still
-  // being assembled. Full-length videos continue using the standard thumbnail API.
-  let thumbnailProcessingStatus: string | null = null;
-  let processingLookupError: string | null = null;
-  if (!scheduledShort && pub.content_format === "short" && pub.thumbnail_file_id && !payload.thumbnail_applied && !thumbnailOnly) {
-    let preexistingCustomThumbnail = false;
-    try {
-      const details = await ctx.youtube.getYoutubeThumbnailStatus(youtubeToken, videoId);
-      thumbnailProcessingStatus = details.processingStatus;
-      preexistingCustomThumbnail = details.hasCustomThumbnail === true;
-    } catch (error) {
-      processingLookupError = safeError(error);
-    }
-
-    if (preexistingCustomThumbnail) {
-      payload.thumbnail_applied = true;
-      payload.thumbnail_api_status = "already_present_not_overwritten";
-      payload.thumbnail_manual_or_preexisting_detected_at = ctx.nowIso();
-      await saveThumbnailState({
-        ...previousThumbnail(),
-        apiStatus: "already_present_not_overwritten",
-        attemptedAt: null,
-        error: null,
-        note: "YouTube already reported a custom thumbnail; no API overwrite attempted.",
-      });
-      await insertEvent(ctx, "thumbnail_preexisting_preserved", { videoId });
-    } else {
-      const decision = thumbnailProcessingDecision(
-        thumbnailProcessingStatus,
-        typeof pub.uploaded_at === "string" ? pub.uploaded_at : null,
-        ctx.now(),
-      );
-      if (decision === "processing_failed") {
-        throw new PermanentYoutubeError(
-          "YouTube reports that video processing failed. The video already exists; no duplicate upload was attempted.",
-        );
-      }
-      if (decision === "wait") {
-        const checkedAt = ctx.nowIso();
-        await saveJobPayload(ctx, {
-          ...payload,
-          thumbnail_processing_last_status: thumbnailProcessingStatus,
-          thumbnail_processing_last_checked_at: checkedAt,
-          thumbnail_processing_lookup_error: processingLookupError,
-        });
-        await saveThumbnailState({
-          ...previousThumbnail(),
-          apiStatus: "waiting_processing",
-          processingStatus: thumbnailProcessingStatus,
-          processingLookupError,
-          checkedAt,
-        });
-        return await waitForYoutube(ctx, { ok: true, action: "waiting_for_youtube_processing", publicationId: pub.id, videoId, processingStatus: thumbnailProcessingStatus });
-      }
-      payload.thumbnail_processing_last_status = thumbnailProcessingStatus;
-      payload.thumbnail_processing_lookup_error = processingLookupError;
-      payload.thumbnail_processing_verified = decision === "ready";
-    }
-  }
-
-  if (!scheduledShort && pub.thumbnail_file_id && !payload.thumbnail_applied) {
+  } else if (pub.thumbnail_file_id && !payload.thumbnail_applied) {
+    // Full episodes and long-form Parts retain their existing YouTube
+    // custom-thumbnail upload behavior.
     try {
       const driveToken = await ctx.driveToken();
       const meta = await ctx.drive.fileMetadata(driveToken, pub.thumbnail_file_id as string);
@@ -695,11 +450,7 @@ async function runFinishingSteps(ctx: Ctx): Promise<TickResult> {
       payload.thumbnail_error = null;
       payload.thumbnail_attempted_at = ctx.nowIso();
       payload.thumbnail_uploaded_file_id = pub.thumbnail_file_id;
-      payload.thumbnail_processing_status_at_upload = thumbnailProcessingStatus;
-      await insertEvent(ctx, "thumbnail_api_accepted", {
-        contentFormat: pub.content_format,
-        note: "YouTube accepted thumbnail media upload; visible Shorts thumbnail is not independently verified.",
-      });
+      await insertEvent(ctx, "thumbnail_api_accepted", { contentFormat: pub.content_format });
     } catch (error) {
       payload.thumbnail_api_status = "failed";
       payload.thumbnail_error = safeError(error);
@@ -711,8 +462,6 @@ async function runFinishingSteps(ctx: Ctx): Promise<TickResult> {
       attemptedAt: payload.thumbnail_attempted_at,
       error: payload.thumbnail_error ?? null,
       fileId: pub.thumbnail_file_id,
-      processingStatusAtUpload: payload.thumbnail_processing_status_at_upload ?? null,
-      processingVerifiedAtUpload: payload.thumbnail_processing_verified === true,
     });
   }
 
