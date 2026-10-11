@@ -22,7 +22,7 @@ begin
   if (select status from public.relationship_opportunities where id=o.id)<>'interested' then raise exception 'cancel failed %',r; end if;
   -- Unknown pre-interview opens a review issue, not a fabricated match.
   r:=public.ingest_relationship_calendar_event(t,null,'info@valorwell.org','test-unknown-intro',null,'confirmed',now()+interval '3 days',now()+interval '3 days 1 hour',array['nobody@example.invalid'],null,'Intro call',now(),'{"bty_classification":"bty_preinterview"}');
-  if (r->>'matched')::boolean or not exists(select 1 from public.relationship_reconciliation_issues where external_reference='test-unknown-intro') then raise exception 'unmatched not surfaced %',r; end if;
+  if (r->>'matched')::boolean or not exists(select 1 from public.relationship_reconciliation_issues where external_event_id='test-unknown-intro') then raise exception 'unmatched not surfaced %',r; end if;
   -- An unclassified non-StreamYard event is still ignored.
   r:=public.ingest_relationship_calendar_event(t,null,'info@valorwell.org','test-staff',null,'confirmed',now(),now(),'{}',null,'Staff sync',now(),'{}');
   if r->>'reason'<>'streamyard_room_not_present' then raise exception 'unrelated event observed'; end if;
