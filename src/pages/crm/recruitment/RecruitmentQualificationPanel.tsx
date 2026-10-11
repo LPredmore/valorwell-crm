@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
@@ -40,9 +40,10 @@ export function RecruitmentQualificationPanel({tenantId,row,canEdit}:{
  tenantId:string;row:ReviewedProspect;canEdit:boolean;
 }){
  const qc=useQueryClient();
- const [reviewStatus,setReviewStatus]=useState<'unverified'|'verified'|'invalid'>('verified');
+ const [reviewStatus,setReviewStatus]=useState<'unverified'|'verified'|'invalid'>('unverified');
  const [reason,setReason]=useState('');
  const [linkReason,setLinkReason]=useState('');
+ useEffect(()=>setReviewStatus(row.emailReviewStatus),[row.id,row.emailReviewStatus]);
  const candidates=useQuery({
   queryKey:['recruitment-applicant-candidates',tenantId,row.id],
   queryFn:()=>getApplicantCandidates(tenantId,row.id),retry:false,
@@ -75,10 +76,12 @@ export function RecruitmentQualificationPanel({tenantId,row,canEdit}:{
      <p><strong>Email review:</strong> {row.emailReviewStatus}</p>
      <p><strong>Phone format:</strong> {row.phoneValid?'Usable format':'Missing or invalid'}</p>
      <p><strong>Suppression:</strong> {row.suppressed?'Excluded — do not contact':'No detected source exclusion'}</p>
-     <p><strong>Shared email:</strong> {row.duplicateEmailCount>1?row.duplicateEmailCount+' source records':'No source duplication detected'}</p>
+     <p><strong>Shared email:</strong> {row.emailQuality==='missing'?'Not applicable — no email on file':row.duplicateEmailCount>1?row.duplicateEmailCount+' source records':'No source duplication detected'}</p>
      <p><strong>Possible existing identity:</strong> {row.possibleApplicant||row.possibleContact?'Review possible match':'No exact email or phone match'}</p>
     </div>
-    {row.emailQuality!=='valid'&&<p role="status" className="text-destructive">This address cannot be cleared for recruitment email: {row.emailQuality}.</p>}
+    {row.emailQuality==='missing'&&<p role="status" className="text-muted-foreground">No usable email address is on file. Add one through prospect contact enrichment, then verify it before preparing recruitment outreach.</p>}
+    {row.emailQuality==='invalid'&&<p role="alert" className="text-destructive">The recorded email address is malformed and cannot be used for recruitment outreach.</p>}
+    {row.emailQuality==='duplicate'&&<p role="alert" className="text-destructive">This email address appears on multiple prospect records. Review the duplicates before approving recruitment email.</p>}
     {row.suppressed&&<p role="alert" className="text-destructive">Do not contact: source or shared CRM suppression exists.</p>}
     {canEdit&&<div className="space-y-2 border-t pt-3">
      <Label htmlFor="email-review-status">Document email verification</Label>
