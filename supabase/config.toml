@@ -56,3 +56,12 @@ verify_jwt = false
 [functions.youtube-oauth-callback]
 # Receives Google's OAuth redirect; authorizes via state/PKCE, not a CRM session.
 verify_jwt = false
+
+[functions.recruitment-delivery-worker]
+# Service-role bearer authorization is verified inside the function.
+# Run requires an additional disabled-by-default runtime flag and two DB CHECK-locked controls.
+verify_jwt = true
+
+[functions.recruitment-unsubscribe]
+# Public single-use token endpoint; hashed token verified server-side.
+verify_jwt = false
