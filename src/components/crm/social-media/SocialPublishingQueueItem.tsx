@@ -5,7 +5,6 @@ import { CONTENT_FORMAT_LABELS, STATUS_LABELS, thumbnailStatusLabel, type Social
 import { SocialMediaThumbnail } from './SocialMediaThumbnail';
 import { formatCentralDateTime } from './centralTime';
 import { visibilityLabel } from './publicationViews';
-import { ShortThumbnailBackfillButton } from './ShortThumbnailBackfillButton';
 
 export function SocialPublishingQueueItem({ publication, onOpen }: { publication: SocialPublication; onOpen: () => void }) {
   const playlists = publication.playlists.map((playlist) => playlist.displayName).filter(Boolean);
@@ -25,10 +24,10 @@ export function SocialPublishingQueueItem({ publication, onOpen }: { publication
             <Badge variant="secondary">{CONTENT_FORMAT_LABELS[publication.contentFormat]}</Badge>
             <Badge variant="outline">{STATUS_LABELS[publication.status]}</Badge>
             <Badge variant="outline">{visibilityLabel(publication)}</Badge>
-            {publication.thumbnailStatus === 'manual_required' && (
-              <Badge variant="outline" className="border-amber-500 text-amber-700">Thumbnail needed</Badge>
+            {publication.contentFormat === 'short' && publication.thumbnailFileId && (
+              <Badge variant="outline">Cover saved in CRM</Badge>
             )}
-            {publication.thumbnailStatus && publication.thumbnailStatus !== 'manual_required' && thumbnailStatusLabel(publication.thumbnailStatus) && (
+            {publication.contentFormat !== 'short' && publication.thumbnailStatus && thumbnailStatusLabel(publication.thumbnailStatus) && (
               <Badge variant="outline">{thumbnailStatusLabel(publication.thumbnailStatus)}</Badge>
             )}
             {publication.attemptCount > 1 && <Badge variant="destructive">Attempt {publication.attemptCount}</Badge>}
@@ -47,7 +46,6 @@ export function SocialPublishingQueueItem({ publication, onOpen }: { publication
               <a href={publication.externalUrl} target="_blank" rel="noreferrer">Open</a>
             </Button>
           )}
-          <ShortThumbnailBackfillButton publication={publication} />
           <Button size="sm" variant="outline" onClick={onOpen}>View</Button>
         </div>
       </CardContent>
