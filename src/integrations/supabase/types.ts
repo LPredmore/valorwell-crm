@@ -14598,6 +14598,263 @@ export type Database = {
           },
         ]
       }
+      crm_recruitment_contact_permissions: {
+        Row: {
+          email_permission: string
+          evidence_details: string | null
+          evidence_source: string | null
+          prospect_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          email_permission?: string
+          evidence_details?: string | null
+          evidence_source?: string | null
+          prospect_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          email_permission?: string
+          evidence_details?: string | null
+          evidence_source?: string | null
+          prospect_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_recruitment_contact_permissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_contact_permissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_contact_permissions_tenant_id_prospect_id_fkey"
+            columns: ["tenant_id", "prospect_id"]
+            isOneToOne: true
+            referencedRelation: "crm_therapist_prospect_workflow"
+            referencedColumns: ["tenant_id", "prospect_id"]
+          },
+        ]
+      }
+      crm_recruitment_delivery_attempts: {
+        Row: {
+          attempt_number: number
+          attempted_at: string
+          delivery_step_id: string
+          error_code: string | null
+          id: string
+          idempotency_key: string
+          provider_message_id: string | null
+          result: string
+          tenant_id: string
+        }
+        Insert: {
+          attempt_number: number
+          attempted_at?: string
+          delivery_step_id: string
+          error_code?: string | null
+          id?: string
+          idempotency_key: string
+          provider_message_id?: string | null
+          result: string
+          tenant_id: string
+        }
+        Update: {
+          attempt_number?: number
+          attempted_at?: string
+          delivery_step_id?: string
+          error_code?: string | null
+          id?: string
+          idempotency_key?: string
+          provider_message_id?: string | null
+          result?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_recruitment_delivery_attemp_tenant_id_delivery_step_id_fkey"
+            columns: ["tenant_id", "delivery_step_id"]
+            isOneToOne: false
+            referencedRelation: "crm_recruitment_delivery_steps"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      crm_recruitment_delivery_plans: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          prospect_id: string
+          recipient_email: string
+          sequence_id: string
+          start_at: string
+          status: string
+          stopped_reason: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          prospect_id: string
+          recipient_email: string
+          sequence_id: string
+          start_at: string
+          status?: string
+          stopped_reason?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          prospect_id?: string
+          recipient_email?: string
+          sequence_id?: string
+          start_at?: string
+          status?: string
+          stopped_reason?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_recruitment_delivery_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_delivery_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_delivery_plans_tenant_id_prospect_id_fkey"
+            columns: ["tenant_id", "prospect_id"]
+            isOneToOne: false
+            referencedRelation: "crm_therapist_prospect_workflow"
+            referencedColumns: ["tenant_id", "prospect_id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_delivery_plans_tenant_id_sequence_id_fkey"
+            columns: ["tenant_id", "sequence_id"]
+            isOneToOne: false
+            referencedRelation: "crm_recruitment_draft_sequences"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      crm_recruitment_delivery_steps: {
+        Row: {
+          attempt_count: number
+          body_text: string
+          created_at: string
+          email_message_id: string | null
+          id: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_token: string | null
+          plan_id: string
+          provider: string | null
+          provider_idempotency_key: string | null
+          provider_message_id: string | null
+          retry_after: string | null
+          scheduled_for: string
+          state: string
+          step_order: number
+          stopped_reason: string | null
+          subject: string
+          tenant_id: string
+          updated_at: string
+          worker_checked_at: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          body_text: string
+          created_at?: string
+          email_message_id?: string | null
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          plan_id: string
+          provider?: string | null
+          provider_idempotency_key?: string | null
+          provider_message_id?: string | null
+          retry_after?: string | null
+          scheduled_for: string
+          state?: string
+          step_order: number
+          stopped_reason?: string | null
+          subject: string
+          tenant_id: string
+          updated_at?: string
+          worker_checked_at?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          body_text?: string
+          created_at?: string
+          email_message_id?: string | null
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          plan_id?: string
+          provider?: string | null
+          provider_idempotency_key?: string | null
+          provider_message_id?: string | null
+          retry_after?: string | null
+          scheduled_for?: string
+          state?: string
+          step_order?: number
+          stopped_reason?: string | null
+          subject?: string
+          tenant_id?: string
+          updated_at?: string
+          worker_checked_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_recruitment_delivery_steps_tenant_id_email_message_id_fkey"
+            columns: ["tenant_id", "email_message_id"]
+            isOneToOne: false
+            referencedRelation: "crm_email_messages"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_delivery_steps_tenant_id_plan_id_fkey"
+            columns: ["tenant_id", "plan_id"]
+            isOneToOne: false
+            referencedRelation: "crm_recruitment_delivery_plans"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
       crm_recruitment_draft_sequences: {
         Row: {
           created_at: string
@@ -14714,6 +14971,90 @@ export type Database = {
           },
         ]
       }
+      crm_recruitment_email_enrichment: {
+        Row: {
+          created_at: string
+          evidence_notes: string
+          evidence_url: string
+          id: string
+          proposed_email: string
+          prospect_id: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_by: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          evidence_notes: string
+          evidence_url: string
+          id?: string
+          proposed_email: string
+          prospect_id: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_by: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          evidence_notes?: string
+          evidence_url?: string
+          id?: string
+          proposed_email?: string
+          prospect_id?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_by?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_recruitment_email_enrichment_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_email_enrichment_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_email_enrichment_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "client_journey_exception_owner_options"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_email_enrichment_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_email_enrichment_tenant_id_prospect_id_fkey"
+            columns: ["tenant_id", "prospect_id"]
+            isOneToOne: false
+            referencedRelation: "crm_therapist_prospect_workflow"
+            referencedColumns: ["tenant_id", "prospect_id"]
+          },
+        ]
+      }
       crm_recruitment_inbound_triage: {
         Row: {
           classification: string
@@ -14781,6 +15122,83 @@ export type Database = {
           },
           {
             foreignKeyName: "crm_recruitment_inbound_triage_tenant_id_prospect_id_fkey"
+            columns: ["tenant_id", "prospect_id"]
+            isOneToOne: false
+            referencedRelation: "crm_therapist_prospect_workflow"
+            referencedColumns: ["tenant_id", "prospect_id"]
+          },
+        ]
+      }
+      crm_recruitment_send_control: {
+        Row: {
+          approved_test_only: boolean
+          execution_enabled: boolean
+          max_per_run: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_test_only?: boolean
+          execution_enabled?: boolean
+          max_per_run?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_test_only?: boolean
+          execution_enabled?: boolean
+          max_per_run?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_recruitment_send_control_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_recruitment_unsubscribe_tokens: {
+        Row: {
+          created_at: string
+          delivery_step_id: string
+          expires_at: string
+          prospect_id: string
+          tenant_id: string
+          token_sha256: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_step_id: string
+          expires_at?: string
+          prospect_id: string
+          tenant_id: string
+          token_sha256: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivery_step_id?: string
+          expires_at?: string
+          prospect_id?: string
+          tenant_id?: string
+          token_sha256?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_recruitment_unsubscribe_tok_tenant_id_delivery_step_id_fkey"
+            columns: ["tenant_id", "delivery_step_id"]
+            isOneToOne: false
+            referencedRelation: "crm_recruitment_delivery_steps"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_recruitment_unsubscribe_tokens_tenant_id_prospect_id_fkey"
             columns: ["tenant_id", "prospect_id"]
             isOneToOne: false
             referencedRelation: "crm_therapist_prospect_workflow"
@@ -30639,12 +31057,32 @@ export type Database = {
         Args: { p_limit?: number; p_prospect_id: string; p_tenant_id: string }
         Returns: Json
       }
+      crm_recruitment_contact_permission_status: {
+        Args: { p_prospect_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      crm_recruitment_delivery_gate: {
+        Args: {
+          p_prospect_id: string
+          p_sequence_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      crm_recruitment_delivery_ledger: {
+        Args: { p_sequence_id?: string; p_tenant_id: string }
+        Returns: Json
+      }
       crm_recruitment_draft_preview: {
         Args: { p_sequence_id: string; p_tenant_id: string }
         Returns: Json
       }
       crm_recruitment_draft_workspace: {
         Args: { p_tenant_id: string }
+        Returns: Json
+      }
+      crm_recruitment_email_enrichment_queue: {
+        Args: { p_prospect_id?: string; p_tenant_id: string }
         Returns: Json
       }
       crm_recruitment_link_existing_applicant: {
@@ -30671,9 +31109,38 @@ export type Database = {
         }
         Returns: Json
       }
+      crm_recruitment_propose_email_enrichment: {
+        Args: {
+          p_email: string
+          p_evidence_notes: string
+          p_prospect_id: string
+          p_source_url: string
+          p_tenant_id: string
+        }
+        Returns: string
+      }
+      crm_recruitment_record_contact_permission: {
+        Args: {
+          p_evidence_details: string
+          p_evidence_source: string
+          p_prospect_id: string
+          p_status: string
+          p_tenant_id: string
+        }
+        Returns: boolean
+      }
       crm_recruitment_reply_inbox: {
         Args: { p_tenant_id: string }
         Returns: Json
+      }
+      crm_recruitment_review_email_enrichment: {
+        Args: {
+          p_decision: string
+          p_proposal_id: string
+          p_review_notes: string
+          p_tenant_id: string
+        }
+        Returns: boolean
       }
       crm_recruitment_review_queue: {
         Args: {
@@ -30704,6 +31171,51 @@ export type Database = {
           p_steps: Json
           p_tenant_id: string
         }
+        Returns: string
+      }
+      crm_recruitment_sequence_schedule_preview: {
+        Args: {
+          p_sequence_id: string
+          p_start_at?: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      crm_recruitment_stage_held_plan: {
+        Args: {
+          p_prospect_id: string
+          p_sequence_id: string
+          p_start_at?: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      crm_recruitment_worker_claim: {
+        Args: { p_lease_seconds?: number; p_limit?: number }
+        Returns: Json
+      }
+      crm_recruitment_worker_finalize: {
+        Args: {
+          p_error?: string
+          p_lease_token: string
+          p_outcome: string
+          p_provider_message_id?: string
+          p_step_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      crm_recruitment_worker_issue_unsubscribe_token: {
+        Args: { p_lease_token: string; p_step_id: string; p_tenant_id: string }
+        Returns: string
+      }
+      crm_recruitment_worker_reap_expired: { Args: never; Returns: number }
+      crm_recruitment_worker_recheck: {
+        Args: { p_lease_token: string; p_step_id: string; p_tenant_id: string }
+        Returns: boolean
+      }
+      crm_recruitment_worker_unsubscribe: {
+        Args: { p_token: string }
         Returns: string
       }
       crm_release_stale_newsletter_claims: {

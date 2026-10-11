@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.93.1";
+import { classifyBtyCalendarEvent } from "./relationship-calendar-classification.ts";
 import {
   CALENDAR_WEBHOOK_URL,
   connectionRuntime,
@@ -239,6 +240,11 @@ async function processCalendarEvent(
     p_summary: typeof event.summary === "string" ? event.summary : null,
     p_updated_at: typeof event.updated === "string" ? event.updated : new Date().toISOString(),
     p_metadata: {
+      bty_classification: classifyBtyCalendarEvent({
+        streamyardPresent: Boolean(streamyard),
+        summary: typeof event.summary === "string" ? event.summary : null,
+        description: typeof event.description === "string" ? event.description : null,
+      }),
       organizer: event.organizer,
       attendees: event.attendees,
       htmlLink: event.htmlLink,

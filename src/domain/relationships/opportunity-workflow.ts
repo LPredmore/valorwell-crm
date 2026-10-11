@@ -13,6 +13,8 @@ export const opportunityStatuses: OpportunityStatus[] = [
   'contacted',
   'responded',
   'interested',
+  'pre_interview_scheduled',
+  'pre_interview_completed',
   'recording_planned',
   'booked',
   'declined',
@@ -21,6 +23,8 @@ export const opportunityStatuses: OpportunityStatus[] = [
   'completed',
 ];
 
+// Mirrors private.relationship_opportunity_status_transition_allowed.
+// Pre-interview = introductory call; recording_planned/booked/completed = full feature recording.
 const transitions: Record<OpportunityStatus, OpportunityStatus[]> = {
   identified: ['researching', 'qualified', 'nurture', 'disqualified'],
   researching: ['qualified', 'nurture', 'disqualified'],
@@ -28,16 +32,24 @@ const transitions: Record<OpportunityStatus, OpportunityStatus[]> = {
   ready_for_campaign: ['contacted', 'nurture', 'disqualified'],
   contacted: ['responded', 'nurture', 'declined', 'disqualified'],
   responded: ['interested', 'nurture', 'declined'],
-  interested: ['recording_planned', 'booked', 'nurture', 'declined'],
+  interested: ['pre_interview_scheduled', 'recording_planned', 'booked', 'nurture', 'declined'],
+  pre_interview_scheduled: ['pre_interview_completed', 'interested', 'booked', 'nurture', 'declined'],
+  pre_interview_completed: ['recording_planned', 'booked', 'nurture', 'declined'],
   recording_planned: ['booked', 'nurture', 'declined'],
   booked: ['completed', 'nurture', 'declined'],
-  nurture: ['researching', 'qualified', 'contacted', 'responded', 'interested', 'disqualified'],
+  nurture: ['researching', 'qualified', 'contacted', 'responded', 'interested', 'pre_interview_scheduled', 'disqualified'],
   declined: ['nurture', 'researching'],
   disqualified: ['identified'],
   completed: ['nurture'],
 };
 
+const labels: Partial<Record<OpportunityStatus, string>> = {
+  pre_interview_scheduled: 'Pre-Interview Scheduled',
+  pre_interview_completed: 'Pre-Interview Completed',
+};
+
 export function opportunityStatusLabel(status: OpportunityStatus) {
+  if (labels[status]) return labels[status]!;
   return status.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
