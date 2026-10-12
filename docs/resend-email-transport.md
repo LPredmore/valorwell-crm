@@ -10,7 +10,7 @@ The CRM uses Resend for every active email delivery path:
 - relationship campaign email
 - inbound email and delivery-status webhooks
 
-Help Scout is retired from the CRM runtime. Its historical database records remain audit-only and are not read or written by the application.
+The previous email provider was retired on 2026-10-12. Its historical database records remain audit-only and are not read or written by the application.
 
 ## Required Supabase secrets
 
@@ -39,6 +39,5 @@ Subscribe the CRM webhook to at least:
 3. Deploy the updated `campaign-scheduler`, `relationship-campaign-worker`, and `relationship-resend-webhook` functions.
 4. Configure the sender and inbound receiving address under CRM Settings → Resend Email, then run **Test connection**.
 5. Configure the Resend webhook and verify an inbound reply appears in the CRM Communications inbox.
-6. Remove the deployed `helpscout-proxy` Edge Function and delete the `HELPSCOUT_*` Edge Function secrets after confirming no rollback is required.
 
 Do not activate or schedule the relationship campaign worker as part of this migration. Its existing production lock remains in force.

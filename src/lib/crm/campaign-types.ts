@@ -108,7 +108,6 @@ export interface CrmCampaignStepLog {
   skip_reason: string | null;
   error_message: string | null;
   channel: 'email' | 'sms';
-  helpscout_conversation_id: string | null;
   created_at: string;
 }
 
