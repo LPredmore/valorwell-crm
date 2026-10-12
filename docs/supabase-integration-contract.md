@@ -56,7 +56,7 @@ Client-side role checks may improve user experience but are never the sole autho
 - RingCentral is the canonical CRM SMS provider.
 - Every outbound send must evaluate the current communication policy and suppression state immediately before sending.
 - Message persistence, provider delivery identifiers, failures, replies, opt-outs, and campaign transitions must remain auditable.
-- New Help Scout sending paths are prohibited.
+- Email sending paths other than Resend are prohibited.
 
 ## 6. Clinical and relationship separation
 
@@ -96,5 +96,5 @@ Before production completion:
 - Website-owned CRM database migrations.
 - Direct writes that bypass canonical mutation contracts.
 - Clinical/relationship data substitution.
-- New Help Scout dependencies.
+- New non-Resend email provider dependencies.
 - Anonymous access to protected CRM or clinical records.
