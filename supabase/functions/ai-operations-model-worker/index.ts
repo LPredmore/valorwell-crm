@@ -1,6 +1,9 @@
 // AI Operations model worker. Claims queued work, applies the configured Gemini model,
 // validates strict structured output, and records provenance. Never remediates source data.
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 import {
   AI_OPS_MODEL, AI_OPS_PROVIDER, AI_OPS_TENANT_ID, adminClient, authorizeWorker,
   backoffSeconds, callGeminiModel, classifyModelFailure,
