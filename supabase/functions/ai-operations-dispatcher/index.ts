@@ -1,7 +1,10 @@
 // AI Operations dispatcher: runs every five minutes and performs whatever step of
 // the daily America/Chicago sequence is due. Bucket 2 monitoring is deterministic
 // and runs seven days a week. Qualitative/model-backed analysis is manual/on-demand.
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 import {
   AI_OPS_TENANT_ID,
   adminClient,
