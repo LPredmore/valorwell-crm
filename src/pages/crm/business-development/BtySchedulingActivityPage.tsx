@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Activity, AlertCircle, CalendarCheck, Clock, RefreshCw } from 'lucide-react';
@@ -101,7 +102,10 @@ export default function BtySchedulingActivityPage() {
     queryKey: ['bty-scheduler-activity-events', days],
     queryFn: async () => {
       const from = new Date(Date.now() - days * 86_400_000).toISOString();
-      const { data, error } = await supabase
+      // The schema's generated Database type will pick up this newly deployed table on its next refresh.
+      // Isolate the untyped table call here rather than changing the generated integration types.
+      const telemetryClient: SupabaseClient = supabase as unknown as SupabaseClient;
+      const { data, error } = await telemetryClient
         .from('bty_scheduler_activity_events')
         .select('id,created_at,visitor_session_id,booking_attempt_id,organization_id,opportunity_id,event_type,meeting_type,requested_start_utc,failure_code,failure_stage,http_status')
         .gte('created_at', from)
@@ -216,8 +220,8 @@ export default function BtySchedulingActivityPage() {
               {event.requested_start_utc &&
                 <span className="block text-xs text-muted-foreground">Requested: {formatDate(event.requested_start_utc)}</span>}
               {event.failure_code &&
-                <span className="block text-xs text-destructive">Reason: {event.failure_code.replaceAll('_', ' ')}
-                  {event.failure_stage ? ' · ' + event.failure_stage.replaceAll('_', ' ') : ''}
+                <span className="block text-xs text-destructive">Reason: {event.failure_code.replace(/_/g, ' ')}
+                  {event.failure_stage ? ' · ' + event.failure_stage.replace(/_/g, ' ') : ''}
                   {event.http_status ? ' · HTTP ' + event.http_status : ''}
                 </span>}
             </li>)}
