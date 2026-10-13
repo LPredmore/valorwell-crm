@@ -68,12 +68,14 @@ export const crmNavGroups: readonly CrmNavGroup[] = [
   {
     id: 'operations', label: 'Operations', icon: Handshake,
     items: [
-      { label: 'Therapist Recruitment', href: '/crm/therapist-matches', icon: UserPlus, description: 'Existing therapist match reconciliation; recruiting pipeline arrives in a later phase' },
+      { label: 'Therapist Recruitment', href: '/crm/recruitment/prospects', icon: UserPlus, description: 'Clinician prospect queue, stages, contact quality and follow-ups' },
       { label: 'Beyond The Yellow', href: '/crm/business-development', icon: HeartHandshake, exact: true },
       { label: 'Client Intake', href: '/crm/clients', icon: ClipboardList },
       { label: 'Clinician Network', href: '/crm/staff', icon: UserCog },
     ],
     tools: [
+      { label: 'Therapist Match Review', href: '/crm/therapist-matches', icon: UserCog },
+      { label: 'Recruitment Email Drafts', href: '/crm/recruitment/sequences', icon: Mail, description: 'Draft and preview only; outreach sending remains disabled' },
       { label: 'Creator & Community Interest', href: '/crm/creator-community-interest', icon: Handshake },
       { label: 'BTY Orchestration', href: '/crm/business-development/orchestration', icon: Wrench },
       { label: 'BTY Scheduling Activity', href: '/crm/business-development/bty-scheduling-activity', icon: CalendarDays, description: 'Booking attempts and scheduling outcomes' },
