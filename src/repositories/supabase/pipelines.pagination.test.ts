@@ -14,6 +14,7 @@ function queryResult(data:CrmPipelineRecord[],error:null|{message:string}=null){
   const query = {
     select:vi.fn().mockReturnThis(), eq:vi.fn().mockReturnThis(),
     order:vi.fn().mockReturnThis(), gt:vi.fn().mockReturnThis(),
+    is:vi.fn().mockReturnThis(), lt:vi.fn().mockReturnThis(),
     limit:vi.fn(), then:(resolve:(value:unknown)=>unknown)=>Promise.resolve({data,error}).then(resolve),
   };
   query.limit.mockReturnValue(query);
@@ -57,5 +58,35 @@ describe('manual pipeline keyset pagination',()=>{
     const query=queryResult([],{message:'Access denied'});
     await expect(pipelinesRepository.recordPage(pipeline,null,5000)).rejects.toThrow('Access denied');
     expect(query.limit).toHaveBeenCalledWith(201);
+  });
+  it('applies tenant-scoped stage, owner and overdue filters BEFORE cursor pagination',async()=>{
+    const query=queryResult([row('x')]);
+    await pipelinesRepository.recordPage(pipeline,'a',25,{
+      stageId:'stage-2',owner:'mine',attention:'overdue',userId:'staff-2',
+    });
+    expect(query.eq).toHaveBeenCalledWith('tenant_id','tenant-1');
+    expect(query.eq).toHaveBeenCalledWith('pipeline_id','pipeline-1');
+    expect(query.eq).toHaveBeenCalledWith('stage_id','stage-2');
+    expect(query.eq).toHaveBeenCalledWith('owner_profile_id','staff-2');
+    expect(query.lt).toHaveBeenCalledWith('next_action_due_at',expect.any(String));
+    expect(query.gt).toHaveBeenCalledWith('id','a');
+    expect(query.limit).toHaveBeenCalledWith(26);
+  });
+
+  it('restricts unassigned globally but leaves no-next-action for loaded-card filtering',async()=>{
+    const query=queryResult([]);
+    await pipelinesRepository.recordPage(pipeline,null,200,{
+      stageId:null,owner:'unassigned',attention:'no_next_action',userId:null,
+    });
+    expect(query.is).toHaveBeenCalledWith('owner_profile_id',null);
+    expect(query.lt).not.toHaveBeenCalled();
+    expect(query.eq).not.toHaveBeenCalledWith('owner_profile_id',expect.anything());
+  });
+
+  it('refuses mine filter without a signed-in identity, avoiding accidental unfiltered results',async()=>{
+    queryResult([]);
+    await expect(pipelinesRepository.recordPage(pipeline,null,200,{
+      stageId:null,owner:'mine',attention:'all',userId:null,
+    })).rejects.toThrow('Sign in');
   });
 });
