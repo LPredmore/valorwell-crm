@@ -76,6 +76,7 @@ export const crmNavGroups: readonly CrmNavGroup[] = [
     tools: [
       { label: 'Creator & Community Interest', href: '/crm/creator-community-interest', icon: Handshake },
       { label: 'BTY Orchestration', href: '/crm/business-development/orchestration', icon: Wrench },
+      { label: 'BTY Scheduling Activity', href: '/crm/business-development/bty-scheduling-activity', icon: CalendarDays, description: 'Booking attempts and scheduling outcomes' },
       { label: 'BTY Duplicate Cleanup', href: '/crm/business-development/duplicate-cleanup', icon: Search, capability: 'mutate' },
     ],
   },
