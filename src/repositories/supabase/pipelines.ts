@@ -60,24 +60,20 @@ export const pipelinesRepository={
     const {error}=await db.from('crm_pipeline_fields').update(patch as never).eq('tenant_id',f.tenant_id).eq('id',f.id);
     assert(error);
   },
-  async records(p:CrmPipeline,limit=200):Promise<CrmPipelineRecord[]>{
-    const total=Math.min(Math.max(limit,1),2000);
-    const chunk=200;
-    const out:CrmPipelineRecord[]=[];
-    // Bounded range requests avoid Supabase project's default row limit. The
-    // pair (updated_at,id) gives deterministic ties between adjacent pages.
-    for(let offset=0;offset<total;offset+=chunk){
-      const end=Math.min(offset+chunk,total)-1;
-      const {data,error}=await db.from('crm_pipeline_records').select('*')
-        .eq('tenant_id',p.tenant_id).eq('pipeline_id',p.id)
-        .order('updated_at',{ascending:false}).order('id',{ascending:true})
-        .range(offset,end);
-      assert(error);
-      const rows=(data??[]) as CrmPipelineRecord[];
-      out.push(...rows);
-      if(rows.length<end-offset+1)break;
-    }
-    return out;
+  async recordPage(p:CrmPipeline,cursor:string|null,pageSize=200):Promise<{rows:CrmPipelineRecord[];nextCursor:string|null}>{
+    if(p.source_mode!=='manual')throw new Error('Connected pipelines use their authoritative source adapters.');
+    const size=Math.max(1,Math.min(200,Math.floor(pageSize)));
+    // (tenant_id,pipeline_id,id) is an existing unique B-tree index. ID
+    // keyset paging avoids OFFSET rescans and does not impose a 2,000-row cap.
+    // The extra row proves that another page exists without a count query.
+    let query=db.from('crm_pipeline_records').select('*')
+      .eq('tenant_id',p.tenant_id).eq('pipeline_id',p.id)
+      .order('id',{ascending:true}).limit(size+1);
+    if(cursor)query=query.gt('id',cursor);
+    const {data,error}=await query;
+    assert(error);
+    const rows=((data??[]) as CrmPipelineRecord[]).slice(0,size);
+    return {rows,nextCursor:(data?.length??0)>size?rows[rows.length-1].id:null};
   },
   async enroll(p:CrmPipeline,stageId:string,subjectId:string,associatedOrganizationId?:string|null){
     if(p.source_mode!=='manual')throw new Error('Connected pipelines must be synchronized from their authoritative source.');
