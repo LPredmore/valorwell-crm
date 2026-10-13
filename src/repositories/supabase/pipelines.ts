@@ -8,6 +8,7 @@ export interface PipelineServerFilters {
   owner:OwnerFilter;
   attention:AttentionFilter;
   userId:string|null;
+  searchText?:string;
 }
 
 type Entry<Row,Insert,Update>={Row:Row;Insert:Insert;Update:Update;Relationships:[]};
@@ -71,6 +72,22 @@ export const pipelinesRepository={
   async recordPage(p:CrmPipeline,cursor:string|null,pageSize=200,filters?:PipelineServerFilters):Promise<{rows:CrmPipelineRecord[];nextCursor:string|null}>{
     if(p.source_mode!=='manual')throw new Error('Connected pipelines use their authoritative source adapters.');
     const size=Math.max(1,Math.min(200,Math.floor(pageSize)));
+    // Full-dataset name/primary-contact/custom-field search and whitespace-aware
+    // missing-action predicates require the RLS-respecting invoker SQL RPC.
+    // Pass only the authenticated session's user identity to other code paths;
+    // the RPC itself obtains auth.uid() rather than trusting an owner UUID.
+    if(filters?.searchText?.trim()||filters?.attention==='no_next_action'){
+      const {data,error}=await supabase.rpc('crm_find_manual_pipeline_records' as never,{
+        p_tenant_id:p.tenant_id,p_pipeline_id:p.id,p_after_id:cursor,
+        p_search:filters.searchText?.trim().slice(0,200)??'',
+        p_stage_id:filters.stageId,p_owner_filter:filters.owner,
+        p_attention:filters.attention,p_page_size:size+1,
+      } as never);
+      assert(error);
+      const page=(data??[]) as CrmPipelineRecord[];
+      const rows=page.slice(0,size);
+      return {rows,nextCursor:page.length>size?rows[rows.length-1].id:null};
+    }
     // (tenant_id,pipeline_id,id) is an existing unique B-tree index. ID
     // keyset paging avoids OFFSET rescans and does not impose a 2,000-row cap.
     // The extra row proves that another page exists without a count query.
@@ -83,8 +100,6 @@ export const pipelinesRepository={
       query=query.eq('owner_profile_id',filters.userId);
     }else if(filters?.owner==='unassigned')query=query.is('owner_profile_id',null);
     if(filters?.attention==='overdue')query=query.lt('next_action_due_at',new Date().toISOString());
-    // Name/custom field search and whitespace-aware "no next action" remain
-    // local to fetched pages; never claim these are global server filters.
     if(cursor)query=query.gt('id',cursor);
     const {data,error}=await query;
     assert(error);
