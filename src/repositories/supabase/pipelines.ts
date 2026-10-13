@@ -1,6 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { CrmPipeline, CrmPipelineField, CrmPipelineStage, CrmPipelineRecord, CrmPipelineStageRule, CrmPipelineSavedView, PipelineSubject, PipelineFieldType } from '@/domain/pipelines/models';
+import type { AttentionFilter, OwnerFilter } from '@/domain/pipelines/board-view';
+
+export interface PipelineServerFilters {
+  stageId:string|null;
+  owner:OwnerFilter;
+  attention:AttentionFilter;
+  userId:string|null;
+}
 
 type Entry<Row,Insert,Update>={Row:Row;Insert:Insert;Update:Update;Relationships:[]};
 type Db={
@@ -60,7 +68,7 @@ export const pipelinesRepository={
     const {error}=await db.from('crm_pipeline_fields').update(patch as never).eq('tenant_id',f.tenant_id).eq('id',f.id);
     assert(error);
   },
-  async recordPage(p:CrmPipeline,cursor:string|null,pageSize=200):Promise<{rows:CrmPipelineRecord[];nextCursor:string|null}>{
+  async recordPage(p:CrmPipeline,cursor:string|null,pageSize=200,filters?:PipelineServerFilters):Promise<{rows:CrmPipelineRecord[];nextCursor:string|null}>{
     if(p.source_mode!=='manual')throw new Error('Connected pipelines use their authoritative source adapters.');
     const size=Math.max(1,Math.min(200,Math.floor(pageSize)));
     // (tenant_id,pipeline_id,id) is an existing unique B-tree index. ID
@@ -69,6 +77,14 @@ export const pipelinesRepository={
     let query=db.from('crm_pipeline_records').select('*')
       .eq('tenant_id',p.tenant_id).eq('pipeline_id',p.id)
       .order('id',{ascending:true}).limit(size+1);
+    if(filters?.stageId)query=query.eq('stage_id',filters.stageId);
+    if(filters?.owner==='mine'){
+      if(!filters.userId)throw new Error('Sign in to filter records assigned to you.');
+      query=query.eq('owner_profile_id',filters.userId);
+    }else if(filters?.owner==='unassigned')query=query.is('owner_profile_id',null);
+    if(filters?.attention==='overdue')query=query.lt('next_action_due_at',new Date().toISOString());
+    // Name/custom field search and whitespace-aware "no next action" remain
+    // local to fetched pages; never claim these are global server filters.
     if(cursor)query=query.gt('id',cursor);
     const {data,error}=await query;
     assert(error);
