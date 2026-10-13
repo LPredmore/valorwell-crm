@@ -73,14 +73,15 @@ describe('manual pipeline keyset pagination',()=>{
     expect(query.limit).toHaveBeenCalledWith(26);
   });
 
-  it('restricts unassigned globally but leaves no-next-action for loaded-card filtering',async()=>{
-    const query=queryResult([]);
+  it('combines unassigned and no-next-action as global server predicates',async()=>{
+    rpc.mockResolvedValue({data:[],error:null});
     await pipelinesRepository.recordPage(pipeline,null,200,{
       stageId:null,owner:'unassigned',attention:'no_next_action',userId:null,
     });
-    expect(query.is).toHaveBeenCalledWith('owner_profile_id',null);
-    expect(query.lt).not.toHaveBeenCalled();
-    expect(query.eq).not.toHaveBeenCalledWith('owner_profile_id',expect.anything());
+    expect(rpc).toHaveBeenCalledWith('crm_find_manual_pipeline_records',expect.objectContaining({
+      p_owner_filter:'unassigned',p_attention:'no_next_action',p_page_size:201,
+    }));
+    expect(from).not.toHaveBeenCalled();
   });
 
   it('refuses mine filter without a signed-in identity, avoiding accidental unfiltered results',async()=>{
