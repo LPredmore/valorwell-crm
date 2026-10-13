@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
-import { pipelinesRepository } from '@/repositories/supabase/pipelines';
+import { pipelinesRepository,type PipelineServerFilters } from '@/repositories/supabase/pipelines';
+import { defaultPipelineUrlFilters,readPipelineUrlFilters,writePipelineUrlFilters,type PipelineUrlFilters } from '@/domain/pipelines/pipeline-url-filters';
 import { listPipelineSubjects,getPipelineCardSubjects,listAssociatedOrganizations } from '@/repositories/supabase/pipeline-subjects';
 import { listConnectedPipelineCards,type ConnectedPipelineCard } from '@/repositories/supabase/connected-pipeline-cards';
 import {getPipelineSourceKind,donorValuesByContact} from '@/repositories/supabase/pipeline-research';
@@ -25,13 +26,13 @@ import {
 } from '@/domain/pipelines/models';
 
 const fieldTypes:PipelineFieldType[]=['text','number','currency','date','datetime','boolean','url','select','multiselect'];
-function usePipeData(p:CrmPipeline|null) {
+function usePipeData(p:CrmPipeline|null,serverFilters:PipelineServerFilters) {
   const enabled=!!p;
   const stages=useQuery({queryKey:['pipeline-stages',p?.id],queryFn:()=>pipelinesRepository.stages(p!),enabled,retry:false});
   const fields=useQuery({queryKey:['pipeline-fields',p?.id],queryFn:()=>pipelinesRepository.fields(p!),enabled,retry:false});
   const recordPages=useInfiniteQuery({
-    queryKey:['pipeline-records',p?.tenant_id,p?.id],
-    queryFn:({pageParam})=>pipelinesRepository.recordPage(p!,pageParam),
+    queryKey:['pipeline-records',p?.tenant_id,p?.id,serverFilters.stageId,serverFilters.owner,serverFilters.attention,serverFilters.userId],
+    queryFn:({pageParam})=>pipelinesRepository.recordPage(p!,pageParam,200,serverFilters),
     initialPageParam:null as string|null,
     getNextPageParam:page=>page.nextCursor,
     enabled:enabled&&p?.source_mode==='manual',retry:false,
@@ -47,12 +48,25 @@ export default function PipelineHubPage(){
   const qc=useQueryClient();
   // Keep the selected pipeline in the URL so deep links and Back/Forward are reliable.
   const [searchParams,setSearchParams]=useSearchParams();
+  const urlFilters=readPipelineUrlFilters(searchParams);
   const selected=searchParams.get('pipeline')??'';
-  const setSelected=(id:string)=>setSearchParams(previous=>{
-    const next=new URLSearchParams(previous);
-    if(id)next.set('pipeline',id);else next.delete('pipeline');
-    return next;
-  });
+  const setSelected=(id:string)=>{
+    setSearchParams(previous=>{
+      const next=new URLSearchParams(previous);
+      if(id)next.set('pipeline',id);else next.delete('pipeline');
+      return writePipelineUrlFilters(next,defaultPipelineUrlFilters);
+    });
+    setActiveSavedView('');
+    setSelectedRecords([]);
+  };
+  const updateFilters=(patch:Partial<PipelineUrlFilters>)=>{
+    // Replace history for filter edits (especially search typing), while
+    // retaining the selected pipeline and any unrelated query parameters.
+    setSearchParams(previous=>writePipelineUrlFilters(previous,{
+      ...readPipelineUrlFilters(previous),...patch,
+    }),{replace:true});
+    setSelectedRecords([]);
+  };
   const [tab,setTab]=useState<'board'|'settings'>('board');
   const [newName,setNewName]=useState('');
   const [newSubject,setNewSubject]=useState<PipelineSubject>('organization');
@@ -63,12 +77,18 @@ export default function PipelineHubPage(){
   const [findSubject,setFindSubject]=useState('');
   const [enrollId,setEnrollId]=useState('');
   const [associatedOrgId,setAssociatedOrgId]=useState('');
-  const [sortKey,setSortKey]=useState('updated_at');
-  const [viewMode,setViewMode]=useState<PipelineViewMode>('board');
-  const [searchText,setSearchText]=useState('');
-  const [stageFilter,setStageFilter]=useState('');
-  const [attention,setAttention]=useState<AttentionFilter>('all');
-  const [ownerFilter,setOwnerFilter]=useState<OwnerFilter>('all');
+  const sortKey=urlFilters.sort_key;
+  const setSortKey=(value:string)=>updateFilters({sort_key:value});
+  const viewMode=urlFilters.view_mode;
+  const setViewMode=(value:PipelineViewMode)=>updateFilters({view_mode:value});
+  const searchText=urlFilters.search_text;
+  const setSearchText=(value:string)=>updateFilters({search_text:value});
+  const stageFilter=urlFilters.stage_id;
+  const setStageFilter=(value:string)=>updateFilters({stage_id:value});
+  const attention=urlFilters.attention;
+  const setAttention=(value:AttentionFilter)=>updateFilters({attention:value});
+  const ownerFilter=urlFilters.owner_filter;
+  const setOwnerFilter=(value:OwnerFilter)=>updateFilters({owner_filter:value});
   const [saveName,setSaveName]=useState('');
   const [activeSavedView,setActiveSavedView]=useState('');
   const [fromStage,setFromStage]=useState('');
@@ -76,11 +96,15 @@ export default function PipelineHubPage(){
   const [ruleAllowed,setRuleAllowed]=useState(true);
   const [selectedRecords,setSelectedRecords]=useState<string[]>([]);
   const [bulkStage,setBulkStage]=useState('');
+  const [bulkProgress,setBulkProgress]=useState('');
   const teamOwners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId],queryFn:()=>listTeamOwners(currentTenantId!),enabled:!!currentTenantId,retry:false});
   const ownerName=(id:string|null)=>id?(teamOwners.data?.find(member=>member.id===id)?.name??'Assigned team member'):'Unassigned';
   const list=useQuery({queryKey:['crm-pipelines',currentTenantId],queryFn:()=>pipelinesRepository.list(currentTenantId!),enabled:!!currentTenantId,retry:false});
   const p=list.data?.find(x=>x.id===selected)??list.data?.[0]??null;
-  const {stages,fields,records,subjects,connected}=usePipeData(p);
+  const serverFilters:PipelineServerFilters={
+    stageId:stageFilter||null,owner:ownerFilter,attention,userId:userId??null,
+  };
+  const {stages,fields,records,subjects,connected}=usePipeData(p,serverFilters);
   const rules=useQuery({queryKey:['pipeline-stage-rules',p?.id],queryFn:()=>pipelinesRepository.stageRules(p!),enabled:!!p&&p.source_mode==='manual',retry:false});
   const saved=useQuery({queryKey:['pipeline-saved-views',p?.id,userId],queryFn:()=>pipelinesRepository.savedViews(p!,userId!),enabled:!!p&&!!userId,retry:false});
   const sourceBinding=useQuery({queryKey:['pipeline-source-binding',p?.id],
@@ -102,7 +126,7 @@ export default function PipelineHubPage(){
     try{await mutation.mutateAsync(fn);await Promise.all([
       qc.invalidateQueries({queryKey:['pipeline-stages',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-fields',p?.id]}),
-      qc.invalidateQueries({queryKey:['pipeline-records',p?.id]}),
+      qc.invalidateQueries({queryKey:['pipeline-records',p?.tenant_id,p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-card-subjects',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-saved-views',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-stage-rules',p?.id]}),
@@ -117,7 +141,9 @@ export default function PipelineHubPage(){
       const donation=giving.data?.[row.contact_id];
       return donation?{...row,field_values:{...row.field_values,...donation}}:row;
     });
-    return [...values].sort((a,b)=>comparePipelineRecords(a as CrmPipelineRecord,b as CrmPipelineRecord,sortKey));
+    const safeSort=sortKey==='updated_at'||sortKey==='created_at'||sortKey==='next_action_due_at'
+      ||(p?.sort_field_keys??[]).includes(sortKey)?sortKey:'updated_at';
+    return [...values].sort((a,b)=>comparePipelineRecords(a as CrmPipelineRecord,b as CrmPipelineRecord,safeSort));
   },[p?.source_mode,connected.data,records.data,giving.data,sortKey]);
   const labelOf=(r:(typeof sorted)[number])=>{
     if('displayName' in r&&typeof r.displayName==='string')return r.displayName;
@@ -154,9 +180,8 @@ export default function PipelineHubPage(){
     <div className="flex flex-wrap items-end gap-3">
       <div className="min-w-[210px] space-y-1"><Label htmlFor="pipeline-choice">Pipeline</Label>
         <select id="pipeline-choice" className="w-full rounded-md border bg-background p-2" value={p?.id??''}
-          onChange={e=>{setSelected(e.target.value);setTab('board');setSortKey('updated_at');
-            setViewMode('board');setSearchText('');setStageFilter('');setAttention('all');setOwnerFilter('all');setActiveSavedView('');
-            setSelectedRecords([]);setBulkStage('');setFindSubject('');setEnrollId('');}}>
+          onChange={e=>{setSelected(e.target.value);setTab('board');
+            setBulkStage('');setBulkProgress('');setFindSubject('');setEnrollId('');}}>
           {(list.data??[]).map(x=><option key={x.id} value={x.id}>{x.name} ({x.subject_type})</option>)}
         </select></div>
       {p&&<><Button size="sm" variant={tab==='board'?'default':'outline'} onClick={()=>setTab('board')}>Board</Button>
@@ -247,9 +272,8 @@ export default function PipelineHubPage(){
         totalLoaded={sorted.length} loading={stages.isLoading||connected.isLoading}
         error={stages.isError?stages.error.message:connected.isError?connected.error.message:undefined}
         onChooseStage={id=>{
-          setStageFilter(id);
-          setSearchText('');setAttention('all');setOwnerFilter('all');
-          setActiveSavedView('');setViewMode('board');
+          updateFilters({stage_id:id,search_text:'',attention:'all',owner_filter:'all',view_mode:'board'});
+          setActiveSavedView('');
         }}
       />}
       <div className="flex flex-wrap items-end gap-3">
@@ -264,7 +288,7 @@ export default function PipelineHubPage(){
             onChange={e=>setSortKey(e.target.value)}>
             {sortOptions.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}
           </select></div>
-        <div className="space-y-1"><Label htmlFor="pipeline-search">Search</Label>
+        <div className="space-y-1"><Label htmlFor="pipeline-search">{p.source_mode==='manual'?'Search loaded cards':'Search'}</Label>
           <Input id="pipeline-search" value={searchText} maxLength={200} onChange={e=>setSearchText(e.target.value)}
             placeholder="Search name or card fields"/></div>
         <div className="space-y-1"><Label htmlFor="pipeline-stage-filter">Stage</Label>
@@ -297,8 +321,8 @@ export default function PipelineHubPage(){
             onChange={e=>{
               const id=e.target.value;setActiveSavedView(id);
               const v=saved.data?.find(x=>x.id===id);if(!v)return;
-              setViewMode(v.view_mode);setSortKey(v.sort_key);setSearchText(v.search_text);
-              setStageFilter(v.stage_id??'');setAttention(v.attention);setOwnerFilter(v.owner_filter);
+              updateFilters({view_mode:v.view_mode,sort_key:v.sort_key,search_text:v.search_text,
+                stage_id:v.stage_id??'',attention:v.attention,owner_filter:v.owner_filter});
             }}>
             <option value="">Current / unsaved filters</option>
             {(saved.data??[]).map(v=><option key={v.id} value={v.id}>{v.name}</option>)}
@@ -346,8 +370,9 @@ export default function PipelineHubPage(){
         {records.isFetchingNextPage?'Loading records…':'Load 200 more records'}
       </Button>}
       {p.source_mode==='manual'&&<p role="status" className="text-xs text-muted-foreground">
-        {records.data?.length??0} records loaded. Search, sorting and stage counts apply only to loaded records.
-        Additional records can be loaded without a 2,000-record cap.
+        {records.data?.length??0} records loaded. Stage, owner and overdue filters are applied to all manual pipeline records on the server.
+        Search by name or card fields, "No next action", sorting and displayed counts apply only to loaded matching records.
+        More matching records can be loaded without a 2,000-record cap.
       </p>}
       {missingCount>0&&<p role="alert" className="text-destructive">{missingCount} organizations need primary-contact review.</p>}
       {sourceBinding.isError&&<p role="alert" className="text-destructive">Source binding unavailable: {sourceBinding.error.message}</p>}
@@ -387,20 +412,25 @@ export default function PipelineHubPage(){
               setActionError('A selected record has a blocked transition. Nothing was moved.');return;
             }
             if(!window.confirm(`Move ${moving.length} selected records to "${destination.name}"? Each move is recorded in the pipeline audit history.`))return;
+            setBulkProgress(`Moving 0 of ${moving.length} records…`);
             void act(async()=>{
               let completed=0;
               try{
                 for(const record of moving){
                   await pipelinesRepository.move(record,bulkStage);
                   completed++;
+                  setBulkProgress(`Moving ${completed} of ${moving.length} records…`);
                 }
                 setSelectedRecords([]);
+                setBulkProgress(`Completed ${completed} of ${moving.length} stage moves. All changes are individually audited.`);
               }catch(error){
+                setBulkProgress(`Stopped after ${completed} of ${moving.length} stage moves. Refresh before retrying.`);
                 throw new Error(`${completed} of ${moving.length} records moved. ${error instanceof Error?error.message:'A move failed'}. Refresh before retrying remaining records.`);
               }
             });
           }}>Move selected (up to 20)</Button>
       </div>}
+      {bulkProgress&&<p role="status" className="rounded border p-2 text-sm">{bulkProgress}</p>}
       {viewMode==='list'&&<div className="overflow-x-auto rounded border">
         <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-muted text-left"><tr>
