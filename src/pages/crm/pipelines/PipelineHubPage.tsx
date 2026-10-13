@@ -1,5 +1,5 @@
 import { useMemo,useState } from 'react';
-import { useMutation,useQuery,useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery,useMutation,useQuery,useQueryClient } from '@tanstack/react-query';
 import { Link,useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card,CardContent,CardDescription,CardHeader,CardTitle } from '@/components/ui/card';
@@ -25,11 +25,18 @@ import {
 } from '@/domain/pipelines/models';
 
 const fieldTypes:PipelineFieldType[]=['text','number','currency','date','datetime','boolean','url','select','multiselect'];
-function usePipeData(p:CrmPipeline|null,limit:number) {
+function usePipeData(p:CrmPipeline|null) {
   const enabled=!!p;
   const stages=useQuery({queryKey:['pipeline-stages',p?.id],queryFn:()=>pipelinesRepository.stages(p!),enabled,retry:false});
   const fields=useQuery({queryKey:['pipeline-fields',p?.id],queryFn:()=>pipelinesRepository.fields(p!),enabled,retry:false});
-  const records=useQuery({queryKey:['pipeline-records',p?.id,limit],queryFn:()=>pipelinesRepository.records(p!,limit),enabled:enabled&&p?.source_mode==='manual',retry:false});
+  const recordPages=useInfiniteQuery({
+    queryKey:['pipeline-records',p?.tenant_id,p?.id],
+    queryFn:({pageParam})=>pipelinesRepository.recordPage(p!,pageParam),
+    initialPageParam:null as string|null,
+    getNextPageParam:page=>page.nextCursor,
+    enabled:enabled&&p?.source_mode==='manual',retry:false,
+  });
+  const records={...recordPages,data:recordPages.data?.pages.flatMap(page=>page.rows)};
   const connected=useQuery({queryKey:['pipeline-connected-cards',p?.id],queryFn:()=>listConnectedPipelineCards(p!,stages.data??[]),enabled:enabled&&p?.source_mode==='connected'&&!!stages.data,retry:false});
   const subjects=useQuery({queryKey:['pipeline-card-subjects',p?.id,records.dataUpdatedAt],queryFn:()=>getPipelineCardSubjects(p!,records.data??[]),enabled:enabled&&p?.source_mode==='manual'&&!!records.data,retry:false});
   return {stages,fields,records,subjects,connected};
@@ -62,7 +69,6 @@ export default function PipelineHubPage(){
   const [stageFilter,setStageFilter]=useState('');
   const [attention,setAttention]=useState<AttentionFilter>('all');
   const [ownerFilter,setOwnerFilter]=useState<OwnerFilter>('all');
-  const [recordLimit,setRecordLimit]=useState(200);
   const [saveName,setSaveName]=useState('');
   const [activeSavedView,setActiveSavedView]=useState('');
   const [fromStage,setFromStage]=useState('');
@@ -74,7 +80,7 @@ export default function PipelineHubPage(){
   const ownerName=(id:string|null)=>id?(teamOwners.data?.find(member=>member.id===id)?.name??'Assigned team member'):'Unassigned';
   const list=useQuery({queryKey:['crm-pipelines',currentTenantId],queryFn:()=>pipelinesRepository.list(currentTenantId!),enabled:!!currentTenantId,retry:false});
   const p=list.data?.find(x=>x.id===selected)??list.data?.[0]??null;
-  const {stages,fields,records,subjects,connected}=usePipeData(p,recordLimit);
+  const {stages,fields,records,subjects,connected}=usePipeData(p);
   const rules=useQuery({queryKey:['pipeline-stage-rules',p?.id],queryFn:()=>pipelinesRepository.stageRules(p!),enabled:!!p&&p.source_mode==='manual',retry:false});
   const saved=useQuery({queryKey:['pipeline-saved-views',p?.id,userId],queryFn:()=>pipelinesRepository.savedViews(p!,userId!),enabled:!!p&&!!userId,retry:false});
   const sourceBinding=useQuery({queryKey:['pipeline-source-binding',p?.id],
@@ -150,7 +156,7 @@ export default function PipelineHubPage(){
         <select id="pipeline-choice" className="w-full rounded-md border bg-background p-2" value={p?.id??''}
           onChange={e=>{setSelected(e.target.value);setTab('board');setSortKey('updated_at');
             setViewMode('board');setSearchText('');setStageFilter('');setAttention('all');setOwnerFilter('all');setActiveSavedView('');
-            setRecordLimit(200);setSelectedRecords([]);setBulkStage('');setFindSubject('');setEnrollId('');}}>
+            setSelectedRecords([]);setBulkStage('');setFindSubject('');setEnrollId('');}}>
           {(list.data??[]).map(x=><option key={x.id} value={x.id}>{x.name} ({x.subject_type})</option>)}
         </select></div>
       {p&&<><Button size="sm" variant={tab==='board'?'default':'outline'} onClick={()=>setTab('board')}>Board</Button>
@@ -333,10 +339,16 @@ export default function PipelineHubPage(){
             :' This source requires its existing authorized workflow for status changes. Generic CRM stage movement is disabled.'}
       </p>}
       {connected.isError&&<p role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">Source records could not be loaded with your current permissions: {connected.error.message}</p>}
-      {p.source_mode==='manual'&&records.data?.length===recordLimit&&recordLimit<2000&&
-        <Button variant="outline" onClick={()=>setRecordLimit(x=>Math.min(x+200,2000))}>Load 200 more records</Button>}
-      {p.source_mode==='manual'&&records.data?.length===2000&&<p role="status" className="text-sm text-amber-700">
-        First 2,000 records loaded. Server-side pagination is required for larger pipelines.</p>}
+      {p.source_mode==='manual'&&records.isError&&<p role="alert" className="text-destructive">
+        Unable to load pipeline records: {records.error.message}</p>}
+      {p.source_mode==='manual'&&records.hasNextPage&&<Button variant="outline" disabled={records.isFetchingNextPage}
+        onClick={()=>void records.fetchNextPage()}>
+        {records.isFetchingNextPage?'Loading records…':'Load 200 more records'}
+      </Button>}
+      {p.source_mode==='manual'&&<p role="status" className="text-xs text-muted-foreground">
+        {records.data?.length??0} records loaded. Search, sorting and stage counts apply only to loaded records.
+        Additional records can be loaded without a 2,000-record cap.
+      </p>}
       {missingCount>0&&<p role="alert" className="text-destructive">{missingCount} organizations need primary-contact review.</p>}
       {sourceBinding.isError&&<p role="alert" className="text-destructive">Source binding unavailable: {sourceBinding.error.message}</p>}
       {giving.isError&&<p role="alert" className="text-destructive">Verified donation enrichment could not be loaded: {giving.error.message}</p>}
