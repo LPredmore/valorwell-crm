@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CrmPipeline, CrmPipelineRecord } from '@/domain/pipelines/models';
 
-const { from } = vi.hoisted(() => ({ from: vi.fn() }));
-vi.mock('@/integrations/supabase/client', () => ({ supabase: { from } }));
+const { from, rpc } = vi.hoisted(() => ({ from: vi.fn(),rpc:vi.fn() }));
+vi.mock('@/integrations/supabase/client', () => ({ supabase: { from,rpc } }));
 import { pipelinesRepository } from './pipelines';
 
 const pipeline = {
@@ -88,5 +88,47 @@ describe('manual pipeline keyset pagination',()=>{
     await expect(pipelinesRepository.recordPage(pipeline,null,200,{
       stageId:null,owner:'mine',attention:'all',userId:null,
     })).rejects.toThrow('Sign in');
+  });
+  it('runs full-dataset text search through a bounded invoker RPC with stage/tenant filters',async()=>{
+    rpc.mockResolvedValue({data:[row('b'),row('c'),row('d')],error:null});
+    const result=await pipelinesRepository.recordPage(pipeline,'a',2,{
+      searchText:'  Veterans  ',stageId:'stage-1',owner:'mine',attention:'all',userId:'staff-1',
+    });
+    expect(rpc).toHaveBeenCalledWith('crm_find_manual_pipeline_records',{
+      p_tenant_id:'tenant-1',p_pipeline_id:'pipeline-1',p_after_id:'a',
+      p_search:'Veterans',p_stage_id:'stage-1',p_owner_filter:'mine',p_attention:'all',p_page_size:3,
+    });
+    expect(result).toEqual({rows:[row('b'),row('c')],nextCursor:'c'});
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it('searches globally for no-next-action cards even without a search phrase',async()=>{
+    rpc.mockResolvedValue({data:[row('b')],error:null});
+    const result=await pipelinesRepository.recordPage(pipeline,null,200,{
+      searchText:'',stageId:null,owner:'all',attention:'no_next_action',userId:'staff-1',
+    });
+    expect(rpc).toHaveBeenCalledWith('crm_find_manual_pipeline_records',expect.objectContaining({
+      p_attention:'no_next_action',p_page_size:201,
+    }));
+    expect(result.nextCursor).toBeNull();
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it('does not silently fall back to incomplete client filtering on RPC errors',async()=>{
+    rpc.mockResolvedValue({data:null,error:{message:'Search function unavailable'}});
+    await expect(pipelinesRepository.recordPage(pipeline,null,200,{
+      searchText:'Smith',stageId:null,owner:'all',attention:'all',userId:'staff-1',
+    })).rejects.toThrow('Search function unavailable');
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it('bounds server search input length and the RPC lookahead to 201 rows',async()=>{
+    rpc.mockResolvedValue({data:[],error:null});
+    await pipelinesRepository.recordPage(pipeline,null,1000,{
+      searchText:'a'.repeat(400),stageId:null,owner:'all',attention:'all',userId:'staff-1',
+    });
+    const args=rpc.mock.calls[0][1] as {p_page_size:number;p_search:string};
+    expect(args.p_page_size).toBe(201);
+    expect(args.p_search).toHaveLength(200);
   });
 });
