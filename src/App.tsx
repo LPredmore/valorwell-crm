@@ -38,6 +38,7 @@ import RelationshipSuppressionPage from "./pages/crm/business-development/Relati
 import RelationshipOrchestrationPage from "./pages/crm/business-development/RelationshipOrchestrationPage";
 import RelationshipReconciliationPage from "./pages/crm/business-development/RelationshipReconciliationPage";
 import BtyAutomationPage from "./pages/crm/business-development/BtyAutomationPage";
+import BtySchedulingActivityPage from "./pages/crm/business-development/BtySchedulingActivityPage";
 import CommunicationsControlPlanePage from "./pages/crm/CommunicationsControlPlanePage";
 import NewsletterManagementPage from "./pages/crm/NewsletterManagementPage";
 import CampaignManagementPage from "./pages/crm/CampaignManagementPage";
@@ -109,6 +110,7 @@ const App = () => (
             <Route path="business-development/orchestration/reconciliation" element={<RelationshipReconciliationPage />} />
             <Route path="business-development/automation" element={<CrmLegacyRouteRedirect to="/crm/business-development/duplicate-cleanup" />} />
             <Route path="business-development/duplicate-cleanup" element={<BtyAutomationPage />} />
+            <Route path="business-development/bty-scheduling-activity" element={<BtySchedulingActivityPage />} />
             <Route path="communications-control-plane" element={<CommunicationsControlPlanePage />} />
 
             <Route path="business-development/search" element={<RelationshipSearchPage />} />
