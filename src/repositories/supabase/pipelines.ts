@@ -125,6 +125,23 @@ export const pipelinesRepository={
     if(data===null)throw new Error('Move failed. Refresh the board and retry.');
     return data as number;
   },
+  async bulkMove(records:CrmPipelineRecord[],stageId:string):Promise<number>{
+    if(records.length<1||records.length>20)throw new Error('Select between 1 and 20 pipeline records.');
+    const [first]=records;
+    if(records.some(row=>row.tenant_id!==first.tenant_id||row.pipeline_id!==first.pipeline_id))
+      throw new Error('Bulk moves must stay inside one tenant and one pipeline.');
+    if(records.some(row=>row.source_record_id||row.source_record_type))
+      throw new Error('Source-connected records cannot be moved through the generic CRM bulk action.');
+    if(new Set(records.map(row=>row.id)).size!==records.length)
+      throw new Error('Duplicate records are not allowed in a bulk move.');
+    const {data,error}=await supabase.rpc('crm_bulk_move_manual_pipeline_records' as never,{
+      p_items:records.map(row=>({id:row.id,version:row.version})),
+      p_to_stage_id:stageId,
+    } as never);
+    assert(error);
+    if(data!==records.length)throw new Error('Could not verify the completed bulk operation. Refresh before retrying.');
+    return data as number;
+  },
   async updateValues(record:CrmPipelineRecord,values:Record<string,unknown>){
     const {data,error}=await db.from('crm_pipeline_records').update({field_values:values} as never)
       .eq('tenant_id',record.tenant_id).eq('id',record.id).eq('version',record.version).select('id').maybeSingle();
