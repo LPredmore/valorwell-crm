@@ -31,7 +31,7 @@ function usePipeData(p:CrmPipeline|null,serverFilters:PipelineServerFilters) {
   const stages=useQuery({queryKey:['pipeline-stages',p?.id],queryFn:()=>pipelinesRepository.stages(p!),enabled,retry:false});
   const fields=useQuery({queryKey:['pipeline-fields',p?.id],queryFn:()=>pipelinesRepository.fields(p!),enabled,retry:false});
   const recordPages=useInfiniteQuery({
-    queryKey:['pipeline-records',p?.tenant_id,p?.id,serverFilters.stageId,serverFilters.owner,serverFilters.attention,serverFilters.userId],
+    queryKey:['pipeline-records',p?.tenant_id,p?.id,serverFilters.stageId,serverFilters.owner,serverFilters.attention,serverFilters.userId,serverFilters.searchText],
     queryFn:({pageParam})=>pipelinesRepository.recordPage(p!,pageParam,200,serverFilters),
     initialPageParam:null as string|null,
     getNextPageParam:page=>page.nextCursor,
@@ -103,6 +103,7 @@ export default function PipelineHubPage(){
   const p=list.data?.find(x=>x.id===selected)??list.data?.[0]??null;
   const serverFilters:PipelineServerFilters={
     stageId:stageFilter||null,owner:ownerFilter,attention,userId:userId??null,
+    searchText,
   };
   const {stages,fields,records,subjects,connected}=usePipeData(p,serverFilters);
   const rules=useQuery({queryKey:['pipeline-stage-rules',p?.id],queryFn:()=>pipelinesRepository.stageRules(p!),enabled:!!p&&p.source_mode==='manual',retry:false});
@@ -153,7 +154,12 @@ export default function PipelineHubPage(){
   };
   const filtered=sorted.filter(r=>matchesPipelineView({
     ...r,owner_profile_id:'owner_profile_id' in r?r.owner_profile_id:null,
-  },labelOf(r),{search_text:searchText,stage_id:stageFilter||null,attention,owner_filter:ownerFilter},userId??''));
+  },labelOf(r),{
+    search_text:p?.source_mode==='manual'?'':searchText,
+    stage_id:stageFilter||null,
+    attention:p?.source_mode==='manual'?'all':attention,
+    owner_filter:ownerFilter,
+  },userId??''));
   const actionHealth=useMemo(()=>{
     const overdue=filtered.filter(row=>row.next_action_due_at&&new Date(row.next_action_due_at).getTime()<Date.now()).length;
     const missing=filtered.filter(row=>!row.next_action?.trim()).length;
@@ -288,7 +294,7 @@ export default function PipelineHubPage(){
             onChange={e=>setSortKey(e.target.value)}>
             {sortOptions.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}
           </select></div>
-        <div className="space-y-1"><Label htmlFor="pipeline-search">{p.source_mode==='manual'?'Search loaded cards':'Search'}</Label>
+        <div className="space-y-1"><Label htmlFor="pipeline-search">{p.source_mode==='manual'?'Search all pipeline records':'Search'}</Label>
           <Input id="pipeline-search" value={searchText} maxLength={200} onChange={e=>setSearchText(e.target.value)}
             placeholder="Search name or card fields"/></div>
         <div className="space-y-1"><Label htmlFor="pipeline-stage-filter">Stage</Label>
@@ -370,9 +376,9 @@ export default function PipelineHubPage(){
         {records.isFetchingNextPage?'Loading records…':'Load 200 more records'}
       </Button>}
       {p.source_mode==='manual'&&<p role="status" className="text-xs text-muted-foreground">
-        {records.data?.length??0} records loaded. Stage, owner and overdue filters are applied to all manual pipeline records on the server.
-        Search by name or card fields, "No next action", sorting and displayed counts apply only to loaded matching records.
-        More matching records can be loaded without a 2,000-record cap.
+        {records.data?.length??0} matching records loaded. Stage, owner, action and search filters run against the full manual pipeline on the server.
+        Search matches CRM names, global primary contacts, next actions and custom fields.
+        Sorting and displayed counts reflect only the currently loaded matching records; load more to see additional matches.
       </p>}
       {missingCount>0&&<p role="alert" className="text-destructive">{missingCount} organizations need primary-contact review.</p>}
       {sourceBinding.isError&&<p role="alert" className="text-destructive">Source binding unavailable: {sourceBinding.error.message}</p>}
