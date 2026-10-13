@@ -144,7 +144,7 @@ export default function PipelineHubPage(){
     const safeSort=sortKey==='updated_at'||sortKey==='created_at'||sortKey==='next_action_due_at'
       ||(p?.sort_field_keys??[]).includes(sortKey)?sortKey:'updated_at';
     return [...values].sort((a,b)=>comparePipelineRecords(a as CrmPipelineRecord,b as CrmPipelineRecord,safeSort));
-  },[p?.source_mode,connected.data,records.data,giving.data,sortKey]);
+  },[p?.source_mode,p?.sort_field_keys,connected.data,records.data,giving.data,sortKey]);
   const labelOf=(r:(typeof sorted)[number])=>{
     if('displayName' in r&&typeof r.displayName==='string')return r.displayName;
     const manual=r as CrmPipelineRecord;
