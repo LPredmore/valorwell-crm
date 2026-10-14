@@ -132,4 +132,44 @@ describe('manual pipeline keyset pagination',()=>{
     expect(args.p_page_size).toBe(201);
     expect(args.p_search).toHaveLength(200);
   });
+  it.each(['updated_at','created_at','next_action_due_at'] as const)(
+    'paginates the entire manual pipeline using an authorized global %s date sort',
+    async sortKey=>{
+      rpc.mockResolvedValue({data:[row('a'),row('b'),row('c')],error:null});
+      const result=await pipelinesRepository.recordPage(pipeline,'previous',2,{
+        sortKey,stageId:'stage-1',owner:'mine',attention:'overdue',userId:'staff-1',
+        searchText:'Veterans',
+      });
+      expect(result).toEqual({rows:[row('a'),row('b')],nextCursor:'b'});
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(rpc).toHaveBeenCalledWith('crm_find_manual_pipeline_records_sorted',{
+        p_tenant_id:'tenant-1',p_pipeline_id:'pipeline-1',
+        p_after_id:'previous',p_search:'Veterans',p_stage_id:'stage-1',
+        p_owner_filter:'mine',p_attention:'overdue',p_page_size:3,p_sort_key:sortKey,
+      });
+      expect(from).not.toHaveBeenCalled();
+      vi.clearAllMocks();
+    },
+  );
+
+  it('does not claim a successful globally sorted page after database error',async()=>{
+    rpc.mockResolvedValue({data:null,error:{message:'Sorted pipeline unavailable'}});
+    await expect(pipelinesRepository.recordPage(pipeline,null,200,{
+      sortKey:'updated_at',stageId:null,owner:'all',attention:'all',userId:'staff',
+      searchText:'',
+    })).rejects.toThrow('Sorted pipeline unavailable');
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it('keeps custom-field sorting on the explicit loaded-only fallback',async()=>{
+    const query=queryResult([row('a')]);
+    const result=await pipelinesRepository.recordPage(pipeline,null,200,{
+      sortKey:'custom_rank',stageId:null,owner:'all',attention:'all',userId:'staff',
+      searchText:'',
+    });
+    expect(result.nextCursor).toBeNull();
+    expect(query.order).toHaveBeenCalledWith('id',{ascending:true});
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
 });
