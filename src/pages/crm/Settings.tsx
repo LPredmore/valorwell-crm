@@ -1,6 +1,7 @@
 import { KanbanConfigPanel } from '@/components/crm/settings/KanbanConfigPanel';
 import { ResendConfigPanel } from '@/components/crm/settings/ResendConfigPanel';
 import { EmailSignaturesPanel } from '@/components/crm/settings/EmailSignaturesPanel';
+import { AccountSecurityPanel } from '@/components/crm/settings/AccountSecurityPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ShieldAlert } from 'lucide-react';
@@ -25,6 +26,7 @@ export default function CrmSettings() {
       <h1 className="text-2xl font-bold">Settings</h1>
 
       <div className="grid gap-6 max-w-3xl">
+        <AccountSecurityPanel />
         <Card>
           <CardHeader>
             <CardTitle className="text-base">About / Contract</CardTitle>
