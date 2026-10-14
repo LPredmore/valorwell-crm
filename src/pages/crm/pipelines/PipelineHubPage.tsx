@@ -417,21 +417,16 @@ export default function PipelineHubPage(){
             if(moving.some(record=>!canMovePipelineCard(record.stage_id,bulkStage,stages.data??[],rules.data??[]))){
               setActionError('A selected record has a blocked transition. Nothing was moved.');return;
             }
-            if(!window.confirm(`Move ${moving.length} selected records to "${destination.name}"? Each move is recorded in the pipeline audit history.`))return;
-            setBulkProgress(`Moving 0 of ${moving.length} records…`);
+            if(!window.confirm(`Move ${moving.length} selected records to "${destination.name}" as one transaction? Either every stage change succeeds or none are committed. Each successful move is audited.`))return;
+            setBulkProgress(`Processing all ${moving.length} records as one atomic transaction…`);
             void act(async()=>{
-              let completed=0;
               try{
-                for(const record of moving){
-                  await pipelinesRepository.move(record,bulkStage);
-                  completed++;
-                  setBulkProgress(`Moving ${completed} of ${moving.length} records…`);
-                }
+                const completed=await pipelinesRepository.bulkMove(moving,bulkStage);
                 setSelectedRecords([]);
-                setBulkProgress(`Completed ${completed} of ${moving.length} stage moves. All changes are individually audited.`);
+                setBulkProgress(`All ${completed} stage moves completed and were audited together.`);
               }catch(error){
-                setBulkProgress(`Stopped after ${completed} of ${moving.length} stage moves. Refresh before retrying.`);
-                throw new Error(`${completed} of ${moving.length} records moved. ${error instanceof Error?error.message:'A move failed'}. Refresh before retrying remaining records.`);
+                setBulkProgress('Bulk move could not be confirmed. The database applies the batch atomically; refresh the board before retrying.');
+                throw new Error(`Bulk move failed or could not be confirmed: ${error instanceof Error?error.message:'Unknown error'}. Refresh before retrying.`);
               }
             });
           }}>Move selected (up to 20)</Button>
