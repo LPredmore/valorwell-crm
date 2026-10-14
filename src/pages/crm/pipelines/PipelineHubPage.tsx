@@ -17,6 +17,7 @@ import {ResearchSourceReview} from './ResearchSourceReview';
 import {PipelineDragContext,KanbanRecordDrag,KanbanStageDrop} from './KanbanDnd';
 import {PipelineActionEditor} from './PipelineActionEditor';
 import {PipelineRecordDetails} from './PipelineRecordDetails';
+import {getManualPipelineMetrics,pipelineMetricsTotals} from '@/repositories/supabase/pipeline-metrics';
 import {listTeamOwners} from '@/repositories/supabase/pipeline-team-owners';
 import {ConnectedStageEditor} from './ConnectedStageEditor';
 import {ClinicianStageNavigator} from './ClinicianStageNavigator';
@@ -111,6 +112,12 @@ export default function PipelineHubPage(){
     searchText:settledSearchText,sortKey,
   };
   const {stages,fields,records,subjects,connected}=usePipeData(p,serverFilters);
+  const globalMetrics=useQuery({
+    queryKey:['crm-manual-pipeline-metrics',p?.tenant_id,p?.id],
+    queryFn:()=>getManualPipelineMetrics(p!),enabled:!!p&&p.source_mode==='manual',retry:false,
+  });
+  const pipelineTotals=globalMetrics.data?pipelineMetricsTotals(globalMetrics.data):null;
+  const metricsByStage=new Map((globalMetrics.data??[]).map(row=>[row.stage_id,row.record_count]));
   const rules=useQuery({queryKey:['pipeline-stage-rules',p?.id],queryFn:()=>pipelinesRepository.stageRules(p!),enabled:!!p&&p.source_mode==='manual',retry:false});
   const saved=useQuery({queryKey:['pipeline-saved-views',p?.id,userId],queryFn:()=>pipelinesRepository.savedViews(p!,userId!),enabled:!!p&&!!userId,retry:false});
   const sourceBinding=useQuery({queryKey:['pipeline-source-binding',p?.id],
@@ -135,6 +142,7 @@ export default function PipelineHubPage(){
       qc.invalidateQueries({queryKey:['pipeline-records',p?.tenant_id,p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-card-subjects',p?.id]}),
       qc.invalidateQueries({queryKey:['crm-pipeline-record-history',p?.tenant_id,p?.id]}),
+      qc.invalidateQueries({queryKey:['crm-manual-pipeline-metrics',p?.tenant_id,p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-saved-views',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-stage-rules',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-connected-cards',p?.id]}),
@@ -331,6 +339,18 @@ export default function PipelineHubPage(){
         <Badge variant="outline">Unassigned: {actionHealth.withoutOwner}</Badge>
       </div>
       <p className="text-xs text-muted-foreground" role="status">Action-health counts reflect only currently loaded, filtered records in this pipeline. They are not full-funnel conversion metrics.</p>
+      {p.source_mode==='manual'&&<div className="rounded border p-3 text-sm" aria-label="Entire manual pipeline counts">
+        {globalMetrics.isPending&&<p role="status">Loading exact manual pipeline totals…</p>}
+        {globalMetrics.isError&&<p role="alert" className="text-destructive">Could not load pipeline-wide counts: {globalMetrics.error.message}</p>}
+        {pipelineTotals&&<div className="flex flex-wrap gap-4">
+          <strong>Entire manual pipeline (all stages and filters):</strong>
+          <span>{pipelineTotals.records} records</span>
+          <span>{pipelineTotals.overdue} overdue</span>
+          <span>{pipelineTotals.missingAction} missing next action</span>
+          <span>{pipelineTotals.unassigned} unassigned</span>
+        </div>}
+        {pipelineTotals&&<p className="mt-1 text-xs text-muted-foreground">Exact tenant-authorized counts across all manual records, independent of loaded pages or current filters. Not conversion rates.</p>}
+      </div>}
       <div className="flex flex-wrap items-end gap-2 rounded border p-3">
         <div className="space-y-1"><Label htmlFor="pipeline-saved-view">Saved views</Label>
           <select id="pipeline-saved-view" className="rounded border bg-background p-2" value={activeSavedView}
@@ -502,7 +522,11 @@ export default function PipelineHubPage(){
         {(stages.data??[]).filter(stage=>!stageFilter||stage.id===stageFilter).map(stage=><KanbanStageDrop key={stage.id} id={stage.id}
           enabled={p.source_mode==='manual'&&capabilities.mutate}>
           <Card className="min-w-0">
-          <CardHeader><CardTitle className="text-base">{stage.name}</CardTitle><CardDescription>{filtered.filter(r=>r.stage_id===stage.id).length} records</CardDescription></CardHeader>
+          <CardHeader><CardTitle className="text-base">{stage.name}</CardTitle><CardDescription>
+            {filtered.filter(r=>r.stage_id===stage.id).length} loaded / filtered
+            {p.source_mode==='manual'&&globalMetrics.isSuccess&&
+              <> · {metricsByStage.get(stage.id)??0} total in this stage</>}
+          </CardDescription></CardHeader>
           <CardContent className="space-y-3">
             {filtered.filter(r=>r.stage_id===stage.id).map(record=>{
               const source=p.source_mode==='connected'?record as ConnectedPipelineCard:null;
