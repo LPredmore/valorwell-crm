@@ -16,6 +16,7 @@ import {getPipelineSourceKind,donorValuesByContact} from '@/repositories/supabas
 import {ResearchSourceReview} from './ResearchSourceReview';
 import {PipelineDragContext,KanbanRecordDrag,KanbanStageDrop} from './KanbanDnd';
 import {PipelineActionEditor} from './PipelineActionEditor';
+import {PipelineRecordDetails} from './PipelineRecordDetails';
 import {listTeamOwners} from '@/repositories/supabase/pipeline-team-owners';
 import {ConnectedStageEditor} from './ConnectedStageEditor';
 import {ClinicianStageNavigator} from './ClinicianStageNavigator';
@@ -59,6 +60,7 @@ export default function PipelineHubPage(){
     });
     setActiveSavedView('');
     setSelectedRecords([]);
+    setDetailRecordId('');
   };
   const updateFilters=(patch:Partial<PipelineUrlFilters>)=>{
     // Replace history for filter edits (especially search typing), while
@@ -97,6 +99,7 @@ export default function PipelineHubPage(){
   const [toStage,setToStage]=useState('');
   const [ruleAllowed,setRuleAllowed]=useState(true);
   const [selectedRecords,setSelectedRecords]=useState<string[]>([]);
+  const [detailRecordId,setDetailRecordId]=useState('');
   const [bulkStage,setBulkStage]=useState('');
   const [bulkProgress,setBulkProgress]=useState('');
   const teamOwners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId],queryFn:()=>listTeamOwners(currentTenantId!),enabled:!!currentTenantId,retry:false});
@@ -131,6 +134,7 @@ export default function PipelineHubPage(){
       qc.invalidateQueries({queryKey:['pipeline-fields',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-records',p?.tenant_id,p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-card-subjects',p?.id]}),
+      qc.invalidateQueries({queryKey:['crm-pipeline-record-history',p?.tenant_id,p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-saved-views',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-stage-rules',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-connected-cards',p?.id]}),
@@ -175,6 +179,8 @@ export default function PipelineHubPage(){
     acc[row.stage_id]=(acc[row.stage_id]??0)+1;
     return acc;
   },{});
+  const detailRecord=p?.source_mode==='manual'
+    ?(records.data??[]).find(record=>record.id===detailRecordId):undefined;
   const visibleFields= p?cardFieldLabels(p,fields.data??[]):[];
   const sortOptions=p?availableSortFields(p,fields.data??[]):[];
   const missingCount=sorted.filter(r=>p?.subject_type==='organization'&&((p.source_mode==='connected'?(r as ConnectedPipelineCard).primaryContact:subjects.data?.[(r as CrmPipelineRecord).organization_id??'']?.primaryContact)==='Primary contact needs review')).length;
@@ -385,6 +391,10 @@ export default function PipelineHubPage(){
         Search matches CRM names, global primary contacts, next actions and custom fields.
         Built-in date sorting spans the full manual pipeline; custom-field sorts and displayed counts reflect loaded matches. Load more to see additional matches.
       </p>}
+      {p.source_mode==='manual'&&detailRecord&&<PipelineRecordDetails
+        key={p.id+':'+detailRecord.id} pipeline={p} record={detailRecord} stages={stages.data??[]}
+        subjectName={subjects.data?.[(p.subject_type==='person'?detailRecord.contact_id:detailRecord.organization_id)??'']?.label??'CRM record'}
+        ownerName={ownerName(detailRecord.owner_profile_id)} onClose={()=>setDetailRecordId('')}/>}
       {missingCount>0&&<p role="alert" className="text-destructive">{missingCount} organizations need primary-contact review.</p>}
       {sourceBinding.isError&&<p role="alert" className="text-destructive">Source binding unavailable: {sourceBinding.error.message}</p>}
       {giving.isError&&<p role="alert" className="text-destructive">Verified donation enrichment could not be loaded: {giving.error.message}</p>}
@@ -458,6 +468,8 @@ export default function PipelineHubPage(){
                 disabled={!capabilities.mutate||(!selectedRecords.includes(row.id)&&selectedRecords.length>=20)}
                 onChange={e=>setSelectedRecords(xs=>e.target.checked?[...xs,row.id]:xs.filter(x=>x!==row.id))}/></td>}
               <td className="p-3 font-medium">{labelOf(row)}
+                {manual&&<span className="mt-1 block"><Button size="sm" variant="outline"
+                  onClick={()=>setDetailRecordId(manual.id)}>Details &amp; history</Button></span>}
                 {source?.sourceUrl&&<span className="block">
                   {source.sourceUrl.startsWith('https://')
                     ?<a className="text-xs underline" href={source.sourceUrl} target="_blank" rel="noopener noreferrer">Open source</a>
@@ -510,6 +522,9 @@ export default function PipelineHubPage(){
                    Assigned owner: {ownerName(manual?.owner_profile_id??source?.owner_profile_id??null)}
                  </p>}
                  {record.next_action&&<p className="text-xs text-muted-foreground">Next: {record.next_action}</p>}
+                 {manual&&<Button size="sm" variant="outline" onClick={()=>setDetailRecordId(manual.id)}>
+                   Details &amp; history
+                 </Button>}
                 {source&&['relationship_opportunities','provider_applicants'].includes(p.source_key??'')&&capabilities.mutate&&
                   <ConnectedStageEditor key={source.id+':board:'+source.sourceVersion}
                     pipeline={p} card={source} stages={stages.data??[]} busy={busy} save={act}/>}
