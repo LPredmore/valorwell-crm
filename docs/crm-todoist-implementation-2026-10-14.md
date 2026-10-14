@@ -1,6 +1,6 @@
 # CRM Todoist implementation batch — October 14, 2026
 
-Status: implemented in source, verification deferred at the user's request. This batch is not merged or deployed and does not mark any roadmap phase complete.
+Status: source implementation recorded here. Verification was initially deferred at the user's request; the subsequent merge request now runs required automated CI through PR #153 before merge. Authenticated browser, two-tenant acceptance and cleanup remain in Todoist. This batch does not mark any roadmap phase complete or establish production deployment.
 
 Repository: LPredmore/valorwell-crm. Base: main 27fd88b. Branch: codex/crm-todoist-implementation. Workspace: C:\Users\predm\OneDrive\Documents\Database Migration\valorwell-crm-todoist.
 
@@ -34,4 +34,5 @@ Todoist checklist: https://app.todoist.com/app/task/6hm9jrrxrXXxpPwq
 7. Remaining original acceptance and authenticated smoke checks, coordinated with existing roadmap and remediation tasks.
 8. Review, cleanup, merge and normal frontend deployment after verification; rollback by reverting this batch.
 
-No test, lint, type-check, build, browser acceptance, production data writes, migrations or Edge deployments were performed for this implementation batch. No outreach, invitation, newsletter, SMS, payment, social queue or publisher changes were made. Research identity reconciliation, deliberate global Primary decisions, donor payment ingestion, live invitation redirects and independently authenticated production acceptance remain separate work; existing code presence is not completion evidence.
+During the initial implementation pass, no test, lint, type-check, build or browser acceptance commands were run. Automated validation is now required on PR #153 for the subsequent merge request; its current results are recorded on GitHub. Browser and live acceptance remain deferred. No production data writes, migrations or Edge deployments were performed for this batch. No outreach, invitation, newsletter, SMS, payment, social queue or publisher changes were made. Research identity reconciliation, deliberate global Primary decisions, donor payment ingestion, live invitation redirects and independently authenticated production acceptance remain separate work; existing code presence is not completion evidence.
+
