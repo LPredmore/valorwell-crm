@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { useDebouncedValue } from '@/hooks/crm/useDebouncedValue';
 import { pipelinesRepository,type PipelineServerFilters } from '@/repositories/supabase/pipelines';
 import { defaultPipelineUrlFilters,readPipelineUrlFilters,writePipelineUrlFilters,type PipelineUrlFilters } from '@/domain/pipelines/pipeline-url-filters';
 import { listPipelineSubjects,getPipelineCardSubjects,listAssociatedOrganizations } from '@/repositories/supabase/pipeline-subjects';
@@ -82,6 +83,7 @@ export default function PipelineHubPage(){
   const viewMode=urlFilters.view_mode;
   const setViewMode=(value:PipelineViewMode)=>updateFilters({view_mode:value});
   const searchText=urlFilters.search_text;
+  const settledSearchText=useDebouncedValue(searchText,350);
   const setSearchText=(value:string)=>updateFilters({search_text:value});
   const stageFilter=urlFilters.stage_id;
   const setStageFilter=(value:string)=>updateFilters({stage_id:value});
@@ -103,7 +105,7 @@ export default function PipelineHubPage(){
   const p=list.data?.find(x=>x.id===selected)??list.data?.[0]??null;
   const serverFilters:PipelineServerFilters={
     stageId:stageFilter||null,owner:ownerFilter,attention,userId:userId??null,
-    searchText,sortKey,
+    searchText:settledSearchText,sortKey,
   };
   const {stages,fields,records,subjects,connected}=usePipeData(p,serverFilters);
   const rules=useQuery({queryKey:['pipeline-stage-rules',p?.id],queryFn:()=>pipelinesRepository.stageRules(p!),enabled:!!p&&p.source_mode==='manual',retry:false});
@@ -154,7 +156,7 @@ export default function PipelineHubPage(){
     const id=p?.subject_type==='person'?manual.contact_id:manual.organization_id;
     return subjects.data?.[id??'']?.label??'Loading subject…';
   };
-  const filtered=sorted.filter(r=>matchesPipelineView({
+  const filtered=(p?.source_mode==='manual'&&searchText!==settledSearchText?[]:sorted).filter(r=>matchesPipelineView({
     ...r,owner_profile_id:'owner_profile_id' in r?r.owner_profile_id:null,
   },labelOf(r),{
     search_text:p?.source_mode==='manual'?'':searchText,
@@ -371,6 +373,7 @@ export default function PipelineHubPage(){
             :' This source requires its existing authorized workflow for status changes. Generic CRM stage movement is disabled.'}
       </p>}
       {connected.isError&&<p role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">Source records could not be loaded with your current permissions: {connected.error.message}</p>}
+      {p.source_mode==='manual'&&searchText!==settledSearchText&&<p role="status" className="text-sm text-muted-foreground">Waiting briefly for typing to finish before searching all pipeline records…</p>}
       {p.source_mode==='manual'&&records.isError&&<p role="alert" className="text-destructive">
         Unable to load pipeline records: {records.error.message}</p>}
       {p.source_mode==='manual'&&records.hasNextPage&&<Button variant="outline" disabled={records.isFetchingNextPage}
