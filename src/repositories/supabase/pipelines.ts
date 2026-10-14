@@ -9,6 +9,7 @@ export interface PipelineServerFilters {
   attention:AttentionFilter;
   userId:string|null;
   searchText?:string;
+  sortKey?:string;
 }
 
 type Entry<Row,Insert,Update>={Row:Row;Insert:Insert;Update:Update;Relationships:[]};
@@ -72,6 +73,21 @@ export const pipelinesRepository={
   async recordPage(p:CrmPipeline,cursor:string|null,pageSize=200,filters?:PipelineServerFilters):Promise<{rows:CrmPipelineRecord[];nextCursor:string|null}>{
     if(p.source_mode!=='manual')throw new Error('Connected pipelines use their authoritative source adapters.');
     const size=Math.max(1,Math.min(200,Math.floor(pageSize)));
+    // Builtin date sorts are global, with (timestamp, id) keyset ordering.
+    // Do not fall back to local sorting after an RPC error: that could silently
+    // omit matching records from earlier/later pages.
+    if(filters?.sortKey==='updated_at'||filters?.sortKey==='created_at'||filters?.sortKey==='next_action_due_at'){
+      const {data,error}=await supabase.rpc('crm_find_manual_pipeline_records_sorted' as never,{
+        p_tenant_id:p.tenant_id,p_pipeline_id:p.id,p_after_id:cursor,
+        p_search:filters.searchText?.trim().slice(0,200)??'',
+        p_stage_id:filters.stageId,p_owner_filter:filters.owner,
+        p_attention:filters.attention,p_page_size:size+1,p_sort_key:filters.sortKey,
+      } as never);
+      assert(error);
+      const page=(data??[]) as CrmPipelineRecord[];
+      const rows=page.slice(0,size);
+      return {rows,nextCursor:page.length>size?rows[rows.length-1].id:null};
+    }
     // Full-dataset name/primary-contact/custom-field search and whitespace-aware
     // missing-action predicates require the RLS-respecting invoker SQL RPC.
     // Pass only the authenticated session's user identity to other code paths;
