@@ -31,7 +31,7 @@ function usePipeData(p:CrmPipeline|null,serverFilters:PipelineServerFilters) {
   const stages=useQuery({queryKey:['pipeline-stages',p?.id],queryFn:()=>pipelinesRepository.stages(p!),enabled,retry:false});
   const fields=useQuery({queryKey:['pipeline-fields',p?.id],queryFn:()=>pipelinesRepository.fields(p!),enabled,retry:false});
   const recordPages=useInfiniteQuery({
-    queryKey:['pipeline-records',p?.tenant_id,p?.id,serverFilters.stageId,serverFilters.owner,serverFilters.attention,serverFilters.userId,serverFilters.searchText],
+    queryKey:['pipeline-records',p?.tenant_id,p?.id,serverFilters.stageId,serverFilters.owner,serverFilters.attention,serverFilters.userId,serverFilters.searchText,serverFilters.sortKey],
     queryFn:({pageParam})=>pipelinesRepository.recordPage(p!,pageParam,200,serverFilters),
     initialPageParam:null as string|null,
     getNextPageParam:page=>page.nextCursor,
@@ -103,7 +103,7 @@ export default function PipelineHubPage(){
   const p=list.data?.find(x=>x.id===selected)??list.data?.[0]??null;
   const serverFilters:PipelineServerFilters={
     stageId:stageFilter||null,owner:ownerFilter,attention,userId:userId??null,
-    searchText,
+    searchText,sortKey,
   };
   const {stages,fields,records,subjects,connected}=usePipeData(p,serverFilters);
   const rules=useQuery({queryKey:['pipeline-stage-rules',p?.id],queryFn:()=>pipelinesRepository.stageRules(p!),enabled:!!p&&p.source_mode==='manual',retry:false});
@@ -144,6 +144,8 @@ export default function PipelineHubPage(){
     });
     const safeSort=sortKey==='updated_at'||sortKey==='created_at'||sortKey==='next_action_due_at'
       ||(p?.sort_field_keys??[]).includes(sortKey)?sortKey:'updated_at';
+    if(p?.source_mode==='manual'&&
+      (safeSort==='updated_at'||safeSort==='created_at'||safeSort==='next_action_due_at'))return values;
     return [...values].sort((a,b)=>comparePipelineRecords(a as CrmPipelineRecord,b as CrmPipelineRecord,safeSort));
   },[p?.source_mode,p?.sort_field_keys,connected.data,records.data,giving.data,sortKey]);
   const labelOf=(r:(typeof sorted)[number])=>{
@@ -378,7 +380,7 @@ export default function PipelineHubPage(){
       {p.source_mode==='manual'&&<p role="status" className="text-xs text-muted-foreground">
         {records.data?.length??0} matching records loaded. Stage, owner, action and search filters run against the full manual pipeline on the server.
         Search matches CRM names, global primary contacts, next actions and custom fields.
-        Sorting and displayed counts reflect only the currently loaded matching records; load more to see additional matches.
+        Built-in date sorting spans the full manual pipeline; custom-field sorts and displayed counts reflect loaded matches. Load more to see additional matches.
       </p>}
       {missingCount>0&&<p role="alert" className="text-destructive">{missingCount} organizations need primary-contact review.</p>}
       {sourceBinding.isError&&<p role="alert" className="text-destructive">Source binding unavailable: {sourceBinding.error.message}</p>}
