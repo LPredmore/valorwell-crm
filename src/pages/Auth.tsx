@@ -14,6 +14,7 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [linkSent, setLinkSent] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   useEffect(() => {
@@ -59,6 +60,36 @@ export default function Auth() {
     }
   };
 
+  // Login links are only for existing invited users. Never create CRM users
+  // from this public screen; tenant permissions remain server-side.
+  const handleEmailLink = async () => {
+    if (!email.trim()) {
+      setError('Enter your email address to receive a sign-in link.');
+      return;
+    }
+    setError(null);
+    setIsLoading(true);
+    setLinkSent(false);
+    try {
+      const { error: linkError } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: `${window.location.origin}/auth`,
+        },
+      });
+      if (linkError) {
+        setError('Could not send a sign-in link. Check your account invitation or try again.');
+      } else {
+        setLinkSent(true);
+      }
+    } catch {
+      setError('Could not send a sign-in link. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setError(null);
     setIsLoading(true);
@@ -96,6 +127,13 @@ export default function Auth() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignIn} className="space-y-4">
+            {linkSent && (
+              <Alert>
+                <AlertDescription>
+                  If this address has an invited account, check your email for a sign-in link.
+                </AlertDescription>
+              </Alert>
+            )}
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -139,6 +177,10 @@ export default function Auth() {
               ) : (
                 'Sign in'
               )}
+            </Button>
+
+            <Button type="button" variant="outline" className="w-full" onClick={handleEmailLink} disabled={isLoading}>
+              Email me a sign-in link
             </Button>
 
             <div className="relative">
