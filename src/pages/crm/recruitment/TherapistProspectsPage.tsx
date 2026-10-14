@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
-import {Link,useParams} from 'react-router-dom';
+import {Link,useParams,useSearchParams} from 'react-router-dom';
 import {Button} from '@/components/ui/button';
 import {Card,CardContent,CardHeader,CardTitle,CardDescription} from '@/components/ui/card';
 import {Input} from '@/components/ui/input';
@@ -27,14 +27,34 @@ function toLocal(iso:string|null){
 export default function TherapistProspectsPage(){
   const {id}=useParams();
   const {currentTenantId,capabilities,userId}=useCrmAuth();
-  const [page,setPage]=useState(1);
-  const [searchInput,setSearchInput]=useState('');
-  const [search,setSearch]=useState('');
-  const [stateFilter,setStateFilter]=useState('');
-  const [workflowFilter,setWorkflowFilter]=useState('');
-  const [qualityFilter,setQualityFilter]=useState('');
-  const [dueFilter,setDueFilter]=useState('');
-  const [mineOnly,setMineOnly]=useState(false);
+  const [queueParams,setQueueParams]=useSearchParams();
+  const rawPage=Number(queueParams.get('page'));
+  const page=Number.isSafeInteger(rawPage)&&rawPage>0?rawPage:1;
+  const search=queueParams.get('q')??'';
+  const [searchInput,setSearchInput]=useState(search);
+  useEffect(()=>setSearchInput(search),[search]);
+  const stateFilter=US_STATES.some(([code])=>code===queueParams.get('state'))?queueParams.get('state')!:'';
+  const workflowValues=['review','ready','blocked','recruiting:not_contacted','recruiting:contact_attempted','recruiting:replied','recruiting:interested','recruiting:application_handoff','recruiting:applicant_linked','recruiting:closed'];
+  const qualityValues=['email_valid','email_missing','email_invalid','email_duplicate','suppressed','possible_match','email_unverified','preview_eligible'];
+  const workflowFilter=workflowValues.includes(queueParams.get('workflow')??'')?queueParams.get('workflow')!:'';
+  const qualityFilter=qualityValues.includes(queueParams.get('quality')??'')?queueParams.get('quality')!:'';
+  const dueFilter=['overdue','next_7_days','missing_action','no_due_date'].includes(queueParams.get('due')??'')?queueParams.get('due')!:'';
+  const mineOnly=queueParams.get('mine')==='1';
+  const queueSearch=queueParams.toString()?'?'+queueParams.toString():'';
+  const setQueueFilter=(key:string,value:string)=>setQueueParams(current=>{
+    const next=new URLSearchParams(current);
+    if(value)next.set(key,value);else next.delete(key);
+    if(key!=='page')next.delete('page');
+    return next;
+  });
+  const resetQueue=()=>{
+    setSearchInput('');
+    setQueueParams(current=>{
+      const next=new URLSearchParams(current);
+      for(const key of ['q','page','state','workflow','quality','due','mine'])next.delete(key);
+      return next;
+    });
+  };
   const qc=useQueryClient();
   const query=useQuery({
     queryKey:['therapist-prospect-review',currentTenantId,id??'',page,search,stateFilter,workflowFilter,qualityFilter,dueFilter,mineOnly,userId],
@@ -94,7 +114,7 @@ export default function TherapistProspectsPage(){
       </div>
       <div className="flex gap-2"><Button asChild variant="outline"><Link to={pipelineLink}>Clinician pipeline</Link></Button>
         <Button asChild variant="outline"><Link to="/crm/recruitment/sequences">Recruitment sequences & replies</Link></Button>
-        {id&&<Button asChild variant="outline"><Link to="/crm/recruitment/prospects">All prospects</Link></Button>}</div>
+        {id&&<Button asChild variant="outline"><Link to={'/crm/recruitment/prospects'+queueSearch}>Back to filtered queue</Link></Button>}</div>
     </div>
     {query.isLoading&&<p>Loading tenant-authorized prospects…</p>}
     {query.isError&&<p role="alert" className="text-destructive">{query.error.message}</p>}
@@ -102,7 +122,7 @@ export default function TherapistProspectsPage(){
     {!id&&<Card><CardHeader><CardTitle>Recruitment review queue</CardTitle>
       <CardDescription>Search names, full state names or abbreviations, and narrow results by primary or licensed state. Filters can be combined. Results are server-paged (50 per page), and no campaigns are triggered.</CardDescription></CardHeader>
       <CardContent className="space-y-3">
-        <form className="flex flex-wrap items-end gap-2" onSubmit={event=>{event.preventDefault();setPage(1);setSearch(searchInput.trim())}}>
+        <form className="flex flex-wrap items-end gap-2" onSubmit={event=>{event.preventDefault();setQueueFilter('q',searchInput.trim())}}>
           <div className="min-w-[220px] flex-1 space-y-1">
             <Label htmlFor="prospect-search">Search prospects</Label>
             <Input id="prospect-search" aria-label="Search prospects" placeholder="Search by name, email, or license type" value={searchInput} onChange={event=>setSearchInput(event.target.value)}/>
@@ -110,30 +130,30 @@ export default function TherapistProspectsPage(){
           <div className="min-w-[190px] space-y-1">
             <Label htmlFor="prospect-state-filter">Primary or licensed state</Label>
             <select id="prospect-state-filter" aria-label="Filter by state" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={stateFilter}
-              onChange={event=>{setStateFilter(event.target.value);setPage(1);}}>
+              onChange={event=>{setQueueFilter('state',event.target.value);}}>
               <option value="">All states</option>
               {US_STATES.map(([code,name])=><option key={code} value={code}>{name} ({code})</option>)}
             </select>
           </div>
           <Button type="submit">Search</Button>
-          {(stateFilter||search||workflowFilter||qualityFilter||dueFilter||mineOnly)&&<Button type="button" variant="outline" onClick={()=>{setStateFilter('');setSearch('');setSearchInput('');setWorkflowFilter('');setQualityFilter('');setDueFilter('');setMineOnly(false);setPage(1);}}>Clear filters</Button>}
+          {(stateFilter||search||workflowFilter||qualityFilter||dueFilter||mineOnly)&&<Button type="button" variant="outline" onClick={resetQueue}>Clear filters</Button>}
         </form>
         <RecruitmentFilters workflow={workflowFilter} quality={qualityFilter} due={dueFilter} mineOnly={mineOnly}
-          onWorkflow={v=>{setWorkflowFilter(v);setPage(1)}} onQuality={v=>{setQualityFilter(v);setPage(1)}}
-          onDue={v=>{setDueFilter(v);setPage(1)}} onMine={v=>{setMineOnly(v);setPage(1)}}/>
+          onWorkflow={v=>setQueueFilter('workflow',v)} onQuality={v=>setQueueFilter('quality',v)}
+          onDue={v=>setQueueFilter('due',v)} onMine={v=>setQueueFilter('mine',v?'1':'')}/>
         <p role="status" className="text-sm">{query.isLoading?'Loading prospects…':query.isError?'Prospects could not be loaded':`${query.data?.total??0} matching prospects · Page ${page}`}</p>
         <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-sm">
           <thead><tr className="border-b text-left"><th className="p-2">Prospect</th><th className="p-2">State</th><th className="p-2">Licence</th><th className="p-2">Review stage</th><th className="p-2">Email quality</th><th className="p-2">Follow-up</th><th className="p-2">Owner</th></tr></thead>
           <tbody>{(query.data?.items??[]).map(p=><tr key={p.id} className="border-b">
-            <td className="p-2"><Link className="text-primary underline" to={'/crm/recruitment/prospects/'+p.id}>{displayName(p)}</Link></td>
+            <td className="p-2"><Link className="text-primary underline" to={'/crm/recruitment/prospects/'+p.id+queueSearch}>{displayName(p)}</Link></td>
             <td className="p-2">{p.state??'—'}</td><td className="p-2">{p.licenseType??'—'}</td>
             <td className="p-2">{p.status==='blocked'?'Blocked':p.status==='ready'?'Ready for review':'Needs review'}</td>
             <td className="p-2">{p.emailQuality}{p.suppressed?' · suppressed':''}</td>
             <td className="p-2">{p.nextActionDueAt?new Date(p.nextActionDueAt).toLocaleDateString():(p.nextAction?'Unscheduled':'No next action')}</td>
             <td className="p-2">{owners.data?.find(x=>x.id===p.ownerProfileId)?.name??(p.ownerProfileId?'Assigned team member':'Unassigned')}</td>
           </tr>)}</tbody></table></div>
-        <div className="flex gap-2"><Button variant="outline" disabled={page<=1} onClick={()=>setPage(n=>n-1)}>Previous</Button>
-          <Button variant="outline" disabled={page*50>=(query.data?.total??0)} onClick={()=>setPage(n=>n+1)}>Next</Button></div>
+        <div className="flex gap-2"><Button variant="outline" disabled={query.isPending||page<=1} onClick={()=>setQueueFilter('page',String(page-1))}>Previous</Button>
+          <Button variant="outline" disabled={query.isPending||page*50>=(query.data?.total??0)} onClick={()=>setQueueFilter('page',String(page+1))}>Next</Button></div>
       </CardContent></Card>}
     {id&&!query.isLoading&&!row&&!query.isError&&<p>Prospect not found or not authorized in this tenant.</p>}
     {id&&row&&<><Card><CardHeader><CardTitle>{displayName(row)}</CardTitle><CardDescription>

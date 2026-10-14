@@ -1,3 +1,6 @@
+import { useEffect } from 'react';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { RelationshipOwnerFilter } from '@/components/crm/relationships/RelationshipOwnerField';
 import { relationshipStages } from '@/domain/relationships/contracts';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -17,7 +20,6 @@ import { useOrganizationDirectory, useOrganizationDirectoryFilters } from '@/hoo
 const textFilters = [
   ['organization-outreach', 'Outreach status', 'outreachStatus', 'e.g. contacted'],
   ['organization-kind', 'Organization kind', 'organizationKind', 'e.g. nonprofit'],
-  ['organization-owner', 'Assigned owner', 'owner', 'Owner profile ID'],
 ] as const;
 
 const booleanFilters = [
@@ -27,11 +29,14 @@ const booleanFilters = [
 ] as const;
 
 export default function OrganizationDirectoryPage() {
+  const { currentTenantId, capabilities } = useCrmAuth();
   const { capability, isLoading: capabilityLoading, isError: capabilityError, refetch } = useRelationshipCapability('organizations');
   const { filters, set, setMany, reset } = useOrganizationDirectoryFilters();
   const directory = useOrganizationDirectory(filters, capability?.available === true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const items = directory.data?.items ?? [];
+  const filterKey = JSON.stringify(filters);
+  useEffect(() => setSelectedIds([]), [currentTenantId, filterKey]);
 
   const toggleSelected = (id: string, checked: boolean) => setSelectedIds((current) =>
     checked ? [...new Set([...current, id])] : current.filter((value) => value !== id),
@@ -46,7 +51,7 @@ export default function OrganizationDirectoryPage() {
           <p className="mt-2 max-w-3xl text-muted-foreground">Search, filter, and manage non-clinical relationship organizations in Billing Hub.</p>
         </div>
         <div className="flex gap-2">
-          {available && <Button asChild><Link to="/crm/business-development/organizations/new"><Plus className="mr-2 h-4 w-4" />New organization</Link></Button>}
+          {available && capabilities.mutate && <Button asChild><Link to="/crm/business-development/organizations/new"><Plus className="mr-2 h-4 w-4" />New organization</Link></Button>}
           <Button asChild variant="outline"><Link to="/crm/business-development/status">System status</Link></Button>
         </div>
       </div>
@@ -59,6 +64,7 @@ export default function OrganizationDirectoryPage() {
           <div className="space-y-2"><Label htmlFor="org-source">Source</Label><Input id="org-source" value={filters.sources?.[0] ?? ''} onChange={e => set('source', e.target.value)} placeholder="e.g. crm_manual" /></div>
           <div className="space-y-2"><Label htmlFor="org-contact-days">Last contact</Label><select id="org-contact-days" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={filters.lastContactWithinDays ?? ''} onChange={e => set('contactDays', e.target.value)}><option value="">Any time</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last year</option></select></div>
           <div className="space-y-2"><Label htmlFor="org-next-action">Has next action</Label><select id="org-next-action" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={filters.hasNextAction === undefined ? '' : String(filters.hasNextAction)} onChange={e => set('hasNextAction', e.target.value)}><option value="">Any</option><option value="true">Yes</option><option value="false">No</option></select></div>
+          <RelationshipOwnerFilter id="organization-owner" value={filters.ownerIds?.[0] ?? ''} onChange={value => set('owner', value)} />
           {textFilters.map(([id, label, key, placeholder]) => <div className="space-y-2" key={id}><Label htmlFor={id}>{label}</Label><Input id={id} value={filterValue(filters, key) ?? ''} onChange={(event) => set(key, event.target.value)} placeholder={placeholder} /></div>)}
           {booleanFilters.map(([key, label]) => <div className="space-y-2" key={key}><Label htmlFor={`organization-${key}`}>{label}</Label><select id={`organization-${key}`} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={filterValue(filters, key) ?? ''} onChange={(event) => set(key, event.target.value)}><option value="">Any</option><option value="true">Yes</option><option value="false">No</option></select></div>)}
           <div className="space-y-2"><Label htmlFor="organization-contacted">Contact history</Label><select id="organization-contacted" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={filters.contacted ?? ''} onChange={(event) => set('contacted', event.target.value)}><option value="">Any</option><option value="recently">Contacted in the last 30 days</option><option value="never">Never contacted</option></select></div>

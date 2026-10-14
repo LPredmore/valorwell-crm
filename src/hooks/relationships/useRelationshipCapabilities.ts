@@ -1,3 +1,4 @@
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { useQuery } from '@tanstack/react-query';
 import { createRelationshipCapabilityAdapter } from '@/services/relationships/capability-adapter';
 import { dataProvider } from '@/services/dataProvider';
@@ -7,10 +8,12 @@ const capabilityAdapter = createRelationshipCapabilityAdapter(dataProvider.relat
 
 /** One cached capability snapshot for every relationship workspace. */
 export function useRelationshipCapabilities() {
+  const { currentTenantId, userId, crmRole, isAuthenticated } = useCrmAuth();
   return useQuery({
-    queryKey: ['relationship-capabilities'],
+    queryKey: ['relationship-capabilities', currentTenantId, userId, crmRole],
     queryFn: () => capabilityAdapter.all(),
-    staleTime: Infinity,
+    enabled: isAuthenticated && Boolean(currentTenantId),
+    staleTime: 60_000,
     retry: false,
   });
 }

@@ -71,10 +71,10 @@ export function RelationshipLifecyclePanel({
       queryClient.invalidateQueries({ queryKey: ['relationship-stage-history', key] }),
       queryClient.invalidateQueries({ queryKey: ['relationship-interactions', key] }),
       subject.organizationId
-        ? queryClient.invalidateQueries({ queryKey: ['relationship-organization', subject.organizationId] })
+        ? queryClient.invalidateQueries({ queryKey: ['relationship-organization'] })
         : Promise.resolve(),
       subject.contactId
-        ? queryClient.invalidateQueries({ queryKey: ['relationship-contact', subject.contactId] })
+        ? queryClient.invalidateQueries({ queryKey: ['relationship-contact'] })
         : Promise.resolve(),
       queryClient.invalidateQueries({ queryKey: ['relationship-organizations'] }),
       queryClient.invalidateQueries({ queryKey: ['relationship-contacts'] }),

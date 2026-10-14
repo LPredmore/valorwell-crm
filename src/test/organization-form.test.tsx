@@ -125,3 +125,6 @@ describe('organization form submission preparation', () => {
     })));
   });
 });
+
+vi.mock('@/hooks/crm/useCrmAuth', () => ({ useCrmAuth: () => ({ currentTenantId: 'tenant-1', userId: 'profile-1', isAuthenticated: true, capabilities: { mutate: true } }) }));
+vi.mock('@/hooks/relationships/useRelationshipTeamOwners', () => ({ useRelationshipTeamOwners: () => ({ data: [], isLoading: false, isError: false }) }));

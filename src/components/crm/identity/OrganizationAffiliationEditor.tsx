@@ -1,3 +1,4 @@
+import { useDebouncedDirectorySearch } from '@/hooks/relationships/useDebouncedDirectorySearch';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -10,19 +11,20 @@ import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { dataProvider } from '@/services/dataProvider';
 
 export function OrganizationAffiliationEditor({ organizationId }: { organizationId: string }) {
-  const { capabilities, currentTenantId } = useCrmAuth();
+  const { capabilities, currentTenantId, userId } = useCrmAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedDirectorySearch(search);
   const [selected, setSelected] = useState('');
   const [roleTitle, setRoleTitle] = useState('');
   const [primary, setPrimary] = useState(false);
   const candidates = useQuery({
-    queryKey: ['affiliation-search', currentTenantId, search],
-    queryFn: () => dataProvider.relationships.listContacts({ search, page: 1, pageSize: 25 }),
-    enabled: capabilities.mutate && !!currentTenantId && search.trim().length >= 2,
+    queryKey: ['affiliation-search', currentTenantId, userId, debouncedSearch],
+    queryFn: () => dataProvider.relationships.listContacts({ search: debouncedSearch, page: 1, pageSize: 25 }),
+    enabled: capabilities.mutate && !!currentTenantId && debouncedSearch.trim().length >= 2,
     retry: false,
   });
-  const queryKey = ['relationship-organization-contacts', organizationId];
+  const queryKey = ['relationship-organization-contacts'];
   const create = useMutation({
     mutationFn: () => dataProvider.relationships.createAffiliation({
       contactId: selected, organizationId, roleTitle: roleTitle.trim() || undefined, isPrimary: primary,
@@ -30,9 +32,9 @@ export function OrganizationAffiliationEditor({ organizationId }: { organization
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey }),
-        queryClient.invalidateQueries({ queryKey: ['relationship-contact', selected] }),
+        queryClient.invalidateQueries({ queryKey: ['relationship-contact'] }),
         queryClient.invalidateQueries({ queryKey: ['relationship-contacts'] }),
-        queryClient.invalidateQueries({ queryKey: ['relationship-organization', organizationId] }),
+        queryClient.invalidateQueries({ queryKey: ['relationship-organization'] }),
       ]);
       setSelected(''); setSearch(''); setRoleTitle(''); setPrimary(false);
     },
@@ -56,7 +58,7 @@ export function OrganizationAffiliationEditor({ organizationId }: { organization
           }} placeholder="Search name or email" />
           {candidates.isLoading && <p className="text-xs text-muted-foreground">Searching…</p>}
           {candidates.isError && <p role="alert" className="text-xs text-destructive">Contact search failed.</p>}
-          {candidates.data && (
+          {candidates.data && search === debouncedSearch && (
             <div className="max-h-40 space-y-1 overflow-y-auto rounded border p-2" aria-label="Matching contacts">
               {candidates.data.items.length === 0 && <p className="text-xs text-muted-foreground">No matching contact. <Link className="underline" to="/crm/business-development/contacts">View directory</Link></p>}
               {candidates.data.items.map((contact) => (

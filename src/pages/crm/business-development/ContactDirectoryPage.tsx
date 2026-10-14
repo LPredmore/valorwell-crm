@@ -1,3 +1,5 @@
+import { RelationshipOwnerFilter } from '@/components/crm/relationships/RelationshipOwnerField';
+import { RelationshipOrganizationFilter } from '@/components/crm/relationships/RelationshipOrganizationFilter';
 import { relationshipStages } from '@/domain/relationships/contracts';
 import { Link } from 'react-router-dom';
 import { RotateCcw, Search, UsersRound } from 'lucide-react';
@@ -34,8 +36,8 @@ export default function ContactDirectoryPage() {
           <Filter id="contact-role" label="Organization role" value={filters.roleTitle ?? ''} onChange={value => set('roleTitle', value)} placeholder="Founder, director, volunteer…" />
           <div className="space-y-2"><Label htmlFor="contact-contact-days">Last contact</Label><select id="contact-contact-days" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={filters.lastContactWithinDays ?? ''} onChange={e => set('contactDays', e.target.value)}><option value="">Any time</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last year</option></select></div>
           <BooleanFilter id="contact-overdue" label="Overdue next action" value={filters.overdueNextAction} onChange={value => set('overdue', value)} />
-          <Filter id="contact-organization" label="Organization ID" value={filters.organizationIds?.[0] ?? ''} onChange={(value) => set('organization', value)} placeholder="Organization UUID" />
-          <Filter id="contact-owner" label="Assigned owner" value={filters.ownerIds?.[0] ?? ''} onChange={(value) => set('owner', value)} placeholder="Owner profile ID" />
+          <RelationshipOrganizationFilter value={filters.organizationIds?.[0] ?? ''} onChange={value => set('organization', value)} enabled={available} />
+          <RelationshipOwnerFilter id="contact-owner" value={filters.ownerIds?.[0] ?? ''} onChange={value => set('owner', value)} />
           <Filter id="contact-outreach" label="Outreach status" value={filters.outreachStatuses?.[0] ?? ''} onChange={(value) => set('outreachStatus', value)} placeholder="e.g. contacted" />
           <Filter id="contact-veteran" label="Veteran affiliation" value={filters.veteranAffiliations?.[0] ?? ''} onChange={(value) => set('veteranAffiliation', value)} placeholder="e.g. veteran" />
           <BooleanFilter id="contact-dnc" label="Do not contact" value={filters.doNotContact} onChange={(value) => set('doNotContact', value)} />

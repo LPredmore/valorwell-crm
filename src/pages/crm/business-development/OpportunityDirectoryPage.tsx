@@ -1,3 +1,5 @@
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { useDebouncedDirectorySearch } from '@/hooks/relationships/useDebouncedDirectorySearch';
 import { useMemo, useState } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -13,18 +15,20 @@ import { useRelationshipCapability } from '@/hooks/relationships/useRelationship
 import { dataProvider } from '@/services/dataProvider';
 
 export default function OpportunityDirectoryPage() {
+  const { currentTenantId, userId } = useCrmAuth();
   const { capability, isLoading, isError, refetch } = useRelationshipCapability('opportunities');
   const available = capability?.available === true;
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedDirectorySearch(search);
   const [status, setStatus] = useState<OpportunityStatus | ''>('');
   const [causeArea, setCauseArea] = useState('');
   const [veteranPriority, setVeteranPriority] = useState(false);
   const [page, setPage] = useState(1);
 
   const opportunities = useQuery({
-    queryKey: ['relationship-opportunity-directory', search, status, causeArea, veteranPriority, page],
+    queryKey: ['relationship-opportunity-directory', currentTenantId, userId, debouncedSearch, status, causeArea, veteranPriority, page],
     queryFn: () => dataProvider.relationships.listOpportunities({
-      search: search.trim() || undefined,
+      search: debouncedSearch.trim() || undefined,
       statuses: status ? [status] : undefined,
       causeAreas: causeArea.trim() ? [causeArea.trim()] : undefined,
       veteranPriority: veteranPriority ? true : undefined,
@@ -33,7 +37,7 @@ export default function OpportunityDirectoryPage() {
       sortBy: 'updatedAt',
       sortDirection: 'desc',
     }),
-    enabled: available,
+    enabled: available && Boolean(currentTenantId),
     retry: false,
   });
 
@@ -48,17 +52,17 @@ export default function OpportunityDirectoryPage() {
 
   const organizationQueries = useQueries({
     queries: organizationIds.map((id) => ({
-      queryKey: ['relationship-organization', id],
+      queryKey: ['relationship-organization', currentTenantId, userId, id],
       queryFn: () => dataProvider.relationships.getOrganization(id),
-      enabled: available,
+      enabled: available && Boolean(currentTenantId),
       retry: false,
     })),
   });
   const contactQueries = useQueries({
     queries: contactIds.map((id) => ({
-      queryKey: ['relationship-contact', id],
+      queryKey: ['relationship-contact', currentTenantId, userId, id],
       queryFn: () => dataProvider.relationships.getContact(id),
-      enabled: available,
+      enabled: available && Boolean(currentTenantId),
       retry: false,
     })),
   });

@@ -73,15 +73,15 @@ export default function CanonicalDashboard() {
   const kpis = [
     {
       label: 'Needs Personalized Response',
-      value: personalizedResponses.length,
+      value: openClientFollowups.isPending || openClientFollowups.error || !openClientFollowups.data ? '—' : personalizedResponses.length,
       icon: MessageCircleReply,
       href: '/crm/tasks?view=client-followups',
       color: 'text-red-600',
     },
-    { label: 'At Risk', value: atRisk.data?.total ?? '—', icon: ShieldAlert, href: '/crm/clients?atRisk=1', color: 'text-red-600' },
-    { label: 'Overdue Tasks', value: tasks.data?.length ?? '—', icon: ListTodo, href: '/crm/tasks?view=overdue', color: 'text-amber-600' },
-    { label: 'Open Exceptions', value: exceptions.data?.filter(e => e.status === 'Open').length ?? '—', icon: Activity, href: '/crm/exceptions', color: 'text-indigo-600' },
-    { label: 'Went Dark', value: dark.data?.total ?? '—', icon: TrendingDown, href: '/crm/clients?engagement=Went+Dark', color: 'text-orange-600' },
+    { label: 'At Risk', value: atRisk.isPending || atRisk.error ? '—' : atRisk.data?.total ?? '—', icon: ShieldAlert, href: '/crm/clients?atRisk=1', color: 'text-red-600' },
+    { label: 'Overdue Tasks', value: tasks.isPending || tasks.error ? '—' : tasks.data?.length ?? '—', icon: ListTodo, href: '/crm/tasks?view=overdue', color: 'text-amber-600' },
+    { label: 'Open Exceptions', value: exceptions.isPending || exceptions.error ? '—' : exceptions.data?.filter(e => e.status === 'Open').length ?? '—', icon: Activity, href: '/crm/exceptions', color: 'text-indigo-600' },
+    { label: 'Went Dark', value: dark.isPending || dark.error ? '—' : dark.data?.total ?? '—', icon: TrendingDown, href: '/crm/clients?engagement=Went+Dark', color: 'text-orange-600' },
   ];
 
   return (
@@ -101,6 +101,7 @@ export default function CanonicalDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-semibold">{k.value}</div>
+                {k.value === '—' && <p className="text-xs text-muted-foreground" role="status">Count unavailable or loading</p>}
               </CardContent>
             </Card>
           </Link>

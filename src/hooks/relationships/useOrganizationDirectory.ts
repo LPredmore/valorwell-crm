@@ -1,3 +1,4 @@
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { useDebouncedDirectorySearch } from '@/hooks/relationships/useDebouncedDirectorySearch';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
@@ -68,12 +69,13 @@ export function useOrganizationDirectoryFilters() {
 
 /** Query is enabled only after the typed organization capability is available. */
 export function useOrganizationDirectory(filters: RelationshipOrganizationFilters, enabled: boolean) {
+  const { currentTenantId, userId, isAuthenticated } = useCrmAuth();
   const search = useDebouncedDirectorySearch(filters.search);
   const queryFilters = { ...filters, search, };
   return useQuery({
-    queryKey: ['relationship-organizations', queryFilters],
+    queryKey: ['relationship-organizations', currentTenantId, userId, queryFilters],
     queryFn: () => dataProvider.relationships.listOrganizations(queryFilters),
-    enabled,
+    enabled: enabled && isAuthenticated && Boolean(currentTenantId),
     retry: false,
   });
 }

@@ -59,7 +59,7 @@ describe('RelationshipOpportunityPanel', () => {
       items: [opportunity],
       total: 1,
       page: 1,
-      pageSize: 100,
+      pageSize: 25,
     });
     relationships.createOpportunity.mockResolvedValue(opportunity);
   });
@@ -72,7 +72,7 @@ describe('RelationshipOpportunityPanel', () => {
       organizationIds: ['organization-1'],
       contactIds: undefined,
       page: 1,
-      pageSize: 100,
+      pageSize: 25,
       sortBy: 'updatedAt',
       sortDirection: 'desc',
     });
@@ -104,3 +104,6 @@ describe('RelationshipOpportunityPanel', () => {
     }));
   });
 });
+
+vi.mock('@/hooks/crm/useCrmAuth', () => ({ useCrmAuth: () => ({ currentTenantId: 'tenant-1', userId: 'profile-1', isAuthenticated: true, capabilities: { mutate: true } }) }));
+
