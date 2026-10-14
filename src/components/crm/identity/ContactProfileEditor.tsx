@@ -22,7 +22,7 @@ export function ContactProfileEditor({ contact }: { contact: RelationshipContact
       email: fields.email, phone: fields.phone, state: fields.state, doNotContact: fields.doNotContact,
     }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['relationship-contact', contact.id] });
+      await queryClient.invalidateQueries({ queryKey: ['relationship-contact'] });
       await queryClient.invalidateQueries({ queryKey: ['relationship-contacts'] });
       setOpen(false);
     },

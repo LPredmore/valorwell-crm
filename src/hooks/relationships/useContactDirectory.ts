@@ -1,3 +1,4 @@
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { useDebouncedDirectorySearch } from '@/hooks/relationships/useDebouncedDirectorySearch';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
@@ -67,13 +68,14 @@ export function useContactDirectoryFilters() {
 }
 
 export function useContactDirectory(filters: RelationshipContactFilters, enabled: boolean) {
+  const { currentTenantId, userId, isAuthenticated } = useCrmAuth();
   const search = useDebouncedDirectorySearch(filters.search);
   const roleTitle = useDebouncedDirectorySearch(filters.roleTitle);
   const queryFilters = { ...filters, search, roleTitle, };
   return useQuery({
-    queryKey: ['relationship-contacts', queryFilters],
+    queryKey: ['relationship-contacts', currentTenantId, userId, queryFilters],
     queryFn: () => dataProvider.relationships.listContacts(queryFilters),
-    enabled,
+    enabled: enabled && isAuthenticated && Boolean(currentTenantId),
     retry: false,
   });
 }

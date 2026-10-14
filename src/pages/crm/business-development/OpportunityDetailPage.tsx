@@ -33,42 +33,42 @@ export default function OpportunityDetailPage() {
   const available = opportunityCapability.capability?.available === true;
   const interactionsAvailable = interactionCapability.capability?.available === true;
   const queryClient = useQueryClient();
-  const {currentTenantId}=useCrmAuth();
+  const {currentTenantId,userId}=useCrmAuth();
   const teamOwners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId],queryFn:()=>listTeamOwners(currentTenantId!),enabled:!!currentTenantId,retry:false});
   const ownerLabel=(id?:string)=>!id?'Unassigned':(teamOwners.data?.find(person=>person.id===id)?.name??'Assigned team member');
 
   const opportunity = useQuery({
-    queryKey: ['relationship-opportunity', id],
+    queryKey: ['relationship-opportunity', currentTenantId, userId, id],
     queryFn: () => dataProvider.relationships.getOpportunity(id!),
-    enabled: available && Boolean(id),
+    enabled: available && Boolean(currentTenantId) && Boolean(id),
     retry: false,
   });
 
   const organization = useQuery({
-    queryKey: ['relationship-organization', opportunity.data?.organizationId],
+    queryKey: ['relationship-organization', currentTenantId, userId, opportunity.data?.organizationId],
     queryFn: () => dataProvider.relationships.getOrganization(opportunity.data!.organizationId),
-    enabled: Boolean(opportunity.data?.organizationId),
+    enabled: Boolean(currentTenantId) && Boolean(opportunity.data?.organizationId),
     retry: false,
   });
 
   const contact = useQuery({
-    queryKey: ['relationship-contact', opportunity.data?.primaryContactId],
+    queryKey: ['relationship-contact', currentTenantId, userId, opportunity.data?.primaryContactId],
     queryFn: () => dataProvider.relationships.getContact(opportunity.data!.primaryContactId!),
-    enabled: Boolean(opportunity.data?.primaryContactId),
+    enabled: Boolean(currentTenantId) && Boolean(opportunity.data?.primaryContactId),
     retry: false,
   });
 
   const interactions = useQuery({
-    queryKey: ['relationship-opportunity-interactions', id],
+    queryKey: ['relationship-opportunity-interactions', currentTenantId, userId, id],
     queryFn: () => dataProvider.relationships.listInteractions({ opportunityId: id! }, { page: 1, pageSize: 100 }),
-    enabled: interactionsAvailable && Boolean(id),
+    enabled: interactionsAvailable && Boolean(currentTenantId) && Boolean(id),
     retry: false,
   });
 
   const orchestration = useQuery({
-    queryKey: ['relationship-opportunity-orchestration', id],
+    queryKey: ['relationship-opportunity-orchestration', currentTenantId, userId, id],
     queryFn: () => getOpportunityOrchestration(id!),
-    enabled: available && Boolean(id),
+    enabled: available && Boolean(currentTenantId) && Boolean(id),
     retry: false,
   });
 
@@ -99,11 +99,11 @@ export default function OpportunityDetailPage() {
 
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity', id] }),
-      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-interactions', id] }),
+      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity', currentTenantId, userId, id] }),
+      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-interactions', currentTenantId, userId, id] }),
       queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-directory'] }),
       queryClient.invalidateQueries({ queryKey: ['relationship-opportunities'] }),
-      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-orchestration', id] }),
+      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-orchestration', currentTenantId, userId, id] }),
     ]);
   };
 

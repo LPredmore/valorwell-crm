@@ -1,3 +1,5 @@
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { RelationshipOwnerName } from '@/components/crm/relationships/RelationshipOwnerField';
 import { RelationshipTimelinePanel } from '@/components/crm/relationships/RelationshipTimelinePanel';
 import { RelationshipTasksPanel } from '@/components/crm/relationships/RelationshipTasksPanel';
 import { ContactProfileEditor } from '@/components/crm/identity/ContactProfileEditor';
@@ -17,23 +19,24 @@ import { dataProvider } from '@/services/dataProvider';
 
 export default function ContactDetailPage() {
   const { id } = useParams();
+  const { currentTenantId, userId } = useCrmAuth();
   const contacts = useRelationshipCapability('contacts');
   const organizations = useRelationshipCapability('organizations');
   const contactAvailable = contacts.capability?.available === true;
   const organizationsAvailable = organizations.capability?.available === true;
 
   const contact = useQuery({
-    queryKey: ['relationship-contact', id],
+    queryKey: ['relationship-contact', currentTenantId, userId, id],
     queryFn: () => dataProvider.relationships.getContact(id!),
-    enabled: contactAvailable && Boolean(id),
+    enabled: contactAvailable && Boolean(currentTenantId) && Boolean(id),
     retry: false,
   });
 
   const organizationQueries = useQueries({
     queries: (contact.data?.affiliations ?? []).map((affiliation) => ({
-      queryKey: ['relationship-organization', affiliation.organizationId],
+      queryKey: ['relationship-organization', currentTenantId, userId, affiliation.organizationId],
       queryFn: () => dataProvider.relationships.getOrganization(affiliation.organizationId),
-      enabled: organizationsAvailable,
+      enabled: organizationsAvailable && Boolean(currentTenantId),
       retry: false,
     })),
   });
@@ -70,7 +73,7 @@ export default function ContactDetailPage() {
           <Summary label="Email" value={contact.data.email ?? 'Not recorded'} />
           <Summary label="Phone" value={contact.data.phone ?? 'Not recorded'} />
           <Summary label="State" value={contact.data.state ?? 'Not recorded'} />
-          <Summary label="Assigned owner" value={contact.data.ownerId ?? 'Unassigned'} />
+          <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Assigned owner</p><p className="mt-1 text-sm"><RelationshipOwnerName ownerId={contact.data.ownerId} /></p></div>
           <Summary label="Next action" value={contact.data.nextAction ?? 'None'} />
           <Summary label="Next action due" value={formatDate(contact.data.nextActionDueAt)} />
           <Summary label="Last contact" value={formatDate(contact.data.lastContactAt)} />
@@ -116,7 +119,6 @@ export default function ContactDetailPage() {
                 <Link className="font-medium text-primary underline-offset-4 hover:underline" to={`/crm/business-development/organizations/${affiliation.organizationId}`}>
                   {organizationNames.get(affiliation.organizationId) ?? 'Organization detail'}
                 </Link>
-                <p className="text-xs text-muted-foreground">{affiliation.organizationId}</p>
               </div>
               <div className="text-right">
                 <p className="text-sm">{affiliation.roleTitle ?? 'Role not recorded'}</p>

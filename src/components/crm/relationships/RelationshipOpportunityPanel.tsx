@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { RelationshipPagination } from './RelationshipWorkspacePrimitives';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -25,10 +27,13 @@ export function RelationshipOpportunityPanel({
   contactId?: string;
   entityLabel: string;
 }) {
+  const { currentTenantId, userId, capabilities } = useCrmAuth();
+  const [page, setPage] = useState(1);
+  useEffect(() => setPage(1), [currentTenantId, organizationId, contactId]);
   const capability = useRelationshipCapability('opportunities');
   const available = capability.capability?.available === true;
   const queryClient = useQueryClient();
-  const queryKey = ['relationship-opportunities', organizationId ?? null, contactId ?? null];
+  const queryKey = ['relationship-opportunities', currentTenantId, userId, organizationId ?? null, contactId ?? null, page];
   const [causeArea, setCauseArea] = useState('');
   const [veteranPriority, setVeteranPriority] = useState(false);
   const [nextAction, setNextAction] = useState('');
@@ -41,17 +46,18 @@ export function RelationshipOpportunityPanel({
     queryFn: () => dataProvider.relationships.listOpportunities({
       organizationIds: organizationId ? [organizationId] : undefined,
       contactIds: contactId ? [contactId] : undefined,
-      page: 1,
-      pageSize: 100,
+      page,
+      pageSize: 25,
       sortBy: 'updatedAt',
       sortDirection: 'desc',
     }),
-    enabled: available && Boolean(organizationId || contactId),
+    enabled: available && Boolean(currentTenantId) && Boolean(organizationId || contactId),
     retry: false,
   });
 
   const create = useMutation({
     mutationFn: async () => {
+      if (!capabilities.mutate || !currentTenantId) throw new Error('You do not have permission to create opportunities.');
       if (!organizationId) throw new Error('Create opportunities from an organization record.');
       const qualification = parseQualificationLines(qualificationText);
       const input = {
@@ -76,7 +82,8 @@ export function RelationshipOpportunityPanel({
       setNextActionDueAt('');
       setQualificationText('');
       setErrors({});
-      await queryClient.invalidateQueries({ queryKey });
+      setPage(1);
+      await queryClient.invalidateQueries({ queryKey: ['relationship-opportunities'] });
     },
   });
 
@@ -89,7 +96,7 @@ export function RelationshipOpportunityPanel({
         onRetry={() => { void capability.refetch(); }}
       />
 
-      {organizationId && (
+      {organizationId && capabilities.mutate && (
         <Card>
           <CardHeader>
             <CardTitle>Create opportunity</CardTitle>
@@ -147,6 +154,7 @@ export function RelationshipOpportunityPanel({
               </div>
             </div>
           ))}
+          {opportunities.data && <RelationshipPagination page={page} pageSize={25} total={opportunities.data.total} onPageChange={setPage} />}
         </CardContent>
       </Card>
     </div>

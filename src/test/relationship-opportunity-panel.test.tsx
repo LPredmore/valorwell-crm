@@ -104,3 +104,5 @@ describe('RelationshipOpportunityPanel', () => {
     }));
   });
 });
+
+vi.mock('@/hooks/crm/useCrmAuth', () => ({ useCrmAuth: () => ({ currentTenantId: 'tenant-1', userId: 'profile-1', isAuthenticated: true, capabilities: { mutate: true } }) }));

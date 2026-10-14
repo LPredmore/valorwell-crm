@@ -1,3 +1,7 @@
+import { useEffect, useState } from 'react';
+import { RelationshipPagination } from '@/components/crm/relationships/RelationshipWorkspacePrimitives';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { RelationshipOwnerName } from '@/components/crm/relationships/RelationshipOwnerField';
 import { RelationshipTimelinePanel } from '@/components/crm/relationships/RelationshipTimelinePanel';
 import { RelationshipTasksPanel } from '@/components/crm/relationships/RelationshipTasksPanel';
 import { OrganizationAffiliationEditor } from '@/components/crm/identity/OrganizationAffiliationEditor';
@@ -16,22 +20,25 @@ import { dataProvider } from '@/services/dataProvider';
 
 export default function OrganizationDetailPage() {
   const { id } = useParams();
+  const { currentTenantId, userId, capabilities } = useCrmAuth();
+  const [contactsPage, setContactsPage] = useState(1);
+  useEffect(() => setContactsPage(1), [currentTenantId, id]);
   const organizations = useRelationshipCapability('organizations');
   const contacts = useRelationshipCapability('contacts');
   const organizationAvailable = organizations.capability?.available === true;
   const contactsAvailable = contacts.capability?.available === true;
 
   const organization = useQuery({
-    queryKey: ['relationship-organization', id],
+    queryKey: ['relationship-organization', currentTenantId, userId, id],
     queryFn: () => dataProvider.relationships.getOrganization(id!),
-    enabled: organizationAvailable && Boolean(id),
+    enabled: organizationAvailable && Boolean(currentTenantId) && Boolean(id),
     retry: false,
   });
 
   const affiliatedContacts = useQuery({
-    queryKey: ['relationship-organization-contacts', id],
-    queryFn: () => dataProvider.relationships.listContacts({ organizationIds: [id!], page: 1, pageSize: 100 }),
-    enabled: contactsAvailable && Boolean(id),
+    queryKey: ['relationship-organization-contacts', currentTenantId, userId, id, contactsPage],
+    queryFn: () => dataProvider.relationships.listContacts({ organizationIds: [id!], page: contactsPage, pageSize: 25 }),
+    enabled: contactsAvailable && Boolean(currentTenantId) && Boolean(id),
     retry: false,
   });
 
@@ -43,7 +50,7 @@ export default function OrganizationDetailPage() {
           <p className="mt-2 text-muted-foreground">Tenant-scoped, non-clinical relationship record.</p>
         </div>
         <div className="flex gap-2">
-          {organization.data && <Button asChild><Link to={`/crm/business-development/organizations/${organization.data.id}/edit`}>Edit organization</Link></Button>}
+          {organization.data && capabilities.mutate && <Button asChild><Link to={`/crm/business-development/organizations/${organization.data.id}/edit`}>Edit organization</Link></Button>}
           <Button asChild variant="outline"><Link to="/crm/business-development/organizations">Back to organizations</Link></Button>
         </div>
       </div>
@@ -61,7 +68,7 @@ export default function OrganizationDetailPage() {
           <Summary label="Outreach status" value={organization.data.outreachStatus.replace(/_/g, ' ')} />
           <Summary label="Organization kind" value={organization.data.organizationKind ?? 'Not recorded'} />
           <Summary label="Veteran affiliated" value={organization.data.veteranAffiliated === undefined ? 'Not recorded' : organization.data.veteranAffiliated ? 'Yes' : 'No'} />
-          <Summary label="Assigned owner" value={organization.data.ownerId ?? 'Unassigned'} />
+          <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Assigned owner</p><p className="mt-1 text-sm"><RelationshipOwnerName ownerId={organization.data.ownerId} /></p></div>
           <Summary label="Organization website" value={organization.data.website ?? 'Not recorded'} />
           <Summary label="Next action" value={organization.data.nextAction ?? 'None'} />
           <Summary label="Next action due" value={formatDate(organization.data.nextActionDueAt)} />
@@ -118,6 +125,7 @@ export default function OrganizationDetailPage() {
             const affiliation = contact.affiliations.find((item) => item.organizationId === id);
             return <div className="flex flex-wrap items-center justify-between gap-2 p-3" key={contact.id}><div><Link className="font-medium text-primary underline-offset-4 hover:underline" to={`/crm/business-development/contacts/${contact.id}`}>{contact.displayName}</Link><p className="text-sm text-muted-foreground">{contact.email ?? 'No email recorded'} · {relationshipStageLabel(contact.stage)}</p></div><div className="text-right"><p className="text-sm">{affiliation?.roleTitle ?? 'Role not recorded'}</p>{affiliation?.isPrimary && <Badge variant="secondary">Primary</Badge>}</div></div>;
           })}</div>}
+          {affiliatedContacts.data && <RelationshipPagination page={contactsPage} pageSize={25} total={affiliatedContacts.data.total} onPageChange={setContactsPage} />}
         </CardContent>
       </Card>
 

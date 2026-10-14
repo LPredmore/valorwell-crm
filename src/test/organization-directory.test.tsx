@@ -58,3 +58,6 @@ describe('OrganizationDirectoryPage', () => {
     expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
   });
 });
+
+vi.mock('@/hooks/crm/useCrmAuth', () => ({ useCrmAuth: () => ({ currentTenantId: 'tenant-1', userId: 'profile-1', isAuthenticated: true, capabilities: { mutate: true } }) }));
+vi.mock('@/components/crm/relationships/RelationshipOwnerField', () => ({ RelationshipOwnerFilter: () => <div>Owner filter</div> }));
