@@ -190,3 +190,16 @@ CRM source changes (Phases 15/17/22/23/24/30/32/34):
 - Operational Exceptions hides readonly mutations and cached failed results, shows retry/mutation/owner errors and pending state, scopes queries by operator/role, and revalidates current server CRM mutation capability before each native operation. No exception/task was changed. Existing exception update/audit/idempotency limitations are not remediated by these UI guards.
 
 Prepared filter/locator/page-contract/scope/exception/connected-traversal/stale-opportunity fixtures, NOT RUN. No tests, lint, type checks, builds, browser checks or workflow execution. No schema/configuration/source-record changes, messages, payments, Ads uploads, workers, campaign activation or Social Media/publisher changes. All branches remain draft/unmerged/undeployed. Phase acceptance remains open; deferred checks appended at the end of Todoist task 42. Roll back source through GitHub; no database migration to reverse.
+
+## User-authorized merge to main — October 15
+
+User explicitly requested merging all continuation work to main. All four PRs were marked ready and merged with their inspected head SHA pinned; GitHub subsequently reported each closed and merged:
+
+| Repository / PR | Merge commit |
+| --- | --- |
+| CRM [#154](https://github.com/LPredmore/valorwell-crm/pull/154) | `b755b776c0b96149263164448eb1fcafd47cbf78` |
+| Staff [#30](https://github.com/LPredmore/valorwell-staff/pull/30) | `62444fafe19713544cc1af92470feedd29249aa7` |
+| Clients [#31](https://github.com/LPredmore/valorwell-clients/pull/31) | `09a272d1a39413e3e9ab365d1ea870ab0918638c` |
+| Billing Hub [#15](https://github.com/LPredmore/valorwell-billing-hub/pull/15) | `00f74b3b2000c6ec89c87a2127dd904be048b60e` |
+
+Earlier draft/unmerged notes above are historical and superseded by this merge receipt. Merge commit titles include `[skip ci]` to preserve the user's deferred-check instruction. No tests/lint/type checks/build/browser acceptance or workflow dispatch was performed. This is GitHub merge evidence, not application deployment or runtime verification. No manual hosting/Edge Function deployment, Auth setting change, source-record change, message/payment/upload or worker/campaign activation was performed in this merge pass. Automated hosting status was not checked. Task 42 and all incomplete acceptance/configuration/backend/evidence requirements remain open.
