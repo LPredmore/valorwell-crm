@@ -26,11 +26,16 @@ function toLocal(iso:string|null){
 }
 export default function TherapistProspectsPage(){
   const {id}=useParams();
-  const {currentTenantId,capabilities,userId}=useCrmAuth();
+  const {currentTenantId,userId,crmRole}=useCrmAuth();
+  return <TherapistProspectWorkspace key={`${currentTenantId}:${userId}:${crmRole}:${id??'queue'}`} />;
+}
+function TherapistProspectWorkspace(){
+  const {id}=useParams();
+  const {currentTenantId,capabilities,userId,crmRole,isAuthenticated}=useCrmAuth();
   const [queueParams,setQueueParams]=useSearchParams();
   const rawPage=Number(queueParams.get('page'));
-  const page=Number.isSafeInteger(rawPage)&&rawPage>0?rawPage:1;
-  const search=queueParams.get('q')??'';
+  const page=Number.isSafeInteger(rawPage)&&rawPage>0&&rawPage<=1000000?rawPage:1;
+  const search=(queueParams.get('q')??'').slice(0,200);
   const [searchInput,setSearchInput]=useState(search);
   useEffect(()=>setSearchInput(search),[search]);
   const stateFilter=US_STATES.some(([code])=>code===queueParams.get('state'))?queueParams.get('state')!:'';
@@ -57,21 +62,21 @@ export default function TherapistProspectsPage(){
   };
   const qc=useQueryClient();
   const query=useQuery({
-    queryKey:['therapist-prospect-review',currentTenantId,id??'',page,search,stateFilter,workflowFilter,qualityFilter,dueFilter,mineOnly,userId],
+    queryKey:['therapist-prospect-review',currentTenantId,id??'',page,search,stateFilter,workflowFilter,qualityFilter,dueFilter,mineOnly,userId,crmRole],
     queryFn:()=>listRecruitmentReviewProspects(currentTenantId!,id?1:page,id?1:50,{
       search:id?'':search,state:id?'':stateFilter,
       workflow:id?'':workflowFilter,quality:id?'':qualityFilter,due:id?'':dueFilter,
       owner:id||!mineOnly?'':userId,
     },id),
-    enabled:!!currentTenantId,retry:false,
+    enabled:isAuthenticated&&!!currentTenantId,retry:false,
   });
-  const owners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId],
-    queryFn:()=>listTeamOwners(currentTenantId!),enabled:!!currentTenantId,retry:false});
-  const row=query.data?.items[0];
+  const owners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId,userId,crmRole],
+    queryFn:()=>listTeamOwners(currentTenantId!),enabled:isAuthenticated&&!!currentTenantId,retry:false});
+  const row=query.isError?undefined:query.data?.items[0];
   const history=useQuery({
-    queryKey:['therapist-prospect-history',currentTenantId,id],
+    queryKey:['therapist-prospect-history',currentTenantId,id,userId,crmRole],
     queryFn:()=>therapistProspectHistory(currentTenantId!,id!),
-    enabled:!!currentTenantId&&!!id,retry:false,
+    enabled:isAuthenticated&&!!currentTenantId&&!!id,retry:false,
   });
   const [status,setStatus]=useState<'review'|'ready'|'blocked'>('review');
   const [owner,setOwner]=useState('');
@@ -118,6 +123,7 @@ export default function TherapistProspectsPage(){
     </div>
     {query.isLoading&&<p>Loading tenant-authorized prospects…</p>}
     {query.isError&&<p role="alert" className="text-destructive">{query.error.message}</p>}
+    {query.isError&&<Button variant="outline" onClick={()=>void query.refetch()}>Retry prospects</Button>}
     {!id&&<RecruitmentPreviewPanel tenantId={currentTenantId}/>}
     {!id&&<Card><CardHeader><CardTitle>Recruitment review queue</CardTitle>
       <CardDescription>Search names, full state names or abbreviations, and narrow results by primary or licensed state. Filters can be combined. Results are server-paged (50 per page), and no campaigns are triggered.</CardDescription></CardHeader>
@@ -138,11 +144,29 @@ export default function TherapistProspectsPage(){
           <Button type="submit">Search</Button>
           {(stateFilter||search||workflowFilter||qualityFilter||dueFilter||mineOnly)&&<Button type="button" variant="outline" onClick={resetQueue}>Clear filters</Button>}
         </form>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Recruitment quick views">
+          {[
+            {label:'Uncontacted, technically reviewed',workflow:'recruiting:not_contacted',quality:'preview_eligible',due:'',mine:''},
+            {label:'Responded',workflow:'recruiting:replied',quality:'',due:'',mine:''},
+            {label:'Applications linked',workflow:'recruiting:applicant_linked',quality:'',due:'',mine:''},
+            {label:'Blocked',workflow:'blocked',quality:'',due:'',mine:''},
+            {label:'Needs review',workflow:'review',quality:'',due:'',mine:''},
+            {label:'My overdue follow-ups',workflow:'',quality:'',due:'overdue',mine:'1'},
+          ].map(view=><Button key={view.label} size="sm" variant="outline" onClick={()=>setQueueParams(current=>{
+            const next=new URLSearchParams(current);
+            next.delete('page');
+            for(const key of ['workflow','quality','due','mine'] as const){
+              if(view[key])next.set(key,view[key]);else next.delete(key);
+            }
+            return next;
+          })}>{view.label}</Button>)}
+        </div>
+        <p className="text-xs text-muted-foreground">Quick views retain your name and state filters. Technical review is not permission to send outreach.</p>
         <RecruitmentFilters workflow={workflowFilter} quality={qualityFilter} due={dueFilter} mineOnly={mineOnly}
           onWorkflow={v=>setQueueFilter('workflow',v)} onQuality={v=>setQueueFilter('quality',v)}
           onDue={v=>setQueueFilter('due',v)} onMine={v=>setQueueFilter('mine',v?'1':'')}/>
         <p role="status" className="text-sm">{query.isLoading?'Loading prospects…':query.isError?'Prospects could not be loaded':`${query.data?.total??0} matching prospects · Page ${page}`}</p>
-        <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-sm">
+        {!query.isError&&<div className="overflow-x-auto"><table className="w-full min-w-[650px] text-sm">
           <thead><tr className="border-b text-left"><th className="p-2">Prospect</th><th className="p-2">State</th><th className="p-2">Licence</th><th className="p-2">Review stage</th><th className="p-2">Email quality</th><th className="p-2">Follow-up</th><th className="p-2">Owner</th></tr></thead>
           <tbody>{(query.data?.items??[]).map(p=><tr key={p.id} className="border-b">
             <td className="p-2"><Link className="text-primary underline" to={'/crm/recruitment/prospects/'+p.id+queueSearch}>{displayName(p)}</Link></td>
@@ -151,9 +175,9 @@ export default function TherapistProspectsPage(){
             <td className="p-2">{p.emailQuality}{p.suppressed?' · suppressed':''}</td>
             <td className="p-2">{p.nextActionDueAt?new Date(p.nextActionDueAt).toLocaleDateString():(p.nextAction?'Unscheduled':'No next action')}</td>
             <td className="p-2">{owners.data?.find(x=>x.id===p.ownerProfileId)?.name??(p.ownerProfileId?'Assigned team member':'Unassigned')}</td>
-          </tr>)}</tbody></table></div>
-        <div className="flex gap-2"><Button variant="outline" disabled={query.isPending||page<=1} onClick={()=>setQueueFilter('page',String(page-1))}>Previous</Button>
-          <Button variant="outline" disabled={query.isPending||page*50>=(query.data?.total??0)} onClick={()=>setQueueFilter('page',String(page+1))}>Next</Button></div>
+          </tr>)}</tbody></table></div>}
+        <div className="flex gap-2"><Button variant="outline" disabled={query.isFetching||query.isError||page<=1} onClick={()=>setQueueFilter('page',String(page-1))}>Previous</Button>
+          <Button variant="outline" disabled={query.isFetching||query.isError||page*50>=(query.data?.total??0)} onClick={()=>setQueueFilter('page',String(page+1))}>Next</Button></div>
       </CardContent></Card>}
     {id&&!query.isLoading&&!row&&!query.isError&&<p>Prospect not found or not authorized in this tenant.</p>}
     {id&&row&&<><Card><CardHeader><CardTitle>{displayName(row)}</CardTitle><CardDescription>

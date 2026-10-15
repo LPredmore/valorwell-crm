@@ -1,3 +1,4 @@
+import {useCrmAuth} from '@/hooks/crm/useCrmAuth';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, History, MessageSquarePlus } from 'lucide-react';
@@ -36,9 +37,10 @@ export function RelationshipLifecyclePanel({
   currentStage,
   entityLabel,
 }: RelationshipLifecyclePanelProps) {
+  const {currentTenantId,userId,crmRole,isAuthenticated}=useCrmAuth();
   const queryClient = useQueryClient();
   const capabilityQuery = useRelationshipCapability('interactions');
-  const available = capabilityQuery.capability?.available === true;
+  const available = isAuthenticated&&!!currentTenantId&&capabilityQuery.capability?.available === true;
   const key = subjectKey(subject);
   const transitions = useMemo(
     () => availableRelationshipStageTransitions(currentStage),
@@ -53,14 +55,14 @@ export function RelationshipLifecyclePanel({
   const [interactionErrors, setInteractionErrors] = useState<Record<string, string>>({});
 
   const history = useQuery({
-    queryKey: ['relationship-stage-history', key],
+    queryKey: ['relationship-stage-history', key,currentTenantId,userId,crmRole],
     queryFn: () => dataProvider.relationships.listStageHistory(subject),
     enabled: available,
     retry: false,
   });
 
   const interactions = useQuery({
-    queryKey: ['relationship-interactions', key, 1, 50],
+    queryKey: ['relationship-interactions', key,currentTenantId,userId,crmRole, 1, 50],
     queryFn: () => dataProvider.relationships.listInteractions(subject, { page: 1, pageSize: 50 }),
     enabled: available,
     retry: false,
@@ -68,8 +70,9 @@ export function RelationshipLifecyclePanel({
 
   const refreshLifecycle = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['relationship-stage-history', key] }),
+      queryClient.invalidateQueries({ queryKey: ['relationship-stage-history', key,currentTenantId,userId,crmRole] }),
       queryClient.invalidateQueries({ queryKey: ['relationship-interactions', key] }),
+      queryClient.invalidateQueries({ queryKey: ['relationship-timeline-interactions',currentTenantId,userId,crmRole] }),
       subject.organizationId
         ? queryClient.invalidateQueries({ queryKey: ['relationship-organization'] })
         : Promise.resolve(),
@@ -108,7 +111,10 @@ export function RelationshipLifecyclePanel({
       setInteractionSummary('');
       setInteractionOccurredAt(localDateTime(new Date()));
       setInteractionErrors({});
-      await queryClient.invalidateQueries({ queryKey: ['relationship-interactions', key] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['relationship-interactions', key] }),
+        queryClient.invalidateQueries({ queryKey: ['relationship-timeline-interactions',currentTenantId,userId,crmRole] }),
+      ]);
     },
   });
 

@@ -5,8 +5,7 @@ import type { CrmTask, TaskStatus, TaskPriority, TaskType } from '@/domain/opera
 import { buildTaskViewPlan } from '../taskViewSemantics';
 import { assertEntityTenant, requireOperatingTenant } from '../tenantScope';
 
-// Columns added for relationship links are not selected by this repository's COLS list.
-type Row = Omit<Tables<'crm_tasks'>, 'relationship_contact_id' | 'relationship_organization_id'>;
+type Row = Tables<'crm_tasks'> & {relationship_contact_id?:string|null;relationship_organization_id?:string|null};
 type TaskInsert = TablesInsert<'crm_tasks'>;
 type TaskUpdate = TablesUpdate<'crm_tasks'>;
 type TaskDbStatus = Row['status'];
@@ -51,6 +50,8 @@ function toDomain(r: Row): CrmTask {
     id: r.id, tenantId: r.tenant_id, title: r.title, description: r.description ?? undefined,
     clientId: r.client_id ?? undefined, staffId: r.staff_id ?? undefined,
     campaignId: r.campaign_id ?? undefined, exceptionId: r.exception_id ?? undefined,
+    relationshipContactId:r.relationship_contact_id??undefined,
+    relationshipOrganizationId:r.relationship_organization_id??undefined,
     type: TASK_TYPE_B2D[r.type] ?? 'General',
     priority: TASK_PRIO_B2D[r.priority] ?? 'Normal',
     status: TASK_STATUS_B2D[r.status] ?? 'Not Started',

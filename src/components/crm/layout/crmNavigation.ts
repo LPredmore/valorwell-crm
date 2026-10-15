@@ -50,7 +50,7 @@ export const crmNavGroups: readonly CrmNavGroup[] = [
       { label: 'Contacts', href: '/crm/business-development/contacts', icon: Users },
       { label: 'Organizations', href: '/crm/business-development/organizations', icon: Building2 },
       { label: 'Pipelines', href: '/crm/pipelines', icon: GitBranch, description: 'Configurable personal and organization relationship pipelines' },
-      { label: 'Communications', href: '/crm/communications-control-plane', icon: MessageCircle, description: 'Existing communications control plane' },
+      { label: 'Communications', href: '/crm/communications', icon: MessageCircle, exact: true, description: 'Direct messages, replies, campaigns, newsletters and templates' },
       { label: 'Campaigns', href: '/crm/communications/campaigns', icon: Megaphone },
     ],
     tools: [
@@ -102,6 +102,7 @@ export const crmNavGroups: readonly CrmNavGroup[] = [
     ],
     tools: [
       { label: 'Relationship Reports', href: '/crm/business-development/reports', icon: BarChart3, capability: 'report' },
+      { label: 'Communications Control Plane', href: '/crm/communications-control-plane', icon: Wrench, capability: 'report' },
       { label: 'Comms Observability', href: '/crm/communications/observability', icon: Activity, capability: 'report' },
       { label: 'System Help', href: '/crm/business-development/status', icon: CircleHelp, capability: 'report' },
       { label: 'Email Playground', href: '/crm/email-studio/playground', icon: BookOpen, capability: 'communicate' },

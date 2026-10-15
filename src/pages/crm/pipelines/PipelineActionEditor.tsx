@@ -25,7 +25,10 @@ export function PipelineActionEditor({record,userId,busy,save}:{
     queryFn:()=>listTeamOwners(record.tenant_id),enabled:open,retry:false});
   const dueValid=!due||Number.isFinite(new Date(due).getTime());
   return <div className="space-y-2">
-    <Button size="sm" variant="outline" disabled={busy} onClick={()=>setOpen(x=>!x)}>
+    <Button size="sm" variant="outline" disabled={busy} aria-expanded={open} onClick={()=>{
+      if(!open){setAction(record.next_action??'');setDue(localDatetime(record.next_action_due_at));setOwner('keep');}
+      setOpen(x=>!x);
+    }}>
       {open?'Hide follow-up':'Edit owner / next action'}
     </Button>
     {open&&<div className="space-y-2 rounded border p-2">

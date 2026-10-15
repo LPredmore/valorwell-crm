@@ -11,7 +11,7 @@ import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { dataProvider } from '@/services/dataProvider';
 
 export function OrganizationAffiliationEditor({ organizationId }: { organizationId: string }) {
-  const { capabilities, currentTenantId, userId } = useCrmAuth();
+  const { capabilities, currentTenantId, userId, crmRole } = useCrmAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedDirectorySearch(search);
@@ -19,7 +19,7 @@ export function OrganizationAffiliationEditor({ organizationId }: { organization
   const [roleTitle, setRoleTitle] = useState('');
   const [primary, setPrimary] = useState(false);
   const candidates = useQuery({
-    queryKey: ['affiliation-search', currentTenantId, userId, debouncedSearch],
+    queryKey: ['affiliation-search', currentTenantId, userId, crmRole, debouncedSearch],
     queryFn: () => dataProvider.relationships.listContacts({ search: debouncedSearch, page: 1, pageSize: 25 }),
     enabled: capabilities.mutate && !!currentTenantId && debouncedSearch.trim().length >= 2,
     retry: false,
@@ -35,6 +35,9 @@ export function OrganizationAffiliationEditor({ organizationId }: { organization
         queryClient.invalidateQueries({ queryKey: ['relationship-contact'] }),
         queryClient.invalidateQueries({ queryKey: ['relationship-contacts'] }),
         queryClient.invalidateQueries({ queryKey: ['relationship-organization'] }),
+        queryClient.invalidateQueries({ queryKey: ['pipeline-card-subjects'] }),
+        queryClient.invalidateQueries({ queryKey: ['pipeline-existing-primary'] }),
+        queryClient.invalidateQueries({ queryKey: ['pipeline-connected-cards'] }),
       ]);
       setSelected(''); setSearch(''); setRoleTitle(''); setPrimary(false);
     },
@@ -47,7 +50,7 @@ export function OrganizationAffiliationEditor({ organizationId }: { organization
         <CardTitle>Link an existing contact</CardTitle>
         <CardDescription>
           Search this tenant's contact directory and record an organization affiliation with role.
-          The contact and organization retain their original records and primary keys.
+          The first linked contact becomes Primary automatically. To replace an existing Primary, use the contact list above after linking.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -78,7 +81,7 @@ export function OrganizationAffiliationEditor({ organizationId }: { organization
         </div>
         <label className="flex items-center gap-2 text-sm">
           <Checkbox checked={primary} onCheckedChange={(checked) => setPrimary(checked === true)} />
-          Primary organization for this contact
+          Primary contact for this organization
         </label>
         {create.isError && <p role="alert" className="text-sm text-destructive">
           {create.error instanceof Error ? create.error.message : 'Could not link contact.'}

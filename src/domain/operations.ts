@@ -38,6 +38,9 @@ export interface CrmTask {
   staffId?: string;
   campaignId?: string;
   exceptionId?: string;
+  /** Read-only source links; generic task editing never changes the subject. */
+  relationshipContactId?: string;
+  relationshipOrganizationId?: string;
   type: TaskType;
   priority: TaskPriority;
   status: TaskStatus;

@@ -39,6 +39,7 @@ import RelationshipOrchestrationPage from "./pages/crm/business-development/Rela
 import RelationshipReconciliationPage from "./pages/crm/business-development/RelationshipReconciliationPage";
 import BtyAutomationPage from "./pages/crm/business-development/BtyAutomationPage";
 import BtySchedulingActivityPage from "./pages/crm/business-development/BtySchedulingActivityPage";
+import CommunicationsHubPage from "./pages/crm/CommunicationsHubPage";
 import CommunicationsControlPlanePage from "./pages/crm/CommunicationsControlPlanePage";
 import NewsletterManagementPage from "./pages/crm/NewsletterManagementPage";
 import CampaignManagementPage from "./pages/crm/CampaignManagementPage";
@@ -92,6 +93,7 @@ const App = () => (
             <Route path="campaigns/:id" element={<CanonicalCampaignDetail />} />
             <Route path="campaigns/:id/edit" element={<CrmCampaignEditor />} />
             <Route path="campaigns/:id/enrollments" element={<CrmCampaignEnrollments />} />
+            <Route path="communications" element={<CommunicationsHubPage />} />
             <Route path="communications/campaigns" element={<CampaignManagementPage />} />
             <Route path="communications/newsletters" element={<NewsletterManagementPage />} />
             <Route path="communications/observability" element={<CommunicationsObservabilityPage />} />

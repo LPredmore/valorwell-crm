@@ -1,3 +1,5 @@
+import {OrganizationPrimaryContactAction} from '@/components/crm/identity/OrganizationPrimaryContactAction';
+import { RelationshipPipelinePanel } from '@/components/crm/relationships/RelationshipPipelinePanel';
 import { directoryReturnSearch, directoryDetailSearch } from '@/domain/relationships/directory-url';
 import { useEffect, useState } from 'react';
 import { RelationshipPagination } from '@/components/crm/relationships/RelationshipWorkspacePrimitives';
@@ -20,10 +22,15 @@ import { useRelationshipCapability } from '@/hooks/relationships/useRelationship
 import { dataProvider } from '@/services/dataProvider';
 
 export default function OrganizationDetailPage() {
+  const {id}=useParams();
+  const {currentTenantId,userId,crmRole}=useCrmAuth();
+  return <OrganizationDetailWorkspace key={`${currentTenantId}:${userId}:${crmRole}:${id}`}/>;
+}
+function OrganizationDetailWorkspace() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const directorySearch = directoryReturnSearch(searchParams);
-  const { currentTenantId, userId, capabilities } = useCrmAuth();
+  const { currentTenantId, userId, crmRole, capabilities } = useCrmAuth();
   const [contactsPage, setContactsPage] = useState(1);
   useEffect(() => setContactsPage(1), [currentTenantId, id]);
   const organizations = useRelationshipCapability('organizations');
@@ -32,14 +39,14 @@ export default function OrganizationDetailPage() {
   const contactsAvailable = contacts.capability?.available === true;
 
   const organization = useQuery({
-    queryKey: ['relationship-organization', currentTenantId, userId, id],
+    queryKey: ['relationship-organization', currentTenantId, userId, crmRole, id],
     queryFn: () => dataProvider.relationships.getOrganization(id!),
     enabled: organizationAvailable && Boolean(currentTenantId) && Boolean(id),
     retry: false,
   });
 
   const affiliatedContacts = useQuery({
-    queryKey: ['relationship-organization-contacts', currentTenantId, userId, id, contactsPage],
+    queryKey: ['relationship-organization-contacts', currentTenantId, userId, crmRole, id, contactsPage],
     queryFn: () => dataProvider.relationships.listContacts({ organizationIds: [id!], page: contactsPage, pageSize: 25 }),
     enabled: contactsAvailable && Boolean(currentTenantId) && Boolean(id),
     retry: false,
@@ -94,6 +101,7 @@ export default function OrganizationDetailPage() {
 
       {organization.data && <RelationshipTimelinePanel subject={{ organizationId: organization.data.id }} />}
       {organization.data && <RelationshipTasksPanel subject={{ organizationId: organization.data.id }} />}
+      {organization.data && <RelationshipPipelinePanel subject={{ organizationId: organization.data.id }} />}
 
       {organization.data && (
         <RelationshipLifecyclePanel
@@ -126,9 +134,9 @@ export default function OrganizationDetailPage() {
           {affiliatedContacts.data?.items.length === 0 && <p className="text-sm text-muted-foreground">No contacts are affiliated with this organization.</p>}
           {affiliatedContacts.data && affiliatedContacts.data.items.length > 0 && <div className="divide-y rounded border">{affiliatedContacts.data.items.map((contact) => {
             const affiliation = contact.affiliations.find((item) => item.organizationId === id);
-            return <div className="flex flex-wrap items-center justify-between gap-2 p-3" key={contact.id}><div><Link className="font-medium text-primary underline-offset-4 hover:underline" to={`/crm/business-development/contacts/${contact.id}`}>{contact.displayName}</Link><p className="text-sm text-muted-foreground">{contact.email ?? 'No email recorded'} · {relationshipStageLabel(contact.stage)}</p></div><div className="text-right"><p className="text-sm">{affiliation?.roleTitle ?? 'Role not recorded'}</p>{affiliation?.isPrimary && <Badge variant="secondary">Primary</Badge>}</div></div>;
+            return <div className="flex flex-wrap items-center justify-between gap-2 p-3" key={contact.id}><div><Link className="font-medium text-primary underline-offset-4 hover:underline" to={`/crm/business-development/contacts/${contact.id}`}>{contact.displayName}</Link><p className="text-sm text-muted-foreground">{contact.email ?? 'No email recorded'} · {relationshipStageLabel(contact.stage)}</p></div><div className="text-right"><p className="text-sm">{affiliation?.roleTitle ?? 'Role not recorded'}</p>{affiliation?.isPrimary && <Badge variant="secondary">Primary</Badge>}<OrganizationPrimaryContactAction organizationId={id!} contactId={contact.id} contactName={contact.displayName} isPrimary={affiliation?.isPrimary===true}/></div></div>;
           })}</div>}
-          {affiliatedContacts.data && <RelationshipPagination page={contactsPage} pageSize={25} total={affiliatedContacts.data.total} onPageChange={setContactsPage} />}
+          {affiliatedContacts.data && <RelationshipPagination page={contactsPage} pageSize={25} total={affiliatedContacts.data.total} disabled={affiliatedContacts.isFetching} onPageChange={setContactsPage} />}
         </CardContent>
       </Card>
 

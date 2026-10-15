@@ -35,14 +35,14 @@ export function buildCanonicalTaskListQuery(
 }
 
 export function useTasks(q: ListTasksQuery = {}) {
-  const { currentTenantId, userId, isAuthenticated, isLoading } = useCrmAuth();
+  const { currentTenantId, userId, crmRole, isAuthenticated, isLoading } = useCrmAuth();
   const taskQuery = buildCanonicalTaskListQuery(q, {
     tenantId: currentTenantId,
     profileId: userId,
   });
 
   return useQuery({
-    queryKey: taskKeys.list(taskQuery ?? q),
+    queryKey: [...taskKeys.list(taskQuery ?? q),crmRole],
     queryFn: () => {
       if (!taskQuery) throw new Error('Task query requires an authenticated CRM operating context');
       return dataProvider.tasks.list(taskQuery);
@@ -129,9 +129,9 @@ export function useEnrollments(campaignId?: string) {
 }
 
 export function useStaffList() {
-  const { currentTenantId, isAuthenticated, isLoading } = useCrmAuth();
+  const { currentTenantId, userId, crmRole, isAuthenticated, isLoading } = useCrmAuth();
   return useQuery({
-    queryKey: ['crm-staff', currentTenantId],
+    queryKey: ['crm-staff', currentTenantId,userId,crmRole],
     queryFn: () => {
       if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
       return dataProvider.staff.list(currentTenantId);

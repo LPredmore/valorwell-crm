@@ -1,3 +1,4 @@
+import { RelationshipPipelinePanel } from '@/components/crm/relationships/RelationshipPipelinePanel';
 import { directoryReturnSearch } from '@/domain/relationships/directory-url';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { RelationshipOwnerName } from '@/components/crm/relationships/RelationshipOwnerField';
@@ -19,17 +20,22 @@ import { useRelationshipCapability } from '@/hooks/relationships/useRelationship
 import { dataProvider } from '@/services/dataProvider';
 
 export default function ContactDetailPage() {
+  const {id}=useParams();
+  const {currentTenantId,userId,crmRole}=useCrmAuth();
+  return <ContactDetailWorkspace key={`${currentTenantId}:${userId}:${crmRole}:${id}`}/>;
+}
+function ContactDetailWorkspace() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const directorySearch = directoryReturnSearch(searchParams);
-  const { currentTenantId, userId } = useCrmAuth();
+  const { currentTenantId, userId, crmRole } = useCrmAuth();
   const contacts = useRelationshipCapability('contacts');
   const organizations = useRelationshipCapability('organizations');
   const contactAvailable = contacts.capability?.available === true;
   const organizationsAvailable = organizations.capability?.available === true;
 
   const contact = useQuery({
-    queryKey: ['relationship-contact', currentTenantId, userId, id],
+    queryKey: ['relationship-contact', currentTenantId, userId, crmRole, id],
     queryFn: () => dataProvider.relationships.getContact(id!),
     enabled: contactAvailable && Boolean(currentTenantId) && Boolean(id),
     retry: false,
@@ -37,7 +43,7 @@ export default function ContactDetailPage() {
 
   const organizationQueries = useQueries({
     queries: (contact.data?.affiliations ?? []).map((affiliation) => ({
-      queryKey: ['relationship-organization', currentTenantId, userId, affiliation.organizationId],
+      queryKey: ['relationship-organization', currentTenantId, userId, crmRole, affiliation.organizationId],
       queryFn: () => dataProvider.relationships.getOrganization(affiliation.organizationId),
       enabled: organizationsAvailable && Boolean(currentTenantId),
       retry: false,
@@ -86,6 +92,7 @@ export default function ContactDetailPage() {
 
       {contact.data && <RelationshipTimelinePanel subject={{ contactId: contact.data.id }} />}
       {contact.data && <RelationshipTasksPanel subject={{ contactId: contact.data.id }} />}
+      {contact.data && <RelationshipPipelinePanel subject={{ contactId: contact.data.id }} />}
 
       {contact.data && <ContactProfileEditor contact={contact.data} />}
       {contact.data && <IdentityReviewPanel contact={contact.data} />}
