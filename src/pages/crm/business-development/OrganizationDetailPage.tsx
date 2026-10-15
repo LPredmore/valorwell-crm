@@ -1,3 +1,4 @@
+import { directoryReturnSearch, directoryDetailSearch } from '@/domain/relationships/directory-url';
 import { useEffect, useState } from 'react';
 import { RelationshipPagination } from '@/components/crm/relationships/RelationshipWorkspacePrimitives';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
@@ -6,7 +7,7 @@ import { RelationshipTimelinePanel } from '@/components/crm/relationships/Relati
 import { RelationshipTasksPanel } from '@/components/crm/relationships/RelationshipTasksPanel';
 import { OrganizationAffiliationEditor } from '@/components/crm/identity/OrganizationAffiliationEditor';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +21,8 @@ import { dataProvider } from '@/services/dataProvider';
 
 export default function OrganizationDetailPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const directorySearch = directoryReturnSearch(searchParams);
   const { currentTenantId, userId, capabilities } = useCrmAuth();
   const [contactsPage, setContactsPage] = useState(1);
   useEffect(() => setContactsPage(1), [currentTenantId, id]);
@@ -50,8 +53,8 @@ export default function OrganizationDetailPage() {
           <p className="mt-2 text-muted-foreground">Tenant-scoped, non-clinical relationship record.</p>
         </div>
         <div className="flex gap-2">
-          {organization.data && capabilities.mutate && <Button asChild><Link to={`/crm/business-development/organizations/${organization.data.id}/edit`}>Edit organization</Link></Button>}
-          <Button asChild variant="outline"><Link to="/crm/business-development/organizations">Back to organizations</Link></Button>
+          {organization.data && capabilities.mutate && <Button asChild><Link to={`/crm/business-development/organizations/${organization.data.id}/edit${directoryDetailSearch(directorySearch)}`}>Edit organization</Link></Button>}
+          <Button asChild variant="outline"><Link to={`/crm/business-development/organizations${directorySearch}`}>Back to organizations</Link></Button>
         </div>
       </div>
 

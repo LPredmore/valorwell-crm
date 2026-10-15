@@ -1,3 +1,5 @@
+import { directoryDetailSearch } from '@/domain/relationships/directory-url';
+import { useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { RelationshipOwnerFilter } from '@/components/crm/relationships/RelationshipOwnerField';
@@ -29,6 +31,8 @@ const booleanFilters = [
 ] as const;
 
 export default function OrganizationDirectoryPage() {
+  const location = useLocation();
+  const detailSearch = directoryDetailSearch(location.search);
   const { currentTenantId, capabilities } = useCrmAuth();
   const { capability, isLoading: capabilityLoading, isError: capabilityError, refetch } = useRelationshipCapability('organizations');
   const { filters, set, setMany, reset } = useOrganizationDirectoryFilters();
@@ -51,7 +55,7 @@ export default function OrganizationDirectoryPage() {
           <p className="mt-2 max-w-3xl text-muted-foreground">Search, filter, and manage non-clinical relationship organizations in Billing Hub.</p>
         </div>
         <div className="flex gap-2">
-          {available && capabilities.mutate && <Button asChild><Link to="/crm/business-development/organizations/new"><Plus className="mr-2 h-4 w-4" />New organization</Link></Button>}
+          {available && capabilities.mutate && <Button asChild><Link to={`/crm/business-development/organizations/new${detailSearch}`}><Plus className="mr-2 h-4 w-4" />New organization</Link></Button>}
           <Button asChild variant="outline"><Link to="/crm/business-development/status">System status</Link></Button>
         </div>
       </div>
@@ -75,13 +79,13 @@ export default function OrganizationDirectoryPage() {
 
       <RelationshipCapabilityState state={capability} isLoading={capabilityLoading} isError={capabilityError} onRetry={() => { void refetch(); }} />
 
-      {available && directory.isLoading && <Card aria-label="Loading organizations"><CardHeader><Skeleton className="h-6 w-48" /><Skeleton className="h-4 w-full" /></CardHeader></Card>}
+      {available && (directory.isLoading || directory.isSearchPending) && <Card aria-label="Loading organizations"><CardHeader><Skeleton className="h-6 w-48" /><Skeleton className="h-4 w-full" /></CardHeader></Card>}
       {available && directory.isError && <Card><CardHeader><CardTitle>Organizations could not be loaded</CardTitle><CardDescription>{directory.error instanceof Error ? directory.error.message : 'Try again later.'}</CardDescription></CardHeader><CardContent><Button variant="outline" onClick={() => { void directory.refetch(); }}>Try again</Button></CardContent></Card>}
-      {available && directory.data && <Card>
+      {available && !directory.isError && !directory.isSearchPending && directory.data && <Card>
         <CardHeader><CardTitle>Organization results</CardTitle><CardDescription>{directory.data.total} matching relationship organizations.</CardDescription></CardHeader>
         <CardContent className="space-y-4">
-          {items.length === 0 ? <p className="text-sm text-muted-foreground">No organizations match the current filters.</p> : <div className="divide-y rounded border">{items.map((organization) => <div className="flex items-center gap-3 p-3" key={organization.id}><Checkbox aria-label={`Select ${organization.name}`} checked={selectedIds.includes(organization.id)} onCheckedChange={(checked) => toggleSelected(organization.id, checked === true)} /><div className="min-w-0 flex-1"><Link className="font-medium text-primary underline-offset-4 hover:underline" to={`/crm/business-development/organizations/${organization.id}`}>{organization.name}</Link><p className="truncate text-sm text-muted-foreground">{organization.organizationKind ?? 'Kind not recorded'} · {relationshipStageLabel(organization.stage)} · {organization.outreachStatus.replace(/_/g, ' ')}</p></div><p className="hidden text-sm text-muted-foreground md:block">{organization.nextAction ?? 'No next action'}</p></div>)}</div>}
-          <RelationshipPagination page={directory.data.page} pageSize={directory.data.pageSize} total={directory.data.total} onPageChange={(page) => set('page', String(page))} />
+          {items.length === 0 ? <p className="text-sm text-muted-foreground">No organizations match the current filters.</p> : <div className="divide-y rounded border">{items.map((organization) => <div className="flex items-center gap-3 p-3" key={organization.id}><Checkbox aria-label={`Select ${organization.name}`} checked={selectedIds.includes(organization.id)} onCheckedChange={(checked) => toggleSelected(organization.id, checked === true)} /><div className="min-w-0 flex-1"><Link className="font-medium text-primary underline-offset-4 hover:underline" to={`/crm/business-development/organizations/${organization.id}${detailSearch}`}>{organization.name}</Link><p className="truncate text-sm text-muted-foreground">{organization.organizationKind ?? 'Kind not recorded'} · {relationshipStageLabel(organization.stage)} · {organization.outreachStatus.replace(/_/g, ' ')}</p></div><p className="hidden text-sm text-muted-foreground md:block">{organization.nextAction ?? 'No next action'}</p></div>)}</div>}
+          <RelationshipPagination page={directory.data.page} pageSize={directory.data.pageSize} total={directory.data.total} disabled={directory.isFetching || directory.isSearchPending} onPageChange={(page) => set('page', String(page))} />
         </CardContent>
       </Card>}
 

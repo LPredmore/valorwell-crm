@@ -81,7 +81,9 @@ async function context(): Promise<{ tenantId: string; userId: string; canMutate:
 }
 
 export const relationshipTasksRepository = {
-  async list(subject: RelationshipTaskSubject): Promise<RelationshipTaskRow[]> {
+  async list(subject: RelationshipTaskSubject, options: { page?: number; view?: 'open' | 'overdue' | 'all' } = {}): Promise<RelationshipTaskRow[]> {
+    const page = options.page ?? 1;
+    if (!Number.isSafeInteger(page) || page < 1) throw new Error('Invalid task page.');
     const { tenantId } = await context();
     // Select only task columns relevant to this non-clinical subject; never
     // fetch client task descriptions and then filter in browser memory.
@@ -90,7 +92,13 @@ export const relationshipTasksRepository = {
       .eq('tenant_id', tenantId);
     query = subject.contactId ? query.eq('relationship_contact_id', subject.contactId)
       : query.eq('relationship_organization_id', subject.organizationId!);
-    const { data, error } = await query.order('due_at', { ascending: true, nullsFirst: false }).limit(100);
+    if (options.view === 'open' || options.view === 'overdue') {
+      query = query.in('status', ['not_started', 'in_progress', 'waiting', 'blocked']);
+    }
+    if (options.view === 'overdue') query = query.lt('due_at', new Date().toISOString());
+    const offset = (page - 1) * 50;
+    const { data, error } = await query.order('due_at', { ascending: true, nullsFirst: false })
+      .order('id', { ascending: true }).range(offset, offset + 49);
     checkError(error);
     return data as unknown as RelationshipTaskRow[];
   },

@@ -1,5 +1,6 @@
+import { RelationshipOwnerFilter, RelationshipOwnerName } from './RelationshipOwnerField';
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +13,6 @@ import {
   relationshipTasksRepository, RelationshipTasksNotDeployedError, statusLabels,
   type RelationshipTaskRow, type RelationshipTaskSubject,
 } from '@/repositories/supabase/relationship-tasks';
-import { dataProvider } from '@/services/dataProvider';
 
 const priorityOptions: TaskPriority[] = ['Low', 'Normal', 'High', 'Urgent'];
 
@@ -25,7 +25,12 @@ function isOverdue(task: RelationshipTaskRow) {
 }
 
 export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskSubject }) {
-  const { currentTenantId, capabilities, userId } = useCrmAuth();
+  const { currentTenantId, crmRole, userId } = useCrmAuth();
+  return <RelationshipTasksContent key={`${currentTenantId}:${userId}:${crmRole}:${subject.contactId ?? subject.organizationId}`} subject={subject} />;
+}
+
+function RelationshipTasksContent({ subject }: { subject: RelationshipTaskSubject }) {
+  const { currentTenantId, capabilities, userId, crmRole, isAuthenticated } = useCrmAuth();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -39,16 +44,13 @@ export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskS
   const [editPriority, setEditPriority] = useState<TaskPriority>('Normal');
   const [editStatus, setEditStatus] = useState<TaskStatus>('Not Started');
   const subjectKey = subject.contactId ? 'contact:' + subject.contactId : 'organization:' + subject.organizationId;
-  const key = ['relationship-tasks', currentTenantId, subjectKey];
-  const query = useQuery({
-    queryKey: key,
-    queryFn: () => relationshipTasksRepository.list(subject),
-    enabled: !!currentTenantId, retry: false,
-  });
-  const team = useQuery({
-    queryKey: ['relationship-task-assignees', currentTenantId],
-    queryFn: () => dataProvider.staff.list(currentTenantId!),
-    enabled: !!currentTenantId && capabilities.mutate, retry: false,
+  const key = ['relationship-tasks', currentTenantId, userId, crmRole, subjectKey];
+  const query = useInfiniteQuery({
+    queryKey: [...key, view],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => relationshipTasksRepository.list(subject, { page: pageParam, view }),
+    getNextPageParam: (last, pages) => last.length === 50 ? pages.length + 1 : undefined,
+    enabled: isAuthenticated && !!currentTenantId, retry: false,
   });
   const create = useMutation({
     mutationFn: () => relationshipTasksRepository.create(subject, {
@@ -58,7 +60,7 @@ export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskS
       setTitle(''); setDescription(''); setDue('');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: key }),
-        queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
       ]);
     },
   });
@@ -71,12 +73,11 @@ export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskS
       setEditId('');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: key }),
-        queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
       ]);
     },
   });
-  const rows = (query.data ?? []).filter(row => view === 'all' || (view === 'overdue' ? isOverdue(row)
-    : row.status !== 'completed' && row.status !== 'canceled'));
+  const rows = [...new Map((query.data?.pages.flat() ?? []).map(row => [row.id, row])).values()];
   const missing = query.error instanceof RelationshipTasksNotDeployedError;
   return (
     <Card>
@@ -97,7 +98,7 @@ export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskS
         {!query.isError && <>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Task status filter">
             {(['open', 'overdue', 'all'] as const).map(v => (
-              <Button key={v} size="sm" variant={view === v ? 'default' : 'outline'} onClick={() => setView(v)}>
+              <Button key={v} size="sm" variant={view === v ? 'default' : 'outline'} aria-pressed={view === v} onClick={() => { setView(v); setEditId(''); }}>
                 {v === 'open' ? 'Open' : v === 'overdue' ? 'Overdue' : 'All'}
               </Button>
             ))}
@@ -110,7 +111,7 @@ export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskS
               <div className="space-y-1">
                 <p className="font-medium">{task.title}</p>
                 {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
-                <p className="text-xs text-muted-foreground">{formatDue(task.due_at)} · {task.owner_id ? 'Owner: ' + task.owner_id : 'Unassigned'}</p>
+                <p className="text-xs text-muted-foreground">{formatDue(task.due_at)} · <RelationshipOwnerName ownerId={task.owner_id} /></p>
                 <div className="flex gap-2"><Badge variant={isOverdue(task) ? 'destructive' : 'outline'}>{statusLabels[task.status]}</Badge>
                   <Badge variant="outline">{task.priority}</Badge></div>
               </div>
@@ -126,15 +127,9 @@ export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskS
                   Complete task
                 </Button>
               </div>}
-              {editId === task.id && <div className="grid w-full gap-2 border-t pt-2 sm:grid-cols-4">
-                <label className="text-xs">Owner
-                  <select className="mt-1 h-9 w-full rounded border bg-background px-2" value={editOwnerId} onChange={e => setEditOwnerId(e.target.value)}>
-                    <option value="">Unassigned</option>
-                    <option value={userId}>Me</option>
-                    {team.data?.filter(x => x.profileId && x.profileId !== userId).map(x =>
-                      <option key={x.profileId} value={x.profileId}>{x.displayName}</option>)}
-                  </select>
-                </label>
+              {capabilities.mutate && editId === task.id && <div className="grid w-full gap-2 border-t pt-2 sm:grid-cols-4">
+                <RelationshipOwnerFilter id={`edit-task-owner-${task.id}`} value={editOwnerId}
+                  onChange={setEditOwnerId} emptyLabel="Unassigned" disabled={update.isPending} />
                 <label className="text-xs">Due
                   <Input className="mt-1" type="datetime-local" value={editDueAt} onChange={e => setEditDueAt(e.target.value)} />
                 </label>
@@ -158,11 +153,16 @@ export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskS
               </div>}
             </div>)}
           </div>
+          {query.hasNextPage && <Button variant="outline" disabled={query.isFetching} onClick={() => { void query.fetchNextPage(); }}>
+            {query.isFetchingNextPage ? 'Loading…' : 'Load more tasks'}
+          </Button>}
+          <p className="text-xs text-muted-foreground">{rows.length} loaded tasks in this view.</p>
         </>}
+        {query.isError && !missing && <Button variant="outline" disabled={query.isFetching} onClick={() => { void query.refetch(); }}>Retry tasks</Button>}
         {update.isError && <p role="alert" className="text-sm text-destructive">
           {update.error instanceof Error ? update.error.message : 'Task update failed.'}
         </p>}
-        {capabilities.mutate && !query.isError && <div className="space-y-3 border-t pt-4">
+        {capabilities.mutate && query.isSuccess && <div className="space-y-3 border-t pt-4">
           <h3 className="font-medium">Create follow-up</h3>
           <div className="space-y-1"><Label htmlFor={`task-title-${subjectKey}`}>Task</Label>
             <Input id={`task-title-${subjectKey}`} value={title} maxLength={200}
@@ -171,15 +171,8 @@ export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskS
             <Textarea id={`task-desc-${subjectKey}`} value={description}
               onChange={e => setDescription(e.target.value)} placeholder="Next steps only — no clinical information" /></div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1"><Label htmlFor={`task-owner-${subjectKey}`}>Assigned owner</Label>
-              <select id={`task-owner-${subjectKey}`} value={ownerId} onChange={e => setOwnerId(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                <option value={userId}>Me</option>
-                <option value="">Unassigned</option>
-                {team.data?.filter(x => x.profileId && x.profileId !== userId).map(x =>
-                  <option key={x.profileId} value={x.profileId}>{x.displayName}</option>)}
-              </select>
-            </div>
+            <RelationshipOwnerFilter id={`task-owner-${subjectKey}`} value={ownerId}
+              onChange={setOwnerId} emptyLabel="Unassigned" disabled={create.isPending} />
             <div className="space-y-1"><Label htmlFor={`task-priority-${subjectKey}`}>Priority</Label>
               <select id={`task-priority-${subjectKey}`} value={priority} onChange={e => setPriority(e.target.value as TaskPriority)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">

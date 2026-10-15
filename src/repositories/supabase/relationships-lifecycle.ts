@@ -372,6 +372,7 @@ async function listInteractions(subject: RelationshipSubject, filters?: Interact
 
   const { data, error, count } = await query
     .order('occurred_at', { ascending: false })
+    .order('id', { ascending: false })
     .range(paging.from, paging.to);
   if (error) throw new Error(error.message);
   return {

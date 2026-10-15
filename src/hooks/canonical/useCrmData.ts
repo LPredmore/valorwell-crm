@@ -58,7 +58,10 @@ export function useTaskMutations() {
     if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
     return currentTenantId;
   };
-  const invalidate = () => qc.invalidateQueries({ queryKey: taskKeys.all });
+  const invalidate = () => Promise.all([
+    qc.invalidateQueries({ queryKey: taskKeys.all }),
+    qc.invalidateQueries({ queryKey: ['relationship-tasks'] }),
+  ]);
   return {
     create: useMutation({ mutationFn: (input: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt'>) => dataProvider.tasks.create(tenantId(), input), onSuccess: invalidate }),
     update: useMutation({ mutationFn: (p: { id: string; patch: Partial<CrmTask> }) => dataProvider.tasks.update(tenantId(), p.id, p.patch), onSuccess: invalidate }),

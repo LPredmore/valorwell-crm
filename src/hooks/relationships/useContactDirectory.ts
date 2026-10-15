@@ -1,20 +1,20 @@
+import { directoryEnum, directoryIds, directoryValues } from '@/domain/relationships/directory-url';
+import { relationshipStages } from '@/domain/relationships/contracts';
+import { relationshipOutreachStatuses, veteranAffiliationValues } from '@/domain/relationships/records';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { useDebouncedDirectorySearch } from '@/hooks/relationships/useDebouncedDirectorySearch';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import type {
   RelationshipContactFilters,
-  RelationshipOutreachStatus,
-  VeteranAffiliation,
 } from '@/domain/relationships/records';
-import type { SortDirection } from '@/domain/relationships/contracts';
 import { dataProvider } from '@/services/dataProvider';
 
 const pageSize = 25;
 
 function numberParam(value: string | null, fallback: number) {
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  return Number.isSafeInteger(parsed) && parsed > 0 && parsed <= 1000000 ? parsed : fallback;
 }
 
 function values(searchParams: URLSearchParams, key: string) {
@@ -29,22 +29,22 @@ export function useContactDirectoryFilters() {
   const [searchParams, setSearchParams] = useSearchParams();
   const filters: RelationshipContactFilters = {
     search: searchParams.get('q') || undefined,
-    organizationIds: values(searchParams, 'organization'),
+    organizationIds: directoryIds(searchParams, 'organization'),
     roleTitle: searchParams.get('roleTitle') || undefined,
     overdueNextAction: booleanParam(searchParams.get('overdue')),
-    ownerIds: values(searchParams, 'owner'),
+    ownerIds: directoryIds(searchParams, 'owner'),
     sources: values(searchParams, 'source'),
-    stages: values(searchParams, 'stage') as RelationshipContactFilters['stages'],
+    stages: directoryValues(searchParams, 'stage', relationshipStages),
     lastContactWithinDays: [30, 90, 365].includes(Number(searchParams.get('contactDays')))
       ? Number(searchParams.get('contactDays')) : undefined,
-    outreachStatuses: values(searchParams, 'outreachStatus') as RelationshipOutreachStatus[],
-    veteranAffiliations: values(searchParams, 'veteranAffiliation') as VeteranAffiliation[],
+    outreachStatuses: directoryValues(searchParams, 'outreachStatus', relationshipOutreachStatuses),
+    veteranAffiliations: directoryValues(searchParams, 'veteranAffiliation', veteranAffiliationValues),
     doNotContact: booleanParam(searchParams.get('doNotContact')),
     hasNextAction: booleanParam(searchParams.get('hasNextAction')),
     page: numberParam(searchParams.get('page'), 1),
     pageSize,
-    sortBy: (searchParams.get('sortBy') || 'displayName') as RelationshipContactFilters['sortBy'],
-    sortDirection: (searchParams.get('sortDirection') || 'asc') as SortDirection,
+    sortBy: directoryEnum(searchParams.get('sortBy'), ['displayName', 'updatedAt', 'nextActionDueAt'] as const, 'displayName'),
+    sortDirection: directoryEnum(searchParams.get('sortDirection'), ['asc', 'desc'] as const, 'asc'),
   };
 
   const set = (key: string, value?: string) => setSearchParams((current) => {
@@ -64,7 +64,7 @@ export function useContactDirectoryFilters() {
   });
 
   const reset = () => setSearchParams({});
-  return { filters, set, setMany, reset };
+  return { filters, searchParams, set, setMany, reset };
 }
 
 export function useContactDirectory(filters: RelationshipContactFilters, enabled: boolean) {
@@ -72,10 +72,11 @@ export function useContactDirectory(filters: RelationshipContactFilters, enabled
   const search = useDebouncedDirectorySearch(filters.search);
   const roleTitle = useDebouncedDirectorySearch(filters.roleTitle);
   const queryFilters = { ...filters, search, roleTitle, };
-  return useQuery({
+  const query = useQuery({
     queryKey: ['relationship-contacts', currentTenantId, userId, queryFilters],
     queryFn: () => dataProvider.relationships.listContacts(queryFilters),
     enabled: enabled && isAuthenticated && Boolean(currentTenantId),
     retry: false,
   });
+  return { ...query, isSearchPending: search !== (filters.search ?? '') || roleTitle !== (filters.roleTitle ?? '') };
 }

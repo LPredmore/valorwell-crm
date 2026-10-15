@@ -1,3 +1,5 @@
+import { directoryDetailSearch } from '@/domain/relationships/directory-url';
+import { useLocation } from 'react-router-dom';
 import { RelationshipOwnerFilter } from '@/components/crm/relationships/RelationshipOwnerField';
 import { RelationshipOrganizationFilter } from '@/components/crm/relationships/RelationshipOrganizationFilter';
 import { relationshipStages } from '@/domain/relationships/contracts';
@@ -15,6 +17,8 @@ import { useRelationshipCapability } from '@/hooks/relationships/useRelationship
 import { useContactDirectory, useContactDirectoryFilters } from '@/hooks/relationships/useContactDirectory';
 
 export default function ContactDirectoryPage() {
+  const location = useLocation();
+  const detailSearch = directoryDetailSearch(location.search);
   const { capability, isLoading, isError, refetch } = useRelationshipCapability('contacts');
   const { filters, set, setMany, reset } = useContactDirectoryFilters();
   const available = capability?.available === true;
@@ -49,13 +53,13 @@ export default function ContactDirectoryPage() {
 
       <RelationshipCapabilityState state={capability} isLoading={isLoading} isError={isError} onRetry={() => { void refetch(); }} />
 
-      {available && directory.isLoading && <Card><CardHeader><CardTitle>Loading contacts…</CardTitle></CardHeader></Card>}
+      {available && (directory.isLoading || directory.isSearchPending) && <Card><CardHeader><CardTitle>Loading contacts…</CardTitle></CardHeader></Card>}
       {available && directory.isError && <Card><CardHeader><CardTitle>Contacts could not be loaded</CardTitle><CardDescription>{directory.error instanceof Error ? directory.error.message : 'Unknown query error.'}</CardDescription></CardHeader><CardContent><Button variant="outline" onClick={() => { void directory.refetch(); }}>Try again</Button></CardContent></Card>}
-      {available && directory.data && <Card>
+      {available && !directory.isError && !directory.isSearchPending && directory.data && <Card>
         <CardHeader><CardTitle>Contact results</CardTitle><CardDescription>{directory.data.total} matching relationship contacts.</CardDescription></CardHeader>
         <CardContent className="space-y-4">
-          {directory.data.items.length === 0 ? <p className="text-sm text-muted-foreground">No contacts match the current filters.</p> : <div className="divide-y rounded border">{directory.data.items.map((contact) => <div className="flex flex-wrap items-center justify-between gap-3 p-3" key={contact.id}><div><div className="flex items-center gap-2"><Link className="font-medium text-primary underline-offset-4 hover:underline" to={`/crm/business-development/contacts/${contact.id}`}>{contact.displayName}</Link><Badge variant="outline">{contact.kind.replace(/_/g, ' ')}</Badge></div><p className="text-sm text-muted-foreground">{contact.email ?? 'No email'}{contact.phone ? ` · ${contact.phone}` : ''}</p></div><div className="text-right"><p className="text-sm">{relationshipStageLabel(contact.stage)}</p><p className="text-xs text-muted-foreground">{contact.outreachStatus.replace(/_/g, ' ')} · {contact.affiliations.length} affiliation{contact.affiliations.length === 1 ? '' : 's'}</p></div></div>)}</div>}
-          <RelationshipPagination page={directory.data.page} pageSize={directory.data.pageSize} total={directory.data.total} onPageChange={(page) => set('page', String(page))} />
+          {directory.data.items.length === 0 ? <p className="text-sm text-muted-foreground">No contacts match the current filters.</p> : <div className="divide-y rounded border">{directory.data.items.map((contact) => <div className="flex flex-wrap items-center justify-between gap-3 p-3" key={contact.id}><div><div className="flex items-center gap-2"><Link className="font-medium text-primary underline-offset-4 hover:underline" to={`/crm/business-development/contacts/${contact.id}${detailSearch}`}>{contact.displayName}</Link><Badge variant="outline">{contact.kind.replace(/_/g, ' ')}</Badge></div><p className="text-sm text-muted-foreground">{contact.email ?? 'No email'}{contact.phone ? ` · ${contact.phone}` : ''}</p></div><div className="text-right"><p className="text-sm">{relationshipStageLabel(contact.stage)}</p><p className="text-xs text-muted-foreground">{contact.outreachStatus.replace(/_/g, ' ')} · {contact.affiliations.length} affiliation{contact.affiliations.length === 1 ? '' : 's'}</p></div></div>)}</div>}
+          <RelationshipPagination page={directory.data.page} pageSize={directory.data.pageSize} total={directory.data.total} disabled={directory.isFetching || directory.isSearchPending} onPageChange={(page) => set('page', String(page))} />
         </CardContent>
       </Card>}
 

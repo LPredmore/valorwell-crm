@@ -139,6 +139,7 @@ export function CrmSidebar({ mobile = false, onNavigate }: CrmSidebarProps) {
               )}
               <CollapsibleContent forceMount={compact ? true : undefined} className="space-y-0.5">
                 {shownItems.map(renderItem)}
+                {compact && shownTools.map(renderItem)}
                 {!compact && shownTools.length > 0 && (
                   <Collapsible
                     open={!!toolsOpen[group.id]}

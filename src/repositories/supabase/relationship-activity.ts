@@ -26,7 +26,7 @@ export async function listRelationshipEmails(subject: Subject, page: number): Pr
   ).eq('tenant_id', tenantId);
   query = subject.contactId ? query.eq('contact_id',subject.contactId) : query.eq('organization_id', subject.organizationId!);
   const offset = (page-1) * PER_PAGE;
-  const { data, error, count } = await query.order('occurred_at',{ascending:false}).range(offset,offset+PER_PAGE-1);
+  const { data, error, count } = await query.order('occurred_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+PER_PAGE-1);
   if(error)throw new Error(error.message);
   return {
     total: count ?? 0,

@@ -1,3 +1,4 @@
+import { directoryReturnSearch } from '@/domain/relationships/directory-url';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { RelationshipOwnerName } from '@/components/crm/relationships/RelationshipOwnerField';
 import { RelationshipTimelinePanel } from '@/components/crm/relationships/RelationshipTimelinePanel';
@@ -5,7 +6,7 @@ import { RelationshipTasksPanel } from '@/components/crm/relationships/Relations
 import { ContactProfileEditor } from '@/components/crm/identity/ContactProfileEditor';
 import { IdentityReviewPanel } from '@/components/crm/identity/IdentityReviewPanel';
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +20,8 @@ import { dataProvider } from '@/services/dataProvider';
 
 export default function ContactDetailPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const directorySearch = directoryReturnSearch(searchParams);
   const { currentTenantId, userId } = useCrmAuth();
   const contacts = useRelationshipCapability('contacts');
   const organizations = useRelationshipCapability('organizations');
@@ -54,7 +57,7 @@ export default function ContactDetailPage() {
           <h1 className="text-3xl font-bold tracking-tight">{contact.data?.displayName ?? 'Contact detail'}</h1>
           <p className="mt-2 text-muted-foreground">Non-clinical relationship contact stored separately from client records.</p>
         </div>
-        <Button asChild variant="outline"><Link to="/crm/business-development/contacts">Back to contacts</Link></Button>
+        <Button asChild variant="outline"><Link to={`/crm/business-development/contacts${directorySearch}`}>Back to contacts</Link></Button>
       </div>
 
       <RelationshipCapabilityState state={contacts.capability} isLoading={contacts.isLoading} isError={contacts.isError} onRetry={() => { void contacts.refetch(); }} />

@@ -1,6 +1,6 @@
 import { listRelationshipEmails } from '@/repositories/supabase/relationship-activity';
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,46 +23,47 @@ const channelOptions: Array<{ value: 'all' | TimelineChannel; title: string }> =
 /** Non-clinical activity only. CRM email and relationship interaction source
  * records remain authoritative; clinical CRM events are never fetched here. */
 export function RelationshipTimelinePanel({ subject }: { subject: Subject }) {
-  const { currentTenantId } = useCrmAuth();
+  const { currentTenantId, userId, crmRole, isAuthenticated } = useCrmAuth();
+  return <RelationshipTimelineContent key={`${currentTenantId}:${userId}:${crmRole}:${subject.contactId ?? subject.organizationId}`} subject={subject} enabled={isAuthenticated} />;
+}
+
+function RelationshipTimelineContent({ subject, enabled: authenticated }: { subject: Subject; enabled: boolean }) {
+  const { currentTenantId, userId, crmRole } = useCrmAuth();
   const subjectKey = subject.contactId ? 'contact:' + subject.contactId : 'organization:' + subject.organizationId;
-  const [interactionPage, setInteractionPage] = useState(1);
-  const [emailPage, setEmailPage] = useState(1);
   const [displayPage, setDisplayPage] = useState(1);
   const [channel, setChannel] = useState<'all' | TimelineChannel>('all');
-  const enabled = Boolean(currentTenantId) && Boolean(subject.contactId || subject.organizationId);
-  const interactions = useQuery({
-    queryKey: ['relationship-timeline-interactions', currentTenantId, subjectKey, interactionPage],
-    queryFn: async () => {
-      const requests = Array.from({ length: interactionPage }, (_, i) =>
-        dataProvider.relationships.listInteractions(subject, { page: i + 1, pageSize: INTERACTION_PAGE_SIZE }),
-      );
-      const pages = await Promise.all(requests);
-      return {
-        rows: pages.flatMap(x => x.items),
-        total: pages[0]?.total ?? 0,
-      };
+  const enabled = authenticated && Boolean(currentTenantId) && Boolean(subject.contactId || subject.organizationId);
+  const interactions = useInfiniteQuery({
+    queryKey: ['relationship-timeline-interactions', currentTenantId, userId, crmRole, subjectKey],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => dataProvider.relationships.listInteractions(subject, {
+      page: pageParam, pageSize: INTERACTION_PAGE_SIZE,
+    }),
+    getNextPageParam: (last, pages) => {
+      const loaded = pages.reduce((count, page) => count + page.items.length, 0);
+      return last.items.length > 0 && loaded < last.total ? pages.length + 1 : undefined;
     },
     enabled, retry: false,
   });
-  const communications = useQuery({
-    queryKey: ['relationship-timeline-communications', currentTenantId, subjectKey, emailPage],
-    queryFn: async () => {
-      const pages = await Promise.all(Array.from({ length: emailPage }, (_, i) =>
-        listRelationshipEmails(subject, i + 1),
-      ));
-      return { rows: pages.flatMap(x => x.items), total: pages[0]?.total ?? 0 };
+  const communications = useInfiniteQuery({
+    queryKey: ['relationship-timeline-communications', currentTenantId, userId, crmRole, subjectKey],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => listRelationshipEmails(subject, pageParam),
+    getNextPageParam: (last, pages) => {
+      const loaded = pages.reduce((count, page) => count + page.items.length, 0);
+      return last.items.length > 0 && loaded < last.total ? pages.length + 1 : undefined;
     },
     enabled, retry: false,
   });
   const entries = useMemo(() => {
-    const rows = buildActivityTimeline(interactions.data?.rows ?? [], communications.data?.rows ?? []);
+    const rows = buildActivityTimeline(interactions.data?.pages.flatMap(page => page.items) ?? [], communications.data?.pages.flatMap(page => page.items) ?? []);
     return channel === 'all' ? rows : rows.filter(x => x.channel === channel);
   }, [interactions.data, communications.data, channel]);
 
   const busy = interactions.isLoading || communications.isLoading;
   const error = interactions.error || communications.error;
-  const hasMoreInteractions = (interactions.data?.rows.length ?? 0) < (interactions.data?.total ?? 0);
-  const hasMoreEmails = (communications.data?.rows.length ?? 0) < (communications.data?.total ?? 0);
+  const hasMoreInteractions = interactions.hasNextPage;
+  const hasMoreEmails = communications.hasNextPage;
 
   return (
     <Card>
@@ -78,12 +79,17 @@ export function RelationshipTimelinePanel({ subject }: { subject: Subject }) {
         <div className="flex flex-wrap gap-2" role="group" aria-label="Filter activity by channel">
           {channelOptions.map(item => <Button key={item.value} size="sm"
             variant={channel === item.value ? 'default' : 'outline'}
+            aria-pressed={channel === item.value}
             onClick={() => { setChannel(item.value); setDisplayPage(1); }}>{item.title}</Button>)}
         </div>
         {busy && <p className="text-sm text-muted-foreground">Loading activity history…</p>}
         {error && <p role="alert" className="text-sm text-destructive">
           Some activity could not be loaded: {error instanceof Error ? error.message : 'Access unavailable'}
         </p>}
+        {error && <Button variant="outline" size="sm" disabled={interactions.isFetching || communications.isFetching} onClick={() => {
+          if (interactions.isError) void interactions.refetch();
+          if (communications.isError) void communications.refetch();
+        }}>Retry activity</Button>}
         {!busy && !error && entries.length === 0 &&
           <p className="text-sm text-muted-foreground">No recorded activity for this contact or organization.</p>}
         {!error && <ol aria-label="Chronological relationship activity" className="divide-y rounded-md border">
@@ -114,11 +120,11 @@ export function RelationshipTimelinePanel({ subject }: { subject: Subject }) {
             Show more activity
           </Button>}
           {hasMoreEmails && <Button variant="outline" size="sm" disabled={communications.isFetching}
-            onClick={() => setEmailPage(p => p + 1)}>
+            onClick={() => { void communications.fetchNextPage(); }}>
             Load older email communications
           </Button>}
           {hasMoreInteractions && <Button variant="outline" size="sm" disabled={interactions.isFetching}
-            onClick={() => setInteractionPage(p => p + 1)}>
+            onClick={() => { void interactions.fetchNextPage(); }}>
             Load older interactions
           </Button>}
           <p className="text-xs text-muted-foreground">
