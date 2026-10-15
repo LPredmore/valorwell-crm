@@ -39,3 +39,13 @@ Pure plan/template-evidence test source is prepared in `src/domain/auth/crm-auth
 6. Verify client invitations/registration, clinician onboarding and existing password flows. Record actual published commit and Auth configuration evidence before closing the Todoist issue.
 
 Rollback: revert the CRM source/script changes through GitHub; remove only newly added exact CRM allowlist entries if necessary. Do not remove other portal destinations or delete invited users/role assignments as an automatic rollback.
+
+## Dashboard inspection instructions for the owner
+
+1. Open https://supabase.com/dashboard/project/ahqauomkgflopxgnlndd/auth/url-configuration (Billing Hub project). In sidebar navigation this is Authentication → URL Configuration.
+2. Copy the current **Site URL**. It may legitimately point to the client portal; retain it while inspecting shared flows.
+3. Under **Redirect URLs**, check whether all three exact CRM returns are listed: `https://crm.valorwell.org/auth`, `https://crm.valorwell.org/auth?flow=invite`, `https://crm.valorwell.org/auth?flow=recovery`. Report present/missing and any existing CRM wildcard entry; preserve all other portal URLs.
+4. Open https://supabase.com/dashboard/project/ahqauomkgflopxgnlndd/auth/templates. This is Authentication → Email Templates; some dashboard layouts label the section Email under Notifications. Open **Invite user**, then **Reset password**.
+5. In each template's HTML/source, locate the clickable link (`href=`). Report whether it uses `{{ .ConfirmationURL }}`, hardcodes a portal URL, or constructs a URL using `{{ .SiteURL }}`, `{{ .RedirectTo }}` or `{{ .TokenHash }}`. Copy just the template link markup if unsure; template variable placeholders are sufficient. A custom token-hash link needs flow-specific review rather than automatic replacement.
+
+These are configuration inspection steps, not an instruction to send an invitation/reset email or change shared templates/Site URL. Report the Site URL, CRM redirect entries and the two template link snippets. Never share service-role keys, access tokens, webhook secrets or an actual generated invitation/recovery link.
