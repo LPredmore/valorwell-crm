@@ -6,7 +6,7 @@ Billing Hub is the canonical source of record for this relationship-interest wor
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**URL**: https://lovable.dev/projects/67d68fb5-d6d7-40fb-b409-203945e02edd
 
 ## How can I edit this code?
 

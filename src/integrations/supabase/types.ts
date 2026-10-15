@@ -27421,6 +27421,305 @@ export type Database = {
           },
         ]
       }
+      zeffy_payment_capture_links: {
+        Row: {
+          capture_id: string
+          event_id: string
+          event_type: string
+          payment_id: string
+          requested_at: string
+          source_account_id: string
+          tenant_id: string
+        }
+        Insert: {
+          capture_id: string
+          event_id: string
+          event_type: string
+          payment_id: string
+          requested_at?: string
+          source_account_id: string
+          tenant_id: string
+        }
+        Update: {
+          capture_id?: string
+          event_id?: string
+          event_type?: string
+          payment_id?: string
+          requested_at?: string
+          source_account_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zeffy_payment_capture_links_capture_id_fkey"
+            columns: ["capture_id"]
+            isOneToOne: false
+            referencedRelation: "zeffy_webhook_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zeffy_payment_capture_links_source_account_id_tenant_id_fkey"
+            columns: ["source_account_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "zeffy_source_accounts"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
+      zeffy_payment_jobs: {
+        Row: {
+          attempts: number
+          available_at: string
+          completed_generation: number
+          consecutive_failures: number
+          generation: number
+          last_error_code: string | null
+          lease_generation: number | null
+          lease_token: string | null
+          lease_until: string | null
+          payment_id: string
+          requested_at: string
+          source_account_id: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          attempts?: number
+          available_at?: string
+          completed_generation?: number
+          consecutive_failures?: number
+          generation?: number
+          last_error_code?: string | null
+          lease_generation?: number | null
+          lease_token?: string | null
+          lease_until?: string | null
+          payment_id: string
+          requested_at?: string
+          source_account_id: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          attempts?: number
+          available_at?: string
+          completed_generation?: number
+          consecutive_failures?: number
+          generation?: number
+          last_error_code?: string | null
+          lease_generation?: number | null
+          lease_token?: string | null
+          lease_until?: string | null
+          payment_id?: string
+          requested_at?: string
+          source_account_id?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zeffy_payment_jobs_source_account_id_tenant_id_fkey"
+            columns: ["source_account_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "zeffy_source_accounts"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
+      zeffy_payment_observations: {
+        Row: {
+          id: string
+          lease_token: string
+          observed_at: string
+          payment_id: string
+          snapshot_id: string
+          source_account_id: string
+          tenant_id: string
+          verified_via: string
+        }
+        Insert: {
+          id?: string
+          lease_token: string
+          observed_at?: string
+          payment_id: string
+          snapshot_id: string
+          source_account_id: string
+          tenant_id: string
+          verified_via?: string
+        }
+        Update: {
+          id?: string
+          lease_token?: string
+          observed_at?: string
+          payment_id?: string
+          snapshot_id?: string
+          source_account_id?: string
+          tenant_id?: string
+          verified_via?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zeffy_payment_observations_snapshot_id_source_account_id_t_fkey"
+            columns: [
+              "snapshot_id",
+              "source_account_id",
+              "tenant_id",
+              "payment_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "zeffy_payment_snapshots"
+            referencedColumns: [
+              "id",
+              "source_account_id",
+              "tenant_id",
+              "payment_id",
+            ]
+          },
+        ]
+      }
+      zeffy_payment_snapshots: {
+        Row: {
+          created_at: string
+          currency: string
+          gross_cents: number
+          id: string
+          net_cents: number
+          payment_id: string
+          payment_status: string
+          projection: Json
+          refunded_cents: number
+          snapshot_hash: string
+          source_account_id: string
+          source_type: string
+          tenant_id: string
+          website_donation_candidate: boolean
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          gross_cents: number
+          id?: string
+          net_cents: number
+          payment_id: string
+          payment_status: string
+          projection: Json
+          refunded_cents: number
+          snapshot_hash: string
+          source_account_id: string
+          source_type: string
+          tenant_id: string
+          website_donation_candidate: boolean
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          gross_cents?: number
+          id?: string
+          net_cents?: number
+          payment_id?: string
+          payment_status?: string
+          projection?: Json
+          refunded_cents?: number
+          snapshot_hash?: string
+          source_account_id?: string
+          source_type?: string
+          tenant_id?: string
+          website_donation_candidate?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zeffy_payment_snapshots_source_account_id_tenant_id_fkey"
+            columns: ["source_account_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "zeffy_source_accounts"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
+      zeffy_payment_states: {
+        Row: {
+          observation_id: string
+          observed_at: string
+          payment_id: string
+          snapshot_id: string
+          source_account_id: string
+          tenant_id: string
+        }
+        Insert: {
+          observation_id: string
+          observed_at: string
+          payment_id: string
+          snapshot_id: string
+          source_account_id: string
+          tenant_id: string
+        }
+        Update: {
+          observation_id?: string
+          observed_at?: string
+          payment_id?: string
+          snapshot_id?: string
+          source_account_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zeffy_payment_states_observation_id_source_account_id_tena_fkey"
+            columns: [
+              "observation_id",
+              "source_account_id",
+              "tenant_id",
+              "payment_id",
+              "snapshot_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "zeffy_payment_observations"
+            referencedColumns: [
+              "id",
+              "source_account_id",
+              "tenant_id",
+              "payment_id",
+              "snapshot_id",
+            ]
+          },
+        ]
+      }
+      zeffy_source_accounts: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          ownership_evidence: string
+          provider_organization_id: string
+          tenant_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          enabled?: boolean
+          id: string
+          ownership_evidence: string
+          provider_organization_id: string
+          tenant_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          ownership_evidence?: string
+          provider_organization_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zeffy_source_accounts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zeffy_webhook_events: {
         Row: {
           event_id: string | null
@@ -33875,6 +34174,10 @@ export type Database = {
         Args: { p_staff_id?: string }
         Returns: Json
       }
+      staff_get_provider_applicant: {
+        Args: { p_applicant_id: string; p_tenant_id: string }
+        Returns: Json
+      }
       staff_get_provider_applicant_summary: { Args: never; Returns: Json }
       staff_get_session_documentation_context: {
         Args: { p_appointment_id: string }
@@ -34528,6 +34831,42 @@ export type Database = {
           p_status?: Database["public"]["Enums"]["provider_applicant_status_enum"]
         }
         Returns: string
+      }
+      zeffy_claim_payment_review: {
+        Args: { p_payment_id?: string; p_source_account_id: string }
+        Returns: Json
+      }
+      zeffy_commit_payment_review: {
+        Args: {
+          p_lease_token: string
+          p_payment_id: string
+          p_projection: Json
+          p_source_account_id: string
+        }
+        Returns: Json
+      }
+      zeffy_enqueue_payment_capture: {
+        Args: {
+          p_event_id: string
+          p_event_type: string
+          p_payload_sha256: string
+          p_source_account_id: string
+        }
+        Returns: Json
+      }
+      zeffy_fail_payment_review: {
+        Args: {
+          p_error_code: string
+          p_lease_token: string
+          p_payment_id: string
+          p_source_account_id: string
+        }
+        Returns: Json
+      }
+      zeffy_payment_summary: { Args: { p_tenant_id: string }; Returns: Json }
+      zeffy_request_payment_review: {
+        Args: { p_payment_id: string; p_source_account_id: string }
+        Returns: Json
       }
     }
     Enums: {
