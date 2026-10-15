@@ -1,5 +1,7 @@
 # Donor synchronization dependency evidence
 
+**Superseded current-platform assumption:** the user confirmed Zeffy is now the Foundation donation platform; Givebutter and campaign `565036` are legacy references. Preserve historical records and legacy security repairs, but do not make them prerequisites for Zeffy review. The current investigation is [Zeffy donation integration review](2026-10-15-zeffy-donation-integration-review.md). Earlier source observations below remain valid historical/legacy evidence, not current-platform configuration requirements.
+
 Date: 2026-10-15 UTC (October 14 evening America/Chicago). Read-only discovery only. No donor transaction queued/processed, source record edited, communication sent or worker activated.
 
 Task 40 remains OPEN. The October 9 roadmap note that the identity registries are empty describes current records, not the behavior of the donor ingestion code. The existing code needs a complete cross-app migration/dependency review before changes.
