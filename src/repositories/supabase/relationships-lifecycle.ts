@@ -1,3 +1,4 @@
+import { selectedRelationshipContext } from '../selectedCrmScope';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { capabilityState } from '@/domain/relationships/capabilities';
 import type {
@@ -11,7 +12,6 @@ import type {
   RelationshipOrganizationFilters,
 } from '@/domain/relationships/records';
 import { supabase } from '@/integrations/supabase/client';
-import type { Json } from '@/integrations/supabase/types';
 import type { RelationshipsRepository, RelationshipSubject } from '@/repositories/relationships';
 import { supabaseRelationshipsRepository as baseRelationshipsRepository } from './relationships';
 import {
@@ -87,10 +87,6 @@ const lifecycleSupabase = supabase as unknown as SupabaseClient<LifecycleDatabas
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 
-function isJsonObject(value: Json | undefined): value is { [key: string]: Json | undefined } {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
@@ -113,26 +109,7 @@ function capabilityStatusFromError(error: unknown): CapabilityStatus {
 }
 
 async function operatingContext(): Promise<OperatingContext> {
-  const { data, error } = await supabase.rpc('get_crm_operating_context');
-  if (error) throw new Error(error.message);
-  if (!isJsonObject(data)) throw new Error('Invalid CRM operating context response.');
-  if (data.authenticated !== true) throw new Error('Authenticated CRM access is required.');
-
-  const tenantId = data.current_tenant_id;
-  const profileId = data.profile_id;
-  const capabilities = data.capabilities;
-  if (typeof tenantId !== 'string' || !tenantId) {
-    throw new Error('No operating tenant is selected for this CRM session.');
-  }
-  if (typeof profileId !== 'string' || !profileId) {
-    throw new Error('Invalid CRM profile context.');
-  }
-
-  return {
-    tenantId,
-    profileId,
-    canMutate: isJsonObject(capabilities) && capabilities.mutate === true,
-  };
+  return selectedRelationshipContext();
 }
 
 function requireMutation(context: OperatingContext) {
@@ -343,6 +320,12 @@ async function transitionStage(input: {
   const context = await operatingContext();
   requireMutation(context);
   const subject = assertStageSubject(input.subject);
+  // The native transition receives source IDs, so prove selected-tenant
+  // ownership before invoking it; a role in another tenant is not selection.
+  const existing = await lifecycleSupabase.from(subject.organizationId ? 'relationship_organizations' : 'relationship_contacts')
+    .select('id').eq('tenant_id',context.tenantId).eq('id',subject.organizationId??subject.contactId!).maybeSingle();
+  if(existing.error)throw new Error(existing.error.message);
+  if(!existing.data)throw new Error('Relationship source is unavailable in the selected tenant.');
   const { data, error } = await lifecycleSupabase.rpc('transition_relationship_stage', {
     p_to_stage: input.to,
     p_organization_id: subject.organizationId,

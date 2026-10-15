@@ -68,12 +68,12 @@ export function useContactDirectoryFilters() {
 }
 
 export function useContactDirectory(filters: RelationshipContactFilters, enabled: boolean) {
-  const { currentTenantId, userId, isAuthenticated } = useCrmAuth();
+  const { currentTenantId, userId, crmRole, isAuthenticated } = useCrmAuth();
   const search = useDebouncedDirectorySearch(filters.search);
   const roleTitle = useDebouncedDirectorySearch(filters.roleTitle);
   const queryFilters = { ...filters, search, roleTitle, };
   const query = useQuery({
-    queryKey: ['relationship-contacts', currentTenantId, userId, queryFilters],
+    queryKey: ['relationship-contacts', currentTenantId, userId, crmRole, queryFilters],
     queryFn: () => dataProvider.relationships.listContacts(queryFilters),
     enabled: enabled && isAuthenticated && Boolean(currentTenantId),
     retry: false,

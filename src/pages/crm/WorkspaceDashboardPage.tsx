@@ -20,7 +20,7 @@ function WorkspaceDashboard(){
   const {currentTenantId,userId,crmRole,isAuthenticated}=useCrmAuth();
   const enabled=isAuthenticated&&!!currentTenantId;
   const [selected,setSelected]=useState('');
-  const tasks=useTasks({view:'my'});
+  const tasks=useTasks({view:'my',page:1,pageSize:5});
   const repliesCapability=useRelationshipCapability('replies');
   const replies=useQuery({
     queryKey:['workspace-open-replies',currentTenantId,userId,crmRole],

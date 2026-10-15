@@ -84,3 +84,7 @@ Separate actions preserve the funnel; do not add form-open count to paid-gift co
 5. **Attribution bridge:** confirm with Zeffy a supported field that returns an opaque website checkout token/source on verified payments (or documented export). Then bind it to server-side click capture. Current payment metadata and browser-local storage do not provide this bridge. Confirm consent/window rules and completed-donation Ads action/account settings before any upload.
 
 No retired Givebutter configuration is needed to finish these Zeffy steps. Givebutter retention/security work stays separate.
+# Subsequent source implementation
+
+Billing Hub draft [PR #15](https://github.com/LPredmore/valorwell-billing-hub/pull/15) now prepares signed raw-body capture, retry/conflict handling, pure payment/refund projection and an authenticated GET-only aggregate audit command. Source commits `ceccbd7` and `495d0ea`; no checks executed, no provider calls, no deployment/configuration changes and no ledger/Ads writes. The deployed v11 receiver described below remains the live evidence. Foundation tenant ownership and supported individual attribution are still unresolved. See `docs/zeffy-verified-capture-and-payment-review.md` in that PR for the concrete configuration and acceptance runbook.
+

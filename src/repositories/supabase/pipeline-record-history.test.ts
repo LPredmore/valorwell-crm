@@ -85,7 +85,7 @@ describe('pipeline record history', () => {
     const items = buildPipelineRecordTimeline({
       stages: [
         { id: 'initial', from_stage_id: null, to_stage_id: 'stage-1', occurred_at: '2026-10-13T10:00:00Z' },
-        { id: 'move', from_stage_id: 'stage-1', to_stage_id: 'stage-2', occurred_at: '2026-10-14T10:00:00Z' },
+        { id: 'move', from_stage_id: 'stage-1', to_stage_id: 'stage-2', occurred_at: '2026-10-14T10:00:00Z', actor_profile_id:'actor-profile' },
       ],
       interactions: [
         { id: 'call', interaction_type: 'phone_call', summary: 'Follow-up made', occurred_at: '2026-10-14T09:00:00Z' },
@@ -94,5 +94,6 @@ describe('pipeline record history', () => {
     expect(items.map(x => x.id)).toEqual(['stage:move', 'interaction:call', 'stage:initial']);
     expect(items.map(x => x.detail)).toEqual(['Contacted → Screening', 'Follow-up made', 'Contacted']);
     expect(items[1].title).toBe('phone call');
+    expect(items[0].actorProfileId).toBe('actor-profile');
   });
 });

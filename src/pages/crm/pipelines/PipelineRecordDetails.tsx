@@ -2,6 +2,7 @@ import {Link} from 'react-router-dom';
 import {useCrmAuth} from '@/hooks/crm/useCrmAuth';
 import {RelationshipTimelinePanel} from '@/components/crm/relationships/RelationshipTimelinePanel';
 import {RelationshipTasksPanel} from '@/components/crm/relationships/RelationshipTasksPanel';
+import {RelationshipOwnerName} from '@/components/crm/relationships/RelationshipOwnerField';
 import { useMemo } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -101,6 +102,8 @@ export function PipelineRecordDetails({
               <time className="text-xs text-muted-foreground" dateTime={item.occurredAt}>{dateLabel(item.occurredAt)}</time>
             </div>
             <p className="mt-1 whitespace-pre-wrap break-words">{item.detail}</p>
+            <p className="mt-1 break-all text-xs text-muted-foreground">Recorded actor: {item.actorProfileId
+              ?<><RelationshipOwnerName ownerId={item.actorProfileId}/> · {item.actorProfileId}</>:'Not recorded'}</p>
           </li>)}
         </ol>}
         {history.hasNextPage&&<Button className="mt-3" variant="outline" size="sm" disabled={history.isFetching} onClick={()=>void history.fetchNextPage()}>

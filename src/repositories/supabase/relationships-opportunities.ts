@@ -1,3 +1,4 @@
+import { selectedRelationshipContext } from '../selectedCrmScope';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { capabilityState } from '@/domain/relationships/capabilities';
 import type {
@@ -7,7 +8,6 @@ import type {
   OpportunityStatus,
 } from '@/domain/relationships/contracts';
 import { supabase } from '@/integrations/supabase/client';
-import type { Json } from '@/integrations/supabase/types';
 import type { RelationshipsRepository } from '@/repositories/relationships';
 import { supabaseRelationshipsRepository as baseRelationshipsRepository } from './relationships-referrals';
 import {
@@ -57,10 +57,6 @@ const opportunitySupabase = supabase as unknown as SupabaseClient<OpportunityDat
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 
-function isJsonObject(value: Json | undefined): value is { [key: string]: Json | undefined } {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
@@ -83,26 +79,7 @@ function capabilityStatusFromError(error: unknown): CapabilityStatus {
 }
 
 async function operatingContext(): Promise<OperatingContext> {
-  const { data, error } = await supabase.rpc('get_crm_operating_context');
-  if (error) throw new Error(error.message);
-  if (!isJsonObject(data)) throw new Error('Invalid CRM operating context response.');
-  if (data.authenticated !== true) throw new Error('Authenticated CRM access is required.');
-
-  const tenantId = data.current_tenant_id;
-  const profileId = data.profile_id;
-  const capabilities = data.capabilities;
-  if (typeof tenantId !== 'string' || !tenantId) {
-    throw new Error('No operating tenant is selected for this CRM session.');
-  }
-  if (typeof profileId !== 'string' || !profileId) {
-    throw new Error('Invalid CRM profile context.');
-  }
-
-  return {
-    tenantId,
-    profileId,
-    canMutate: isJsonObject(capabilities) && capabilities.mutate === true,
-  };
+  return selectedRelationshipContext();
 }
 
 function requireMutation(context: OperatingContext) {

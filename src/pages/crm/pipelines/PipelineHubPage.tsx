@@ -44,7 +44,7 @@ function usePipeData(p:CrmPipeline|null,serverFilters:PipelineServerFilters) {
     enabled:enabled&&p?.source_mode==='manual',retry:false,
   });
   const records={...recordPages,data:recordPages.data?.pages.flatMap(page=>page.rows)};
-  const connected=useQuery({queryKey:['pipeline-connected-cards',p?.id,...scope],queryFn:()=>listConnectedPipelineCards(p!,stages.data??[]),enabled:enabled&&p?.source_mode==='connected'&&!!stages.data,retry:false});
+  const connected=useQuery({queryKey:['pipeline-connected-cards',p?.id,...scope],queryFn:()=>listConnectedPipelineCards(p!,stages.data??[]),enabled:enabled&&p?.source_mode==='connected'&&stages.isSuccess,retry:false});
   const subjects=useQuery({queryKey:['pipeline-card-subjects',p?.id,...scope,records.dataUpdatedAt],queryFn:()=>getPipelineCardSubjects(p!,records.data??[]),enabled:enabled&&p?.source_mode==='manual'&&!!records.data,retry:false});
   return {stages,fields,records,subjects,connected};
 }
@@ -115,31 +115,31 @@ function PipelineHubWorkspace(){
   },{replace:true});
   const [bulkStage,setBulkStage]=useState('');
   const [bulkProgress,setBulkProgress]=useState('');
-  const teamOwners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId],queryFn:()=>listTeamOwners(currentTenantId!),enabled:!!currentTenantId,retry:false});
-  const ownerName=(id:string|null)=>id?(teamOwners.data?.find(member=>member.id===id)?.name??'Assigned team member'):'Unassigned';
+  const teamOwners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId,userId,crmRole],queryFn:()=>listTeamOwners(currentTenantId!),enabled:!!currentTenantId,retry:false});
+  const ownerName=(id:string|null)=>id?((teamOwners.isSuccess?teamOwners.data:[])?.find(member=>member.id===id)?.name??'Assigned team member'):'Unassigned';
   const list=useQuery({queryKey:['crm-pipelines',currentTenantId,userId,crmRole],queryFn:()=>pipelinesRepository.list(currentTenantId!),enabled:!!currentTenantId,retry:false});
-  const p=(selected?list.data?.find(x=>x.id===selected):list.data?.[0])??null;
+  const p=list.isSuccess?((selected?list.data?.find(x=>x.id===selected):list.data?.[0])??null):null;
   const serverFilters:PipelineServerFilters={
     stageId:stageFilter||null,owner:ownerFilter,attention,userId:userId??null,
     searchText:settledSearchText,sortKey,
   };
   const {stages,fields,records,subjects,connected}=usePipeData(p,serverFilters);
   const globalMetrics=useQuery({
-    queryKey:['crm-manual-pipeline-metrics',p?.tenant_id,p?.id],
+    queryKey:['crm-manual-pipeline-metrics',p?.tenant_id,p?.id,userId,crmRole],
     queryFn:()=>getManualPipelineMetrics(p!),enabled:!!p&&p.source_mode==='manual',retry:false,
   });
-  const pipelineTotals=globalMetrics.data?pipelineMetricsTotals(globalMetrics.data):null;
-  const metricsByStage=new Map((globalMetrics.data??[]).map(row=>[row.stage_id,row.record_count]));
-  const rules=useQuery({queryKey:['pipeline-stage-rules',p?.id],queryFn:()=>pipelinesRepository.stageRules(p!),enabled:!!p&&p.source_mode==='manual',retry:false});
-  const saved=useQuery({queryKey:['pipeline-saved-views',p?.id,userId],queryFn:()=>pipelinesRepository.savedViews(p!,userId!),enabled:!!p&&!!userId,retry:false});
-  const sourceBinding=useQuery({queryKey:['pipeline-source-binding',p?.id],
+  const pipelineTotals=globalMetrics.isSuccess?pipelineMetricsTotals(globalMetrics.data):null;
+  const metricsByStage=new Map((globalMetrics.isSuccess?globalMetrics.data:[]).map(row=>[row.stage_id,row.record_count]));
+  const rules=useQuery({queryKey:['pipeline-stage-rules',p?.id,currentTenantId,userId,crmRole],queryFn:()=>pipelinesRepository.stageRules(p!),enabled:!!p&&p.source_mode==='manual',retry:false});
+  const saved=useQuery({queryKey:['pipeline-saved-views',p?.id,userId,currentTenantId,crmRole],queryFn:()=>pipelinesRepository.savedViews(p!,userId!),enabled:!!p&&!!userId,retry:false});
+  const sourceBinding=useQuery({queryKey:['pipeline-source-binding',p?.id,currentTenantId,userId,crmRole],
     queryFn:()=>getPipelineSourceKind(p!),enabled:!!p,retry:false});
   const giving=useQuery({queryKey:['pipeline-donor-giving',p?.id,currentTenantId,userId,crmRole,records.dataUpdatedAt],
     queryFn:()=>donorValuesByContact(p!,[...new Set((records.data??[])
       .map(row=>row.contact_id).filter((id):id is string=>!!id))]),
     enabled:!!p&&sourceBinding.data==='donor_giving'&&!!records.data,retry:false});
-  const candidates=useQuery({queryKey:['pipeline-subject-picker',p?.id,findSubject],queryFn:()=>listPipelineSubjects(p!,findSubject),enabled:!!p&&p.source_mode==='manual',retry:false});
-  const relatedOrganizations=useQuery({queryKey:['pipeline-optional-organizations',currentTenantId],queryFn:()=>listAssociatedOrganizations(currentTenantId!),enabled:!!p&&p.source_mode==='manual'&&p.subject_type==='person'&&!!currentTenantId,retry:false});
+  const candidates=useQuery({queryKey:['pipeline-subject-picker',p?.id,findSubject,currentTenantId,userId,crmRole],queryFn:()=>listPipelineSubjects(p!,findSubject),enabled:!!p&&p.source_mode==='manual',retry:false});
+  const relatedOrganizations=useQuery({queryKey:['pipeline-optional-organizations',currentTenantId,userId,crmRole],queryFn:()=>listAssociatedOrganizations(currentTenantId!),enabled:!!p&&p.source_mode==='manual'&&p.subject_type==='person'&&!!currentTenantId,retry:false});
   const mutation=useMutation({
     mutationFn:async (fn:()=>Promise<unknown>)=>fn(),
     onSuccess:()=>qc.invalidateQueries({queryKey:['crm-pipelines']}),
@@ -163,7 +163,7 @@ function PipelineHubWorkspace(){
     catch(e){setActionError(e instanceof Error?e.message:'Action failed');}
   };
   const sorted=useMemo(()=>{
-    const originals=p?.source_mode==='connected'?(connected.data??[]):(records.data??[]);
+    const originals=p?.source_mode==='connected'?(connected.isSuccess?connected.data:[]):(records.isSuccess?records.data??[]:[]);
     const values=originals.map(row=>{
       if(p?.source_mode!=='manual'||!('contact_id' in row)||!row.contact_id)return row;
       const donation=giving.isSuccess?giving.data?.[row.contact_id]:undefined;
@@ -174,7 +174,7 @@ function PipelineHubWorkspace(){
     if(p?.source_mode==='manual'&&
       (safeSort==='updated_at'||safeSort==='created_at'||safeSort==='next_action_due_at'))return values;
     return [...values].sort((a,b)=>comparePipelineRecords(a as CrmPipelineRecord,b as CrmPipelineRecord,safeSort));
-  },[p?.source_mode,p?.sort_field_keys,connected.data,records.data,giving.data,giving.isSuccess,sortKey]);
+  },[p?.source_mode,p?.sort_field_keys,connected.data,connected.isSuccess,records.data,records.isSuccess,giving.data,giving.isSuccess,sortKey]);
   const labelOf=(r:(typeof sorted)[number])=>{
     if('displayName' in r&&typeof r.displayName==='string')return r.displayName;
     const manual=r as CrmPipelineRecord;
@@ -205,7 +205,7 @@ function PipelineHubWorkspace(){
     queryFn:()=>pipelinesRepository.getRecord(p!,detailRecordId),
     enabled:!!p&&p.source_mode==='manual'&&!!detailRecordId,retry:false,
   });
-  const detailRecord=detail.data??undefined;
+  const detailRecord=detail.isSuccess?detail.data??undefined:undefined;
   const detailSubjects=useQuery({
     queryKey:['pipeline-card-subjects',p?.id,'detail',detailRecordId,userId,crmRole,detail.dataUpdatedAt],
     queryFn:()=>getPipelineCardSubjects(p!,[detailRecord!]),enabled:!!p&&!!detailRecord,retry:false,
@@ -245,7 +245,7 @@ function PipelineHubWorkspace(){
           setSelected(result.id);setNewName('');setTab('settings');
         })}>Create pipeline</Button>
       </CardContent></Card>}
-    {!p&&!list.isLoading&&<p className="rounded border p-4 text-muted-foreground">No pipelines configured yet. Create your first pipeline above. Existing records are not automatically converted.</p>}
+    {!p&&list.isSuccess&&!selected&&<p className="rounded border p-4 text-muted-foreground">No pipelines configured yet. Create your first pipeline above. Existing records are not automatically converted.</p>}
     {p&&tab==='settings'&&admin&&<section className="space-y-5">
       <Card><CardHeader><CardTitle>{p.name} · Settings</CardTitle><CardDescription>
         {p.subject_type==='organization'?'Organization name and its one global primary contact':'Person name'} always appear on every card; these cannot be removed.

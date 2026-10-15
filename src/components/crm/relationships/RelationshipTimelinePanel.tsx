@@ -48,7 +48,7 @@ function RelationshipTimelineContent({ subject, enabled: authenticated }: { subj
   const communications = useInfiniteQuery({
     queryKey: ['relationship-timeline-communications', currentTenantId, userId, crmRole, subjectKey],
     initialPageParam: 1,
-    queryFn: ({ pageParam }) => listRelationshipEmails(subject, pageParam),
+    queryFn: ({ pageParam }) => listRelationshipEmails(subject, pageParam, { tenantId: currentTenantId ?? '', userId }),
     getNextPageParam: (last, pages) => {
       const loaded = pages.reduce((count, page) => count + page.items.length, 0);
       return last.items.length > 0 && loaded < last.total ? pages.length + 1 : undefined;

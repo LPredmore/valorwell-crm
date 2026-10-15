@@ -1,3 +1,4 @@
+import { selectedRelationshipContext } from '../selectedCrmScope';
 import { capabilityState, relationshipCapabilities } from '@/domain/relationships/capabilities';
 import type {
   CapabilityAvailability,
@@ -72,32 +73,7 @@ function capabilityStatusFromError(error: unknown): CapabilityStatus {
 }
 
 async function operatingContext(): Promise<OperatingContext> {
-  const { data, error } = await supabase.rpc('get_crm_operating_context');
-  if (error) throw new Error(error.message);
-  if (!isJsonObject(data)) throw new Error('Invalid CRM operating context response.');
-  if (data.authenticated !== true) throw new Error('Authenticated CRM access is required.');
-
-  const tenantId = data.current_tenant_id;
-  const profileId = data.profile_id;
-  const crmRole = data.crm_role;
-  const capabilities = data.capabilities;
-
-  if (typeof tenantId !== 'string' || !tenantId) {
-    throw new Error('No operating tenant is selected for this CRM session.');
-  }
-  if (typeof profileId !== 'string' || !profileId) {
-    throw new Error('Invalid CRM profile context.');
-  }
-  if (typeof crmRole !== 'string') {
-    throw new Error('Invalid CRM role context.');
-  }
-
-  return {
-    tenantId,
-    profileId,
-    crmRole,
-    canMutate: isJsonObject(capabilities) && capabilities.mutate === true,
-  };
+  return selectedRelationshipContext();
 }
 
 function requireMutation(context: OperatingContext) {

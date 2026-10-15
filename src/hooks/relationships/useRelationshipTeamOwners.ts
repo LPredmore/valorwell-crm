@@ -3,9 +3,9 @@ import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { listTeamOwners } from '@/repositories/supabase/pipeline-team-owners';
 
 export function useRelationshipTeamOwners() {
-  const { currentTenantId, userId, isAuthenticated } = useCrmAuth();
+  const { currentTenantId, userId, crmRole, isAuthenticated } = useCrmAuth();
   return useQuery({
-    queryKey: ['relationship-team-owners', currentTenantId, userId],
+    queryKey: ['relationship-team-owners', currentTenantId, userId, crmRole],
     queryFn: () => listTeamOwners(currentTenantId!),
     enabled: isAuthenticated && Boolean(currentTenantId),
     staleTime: 60_000,

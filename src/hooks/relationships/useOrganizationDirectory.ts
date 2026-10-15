@@ -70,11 +70,11 @@ export function useOrganizationDirectoryFilters() {
 
 /** Query is enabled only after the typed organization capability is available. */
 export function useOrganizationDirectory(filters: RelationshipOrganizationFilters, enabled: boolean) {
-  const { currentTenantId, userId, isAuthenticated } = useCrmAuth();
+  const { currentTenantId, userId, crmRole, isAuthenticated } = useCrmAuth();
   const search = useDebouncedDirectorySearch(filters.search);
   const queryFilters = { ...filters, search, };
   const query = useQuery({
-    queryKey: ['relationship-organizations', currentTenantId, userId, queryFilters],
+    queryKey: ['relationship-organizations', currentTenantId, userId, crmRole, queryFilters],
     queryFn: () => dataProvider.relationships.listOrganizations(queryFilters),
     enabled: enabled && isAuthenticated && Boolean(currentTenantId),
     retry: false,
