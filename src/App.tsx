@@ -1,3 +1,4 @@
+import ZeffyDonationsPage from '@/pages/crm/donations/ZeffyDonationsPage';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -97,6 +98,7 @@ const App = () => (
             <Route path="campaigns/:id/edit" element={<CrmCampaignEditor />} />
             <Route path="campaigns/:id/enrollments" element={<CrmCampaignEnrollments />} />
             <Route path="communications" element={<CommunicationsHubPage />} />
+            <Route path="donations" element={<ZeffyDonationsPage />} />
             <Route path="communications/campaigns" element={<CampaignManagementPage />} />
             <Route path="communications/newsletters" element={<NewsletterManagementPage />} />
             <Route path="communications/observability" element={<CommunicationsObservabilityPage />} />
