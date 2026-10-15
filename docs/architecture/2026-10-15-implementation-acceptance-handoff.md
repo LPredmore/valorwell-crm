@@ -52,3 +52,7 @@ Do not execute the authenticated Zeffy audit until trusted read access is config
 5. Review Zeffy settings and authoritative Foundation mapping without creating a gift/refund. Keep Donation form opened and verified actual-donation reporting separate.
 
 Record implementation, database application, configuration, deployment and verification as distinct statuses. Keep all failed/unrun checks and incomplete backend contracts open. Roll back application source through GitHub; retain migration, identity and donation audit/history and use reviewed forward repairs after use.
+
+## Subsequent source batches
+
+Client draft PR #31 (12c46bc) prepares the accepted staff-only redirect; staff draft PR #30 (5ebb2e9) prepares full applicant workspace paging and a reference marker in authorized results. CRM source adds those locators, URL-backed BTY directory returns, conditional ordinary BTY edits, additional interaction pages, connected-source traversal safeguards and Exception permission/error handling. All checks remain deferred; no configuration/schema/data/release changes. Earlier unimplemented staff routing/URL-selector notes are historical; exact-record API/SSO/transport and signed-role acceptance remain open. See the continuation progress notes for precise behavior and limits.

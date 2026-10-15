@@ -1,3 +1,4 @@
+import { applicantWorkspaceLink } from '@/domain/pipelines/applicant-workspace-link';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -70,7 +71,7 @@ function ApplicantHandoffWorkspace() {
           <p>{applicantHandoffMessage(row.status, row)}</p>
           <p className="break-all text-xs">Application reference: {row.id}</p>
           {row.convertedStaffId && <p className="break-all text-xs">Linked staff reference: {row.convertedStaffId}</p>}
-          <a className="underline" href="https://emr.valorwell.org/staff/provider-applicants" target="_blank" rel="noopener noreferrer">Open staff workspace; find this applicant by name</a>
+          <a className="underline" href={applicantWorkspaceLink(row.id, row.name)} target="_blank" rel="noopener noreferrer">Find referenced application in staff workspace</a>
         </CardContent>
       </Card>)}
       <div className="flex gap-2">

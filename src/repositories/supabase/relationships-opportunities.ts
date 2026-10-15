@@ -182,6 +182,7 @@ async function listOpportunities(filters: OpportunityFilters) {
 
   const { data, error, count } = await query
     .order(sortColumn(filters.sortBy), { ascending: filters.sortDirection === 'asc' })
+    .order('id', { ascending: true })
     .range(paging.from, paging.to);
   if (error) throw new Error(error.message);
   return {
@@ -222,15 +223,20 @@ async function updateOpportunity(
 ) {
   const context = await operatingContext();
   requireMutation(context);
-  const { data, error } = await opportunitySupabase
+  if (input.expectedUpdatedAt !== undefined && (!input.expectedUpdatedAt || !Number.isFinite(Date.parse(input.expectedUpdatedAt))))
+    throw new Error('Reload the opportunity before saving: invalid source timestamp.');
+  let query = opportunitySupabase
     .from('relationship_opportunities')
     .update(buildOpportunityUpdate(context.profileId, input))
     .eq('tenant_id', context.tenantId)
-    .eq('id', id)
-    .select('*')
+    .eq('id', id);
+  // The native audit trigger advances updated_at for ordinary field edits;
+  // version only advances for status changes, so it cannot guard owner edits.
+  if (input.expectedUpdatedAt !== undefined) query = query.eq('updated_at', input.expectedUpdatedAt);
+  const { data, error } = await query.select('*')
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) throw new Error('Relationship opportunity not found.');
+  if (!data) throw new Error('Opportunity changed or is unavailable. Reload before saving again.');
   return mapOpportunityRow(data);
 }
 

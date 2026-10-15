@@ -14,7 +14,7 @@ Read-only GitHub inspection of `valorwell-clients` default-branch `UnifiedRoutin
 
 Recommended separate application routing contract: after server-authorized role/tenant resolution, staff-only accounts receive a fixed staff sign-in destination at `https://emr.valorwell.org`; users with a valid client identity stay in the client portal even if also staff, with an explicit portal switcher if needed. CRM-only access must not imply staff access. No authorized portal yields an access/help state; a failed identity lookup stays retryable and is not evidence of a missing client. Preserve client registration, invite/recovery processing and public statement routes. Avoid automatic account/profile creation, global logout, arbitrary return URLs, token URLs and redirect loops. Each destination independently enforces authorization.
 
-This staff-routing contract is documented, not implemented or tested. A simple redirect can require staff sign-in again because sessions are origin-local. Seamless single sign-on requires a separately reviewed central-auth/session exchange design; do not copy tokens between domains as a convenience fix. Deferred acceptance belongs in Task 42.
+Staff-routing source is now implemented in client-portal draft PR #31 (https://github.com/LPredmore/valorwell-clients/pull/31), commit 12c46bc; existing workspace work was preserved. It is not merged, deployed or tested. A simple redirect can require staff sign-in again because sessions are origin-local. Seamless single sign-on requires a separately reviewed central-auth/session exchange design; do not copy tokens between domains as a convenience fix. Deferred acceptance belongs in Task 42.
 
 ## Cause and chosen contract
 
