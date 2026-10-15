@@ -112,3 +112,12 @@ Added a CRM dashboard at `/crm/workspace` and made it the sidebar/default `/crm`
 ### Identity migration plan is stale
 
 Further read-only schema discovery confirmed `public.therapist_outreach_prospects.tenant_id` is already uuid NOT NULL, while the October 8 identity migration/runbook assumes that prospects lack tenant_id and proposes a separate immutable attribution table. The existing validation trigger checks that proposed attribution overlay rather than directly proving the target prospect's current tenant. Do not apply that migration unchanged. Re-evaluate the actual source-domain tenant/privacy contract and complete a fresh dependency review before schema implementation. No migration or prospect attribution was executed.
+
+
+## October 14 evening / October 15 UTC: identity, authentication and donor dependencies
+
+- Identity source IMPLEMENTED in PR #154: current-source tenant/permission guard on reads and writes, soft references that preserve source lifecycle, append-only evidence history, canonical/retry handling, typed repository, tenant/user/role-scoped panel, and paged links/history. Removed obsolete prospect attribution UI/API. SQL and test fixtures are prepared.
+- Database deployment BLOCKED by Supabase connection error “Invalid or expired requestState”. The last catalog read showed both proposed tables absent. No successful migration or type regeneration is claimed. A scoped SQL contract type extension is prepared until live generation is available. Do not close Tasks 11/12/14.
+- Invitation/recovery source IMPLEMENTED: explicit CRM return URLs, password setup flow, server capability check before CRM entry, multi-tenant choice, no-role message, and operator-only explicit CRM invitation script. No script run or email sent. Shared Auth settings/templates remain UNKNOWN through current connector capabilities; see `2026-10-15-crm-invitation-and-recovery.md`.
+- Donor expansion BLOCKED on source-contract review: existing processor can populate the legacy email identity registry, increments aggregates per invocation, and emits automation events; current source lacks a proven campaign-to-tenant/currency/recurring lifecycle contract. See donor dependency evidence. No donor processing performed.
+- No tests, lint, typecheck, build, CI or browser execution performed for this continuation. All acceptance and release work remains in Task 42. Branch changes remain draft/unmerged/undeployed.

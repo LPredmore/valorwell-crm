@@ -2,7 +2,7 @@
 
 Date: 2026-10-15. Repository: `LPredmore/valorwell-crm`. Database: Billing Hub `ahqauomkgflopxgnlndd`.
 
-Status: APPROVED FOR IMPLEMENTATION by the user’s October 14 “Proceed” following presentation of this review. Implementation is proceeding on draft PR #154. No migration, backfill, source-record edit, automated check or runtime test was performed in this review. Tasks 11, 12 and 14 remain open. The October 8 proposal must not be deployed unchanged.
+Status: APPROVED FOR IMPLEMENTATION by the user’s October 14 “Proceed” following presentation of this review. Revised source is implemented in draft PR #154. Migration application is BLOCKED: the Supabase connection returned “Invalid or expired requestState”; last successful catalog read showed both new tables absent. No successful migration, backfill, source-record edit, automated check or runtime test is claimed. Live type regeneration is pending deployment; a scoped `identity-schema.ts` extension records the approved SQL types without modifying unrelated generated contracts. Tasks 11, 12 and 14 remain open. The October 8 proposal must not be deployed unchanged.
 
 ## Decision and intended behavior
 
@@ -56,6 +56,7 @@ Paths are relative to the CRM repository. Direct references were searched across
 | `src/domain/identity/db-migration.test.ts` | Executes historical SQL in PGlite; prospect fixture lacks tenant ID and auth fixtures are synthetic. | Model current tenant columns/name-derived people; run new migration alone and historical-plus-forward sequence; cover RLS/current-source/audit cases below. HIGH test-contract relevance; not GoTrue proof. |
 | `src/pages/crm/business-development/ContactDetailPage.tsx` | Mounts review panel in contact workspace. | Pass selected tenant/user context through established CRM auth surface; retain adjacent panels. LOW. |
 | `src/test/contact-detail.test.tsx` | Mocks identity repository/panel in contact workspace tests. | Align mock signatures and missing-contract/loading behavior; execution deferred. LOW. |
+| `src/integrations/supabase/identity-schema.ts`, `src/repositories/identity-reviews.test.ts` | Scoped approved-contract types and prepared repository authorization tests. | Temporary type extension until live generation; test source prepared, NOT RUN. MEDIUM. |
 | `src/integrations/supabase/types.ts` | Missing proposed table types; repository currently bypasses this. | Regenerate after the approved schema contract exists; review generated scope. MEDIUM. |
 | `src/repositories/supabase/relationships.ts` | Maps source contact to person/role inbox and fetches tenant-filtered candidates. | Reuse unchanged. `kind` is derived from truthiness of preferred/first/last name; it is NOT a DB column. SQL person guards must reflect these fields. LOW. |
 | `.github/workflows/crm-identity-verification.yml` | Path filters and existing identity lint/type/test/build commands. | Include new forward-migration path and relevant tests without running workflow now. LOW. |

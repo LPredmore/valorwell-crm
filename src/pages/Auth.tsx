@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { AccountSecurityPanel } from '@/components/crm/settings/AccountSecurityPanel';
+import { authorizedCrmTenantIds, crmAuthReturnUrl, crmPasswordFlow } from '@/domain/auth/crm-auth-navigation';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,30 +12,94 @@ import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function Auth() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [passwordFlow, setPasswordFlow] = useState(() => crmPasswordFlow(location.search, window.location.hash));
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
+  const [tenantChoices, setTenantChoices] = useState<string[]>([]);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    const query = new URLSearchParams(location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    return query.has('error') || query.has('error_code') || hash.has('error') || hash.has('error_code')
+      ? 'This invitation or sign-in link is invalid or expired. Request a new link below.' : null;
+  });
   const [linkSent, setLinkSent] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   useEffect(() => {
+    let active = true;
+    let observedAuthEvent = false;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        navigate('/crm/clients', { replace: true });
+      if (!active) return;
+      observedAuthEvent = true;
+      if (event === 'PASSWORD_RECOVERY') setPasswordFlow('recovery');
+      setSessionUserId(session?.user?.id ?? null);
+      if (!session?.user) setIsCheckingSession(false);
+    });
+    void supabase.auth.getSession().then(({ data: { session }, error: sessionError }) => {
+      if (!active || observedAuthEvent) return;
+      if (sessionError) setError('Your session could not be loaded. Please sign in again.');
+      setSessionUserId(session?.user?.id ?? null);
+      if (!session?.user) setIsCheckingSession(false);
+    }).catch(() => {
+      if (active && !observedAuthEvent) {
+        setError('Your session could not be loaded. Please sign in again.');
+        setIsCheckingSession(false);
+      }
+    });
+    return () => { active = false; subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    if (!sessionUserId) return;
+    if (passwordFlow) { setIsCheckingSession(false); return; }
+    let active = true;
+    setIsCheckingSession(true);
+    setAccessDenied(false);
+    setTenantChoices([]);
+    // Outside onAuthStateChange: avoid awaiting another Supabase call in its callback.
+    void Promise.resolve(supabase.rpc('get_crm_operating_context')).then(({ data, error: contextError }) => {
+      if (!active) return;
+      const tenants = contextError ? [] : authorizedCrmTenantIds(data, sessionUserId);
+      if (tenants.length === 0) {
+        setAccessDenied(true);
+        setError(contextError ? 'CRM access could not be checked. Try signing in again.'
+          : 'You are signed in, but CRM access has not been assigned. Ask your administrator to grant a CRM workspace and role.');
+      } else if (tenants.length === 1) {
+        navigate('/crm', { replace: true });
+      } else {
+        // Selection is a preference only. CRM authorization revalidates it server-side.
+        setTenantChoices(tenants);
       }
       setIsCheckingSession(false);
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        navigate('/crm/clients', { replace: true });
+    }).catch(() => {
+      if (active) {
+        setAccessDenied(true);
+        setError('CRM access could not be checked. Try signing in again.');
+        setIsCheckingSession(false);
       }
-      setIsCheckingSession(false);
     });
+    return () => { active = false; };
+  }, [sessionUserId, passwordFlow, navigate]);
 
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  const handleSignOut = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) throw signOutError;
+      setSessionUserId(null);
+      setAccessDenied(false);
+      setTenantChoices([]);
+      setPasswordFlow(null);
+      navigate('/auth', { replace: true });
+    } catch {
+      setError('Could not sign out. Please try again.');
+    } finally { setIsLoading(false); }
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +141,7 @@ export default function Auth() {
         email: email.trim(),
         options: {
           shouldCreateUser: false,
-          emailRedirectTo: `${window.location.origin}/auth`,
+          emailRedirectTo: crmAuthReturnUrl(window.location.origin),
         },
       });
       if (linkError) {
@@ -90,13 +156,29 @@ export default function Auth() {
     }
   };
 
+  const handlePasswordReset = async () => {
+    if (!email.trim()) { setError('Enter your email address to reset your password.'); return; }
+    setError(null);
+    setLinkSent(false);
+    setIsLoading(true);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: crmAuthReturnUrl(window.location.origin, 'recovery'),
+      });
+      if (resetError) throw resetError;
+      setLinkSent(true);
+    } catch {
+      setError('Could not send a password reset link. Please try again.');
+    } finally { setIsLoading(false); }
+  };
+
   const handleGoogleSignIn = async () => {
     setError(null);
     setIsLoading(true);
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/crm/clients` },
+        options: { redirectTo: crmAuthReturnUrl(window.location.origin) },
       });
       if (oauthError) {
         setError(oauthError.message);
@@ -116,6 +198,35 @@ export default function Auth() {
     );
   }
 
+  if (sessionUserId && passwordFlow) {
+    return <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md space-y-4">
+        <h1 className="text-2xl font-bold">{passwordFlow === 'invite' ? 'Welcome to ValorWell CRM' : 'Reset your CRM password'}</h1>
+        <p className="text-sm text-muted-foreground">Set your password, then continue to your authorized CRM workspace.</p>
+        <AccountSecurityPanel />
+        <Button className="w-full" onClick={() => {
+          setPasswordFlow(null);
+          navigate('/auth', { replace: true });
+        }}>Continue to CRM</Button>
+      </div>
+    </div>;
+  }
+  if (sessionUserId && (accessDenied || tenantChoices.length > 1)) {
+    return <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader><CardTitle>{accessDenied ? 'CRM access required' : 'Choose your CRM workspace'}</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {tenantChoices.map((tenant, index) => <Button key={tenant} className="w-full" variant="outline" onClick={() => {
+            try { window.localStorage.setItem('crm.currentTenantId', tenant); }
+            catch { setError('Your browser could not save the workspace selection. Allow site storage and try again.'); return; }
+            navigate('/crm', { replace: true });
+          }}>Workspace {index + 1} · {tenant.slice(0, 8)}</Button>)}
+          <Button variant="outline" disabled={isLoading} onClick={() => void handleSignOut()}>Sign out</Button>
+        </CardContent>
+      </Card>
+    </div>;
+  }
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
@@ -130,7 +241,7 @@ export default function Auth() {
             {linkSent && (
               <Alert>
                 <AlertDescription>
-                  If this address has an invited account, check your email for a sign-in link.
+                  If this address has an invited account, check your email for the requested link.
                 </AlertDescription>
               </Alert>
             )}
@@ -181,6 +292,10 @@ export default function Auth() {
 
             <Button type="button" variant="outline" className="w-full" onClick={handleEmailLink} disabled={isLoading}>
               Email me a sign-in link
+            </Button>
+
+            <Button type="button" variant="ghost" className="w-full" onClick={handlePasswordReset} disabled={isLoading}>
+              Reset my password
             </Button>
 
             <div className="relative">

@@ -5,6 +5,11 @@ on:
     paths:
       - 'src/domain/identity/**'
       - 'src/repositories/identity-reviews.ts'
+      - 'src/repositories/identity-reviews.test.ts'
+      - 'src/integrations/supabase/identity-schema.ts'
+      - 'src/domain/auth/**'
+      - 'src/pages/Auth.tsx'
+      - 'src/pages/Auth.test.tsx'
       - 'src/components/crm/identity/**'
       - 'src/pages/crm/business-development/ContactDetailPage.tsx'
       - 'src/pages/crm/business-development/OrganizationDetailPage.tsx'
@@ -40,6 +45,6 @@ jobs:
       - name: Type-check application
         run: npx tsc -p tsconfig.app.json --noEmit
       - name: Run identity unit tests
-        run: npm test -- src/domain/identity
+        run: npm test -- src/domain/identity src/repositories/identity-reviews.test.ts src/domain/auth src/pages/Auth.test.tsx
       - name: Production build
         run: npm run build
