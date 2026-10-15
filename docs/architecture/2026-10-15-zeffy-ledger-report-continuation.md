@@ -1,5 +1,9 @@
 # Zeffy ledger reporting and exact applicant handoff
 
+**October 15 live rollout update:** owner authorized database/deployment continuation. Both migrations applied successfully with actual versions `20261015210737` (staff exact read) and `20261015210747` (Zeffy ledger); Billing Hub filenames aligned to those ledger timestamps without replay. Generated live types refreshed in CRM, Staff and Billing Hub. `zeffy-donation-report` v1 deployed, plus separate signed standby receiver `zeffy-webhook-verified` v1; existing `zeffy-webhook` v11 preserved because its provider signing binding/subscription is not confirmed. Mapping remains disabled. Earlier source-only/unapplied notes below are historical. No acceptance checks or financial processing executed. Detailed receipt/configuration steps: Billing Hub `docs/2026-10-15-live-zeffy-rollout.md`.
+
+Website source additionally passes only a known acquisition channel through Zeffy's documented `UTM_source`; it never forwards click IDs, personal data or a fabricated checkout token. Source persistence through the embed/API label still needs deferred evidence. It is not individual ad attribution or an Ads uploader. Production hosting receipts follow separately.
+
 October 15, 2026. Source implemented; **NOT TESTED**. This continues the existing merged CRM #154, Billing Hub #15, staff #30 and client #31 work. No new migration was applied, function deployed, Auth setting changed, provider API read, donation processed, record linked, message sent, conversion uploaded or worker activated. Automatic hosting status is uninspected.
 
 ## Current source changes
