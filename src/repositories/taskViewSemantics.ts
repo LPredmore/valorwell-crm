@@ -143,6 +143,6 @@ export function sortTasksForViewPlan(tasks: readonly CrmTask[], plan: TaskViewPl
       const rightTime = sortableTime(right.dueAt, Number.POSITIVE_INFINITY);
       if (leftTime !== rightTime) return plan.orderAscending ? leftTime - rightTime : rightTime - leftTime;
     }
-    return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+    return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime() || left.id.localeCompare(right.id);
   });
 }

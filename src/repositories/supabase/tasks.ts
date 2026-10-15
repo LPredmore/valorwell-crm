@@ -4,8 +4,9 @@ import type { TasksRepository, ListTasksQuery } from '../types';
 import type { CrmTask, TaskStatus, TaskPriority, TaskType } from '@/domain/operations';
 import { buildTaskViewPlan } from '../taskViewSemantics';
 import { assertEntityTenant, requireOperatingTenant } from '../tenantScope';
+import { taskPageRange } from '@/domain/taskWorkspaceFilters';
 
-type Row = Tables<'crm_tasks'> & {relationship_contact_id?:string|null;relationship_organization_id?:string|null};
+type Row = Tables<'crm_tasks'>;
 type TaskInsert = TablesInsert<'crm_tasks'>;
 type TaskUpdate = TablesUpdate<'crm_tasks'>;
 type TaskDbStatus = Row['status'];
@@ -140,6 +141,7 @@ function toInsert(input: Parameters<TasksRepository['create']>[1]): TaskInsert {
 export const supabaseTasksRepository: TasksRepository = {
   async list(q: ListTasksQuery): Promise<CrmTask[]> {
     const tenantId = requireOperatingTenant(q.tenantId);
+    const range = taskPageRange(q.page, q.pageSize);
     const plan = buildTaskViewPlan({ ...q, tenantId });
     let query = supabase.from('crm_tasks').select(COLS);
 
@@ -147,6 +149,7 @@ export const supabaseTasksRepository: TasksRepository = {
     if (q.clientId) query = query.eq('client_id', q.clientId);
     if (q.ownerIds?.length) query = query.in('owner_id', q.ownerIds);
     if (q.statuses?.length) query = query.in('status', q.statuses.map(s => TASK_STATUS_D2D[s]));
+    if (q.priorities?.length) query = query.in('priority', q.priorities.map(priority => TASK_PRIO_D2D[priority]));
     if (q.dueBefore) query = query.lte('due_at', q.dueBefore);
     if (q.dueAfter) query = query.gte('due_at', q.dueAfter);
     if (q.types?.length) {
@@ -155,7 +158,7 @@ export const supabaseTasksRepository: TasksRepository = {
       query = query.in('type', types);
     }
     if (q.search) {
-      const s = q.search.replace(/[,()]/g, ' ');
+      const s = q.search.slice(0, 200).replace(/[^\p{L}\p{N}\s@.+-]/gu, ' ').trim();
       query = query.or(`title.ilike.%${s}%,description.ilike.%${s}%`);
     }
 
@@ -177,6 +180,8 @@ export const supabaseTasksRepository: TasksRepository = {
         .order('updated_at', { ascending: false });
     }
 
+    query = query.order('id', { ascending: true });
+    if (range) query = query.range(...range);
     const { data, error } = await query;
     if (error) throw new Error(error.message);
     return (data ?? []).map(toDomain);
@@ -223,7 +228,7 @@ export const supabaseTasksRepository: TasksRepository = {
   async bulkStatus(tenantIdInput, ids, status) {
     const tenantId = requireOperatingTenant(tenantIdInput);
     const { error } = await supabase
-      .from('crm_tasks').update({ status: TASK_STATUS_D2D[status] })
+      .from('crm_tasks').update({ status: TASK_STATUS_D2D[status], completed_at: status === 'Completed' ? new Date().toISOString() : null })
       .eq('tenant_id', tenantId).in('id', ids);
     if (error) throw new Error(error.message);
   },

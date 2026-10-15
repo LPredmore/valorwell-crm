@@ -45,17 +45,18 @@ function RelationshipTasksContent({ subject }: { subject: RelationshipTaskSubjec
   const [editStatus, setEditStatus] = useState<TaskStatus>('Not Started');
   const subjectKey = subject.contactId ? 'contact:' + subject.contactId : 'organization:' + subject.organizationId;
   const key = ['relationship-tasks', currentTenantId, userId, crmRole, subjectKey];
+  const scope = { tenantId: currentTenantId ?? '', userId };
   const query = useInfiniteQuery({
     queryKey: [...key, view],
     initialPageParam: 1,
-    queryFn: ({ pageParam }) => relationshipTasksRepository.list(subject, { page: pageParam, view }),
+    queryFn: ({ pageParam }) => relationshipTasksRepository.list(subject, scope, { page: pageParam, view }),
     getNextPageParam: (last, pages) => last.length === 50 ? pages.length + 1 : undefined,
     enabled: isAuthenticated && !!currentTenantId, retry: false,
   });
   const create = useMutation({
     mutationFn: () => relationshipTasksRepository.create(subject, {
       title, description, priority, ownerId, dueAt: due ? new Date(due).toISOString() : undefined,
-    }),
+    }, scope),
     onSuccess: async () => {
       setTitle(''); setDescription(''); setDue('');
       await Promise.all([
@@ -68,7 +69,7 @@ function RelationshipTasksContent({ subject }: { subject: RelationshipTaskSubjec
     mutationFn: ({ task, complete, patch }: {
       task: RelationshipTaskRow; complete?: boolean;
       patch?: { ownerId?: string | null; dueAt?: string | null; priority?: TaskPriority; status?: TaskStatus };
-    }) => complete ? relationshipTasksRepository.complete(task) : relationshipTasksRepository.update(task, patch ?? {}),
+    }) => complete ? relationshipTasksRepository.complete(task, scope) : relationshipTasksRepository.update(task, patch ?? {}, scope),
     onSuccess: async () => {
       setEditId('');
       await Promise.all([
