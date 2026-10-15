@@ -170,3 +170,7 @@ Foundation tenant mapping, current Zeffy subscription/signing/read-API bindings,
 ## Owner clarification: Foundation donations use the existing CRM tenant
 
 Owner explicitly confirmed Foundation donations belong to `00000000-0000-0000-0000-000000000001`, the existing CRM tenant, and confirmed the Zeffy webhook base endpoint. Ownership decision is resolved; no separate Foundation tenant is needed. Earlier missing-ownership notes are historical. Downstream mapping/ledger remains source/configuration work, not deployed by this note. A base URL ending in an empty question mark does not establish secret binding, enabled subscriptions or current delivery success. Shared Auth dashboard inspection instructions are recorded in the invitation/recovery runbook. No tests, runtime/configuration changes or messages.
+
+## Owner-provided shared Auth settings
+
+Owner supplied Site URL https://client.valorwell.org, redirect entries missing CRM, and both invite/reset templates using ConfirmationURL. Configuration inspection dependency is now partially resolved by owner evidence; exact three CRM return additions still unconfirmed. Keep existing shared Site URL/templates/portal entries. Reviewed client guard and both origin-local session clients; documented separate staff-only routing versus dual-role client behavior in the Auth runbook. No client/staff application changes, settings edits, messages or tests. Deferred checks appended to Task 42.

@@ -2,6 +2,20 @@
 
 Source implementation prepared in draft PR #154; not deployed or behaviorally verified. No invitation/reset email was sent, auth user created, role granted, shared Site URL changed or portal configuration changed during implementation.
 
+## Owner-provided hosted configuration evidence
+
+October 15: owner copied Site URL `https://client.valorwell.org`, the redirect list and both hosted templates from Supabase. No CRM domain/return URL appears in the supplied redirect list. Client and EMR wildcard URLs, preview origins, Google callback URLs and the explicit client reset-password URL are present. Both Invite user and Reset password use `<a href="{{ .ConfirmationURL }}">`; neither supplied link hardcodes a portal. The invite paragraph mentions `{{ .SiteURL }}` only as display text, which does not select the link destination. Earlier UNKNOWN-settings notes below are superseded by this owner report; no Management API read or runtime acceptance is claimed.
+
+Concrete configuration action: retain Site URL and all existing entries/templates; add the three exact CRM return URLs listed below through URL Configuration → Add URL. CRM issuance must also supply its explicit redirectTo; adding entries alone does not route generic Dashboard invitations to CRM. Shared templates do not need a routing rewrite based on the supplied HTML. Addition is NOT CONFIRMED and no hosted setting was changed here.
+
+## Staff accounts entering the client portal
+
+Read-only GitHub inspection of `valorwell-clients` default-branch `UnifiedRoutingGuard.tsx` (blob `2ff9e3cac6c20c316758d6e75a862fa3f53bad94`) shows client-only routing, a sign-out path for `signupIncomplete`, and no staff-portal redirect. Both client and staff `simpleClient.ts` configure localStorage session persistence, so their distinct browser origins do not automatically share a session. Same database/Auth user does not imply cross-subdomain single sign-on. Staff simpleClient source inspected from the existing local main snapshot; client blob `ca3ba7ed9ce4bc64cb1a8c4bd597f066112d4095`.
+
+Recommended separate application routing contract: after server-authorized role/tenant resolution, staff-only accounts receive a fixed staff sign-in destination at `https://emr.valorwell.org`; users with a valid client identity stay in the client portal even if also staff, with an explicit portal switcher if needed. CRM-only access must not imply staff access. No authorized portal yields an access/help state; a failed identity lookup stays retryable and is not evidence of a missing client. Preserve client registration, invite/recovery processing and public statement routes. Avoid automatic account/profile creation, global logout, arbitrary return URLs, token URLs and redirect loops. Each destination independently enforces authorization.
+
+This staff-routing contract is documented, not implemented or tested. A simple redirect can require staff sign-in again because sessions are origin-local. Seamless single sign-on requires a separately reviewed central-auth/session exchange design; do not copy tokens between domains as a convenience fix. Deferred acceptance belongs in Task 42.
+
 ## Cause and chosen contract
 
 The observed dashboard invitation fell back to the shared Auth Site URL on the client portal. That portal requires a clinical client profile. CRM needs an explicit return URL and must independently check its own capability grants after authentication.
