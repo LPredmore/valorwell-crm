@@ -2631,6 +2631,7 @@ export type Database = {
           id: number
           project_id: string
           segment_index: number
+          speaker_label: string | null
           start_seconds: number
           text: string
           words: Json
@@ -2641,6 +2642,7 @@ export type Database = {
           id?: number
           project_id: string
           segment_index: number
+          speaker_label?: string | null
           start_seconds: number
           text: string
           words?: Json
@@ -2651,6 +2653,7 @@ export type Database = {
           id?: number
           project_id?: string
           segment_index?: number
+          speaker_label?: string | null
           start_seconds?: number
           text?: string
           words?: Json
@@ -4485,6 +4488,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bty_scheduler_activity_events: {
+        Row: {
+          booking_attempt_id: string | null
+          calendar_event_id: string | null
+          contact_id: string | null
+          created_at: string
+          event_type: string
+          failure_code: string | null
+          failure_stage: string | null
+          http_status: number | null
+          id: string
+          meeting_type: string | null
+          opportunity_id: string | null
+          organization_id: string | null
+          requested_start_utc: string | null
+          tenant_id: string
+          visitor_session_id: string
+        }
+        Insert: {
+          booking_attempt_id?: string | null
+          calendar_event_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          event_type: string
+          failure_code?: string | null
+          failure_stage?: string | null
+          http_status?: number | null
+          id?: string
+          meeting_type?: string | null
+          opportunity_id?: string | null
+          organization_id?: string | null
+          requested_start_utc?: string | null
+          tenant_id: string
+          visitor_session_id: string
+        }
+        Update: {
+          booking_attempt_id?: string | null
+          calendar_event_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          event_type?: string
+          failure_code?: string | null
+          failure_stage?: string | null
+          http_status?: number | null
+          id?: string
+          meeting_type?: string | null
+          opportunity_id?: string | null
+          organization_id?: string | null
+          requested_start_utc?: string | null
+          tenant_id?: string
+          visitor_session_id?: string
+        }
+        Relationships: []
       }
       calendar_sync_log: {
         Row: {
@@ -13223,6 +13280,113 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      crm_identity_review_events: {
+        Row: {
+          actor_id: string
+          changed_at: string
+          id: string
+          next_decision: string
+          next_match_basis: string | null
+          next_review_note: string | null
+          previous_decision: string | null
+          previous_match_basis: string | null
+          previous_review_note: string | null
+          review_id: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_id: string
+          changed_at?: string
+          id?: string
+          next_decision: string
+          next_match_basis?: string | null
+          next_review_note?: string | null
+          previous_decision?: string | null
+          previous_match_basis?: string | null
+          previous_review_note?: string | null
+          review_id: string
+          tenant_id: string
+        }
+        Update: {
+          actor_id?: string
+          changed_at?: string
+          id?: string
+          next_decision?: string
+          next_match_basis?: string | null
+          next_review_note?: string | null
+          previous_decision?: string | null
+          previous_match_basis?: string | null
+          previous_review_note?: string | null
+          review_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_identity_events_tenant_review_fkey"
+            columns: ["tenant_id", "review_id"]
+            isOneToOne: false
+            referencedRelation: "crm_identity_reviews"
+            referencedColumns: ["tenant_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_identity_review_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_identity_reviews: {
+        Row: {
+          contact_id: string
+          created_at: string
+          decision: string
+          id: string
+          linked_domain: string
+          linked_record_id: string
+          match_basis: string
+          review_note: string | null
+          reviewed_by: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          decision: string
+          id?: string
+          linked_domain: string
+          linked_record_id: string
+          match_basis: string
+          review_note?: string | null
+          reviewed_by: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          decision?: string
+          id?: string
+          linked_domain?: string
+          linked_record_id?: string
+          match_basis?: string
+          review_note?: string | null
+          reviewed_by?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_identity_reviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crm_inbound_sms_logs: {
         Row: {
@@ -22559,6 +22723,7 @@ export type Database = {
           connection_id: string | null
           contact_id: string
           created_at: string
+          decline_detected_at: string | null
           ends_at: string | null
           event_status: string
           external_event_id: string
@@ -22569,6 +22734,7 @@ export type Database = {
           opportunity_id: string | null
           organization_id: string
           purpose: string
+          scheduler_rollback: Json | null
           starts_at: string | null
           streamyard_url: string | null
           tenant_id: string
@@ -22582,6 +22748,7 @@ export type Database = {
           connection_id?: string | null
           contact_id: string
           created_at?: string
+          decline_detected_at?: string | null
           ends_at?: string | null
           event_status: string
           external_event_id: string
@@ -22592,6 +22759,7 @@ export type Database = {
           opportunity_id?: string | null
           organization_id: string
           purpose?: string
+          scheduler_rollback?: Json | null
           starts_at?: string | null
           streamyard_url?: string | null
           tenant_id: string
@@ -22605,6 +22773,7 @@ export type Database = {
           connection_id?: string | null
           contact_id?: string
           created_at?: string
+          decline_detected_at?: string | null
           ends_at?: string | null
           event_status?: string
           external_event_id?: string
@@ -22615,6 +22784,7 @@ export type Database = {
           opportunity_id?: string | null
           organization_id?: string
           purpose?: string
+          scheduler_rollback?: Json | null
           starts_at?: string | null
           streamyard_url?: string | null
           tenant_id?: string
@@ -26812,6 +26982,66 @@ export type Database = {
         }
         Relationships: []
       }
+      website_resource_groups: {
+        Row: {
+          category_slug: string
+          created_at: string
+          display_order: number
+          group_slug: string
+          intro: string | null
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          category_slug: string
+          created_at?: string
+          display_order?: number
+          group_slug: string
+          intro?: string | null
+          name: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Update: {
+          category_slug?: string
+          created_at?: string
+          display_order?: number
+          group_slug?: string
+          intro?: string | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      website_resource_redirects: {
+        Row: {
+          created_at: string
+          from_path: string
+          reason: string | null
+          tenant_id: string
+          to_path: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_path: string
+          reason?: string | null
+          tenant_id?: string
+          to_path: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_path?: string
+          reason?: string | null
+          tenant_id?: string
+          to_path?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       website_resource_relations: {
         Row: {
           created_at: string
@@ -26943,16 +27173,24 @@ export type Database = {
           content_schema_version: number
           coverage_status: string
           created_at: string
+          cta: string
           editorial_type: string
           faq: Json
           featured: boolean
+          group_slug: string | null
           id: string
+          import_content_hash: string | null
+          import_synced_at: string | null
+          in_practice_markdown: string | null
           last_researched_at: string | null
+          last_reviewed_on: string | null
           live_url: string | null
           primary_question: string
           public_updated_at: string | null
           published_at: string | null
+          quick_answer: string | null
           resource_kind: string
+          reviewed_by: string
           seo_description: string | null
           seo_title: string | null
           slug: string
@@ -26973,16 +27211,24 @@ export type Database = {
           content_schema_version?: number
           coverage_status?: string
           created_at?: string
+          cta?: string
           editorial_type?: string
           faq?: Json
           featured?: boolean
+          group_slug?: string | null
           id?: string
+          import_content_hash?: string | null
+          import_synced_at?: string | null
+          in_practice_markdown?: string | null
           last_researched_at?: string | null
+          last_reviewed_on?: string | null
           live_url?: string | null
           primary_question: string
           public_updated_at?: string | null
           published_at?: string | null
+          quick_answer?: string | null
           resource_kind?: string
+          reviewed_by?: string
           seo_description?: string | null
           seo_title?: string | null
           slug: string
@@ -27003,16 +27249,24 @@ export type Database = {
           content_schema_version?: number
           coverage_status?: string
           created_at?: string
+          cta?: string
           editorial_type?: string
           faq?: Json
           featured?: boolean
+          group_slug?: string | null
           id?: string
+          import_content_hash?: string | null
+          import_synced_at?: string | null
+          in_practice_markdown?: string | null
           last_researched_at?: string | null
+          last_reviewed_on?: string | null
           live_url?: string | null
           primary_question?: string
           public_updated_at?: string | null
           published_at?: string | null
+          quick_answer?: string | null
           resource_kind?: string
+          reviewed_by?: string
           seo_description?: string | null
           seo_title?: string | null
           slug?: string
@@ -28523,14 +28777,20 @@ export type Database = {
           body_markdown: string | null
           category_slug: string | null
           content_schema_version: number | null
+          cta: string | null
           editorial_type: string | null
           faq: Json | null
           featured: boolean | null
+          group_slug: string | null
           id: string | null
+          in_practice_markdown: string | null
+          last_reviewed_on: string | null
           primary_question: string | null
           public_updated_at: string | null
           published_at: string | null
+          quick_answer: string | null
           resource_kind: string | null
+          reviewed_by: string | null
           seo_description: string | null
           seo_title: string | null
           slug: string | null
@@ -28546,14 +28806,20 @@ export type Database = {
           body_markdown?: string | null
           category_slug?: string | null
           content_schema_version?: number | null
+          cta?: string | null
           editorial_type?: string | null
           faq?: Json | null
           featured?: boolean | null
+          group_slug?: string | null
           id?: string | null
+          in_practice_markdown?: string | null
+          last_reviewed_on?: string | null
           primary_question?: string | null
           public_updated_at?: string | null
           published_at?: string | null
+          quick_answer?: string | null
           resource_kind?: string | null
+          reviewed_by?: string | null
           seo_description?: string | null
           seo_title?: string | null
           slug?: string | null
@@ -28569,14 +28835,20 @@ export type Database = {
           body_markdown?: string | null
           category_slug?: string | null
           content_schema_version?: number | null
+          cta?: string | null
           editorial_type?: string | null
           faq?: Json | null
           featured?: boolean | null
+          group_slug?: string | null
           id?: string | null
+          in_practice_markdown?: string | null
+          last_reviewed_on?: string | null
           primary_question?: string | null
           public_updated_at?: string | null
           published_at?: string | null
+          quick_answer?: string | null
           resource_kind?: string | null
+          reviewed_by?: string | null
           seo_description?: string | null
           seo_title?: string | null
           slug?: string | null
@@ -30450,6 +30722,10 @@ export type Database = {
         Args: { p_newsletter_id: string; p_reason: string }
         Returns: Json
       }
+      crm_bulk_move_manual_pipeline_records: {
+        Args: { p_items: Json; p_to_stage_id: string }
+        Returns: number
+      }
       crm_bulk_update_client_status: {
         Args: {
           p_actor_profile_id: string
@@ -30722,6 +30998,79 @@ export type Database = {
         Args: { p_newsletter_id: string }
         Returns: Json
       }
+      crm_find_manual_pipeline_records: {
+        Args: {
+          p_after_id?: string
+          p_attention?: string
+          p_owner_filter?: string
+          p_page_size?: number
+          p_pipeline_id: string
+          p_search?: string
+          p_stage_id?: string
+          p_tenant_id: string
+        }
+        Returns: {
+          associated_organization_id: string | null
+          contact_id: string | null
+          created_at: string
+          field_values: Json
+          id: string
+          next_action: string | null
+          next_action_due_at: string | null
+          organization_id: string | null
+          owner_profile_id: string | null
+          pipeline_id: string
+          source_record_id: string | null
+          source_record_type: string | null
+          stage_id: string
+          tenant_id: string
+          updated_at: string
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "crm_pipeline_records"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      crm_find_manual_pipeline_records_sorted: {
+        Args: {
+          p_after_id?: string
+          p_attention?: string
+          p_owner_filter?: string
+          p_page_size?: number
+          p_pipeline_id: string
+          p_search?: string
+          p_sort_key?: string
+          p_stage_id?: string
+          p_tenant_id: string
+        }
+        Returns: {
+          associated_organization_id: string | null
+          contact_id: string | null
+          created_at: string
+          field_values: Json
+          id: string
+          next_action: string | null
+          next_action_due_at: string | null
+          organization_id: string | null
+          owner_profile_id: string | null
+          pipeline_id: string
+          source_record_id: string | null
+          source_record_type: string | null
+          stage_id: string
+          tenant_id: string
+          updated_at: string
+          version: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "crm_pipeline_records"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       crm_get_newsletter: { Args: { p_newsletter_id: string }; Returns: Json }
       crm_get_newsletter_runtime: { Args: never; Returns: Json }
       crm_has_role:
@@ -30770,6 +31119,16 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: Json
+      }
+      crm_manual_pipeline_metrics: {
+        Args: { p_pipeline_id: string; p_tenant_id: string }
+        Returns: {
+          missing_action_count: number
+          overdue_count: number
+          record_count: number
+          stage_id: string
+          unassigned_count: number
+        }[]
       }
       crm_mark_enrollment_responded: {
         Args: {
@@ -32295,6 +32654,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_website_resources: {
+        Args: { p_dry_run?: boolean; p_payload: Json }
+        Returns: Json
+      }
       ingest_relationship_calendar_event: {
         Args: {
           p_attendee_emails: string[]
@@ -32916,6 +33279,10 @@ export type Database = {
       relationship_worker_token_valid: {
         Args: { p_tenant_id: string; p_token: string }
         Returns: boolean
+      }
+      release_bty_scheduler_booking: {
+        Args: { p_meeting_id: string }
+        Returns: Json
       }
       release_campaign_step_claim: {
         Args: {
@@ -35154,3 +35521,4 @@ export const Constants = {
     },
   },
 } as const
+

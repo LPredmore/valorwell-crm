@@ -1,6 +1,7 @@
+import { directoryReturnSearch } from '@/domain/relationships/directory-url';
 import { useEffect, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,46 +28,56 @@ import { listTeamOwners } from '@/repositories/supabase/pipeline-team-owners';
 const noteTypes: InteractionType[] = ['manual_note', 'phone_call', 'meeting', 'outbound_email', 'inbound_reply'];
 
 export default function OpportunityDetailPage() {
+  const { currentTenantId, userId, crmRole } = useCrmAuth();
+  const { id } = useParams();
+  return <OpportunityDetailWorkspace key={`${currentTenantId}:${userId}:${crmRole}:${id}`} />;
+}
+
+function OpportunityDetailWorkspace() {
+  const [params] = useSearchParams();
+  const backSearch = directoryReturnSearch(params);
   const { id } = useParams();
   const opportunityCapability = useRelationshipCapability('opportunities');
   const interactionCapability = useRelationshipCapability('interactions');
   const available = opportunityCapability.capability?.available === true;
   const interactionsAvailable = interactionCapability.capability?.available === true;
   const queryClient = useQueryClient();
-  const {currentTenantId,userId}=useCrmAuth();
-  const teamOwners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId],queryFn:()=>listTeamOwners(currentTenantId!),enabled:!!currentTenantId,retry:false});
-  const ownerLabel=(id?:string)=>!id?'Unassigned':(teamOwners.data?.find(person=>person.id===id)?.name??'Assigned team member');
+  const {currentTenantId,userId,crmRole,capabilities}=useCrmAuth();
+  const teamOwners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId,userId,crmRole],queryFn:()=>listTeamOwners(currentTenantId!),enabled:!!currentTenantId,retry:false});
+  const ownerLabel=(id?:string)=>!id?'Unassigned':((teamOwners.isSuccess?teamOwners.data:[])?.find(person=>person.id===id)?.name??'Assigned team member');
 
   const opportunity = useQuery({
-    queryKey: ['relationship-opportunity', currentTenantId, userId, id],
+    queryKey: ['relationship-opportunity', currentTenantId, userId, crmRole, id],
     queryFn: () => dataProvider.relationships.getOpportunity(id!),
     enabled: available && Boolean(currentTenantId) && Boolean(id),
     retry: false,
   });
 
   const organization = useQuery({
-    queryKey: ['relationship-organization', currentTenantId, userId, opportunity.data?.organizationId],
+    queryKey: ['relationship-organization', currentTenantId, userId, crmRole, opportunity.data?.organizationId],
     queryFn: () => dataProvider.relationships.getOrganization(opportunity.data!.organizationId),
     enabled: Boolean(currentTenantId) && Boolean(opportunity.data?.organizationId),
     retry: false,
   });
 
   const contact = useQuery({
-    queryKey: ['relationship-contact', currentTenantId, userId, opportunity.data?.primaryContactId],
+    queryKey: ['relationship-contact', currentTenantId, userId, crmRole, opportunity.data?.primaryContactId],
     queryFn: () => dataProvider.relationships.getContact(opportunity.data!.primaryContactId!),
     enabled: Boolean(currentTenantId) && Boolean(opportunity.data?.primaryContactId),
     retry: false,
   });
 
-  const interactions = useQuery({
-    queryKey: ['relationship-opportunity-interactions', currentTenantId, userId, id],
-    queryFn: () => dataProvider.relationships.listInteractions({ opportunityId: id! }, { page: 1, pageSize: 100 }),
+  const interactions = useInfiniteQuery({
+    queryKey: ['relationship-opportunity-interactions', currentTenantId, userId, crmRole, id],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => dataProvider.relationships.listInteractions({ opportunityId: id! }, { page: pageParam, pageSize: 100 }),
+    getNextPageParam: (last, pages) => last.items.length > 0 && pages.reduce((n, page) => n + page.items.length, 0) < last.total ? pages.length + 1 : undefined,
     enabled: interactionsAvailable && Boolean(currentTenantId) && Boolean(id),
     retry: false,
   });
 
   const orchestration = useQuery({
-    queryKey: ['relationship-opportunity-orchestration', currentTenantId, userId, id],
+    queryKey: ['relationship-opportunity-orchestration', currentTenantId, userId, crmRole, id],
     queryFn: () => getOpportunityOrchestration(id!),
     enabled: available && Boolean(currentTenantId) && Boolean(id),
     retry: false,
@@ -86,7 +97,7 @@ export default function OpportunityDetailPage() {
   const [formError, setFormError] = useState<string>();
 
   useEffect(() => {
-    if (!opportunity.data) return;
+    if (!opportunity.isSuccess || !opportunity.data) return;
     setPrimaryContactId(opportunity.data.primaryContactId ?? '');
     setOwnerId(opportunity.data.ownerId ?? '');
     setCauseArea(opportunity.data.causeArea ?? '');
@@ -95,23 +106,25 @@ export default function OpportunityDetailPage() {
     setNextAction(opportunity.data.nextAction ?? '');
     setNextActionDueAt(toLocalInput(opportunity.data.nextActionDueAt));
     setNextStatus(allowedOpportunityTransitions(opportunity.data.status)[0] ?? '');
-  }, [opportunity.data]);
+  }, [opportunity.data, opportunity.isSuccess]);
 
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity', currentTenantId, userId, id] }),
-      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-interactions', currentTenantId, userId, id] }),
+      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity', currentTenantId, userId, crmRole, id] }),
+      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-interactions', currentTenantId, userId, crmRole, id] }),
       queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-directory'] }),
       queryClient.invalidateQueries({ queryKey: ['relationship-opportunities'] }),
-      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-orchestration', currentTenantId, userId, id] }),
+      queryClient.invalidateQueries({ queryKey: ['relationship-opportunity-orchestration', currentTenantId, userId, crmRole, id] }),
     ]);
   };
 
   const save = useMutation({
     mutationFn: async () => {
       setFormError(undefined);
+      if (!opportunity.isSuccess || !opportunity.data) throw new Error('Reload the opportunity before saving.');
       const qualification = parseQualificationLines(qualificationText);
       return dataProvider.relationships.updateOpportunity(id!, {
+        expectedUpdatedAt: opportunity.data.updatedAt,
         primaryContactId: primaryContactId.trim() || undefined,
         ownerId: ownerId.trim() || undefined,
         causeArea: causeArea.trim() || undefined,
@@ -166,7 +179,8 @@ export default function OpportunityDetailPage() {
     onSuccess: refresh,
   });
 
-  const transitionOptions = opportunity.data ? allowedOpportunityTransitions(opportunity.data.status) : [];
+  const interactionRows = interactions.isSuccess ? [...new Map(interactions.data.pages.flatMap(page => page.items).map(row => [row.id, row])).values()] : [];
+  const transitionOptions = opportunity.isSuccess && opportunity.data ? allowedOpportunityTransitions(opportunity.data.status) : [];
 
   return (
     <div className="space-y-6">
@@ -175,16 +189,16 @@ export default function OpportunityDetailPage() {
           <h1 className="text-3xl font-bold">{organization.data?.name ?? 'BTY opportunity'}</h1>
           <p className="mt-2 text-muted-foreground">Relationship-only qualification, fit, risk, owner, and outreach context.</p>
         </div>
-        <Button asChild variant="outline"><Link to="/crm/business-development/opportunities">Back to opportunities</Link></Button>
+        <Button asChild variant="outline"><Link to={`/crm/business-development/opportunities${backSearch}`}>Back to opportunities</Link></Button>
       </div>
 
       <RelationshipCapabilityState state={opportunityCapability.capability} isLoading={opportunityCapability.isLoading} isError={opportunityCapability.isError} onRetry={() => { void opportunityCapability.refetch(); }} />
 
       {opportunity.isLoading && <Card><CardHeader><CardTitle>Loading opportunity…</CardTitle></CardHeader></Card>}
-      {opportunity.isError && <Card><CardHeader><CardTitle>Opportunity could not be loaded</CardTitle><CardDescription>{opportunity.error instanceof Error ? opportunity.error.message : 'Unknown query error.'}</CardDescription></CardHeader></Card>}
+      {opportunity.isError && <Card><CardHeader><CardTitle>Opportunity could not be loaded</CardTitle><CardDescription>{opportunity.error instanceof Error ? opportunity.error.message : 'Unknown query error.'}</CardDescription></CardHeader><CardContent><Button variant="outline" onClick={() => void opportunity.refetch()}>Retry opportunity</Button></CardContent></Card>}
       {opportunity.data === null && <Card><CardHeader><CardTitle>Opportunity not found</CardTitle><CardDescription>No opportunity with this ID exists in the selected tenant.</CardDescription></CardHeader></Card>}
 
-      {opportunity.data && (
+      {capabilities.mutate && available && opportunity.isSuccess && opportunity.data && (
         <Card>
           <CardHeader><CardTitle>Lifecycle controls</CardTitle><CardDescription>Explicit business decisions and recording completion. Calendar time alone never completes a recording.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
@@ -201,13 +215,13 @@ export default function OpportunityDetailPage() {
         </Card>
       )}
 
-      {opportunity.data && (
+      {available && opportunity.isSuccess && opportunity.data && (
         <Card>
           <CardHeader><CardTitle>Orchestration state</CardTitle><CardDescription>Pipeline, automation, communication, reply workflow, and recording evidence remain separate.</CardDescription></CardHeader>
           <CardContent className="space-y-5">
             {orchestration.isLoading && <p className="text-sm text-muted-foreground">Loading orchestration evidence…</p>}
             {orchestration.isError && <p className="text-sm text-destructive">{orchestration.error instanceof Error ? orchestration.error.message : 'Orchestration evidence could not be loaded.'}</p>}
-            {orchestration.data && <>
+            {orchestration.isSuccess && orchestration.data && <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Summary label="Pipeline" value={opportunityStatusLabel(opportunity.data.status)} />
                 <Summary label="Automation" value={orchestration.data.enrollments[0] ? `${orchestration.data.enrollments[0].status}${orchestration.data.enrollments[0].stoppedReason ? ` — ${orchestration.data.enrollments[0].stoppedReason}` : ''}` : 'Not enrolled'} />
@@ -222,7 +236,7 @@ export default function OpportunityDetailPage() {
         </Card>
       )}
 
-      {opportunity.data && (
+      {available && opportunity.isSuccess && opportunity.data && (
         <Card>
           <CardHeader><CardTitle>Opportunity summary</CardTitle><CardDescription>Authoritative pipeline status and linked relationship records.</CardDescription></CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -238,7 +252,7 @@ export default function OpportunityDetailPage() {
         </Card>
       )}
 
-      {opportunity.data && (
+      {capabilities.mutate && available && opportunity.isSuccess && opportunity.data && (
         <Card>
           <CardHeader><CardTitle>Qualification and ownership</CardTitle><CardDescription>Edit non-status opportunity fields. Status changes use the separate guarded transition workflow.</CardDescription></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
@@ -246,8 +260,8 @@ export default function OpportunityDetailPage() {
             <div className="space-y-2"><Label htmlFor="opportunity-owner">Assigned owner</Label>
               <select id="opportunity-owner" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={ownerId} onChange={event=>setOwnerId(event.target.value)}>
                 <option value="">Unassigned</option>
-                {ownerId&&!(teamOwners.data??[]).some(person=>person.id===ownerId)&&<option value={ownerId}>Current owner (not in directory)</option>}
-                {(teamOwners.data??[]).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
+                {ownerId&&!(teamOwners.isSuccess?teamOwners.data:[]).some(person=>person.id===ownerId)&&<option value={ownerId}>Current owner (not in directory)</option>}
+                {(teamOwners.isSuccess?teamOwners.data:[]).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
               </select>
               {teamOwners.isError&&<p role="alert" className="text-xs text-destructive">Team directory unavailable; the current assignment is preserved.</p>}
             </div>
@@ -257,12 +271,12 @@ export default function OpportunityDetailPage() {
             <div className="space-y-2"><Label htmlFor="opportunity-next-action-due">Next action due</Label><Input id="opportunity-next-action-due" type="datetime-local" value={nextActionDueAt} onChange={(event) => setNextActionDueAt(event.target.value)} /></div>
             <div className="space-y-2 md:col-span-2"><Label htmlFor="opportunity-qualification">Qualification evidence</Label><Textarea id="opportunity-qualification" value={qualificationText} onChange={(event) => setQualificationText(event.target.value)} placeholder="One key=value per line" /></div>
             {(formError || save.isError) && <p className="text-sm text-destructive md:col-span-2">{formError ?? (save.error instanceof Error ? save.error.message : 'The opportunity could not be saved.')}</p>}
-            <div className="md:col-span-2"><Button type="button" disabled={save.isPending} onClick={() => save.mutate()}>{save.isPending ? 'Saving…' : 'Save opportunity'}</Button></div>
+            <div className="md:col-span-2">{save.isError && <Button variant="outline" disabled={opportunity.isFetching} onClick={() => void opportunity.refetch()}>Reload opportunity</Button>}<Button type="button" disabled={save.isPending} onClick={() => save.mutate()}>{save.isPending ? 'Saving…' : 'Save opportunity'}</Button></div>
           </CardContent>
         </Card>
       )}
 
-      {opportunity.data && (
+      {capabilities.mutate && available && opportunity.isSuccess && opportunity.data && (
         <Card>
           <CardHeader><CardTitle>Status transition</CardTitle><CardDescription>Only database-approved transitions are available. Every change is version-checked and written to status history and the timeline.</CardDescription></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
@@ -278,20 +292,22 @@ export default function OpportunityDetailPage() {
         <CardHeader><CardTitle>Opportunity timeline</CardTitle><CardDescription>Status changes and manual interactions remain separate from clinical activity.</CardDescription></CardHeader>
         <CardContent className="space-y-4">
           <RelationshipCapabilityState state={interactionCapability.capability} isLoading={interactionCapability.isLoading} isError={interactionCapability.isError} onRetry={() => { void interactionCapability.refetch(); }} />
-          <div className="grid gap-4 md:grid-cols-2">
+          {capabilities.mutate && <><div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2"><Label htmlFor="opportunity-interaction-type">Interaction type</Label><select id="opportunity-interaction-type" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={interactionType} onChange={(event) => setInteractionType(event.target.value as InteractionType)}>{noteTypes.map((value) => <option key={value} value={value}>{value.replace(/_/g, ' ')}</option>)}</select></div>
             <div className="space-y-2"><Label htmlFor="opportunity-interaction-summary">Summary</Label><Input id="opportunity-interaction-summary" value={interactionSummary} onChange={(event) => setInteractionSummary(event.target.value)} placeholder="What happened?" /></div>
           </div>
           {createInteraction.isError && <p className="text-sm text-destructive">{createInteraction.error instanceof Error ? createInteraction.error.message : 'The interaction could not be recorded.'}</p>}
-          <Button type="button" variant="outline" disabled={!interactionsAvailable || createInteraction.isPending} onClick={() => createInteraction.mutate()}>{createInteraction.isPending ? 'Recording…' : 'Record interaction'}</Button>
+          <Button type="button" variant="outline" disabled={!capabilities.mutate || !interactionsAvailable || createInteraction.isPending} onClick={() => createInteraction.mutate()}>{createInteraction.isPending ? 'Recording…' : 'Record interaction'}</Button></>}
+          {interactions.isError && <p role="alert" className="text-sm text-destructive">Could not load opportunity interactions. <Button variant="link" onClick={() => void interactions.refetch()}>Retry interactions</Button></p>}
           {interactions.isLoading && <p className="text-sm text-muted-foreground">Loading timeline…</p>}
-          {interactions.data?.items.length === 0 && <p className="text-sm text-muted-foreground">No opportunity interactions have been recorded.</p>}
-          {interactions.data?.items.map((interaction) => (
+          {interactionsAvailable && interactions.isSuccess && interactionRows.length === 0 && <p className="text-sm text-muted-foreground">No opportunity interactions have been recorded.</p>}
+          {(interactionsAvailable ? interactionRows : []).map((interaction) => (
             <div className="rounded-lg border p-4" key={interaction.id}>
               <div className="flex flex-wrap items-center justify-between gap-2"><Badge variant="outline">{interaction.type.replace(/_/g, ' ')}</Badge><span className="text-xs text-muted-foreground">{formatDate(interaction.occurredAt)}</span></div>
               <p className="mt-2 text-sm">{interaction.summary}</p>
             </div>
           ))}
+          {interactionsAvailable && interactions.isSuccess && interactions.hasNextPage && <Button variant="outline" disabled={interactions.isFetching} onClick={() => void interactions.fetchNextPage()}>Load older interactions</Button>}
         </CardContent>
       </Card>
     </div>

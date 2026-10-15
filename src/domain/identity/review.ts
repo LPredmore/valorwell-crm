@@ -87,3 +87,16 @@ export function linkedRecordUrl(domain: IdentitySourceDomain, id: string): strin
   if (domain === 'client') return '/crm/clients/' + encodeURIComponent(id);
   return null; // Applicants/prospects have no verified authenticated detail route here.
 }
+
+export interface IdentityReviewEvent {
+  id: string;
+  reviewId: string;
+  actorId: string;
+  changedAt: string;
+  previousDecision: string | null;
+  nextDecision: string;
+  previousBasis: string | null;
+  nextBasis: string | null;
+  previousNote: string | null;
+  nextNote: string | null;
+}

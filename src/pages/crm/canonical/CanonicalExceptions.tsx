@@ -1,3 +1,4 @@
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { useExceptions, useExceptionMutations, useStaffList } from '@/hooks/canonical/useCrmData';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,11 +16,17 @@ const sevColor: Record<string, string> = {
 };
 
 export default function CanonicalExceptions() {
-  const { data, isLoading } = useExceptions();
+  const query = useExceptions();
+  const { isLoading } = query;
+  const { capabilities } = useCrmAuth();
+  const data = query.isSuccess ? query.data : [];
   const staff = useStaffList();
   const mut = useExceptionMutations();
 
-  const staffOptions = (staff.data ?? []).filter((member) => Boolean(member.profileId));
+  const staffOptions = (staff.isSuccess ? staff.data : []).filter((member) => Boolean(member.profileId));
+
+  const pending = mut.resolve.isPending || mut.dismiss.isPending || mut.reassign.isPending || mut.createTask.isPending;
+  const mutationError = mut.resolve.error ?? mut.dismiss.error ?? mut.reassign.error ?? mut.createTask.error;
 
   return (
     <div className="space-y-4 p-6">
@@ -27,6 +34,9 @@ export default function CanonicalExceptions() {
         <h1 className="text-2xl font-semibold tracking-tight">Operational Exceptions</h1>
         <p className="text-sm text-muted-foreground">Automated flags that require human attention</p>
       </div>
+      {query.isError && <div role="alert" className="text-destructive">Exceptions could not be loaded. <Button variant="link" onClick={() => void query.refetch()}>Retry exceptions</Button></div>}
+      {mutationError && <p role="alert" className="text-destructive">{mutationError.message}</p>}
+      {staff.isError && <p role="alert" className="text-destructive">Owner directory unavailable; existing owners are preserved.</p>}
       <Card>
         <Table>
           <TableHeader>
@@ -42,6 +52,7 @@ export default function CanonicalExceptions() {
           </TableHeader>
           <TableBody>
             {isLoading && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>}
+            {query.isSuccess && data.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">No operational exceptions returned.</TableCell></TableRow>}
             {data?.map(e => {
               const active = e.status === 'Open' || e.status === 'In Review';
               return (
@@ -51,8 +62,9 @@ export default function CanonicalExceptions() {
                   <TableCell><Badge variant={e.status === 'Open' ? 'destructive' : 'outline'}>{e.status}</Badge></TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-md truncate">{e.summary}</TableCell>
                   <TableCell className="text-sm">
-                    {active ? (
+                    {active && capabilities.mutate ? (
                       <Select
+                        disabled={pending || staff.isError}
                         value={e.ownerId ?? ''}
                         onValueChange={(ownerId) => mut.reassign.mutate({ id: e.id, ownerId }, { onSuccess: () => toast.success('Reassigned') })}
                       >
@@ -67,15 +79,15 @@ export default function CanonicalExceptions() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{new Date(e.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right space-x-2">
-                    {active ? (
+                    {active && capabilities.mutate ? (
                       <>
-                        <Button size="sm" variant="outline" onClick={() => mut.createTask.mutate(e.id, { onSuccess: (t) => toast.success(`Task ready: ${t.title}`) })}>
+                        <Button disabled={pending} size="sm" variant="outline" onClick={() => mut.createTask.mutate(e.id, { onSuccess: (t) => toast.success(`Task ready: ${t.title}`) })}>
                           Create Task
                         </Button>
-                        <Button size="sm" onClick={() => mut.resolve.mutate({ id: e.id }, { onSuccess: () => toast.success('Resolved') })}>
+                        <Button disabled={pending} size="sm" onClick={() => mut.resolve.mutate({ id: e.id }, { onSuccess: () => toast.success('Resolved') })}>
                           Resolve
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => mut.dismiss.mutate({ id: e.id }, { onSuccess: () => toast.success('Dismissed') })}>
+                        <Button disabled={pending} size="sm" variant="ghost" onClick={() => mut.dismiss.mutate({ id: e.id }, { onSuccess: () => toast.success('Dismissed') })}>
                           Dismiss
                         </Button>
                       </>

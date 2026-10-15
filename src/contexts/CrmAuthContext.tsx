@@ -6,10 +6,16 @@ import type {
   CrmCapabilities,
   CrmCapabilityRole,
 } from '@/lib/crm/types';
+import { authorizedCrmTenantIds } from '@/domain/auth/crm-auth-navigation';
 import { CrmAuthCtx } from '@/contexts/crmAuthContextValue';
+import { bindSelectedCrmScope, unbindSelectedCrmScope } from '@/repositories/selectedCrmScope';
 
 const CONTRACT_VERSION = 'valorwell-crm-contracts@1.0.1+20260714';
 const TENANT_STORAGE_KEY = 'crm.currentTenantId';
+function storedTenantPreference() {
+  try { return typeof window !== 'undefined' ? window.localStorage.getItem(TENANT_STORAGE_KEY) : null; }
+  catch { return null; }
+}
 
 const EMPTY_CAPABILITIES: CrmCapabilities = {
   mutate: false,
@@ -45,8 +51,10 @@ async function loadOperatingContext(): Promise<RpcContext | null> {
 
 export function CrmAuthProvider({ children }: { children: ReactNode }) {
   const desiredTenantRef = useRef<string | null>(
-    typeof window !== 'undefined' ? localStorage.getItem(TENANT_STORAGE_KEY) : null,
+    storedTenantPreference(),
   );
+  const requestVersion = useRef(0);
+  const active = useRef(true);
 
   const buildFailClosed = useCallback(
     (over: Partial<CrmAuthContextType> = {}): CrmAuthContextType => ({
@@ -73,15 +81,19 @@ export function CrmAuthProvider({ children }: { children: ReactNode }) {
   );
 
   const applyContext = useCallback((ctx: RpcContext | null) => {
-    if (!ctx || !ctx.authenticated || !ctx.profile_id) {
+    if (!ctx || ctx.authenticated !== true || typeof ctx.profile_id !== 'string' || !ctx.profile_id) {
+      bindSelectedCrmScope(null);
       setAuthState(buildFailClosed());
       return;
     }
 
-    const available = ctx.available_tenants ?? [];
-    let currentTenantId = ctx.current_tenant_id;
-    let currentRole = ctx.crm_role;
-    let capabilities = ctx.capabilities ?? EMPTY_CAPABILITIES;
+    const allowed = authorizedCrmTenantIds(ctx, ctx.profile_id);
+    const available = Array.isArray(ctx.available_tenants)
+      ? ctx.available_tenants.filter(t => t && allowed.includes(t.tenant_id)) : [];
+    const serverSelection = available.find(t => t.tenant_id === ctx.current_tenant_id && t.crm_role === ctx.crm_role);
+    let currentTenantId = serverSelection?.tenant_id ?? null;
+    let currentRole: CrmCapabilityRole = serverSelection?.crm_role ?? 'crm_none';
+    let capabilities = serverSelection ? (ctx.capabilities ?? EMPTY_CAPABILITIES) : EMPTY_CAPABILITIES;
 
     // If server didn't pick (multi-tenant), honor stored preference when valid.
     if (!currentTenantId && desiredTenantRef.current) {
@@ -101,6 +113,7 @@ export function CrmAuthProvider({ children }: { children: ReactNode }) {
     }
 
     const authorized = currentTenantId != null && currentRole !== 'crm_none';
+    bindSelectedCrmScope(authorized ? {tenantId:currentTenantId!,userId:ctx.profile_id} : null);
 
     setAuthState({
       userId: ctx.profile_id,
@@ -120,46 +133,54 @@ export function CrmAuthProvider({ children }: { children: ReactNode }) {
   }, [buildFailClosed]);
 
   const refresh = useCallback(async () => {
-    const ctx = await loadOperatingContext();
-    applyContext(ctx);
+    const version = ++requestVersion.current;
+    const ctx = await loadOperatingContext().catch(()=>null);
+    if(active.current&&version===requestVersion.current)applyContext(ctx);
   }, [applyContext]);
 
   const switchTenant = useCallback(
     async (tenantId: string) => {
-      const { data, error } = await supabase.rpc(
+      const version=++requestVersion.current;
+      bindSelectedCrmScope(null);
+      setAuthState(buildFailClosed({isLoading:true}));
+      const { data, error } = await Promise.resolve(supabase.rpc(
         'crm_select_operating_tenant' as never,
         { p_tenant_id: tenantId } as never,
-      );
+      )).catch(()=>({data:null,error:{message:'Workspace selection could not be checked.'}}));
+      if(!active.current||version!==requestVersion.current)return;
       if (error) {
         console.error('crm_select_operating_tenant failed:', error);
+        await refresh();
         return;
       }
       const result = data as unknown as { ok?: boolean };
-      if (!result?.ok) return;
+      if (!result?.ok) {await refresh();return;}
       desiredTenantRef.current = tenantId;
       if (typeof window !== 'undefined') {
-        localStorage.setItem(TENANT_STORAGE_KEY, tenantId);
+        try { window.localStorage.setItem(TENANT_STORAGE_KEY, tenantId); }
+        catch { /* Keep the authorized in-memory selection when storage is unavailable. */ }
       }
       await refresh();
     },
-    [refresh],
+    [refresh,buildFailClosed],
   );
 
-  // Rebind stable refresh/switch into every emitted state
   useEffect(() => {
-    setAuthState((s) => ({ ...s, refresh, switchTenant }));
-  }, [refresh, switchTenant]);
-
-  useEffect(() => {
+    active.current=true;
+    bindSelectedCrmScope(null);
     refresh();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      refresh();
+      // Hide the previous session immediately; stale context responses cannot
+      // repopulate its role/tenant after this newer refresh starts.
+      setAuthState(buildFailClosed({isLoading:true}));
+      bindSelectedCrmScope(null);
+      void refresh();
     });
-    return () => subscription.unsubscribe();
-  }, [refresh]);
+    return () => {active.current=false;requestVersion.current++;unbindSelectedCrmScope();subscription.unsubscribe();};
+  }, [refresh,buildFailClosed]);
 
   return (
-    <CrmAuthCtx.Provider value={authState}>
+    <CrmAuthCtx.Provider value={{...authState,refresh,switchTenant}}>
       {children}
     </CrmAuthCtx.Provider>
   );

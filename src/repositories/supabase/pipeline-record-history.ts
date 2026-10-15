@@ -3,6 +3,7 @@ import type { CrmPipeline, CrmPipelineRecord, CrmPipelineStage } from '@/domain/
 
 /** Only non-clinical, tenant-scoped CRM history is read here. */
 export type PipelineStageHistoryRow = {
+  actor_profile_id?: string | null;
   id: string;
   from_stage_id: string | null;
   to_stage_id: string;
@@ -19,6 +20,7 @@ export type PipelineRecordHistory = {
   interactions: PipelineInteractionHistoryRow[];
 };
 export type PipelineHistoryItem = {
+  actorProfileId?: string | null;
   id: string;
   type: 'stage' | 'interaction';
   occurredAt: string;
@@ -67,6 +69,20 @@ export async function getPipelineRecordHistory(
   };
 }
 
+/** Page the immutable CRM stage ledger without reading any interaction body. */
+export async function getPipelineStageHistoryPage(pipeline:CrmPipeline,record:CrmPipelineRecord,page=1){
+  if(pipeline.source_mode!=='manual'||pipeline.tenant_id!==record.tenant_id||pipeline.id!==record.pipeline_id)
+    throw new Error('Record does not belong to the selected manual pipeline.');
+  if(!Number.isSafeInteger(page)||page<1)throw new Error('Invalid stage history page.');
+  const offset=(page-1)*50;
+  const {data,error}=await supabase.from('crm_pipeline_stage_events')
+    .select('id,from_stage_id,to_stage_id,occurred_at,actor_profile_id')
+    .eq('tenant_id',pipeline.tenant_id).eq('pipeline_id',pipeline.id).eq('record_id',record.id)
+    .order('occurred_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+49);
+  if(error)throw new Error('Stage history unavailable: '+error.message);
+  return (data??[]) as PipelineStageHistoryRow[];
+}
+
 /** Present the two independently sourced, bounded event streams in time order. */
 export function buildPipelineRecordTimeline(
   history: PipelineRecordHistory,
@@ -76,6 +92,7 @@ export function buildPipelineRecordTimeline(
   const stageItems: PipelineHistoryItem[] = history.stages.map(event => ({
     id: 'stage:' + event.id,
     type: 'stage',
+    actorProfileId: event.actor_profile_id,
     occurredAt: event.occurred_at,
     title: event.from_stage_id ? 'Stage changed' : 'Entered pipeline',
     detail: (event.from_stage_id

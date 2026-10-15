@@ -1,3 +1,4 @@
+import {RelationshipOwnerFilter} from '@/components/crm/relationships/RelationshipOwnerField';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -77,7 +78,8 @@ export function TaskFormDialog({
   const [type, setType] = useState<TaskType>(task?.type ?? 'General');
   const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? 'Normal');
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'Not Started');
-  const [dueAt, setDueAt] = useState<string>(task?.dueAt?.slice(0, 16) ?? '');
+  const [ownerId,setOwnerId]=useState(task?.ownerId??auth.userId);
+  const [dueAt, setDueAt] = useState<string>(localDueInput(task?.dueAt));
 
   useEffect(() => {
     if (!open) return;
@@ -86,11 +88,12 @@ export function TaskFormDialog({
     setType(task?.type ?? 'General');
     setPriority(task?.priority ?? 'Normal');
     setStatus(task?.status ?? 'Not Started');
-    setDueAt(task?.dueAt?.slice(0, 16) ?? '');
-  }, [open, task]);
+    setOwnerId(task?task.ownerId??'':auth.userId);
+    setDueAt(localDueInput(task?.dueAt));
+  }, [open, task,auth.userId,auth.currentTenantId]);
 
   const pending = create.isPending || update.isPending;
-  const canSubmit = title.trim().length >= 3 && !pending;
+  const canSubmit = auth.capabilities.mutate&&title.trim().length >= 3 && !pending;
 
   function invalidate() {
     qc.invalidateQueries({ queryKey: ['crm-tasks'] });
@@ -98,18 +101,22 @@ export function TaskFormDialog({
 
   function submit() {
     if (!canSubmit) return;
-    const dueIso = dueAt ? new Date(dueAt).toISOString() : undefined;
+    const parsedDue=dueAt?new Date(dueAt):null;
+    if(parsedDue&&!Number.isFinite(parsedDue.getTime())){toast.error('Enter a valid due date and time.');return;}
+    const dueIso=parsedDue?.toISOString();
     if (isEdit && task) {
       update.mutate(
         {
           id: task.id,
           patch: {
             title: title.trim(),
-            description: description.trim() || undefined,
+            description: description.trim() || null,
             type,
             priority,
             status,
-            dueAt: dueIso,
+            ...(status !== task.status ? { completedAt: status === 'Completed' ? new Date().toISOString() : null } : {}),
+            dueAt: dueIso ?? null,
+            ownerId:ownerId||null,
           },
         },
         {
@@ -139,7 +146,9 @@ export function TaskFormDialog({
         type,
         priority,
         status,
+        ...(status === 'Completed' ? { completedAt: new Date().toISOString() } : {}),
         dueAt: dueIso,
+        ownerId:ownerId||undefined,
         collaboratorIds: [],
         checklist: [],
         tags: [],
@@ -174,7 +183,7 @@ export function TaskFormDialog({
           <DialogTitle>{isEdit ? 'Edit Task' : 'New Task'}</DialogTitle>
           <DialogDescription>
             {isEdit
-              ? 'Update task details. Writes route through the canonical tasks repository.'
+              ? 'Update the task, owner and follow-up time.'
               : 'Create a task scoped to your current tenant.'}
           </DialogDescription>
         </DialogHeader>
@@ -232,6 +241,7 @@ export function TaskFormDialog({
             </div>
           </div>
 
+          <RelationshipOwnerFilter id={`task-owner-${task?.id??'new'}`} value={ownerId} onChange={setOwnerId} emptyLabel="Unassigned" disabled={pending}/>
           <div className="space-y-1.5">
             <Label htmlFor="task-desc">Description</Label>
             <Textarea
@@ -255,4 +265,12 @@ export function TaskFormDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+/** datetime-local needs the operator's wall clock, rather than a sliced UTC timestamp. */
+function localDueInput(value?:string):string {
+  if(!value)return '';
+  const date=new Date(value);
+  if(!Number.isFinite(date.getTime()))return '';
+  return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);
 }

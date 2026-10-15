@@ -4,14 +4,16 @@ import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {Card,CardContent,CardHeader,CardTitle,CardDescription} from '@/components/ui/card';
+import {useCrmAuth} from '@/hooks/crm/useCrmAuth';
 import {
  getApplicantCandidates,getRecruitmentPreview,linkExistingApplicant,reviewProspectEmail,
  type ReviewedProspect,
 } from '@/repositories/supabase/recruitment-review';
 
 export function RecruitmentPreviewPanel({tenantId}:{tenantId:string}){
- const {data,error,isLoading}=useQuery({
-  queryKey:['recruitment-campaign-preview',tenantId],
+ const {userId,crmRole}=useCrmAuth();
+ const {data,error,isLoading,refetch,isFetching}=useQuery({
+  queryKey:['recruitment-campaign-preview',tenantId,userId,crmRole],
   queryFn:()=>getRecruitmentPreview(tenantId),retry:false,
  });
  return <Card><CardHeader><CardTitle>Recruitment readiness · sending paused</CardTitle>
@@ -19,7 +21,8 @@ export function RecruitmentPreviewPanel({tenantId}:{tenantId:string}){
   <CardContent className="space-y-2">
    {isLoading&&<p>Calculating tenant-wide quality and eligibility…</p>}
    {error&&<p role="alert" className="text-destructive">{error.message}</p>}
-   {data&&<>
+   {error&&<Button variant="outline" disabled={isFetching} onClick={()=>void refetch()}>Retry readiness</Button>}
+   {data&&!error&&<>
     <div className="grid gap-2 text-sm grid-cols-2 md:grid-cols-4">
      <p><strong>{data.total}</strong> total prospects</p>
      <p><strong>{data.review}</strong> need review</p>
@@ -39,13 +42,14 @@ export function RecruitmentPreviewPanel({tenantId}:{tenantId:string}){
 export function RecruitmentQualificationPanel({tenantId,row,canEdit}:{
  tenantId:string;row:ReviewedProspect;canEdit:boolean;
 }){
+ const {userId,crmRole}=useCrmAuth();
  const qc=useQueryClient();
  const [reviewStatus,setReviewStatus]=useState<'unverified'|'verified'|'invalid'>('unverified');
  const [reason,setReason]=useState('');
  const [linkReason,setLinkReason]=useState('');
  useEffect(()=>setReviewStatus(row.emailReviewStatus),[row.id,row.emailReviewStatus]);
  const candidates=useQuery({
-  queryKey:['recruitment-applicant-candidates',tenantId,row.id],
+  queryKey:['recruitment-applicant-candidates',tenantId,row.id,userId,crmRole],
   queryFn:()=>getApplicantCandidates(tenantId,row.id),retry:false,
  });
  const emailReview=useMutation({
@@ -103,9 +107,10 @@ export function RecruitmentQualificationPanel({tenantId,row,canEdit}:{
    <CardContent className="space-y-3 text-sm">
     {candidates.isLoading&&<p>Checking the existing applicant directory…</p>}
     {candidates.isError&&<p role="alert" className="text-destructive">{candidates.error.message}</p>}
-    {candidates.data?.linkedApplicantId&&<p role="status">Linked existing application: {candidates.data.linkedApplicantId}. <a className="text-primary underline" href="https://emr.valorwell.org/staff/provider-applicants">Open applicant workspace</a>. No invitation or email was sent by linking.</p>}
-    {candidates.data?.matches.length===0&&<p>No matching applicant found. Do not create a duplicate applicant without reviewing the original application process.</p>}
-    {(candidates.data?.matches??[]).map(a=><div key={a.id} className="rounded border p-3 space-y-2">
+    {candidates.isError&&<Button variant="outline" disabled={candidates.isFetching} onClick={()=>void candidates.refetch()}>Retry applicant reconciliation</Button>}
+    {!candidates.isError&&candidates.data?.linkedApplicantId&&<p role="status">Linked existing application: {candidates.data.linkedApplicantId}. <a className="text-primary underline" href="https://emr.valorwell.org/staff/provider-applicants">Open applicant workspace</a>. No invitation or email was sent by linking.</p>}
+    {!candidates.isError&&candidates.data?.matches.length===0&&<p>No matching applicant found. Do not create a duplicate applicant without reviewing the original application process.</p>}
+    {(candidates.isError?[]:candidates.data?.matches??[]).map(a=><div key={a.id} className="rounded border p-3 space-y-2">
      <p><strong>{a.name}</strong> · {a.status} · {a.reason}</p>
      {canEdit&&!candidates.data?.linkedApplicantId&&<>
       <Label htmlFor={'link-reason-'+a.id}>Reason and evidence for linking</Label>

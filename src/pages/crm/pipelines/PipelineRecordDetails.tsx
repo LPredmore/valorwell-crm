@@ -1,9 +1,14 @@
+import {Link} from 'react-router-dom';
+import {useCrmAuth} from '@/hooks/crm/useCrmAuth';
+import {RelationshipTimelinePanel} from '@/components/crm/relationships/RelationshipTimelinePanel';
+import {RelationshipTasksPanel} from '@/components/crm/relationships/RelationshipTasksPanel';
+import {RelationshipOwnerName} from '@/components/crm/relationships/RelationshipOwnerField';
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { CrmPipeline, CrmPipelineRecord, CrmPipelineStage } from '@/domain/pipelines/models';
-import { buildPipelineRecordTimeline, getPipelineRecordHistory } from '@/repositories/supabase/pipeline-record-history';
+import { buildPipelineRecordTimeline, getPipelineStageHistoryPage } from '@/repositories/supabase/pipeline-record-history';
 
 function dateLabel(value: string | null): string {
   if (!value) return 'Not scheduled';
@@ -25,25 +30,35 @@ export function PipelineRecordDetails({
   ownerName: string;
   onClose: () => void;
 }) {
-  const history = useQuery({
-    queryKey: ['crm-pipeline-record-history', pipeline.tenant_id, pipeline.id, record.id],
-    queryFn: () => getPipelineRecordHistory(pipeline, record),
+  const {userId,crmRole}=useCrmAuth();
+  const subject=pipeline.subject_type==='person'&&record.contact_id?{contactId:record.contact_id}
+    :pipeline.subject_type==='organization'&&record.organization_id?{organizationId:record.organization_id}:null;
+  const history = useInfiniteQuery({
+    queryKey: ['crm-pipeline-record-history', pipeline.tenant_id, pipeline.id, record.id,userId,crmRole],
+    initialPageParam:1,
+    queryFn: ({pageParam}) => getPipelineStageHistoryPage(pipeline, record,pageParam),
+    getNextPageParam:(last,pages)=>last.length===50?pages.length+1:undefined,
     retry: false,
   });
   const timeline = useMemo(
-    () => history.data ? buildPipelineRecordTimeline(history.data, stages) : [],
+    () => history.data ? buildPipelineRecordTimeline({stages:[...new Map(history.data.pages.flat().map(row=>[row.id,row])).values()],interactions:[]}, stages) : [],
     [history.data, stages],
   );
   const currentStage = stages.find(stage => stage.id === record.stage_id)?.name ?? 'Unknown stage';
 
-  return <Card aria-label="Pipeline record details" className="border-primary/30">
+  return <div className="space-y-4"><Card aria-label="Pipeline record details" className="border-primary/30">
     <CardHeader>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <CardTitle className="text-lg">{subjectName}</CardTitle>
           <CardDescription>Manual pipeline record details · {pipeline.name}</CardDescription>
         </div>
-        <Button size="sm" variant="outline" onClick={onClose}>Close details</Button>
+        <div className="flex flex-wrap gap-2">
+          {subject&&<Button size="sm" variant="outline" asChild><Link to={subject.contactId
+            ?`/crm/business-development/contacts/${subject.contactId}`
+            :`/crm/business-development/organizations/${subject.organizationId}`}>Open relationship workspace</Link></Button>}
+          <Button size="sm" variant="outline" onClick={onClose}>Close details</Button>
+        </div>
       </div>
     </CardHeader>
     <CardContent className="space-y-5">
@@ -67,18 +82,18 @@ export function PipelineRecordDetails({
         </dl>
       </section>}
       <section aria-label="Record activity history">
-        <h3 className="font-semibold">Activity history</h3>
+        <h3 className="font-semibold">Stage history</h3>
         <p className="text-xs text-muted-foreground">
-          CRM stage changes for this record and relationship interactions for this person or organization.
-          Up to 50 most recent entries from each source; not a complete audit export.
-          Clinical records and external-source histories are not included.
+          Recorded stage changes for this CRM pipeline record, newest first.
+          Load older stage events as needed. Relationship communications and follow-up tasks are shown below.
         </p>
         {history.isPending && <p role="status" className="mt-2 text-sm">Loading CRM history…</p>}
         {history.isError && <p role="alert" className="mt-2 text-sm text-destructive">
           Could not load CRM history: {history.error.message}
         </p>}
+        {history.isError&&<Button variant="outline" size="sm" onClick={()=>void history.refetch()}>Retry stage history</Button>}
         {history.isSuccess && timeline.length === 0 && <p className="mt-2 text-sm text-muted-foreground">
-          No recorded CRM stage events or relationship interactions for this record.
+          No recorded stage events for this pipeline record.
         </p>}
         {history.isSuccess && timeline.length > 0 && <ol className="mt-3 space-y-3">
           {timeline.map(item => <li key={item.id} className="rounded border p-3 text-sm">
@@ -87,9 +102,17 @@ export function PipelineRecordDetails({
               <time className="text-xs text-muted-foreground" dateTime={item.occurredAt}>{dateLabel(item.occurredAt)}</time>
             </div>
             <p className="mt-1 whitespace-pre-wrap break-words">{item.detail}</p>
+            <p className="mt-1 break-all text-xs text-muted-foreground">Recorded actor: {item.actorProfileId
+              ?<><RelationshipOwnerName ownerId={item.actorProfileId}/> · {item.actorProfileId}</>:'Not recorded'}</p>
           </li>)}
         </ol>}
+        {history.hasNextPage&&<Button className="mt-3" variant="outline" size="sm" disabled={history.isFetching} onClick={()=>void history.fetchNextPage()}>
+          {history.isFetchingNextPage?'Loading…':'Load older stage events'}
+        </Button>}
       </section>
     </CardContent>
-  </Card>;
+  </Card>
+    {subject&&<RelationshipTimelinePanel subject={subject}/>}
+    {subject&&<RelationshipTasksPanel subject={subject}/>}
+  </div>;
 }

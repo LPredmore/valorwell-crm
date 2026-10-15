@@ -1,6 +1,9 @@
+import { loadConnectedSourcePages as pages } from './connected-source-pages';
+import { applicantWorkspaceLink } from '@/domain/pipelines/applicant-workspace-link';
 import { supabase } from '@/integrations/supabase/client';
 import { getPipelineCardSubjects } from './pipeline-subjects';
 import {listRecruitmentReviewProspects} from './recruitment-review';
+import type { ApplicantHandoff } from '@/domain/pipelines/applicant-handoff';
 import type { CrmPipeline, CrmPipelineStage, CrmPipelineRecord } from '@/domain/pipelines/models';
 
 export interface ConnectedPipelineCard {
@@ -18,23 +21,7 @@ export interface ConnectedPipelineCard {
   sourceVersion?: number;
   owner_profile_id?: string|null;
   sourceKind?: 'therapist_prospect' | 'provider_applicant';
-}
-
-const batchSize=250;
-const maxRows=2000;
-
-/** Fetch only source-authorized rows, never insert copies of clinical/credentialing
- * data into CRM-owned relationship tables or manufacture source statuses. */
-async function pages<T>(makeQuery:(from:number,to:number)=>PromiseLike<{data:T[]|null;error:{message:string}|null}>):Promise<T[]>{
-  const out:T[]=[];
-  for(let offset=0;offset<maxRows;offset+=batchSize){
-    const {data,error}=await makeQuery(offset,offset+batchSize-1);
-    if(error)throw new Error(error.message);
-    const rows=data??[];
-    out.push(...rows);
-    if(rows.length<batchSize)break;
-  }
-  return out;
+  applicantHandoff?: ApplicantHandoff;
 }
 
 function mapName(...parts:(string|null|undefined)[]):string{
@@ -60,29 +47,37 @@ export async function listConnectedPipelineCards(
     type Applicant={id:string;firstName:string;lastName:string;status:string;source:string;
       primaryState:string|null;licenseType:string|null;referralSource:string|null;
       nextAction:string|null;nextActionDueAt:string|null;createdAt:string;lastActivityAt:string|null;
-      ownerProfileId:string|null;version:number};
-    for(let page=1;page<=20;page++){
+      ownerProfileId:string|null;ownerName:string|null;convertedStaffId:string|null;version:number};
+    const applicantIds=new Set<string>();
+    let applicantsComplete=false;
+    for(let page=1;page<=1000;page++){
       const {data,error}=await supabase.rpc('staff_list_provider_applicants' as never,{
         p_status:null,p_search:null,p_page:page,p_page_size:100,
       } as never);
       if(error)throw new Error('Provider applicant listing requires authorized staff access: '+error.message);
       const result=data as {items?:Applicant[]}|null;
-      const items=result?.items??[];
+      if(!result||!Array.isArray(result.items))throw new Error('Provider applicant listing contract is unavailable.');
+      const items=result.items;
       for(const row of items){
+        if(!row||typeof row.id!=='string'||!row.id||applicantIds.has(row.id))throw new Error('Provider applicant source repeated or changed a record during paging. Refresh the source.');
+        applicantIds.add(row.id);
         if(['hired','declined','withdrawn','no_response','inactive'].includes(row.status))continue;
         const sourceStage=row.status==='new'&&row.source==='website'?'website_new'
           :row.status==='credentialing'?'application':row.status;
         const id=stage(sourceStage);
         if(!id)continue;
         cards.push({id:row.id,stage_id:id,displayName:mapName(row.firstName,row.lastName),
+          sourceKind:'provider_applicant',
+          applicantHandoff:{ownerName:row.ownerName,convertedStaffId:row.convertedStaffId},
           field_values:{license_type:row.licenseType,primary_state:row.primaryState,source:row.source},
           created_at:row.createdAt,updated_at:row.lastActivityAt??row.createdAt,
           next_action:row.nextAction,next_action_due_at:row.nextActionDueAt,
           sourceStatus:row.status,sourceVersion:row.version,owner_profile_id:row.ownerProfileId,
-          sourceUrl:'https://emr.valorwell.org/staff/provider-applicants'});
+          sourceUrl:applicantWorkspaceLink(row.id,mapName(row.firstName,row.lastName))});
       }
-      if(items.length<100)break;
+      if(items.length<100){applicantsComplete=true;break;}
     }
+    if(!applicantsComplete)throw new Error('Provider applicant traversal limit reached. Use the paged staff handoff workspace.');
     // Review-only prospect source. It remains physically separate from actual
     // provider applicants: no campaign, enrollment or applicant mutation here.
     // The full tenant-authorized 50-row paged directory is available at
@@ -116,15 +111,15 @@ export async function listConnectedPipelineCards(
     if(roles.error)throw new Error(roles.error.message);
     const ids=(roles.data??[]).map(r=>r.id);
     if(!ids.length)return [];
-    const assigned=await supabase.from('staff_role_assignments').select('staff_id')
-      .eq('tenant_id',tenantId).in('staff_role_id',ids);
-    if(assigned.error)throw new Error(assigned.error.message);
-    const staffIds=[...new Set((assigned.data??[]).map(x=>x.staff_id))];
+    const assigned=await pages((from,to)=>supabase.from('staff_role_assignments').select('id,staff_id')
+      .eq('tenant_id',tenantId).in('staff_role_id',ids).order('id').range(from,to));
+    const staffIds=[...new Set(assigned.map(x=>x.staff_id))];
     if(!staffIds.length)return [];
-    const {data,error}=await supabase.from('staff').select('id,prov_name_f,prov_name_l,prov_status,prov_field,prov_state,created_at,updated_at')
-      .eq('tenant_id',tenantId).in('id',staffIds);
-    if(error)throw new Error(error.message);
-    for(const row of data??[]){
+    // Bound IN URLs independently of the complete assignment traversal.
+    for(let offset=0;offset<staffIds.length;offset+=150){
+    const rows=await pages((from,to)=>supabase.from('staff').select('id,prov_name_f,prov_name_l,prov_status,prov_field,prov_state,created_at,updated_at')
+      .eq('tenant_id',tenantId).in('id',staffIds.slice(offset,offset+150)).order('id').range(from,to));
+    for(const row of rows){
       const id=stage(row.prov_status);
       if(!id)continue;
       cards.push({id:row.id,stage_id:id,displayName:mapName(row.prov_name_f,row.prov_name_l),
@@ -132,12 +127,13 @@ export async function listConnectedPipelineCards(
         created_at:row.created_at,updated_at:row.updated_at,
         next_action:null,next_action_due_at:null,sourceUrl:'/crm/staff'});
     }
+    }
   }else if(pipeline.source_key==='clients'){
     // Direct source RLS controls access; do not leak client attributes to
     // contact tables or broaden CRM permissions to make a board appear full.
     const rows=await pages((from,to)=>supabase.from('clients')
       .select('id,pat_name_f,pat_name_l,pat_name_preferred,lifecycle_stage,pat_status,created_at,updated_at')
-      .eq('tenant_id',tenantId).order('created_at').range(from,to));
+      .eq('tenant_id',tenantId).order('created_at').order('id').range(from,to));
     for(const row of rows){
       const id=stage(row.lifecycle_stage??'');
       if(!id)continue;
@@ -149,7 +145,7 @@ export async function listConnectedPipelineCards(
   }else if(pipeline.source_key==='relationship_opportunities'){
     const rows=await pages((from,to)=>supabase.from('relationship_opportunities')
       .select('id,organization_id,status,version,owner_profile_id,cause_area,veteran_priority,next_action,next_action_due_at,created_at,updated_at')
-      .eq('tenant_id',tenantId).order('created_at').range(from,to));
+      .eq('tenant_id',tenantId).order('created_at').order('id').range(from,to));
     const subjectRecords=rows.map(r=>({
       organization_id:r.organization_id,
     })) as CrmPipelineRecord[];

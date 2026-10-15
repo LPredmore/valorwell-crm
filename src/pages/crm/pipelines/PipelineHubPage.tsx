@@ -20,6 +20,7 @@ import {PipelineRecordDetails} from './PipelineRecordDetails';
 import {getManualPipelineMetrics,pipelineMetricsTotals} from '@/repositories/supabase/pipeline-metrics';
 import {listTeamOwners} from '@/repositories/supabase/pipeline-team-owners';
 import {ConnectedStageEditor} from './ConnectedStageEditor';
+import {ApplicantHandoffSummary} from './ApplicantHandoffSummary';
 import {ClinicianStageNavigator} from './ClinicianStageNavigator';
 import {canMovePipelineCard,matchesPipelineView,type PipelineViewMode,type AttentionFilter,type OwnerFilter} from '@/domain/pipelines/board-view';
 import {
@@ -30,22 +31,28 @@ import {
 
 const fieldTypes:PipelineFieldType[]=['text','number','currency','date','datetime','boolean','url','select','multiselect'];
 function usePipeData(p:CrmPipeline|null,serverFilters:PipelineServerFilters) {
+  const {userId,crmRole}=useCrmAuth();
+  const scope=[p?.tenant_id,userId,crmRole];
   const enabled=!!p;
-  const stages=useQuery({queryKey:['pipeline-stages',p?.id],queryFn:()=>pipelinesRepository.stages(p!),enabled,retry:false});
-  const fields=useQuery({queryKey:['pipeline-fields',p?.id],queryFn:()=>pipelinesRepository.fields(p!),enabled,retry:false});
+  const stages=useQuery({queryKey:['pipeline-stages',p?.id,...scope],queryFn:()=>pipelinesRepository.stages(p!),enabled,retry:false});
+  const fields=useQuery({queryKey:['pipeline-fields',p?.id,...scope],queryFn:()=>pipelinesRepository.fields(p!),enabled,retry:false});
   const recordPages=useInfiniteQuery({
-    queryKey:['pipeline-records',p?.tenant_id,p?.id,serverFilters.stageId,serverFilters.owner,serverFilters.attention,serverFilters.userId,serverFilters.searchText,serverFilters.sortKey],
+    queryKey:['pipeline-records',p?.tenant_id,p?.id,serverFilters.stageId,serverFilters.owner,serverFilters.attention,serverFilters.userId,serverFilters.searchText,serverFilters.sortKey,...scope],
     queryFn:({pageParam})=>pipelinesRepository.recordPage(p!,pageParam,200,serverFilters),
     initialPageParam:null as string|null,
     getNextPageParam:page=>page.nextCursor,
     enabled:enabled&&p?.source_mode==='manual',retry:false,
   });
   const records={...recordPages,data:recordPages.data?.pages.flatMap(page=>page.rows)};
-  const connected=useQuery({queryKey:['pipeline-connected-cards',p?.id],queryFn:()=>listConnectedPipelineCards(p!,stages.data??[]),enabled:enabled&&p?.source_mode==='connected'&&!!stages.data,retry:false});
-  const subjects=useQuery({queryKey:['pipeline-card-subjects',p?.id,records.dataUpdatedAt],queryFn:()=>getPipelineCardSubjects(p!,records.data??[]),enabled:enabled&&p?.source_mode==='manual'&&!!records.data,retry:false});
+  const connected=useQuery({queryKey:['pipeline-connected-cards',p?.id,...scope],queryFn:()=>listConnectedPipelineCards(p!,stages.data??[]),enabled:enabled&&p?.source_mode==='connected'&&stages.isSuccess,retry:false});
+  const subjects=useQuery({queryKey:['pipeline-card-subjects',p?.id,...scope,records.dataUpdatedAt],queryFn:()=>getPipelineCardSubjects(p!,records.data??[]),enabled:enabled&&p?.source_mode==='manual'&&!!records.data,retry:false});
   return {stages,fields,records,subjects,connected};
 }
 export default function PipelineHubPage(){
+  const {currentTenantId,userId,crmRole}=useCrmAuth();
+  return <PipelineHubWorkspace key={`${currentTenantId}:${userId}:${crmRole}`} />;
+}
+function PipelineHubWorkspace(){
   const {currentTenantId,userId,crmRole,capabilities}=useCrmAuth();
   const admin=crmRole==='crm_admin';
   const qc=useQueryClient();
@@ -57,11 +64,11 @@ export default function PipelineHubPage(){
     setSearchParams(previous=>{
       const next=new URLSearchParams(previous);
       if(id)next.set('pipeline',id);else next.delete('pipeline');
+      next.delete('record');
       return writePipelineUrlFilters(next,defaultPipelineUrlFilters);
     });
     setActiveSavedView('');
     setSelectedRecords([]);
-    setDetailRecordId('');
   };
   const updateFilters=(patch:Partial<PipelineUrlFilters>)=>{
     // Replace history for filter edits (especially search typing), while
@@ -100,34 +107,39 @@ export default function PipelineHubPage(){
   const [toStage,setToStage]=useState('');
   const [ruleAllowed,setRuleAllowed]=useState(true);
   const [selectedRecords,setSelectedRecords]=useState<string[]>([]);
-  const [detailRecordId,setDetailRecordId]=useState('');
+  const detailRecordId=searchParams.get('record')??'';
+  const setDetailRecordId=(id:string)=>setSearchParams(previous=>{
+    const next=new URLSearchParams(previous);
+    if(id)next.set('record',id);else next.delete('record');
+    return next;
+  },{replace:true});
   const [bulkStage,setBulkStage]=useState('');
   const [bulkProgress,setBulkProgress]=useState('');
-  const teamOwners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId],queryFn:()=>listTeamOwners(currentTenantId!),enabled:!!currentTenantId,retry:false});
-  const ownerName=(id:string|null)=>id?(teamOwners.data?.find(member=>member.id===id)?.name??'Assigned team member'):'Unassigned';
-  const list=useQuery({queryKey:['crm-pipelines',currentTenantId],queryFn:()=>pipelinesRepository.list(currentTenantId!),enabled:!!currentTenantId,retry:false});
-  const p=list.data?.find(x=>x.id===selected)??list.data?.[0]??null;
+  const teamOwners=useQuery({queryKey:['crm-pipeline-team-owners',currentTenantId,userId,crmRole],queryFn:()=>listTeamOwners(currentTenantId!),enabled:!!currentTenantId,retry:false});
+  const ownerName=(id:string|null)=>id?((teamOwners.isSuccess?teamOwners.data:[])?.find(member=>member.id===id)?.name??'Assigned team member'):'Unassigned';
+  const list=useQuery({queryKey:['crm-pipelines',currentTenantId,userId,crmRole],queryFn:()=>pipelinesRepository.list(currentTenantId!),enabled:!!currentTenantId,retry:false});
+  const p=list.isSuccess?((selected?list.data?.find(x=>x.id===selected):list.data?.[0])??null):null;
   const serverFilters:PipelineServerFilters={
     stageId:stageFilter||null,owner:ownerFilter,attention,userId:userId??null,
     searchText:settledSearchText,sortKey,
   };
   const {stages,fields,records,subjects,connected}=usePipeData(p,serverFilters);
   const globalMetrics=useQuery({
-    queryKey:['crm-manual-pipeline-metrics',p?.tenant_id,p?.id],
+    queryKey:['crm-manual-pipeline-metrics',p?.tenant_id,p?.id,userId,crmRole],
     queryFn:()=>getManualPipelineMetrics(p!),enabled:!!p&&p.source_mode==='manual',retry:false,
   });
-  const pipelineTotals=globalMetrics.data?pipelineMetricsTotals(globalMetrics.data):null;
-  const metricsByStage=new Map((globalMetrics.data??[]).map(row=>[row.stage_id,row.record_count]));
-  const rules=useQuery({queryKey:['pipeline-stage-rules',p?.id],queryFn:()=>pipelinesRepository.stageRules(p!),enabled:!!p&&p.source_mode==='manual',retry:false});
-  const saved=useQuery({queryKey:['pipeline-saved-views',p?.id,userId],queryFn:()=>pipelinesRepository.savedViews(p!,userId!),enabled:!!p&&!!userId,retry:false});
-  const sourceBinding=useQuery({queryKey:['pipeline-source-binding',p?.id],
+  const pipelineTotals=globalMetrics.isSuccess?pipelineMetricsTotals(globalMetrics.data):null;
+  const metricsByStage=new Map((globalMetrics.isSuccess?globalMetrics.data:[]).map(row=>[row.stage_id,row.record_count]));
+  const rules=useQuery({queryKey:['pipeline-stage-rules',p?.id,currentTenantId,userId,crmRole],queryFn:()=>pipelinesRepository.stageRules(p!),enabled:!!p&&p.source_mode==='manual',retry:false});
+  const saved=useQuery({queryKey:['pipeline-saved-views',p?.id,userId,currentTenantId,crmRole],queryFn:()=>pipelinesRepository.savedViews(p!,userId!),enabled:!!p&&!!userId,retry:false});
+  const sourceBinding=useQuery({queryKey:['pipeline-source-binding',p?.id,currentTenantId,userId,crmRole],
     queryFn:()=>getPipelineSourceKind(p!),enabled:!!p,retry:false});
-  const giving=useQuery({queryKey:['pipeline-donor-giving',p?.id,records.dataUpdatedAt],
+  const giving=useQuery({queryKey:['pipeline-donor-giving',p?.id,currentTenantId,userId,crmRole,records.dataUpdatedAt],
     queryFn:()=>donorValuesByContact(p!,[...new Set((records.data??[])
       .map(row=>row.contact_id).filter((id):id is string=>!!id))]),
     enabled:!!p&&sourceBinding.data==='donor_giving'&&!!records.data,retry:false});
-  const candidates=useQuery({queryKey:['pipeline-subject-picker',p?.id,findSubject],queryFn:()=>listPipelineSubjects(p!,findSubject),enabled:!!p&&p.source_mode==='manual',retry:false});
-  const relatedOrganizations=useQuery({queryKey:['pipeline-optional-organizations',currentTenantId],queryFn:()=>listAssociatedOrganizations(currentTenantId!),enabled:!!p&&p.source_mode==='manual'&&p.subject_type==='person'&&!!currentTenantId,retry:false});
+  const candidates=useQuery({queryKey:['pipeline-subject-picker',p?.id,findSubject,currentTenantId,userId,crmRole],queryFn:()=>listPipelineSubjects(p!,findSubject),enabled:!!p&&p.source_mode==='manual',retry:false});
+  const relatedOrganizations=useQuery({queryKey:['pipeline-optional-organizations',currentTenantId,userId,crmRole],queryFn:()=>listAssociatedOrganizations(currentTenantId!),enabled:!!p&&p.source_mode==='manual'&&p.subject_type==='person'&&!!currentTenantId,retry:false});
   const mutation=useMutation({
     mutationFn:async (fn:()=>Promise<unknown>)=>fn(),
     onSuccess:()=>qc.invalidateQueries({queryKey:['crm-pipelines']}),
@@ -140,6 +152,7 @@ export default function PipelineHubPage(){
       qc.invalidateQueries({queryKey:['pipeline-stages',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-fields',p?.id]}),
       qc.invalidateQueries({queryKey:['pipeline-records',p?.tenant_id,p?.id]}),
+      qc.invalidateQueries({queryKey:['relationship-pipeline-records',p?.tenant_id]}),
       qc.invalidateQueries({queryKey:['pipeline-card-subjects',p?.id]}),
       qc.invalidateQueries({queryKey:['crm-pipeline-record-history',p?.tenant_id,p?.id]}),
       qc.invalidateQueries({queryKey:['crm-manual-pipeline-metrics',p?.tenant_id,p?.id]}),
@@ -150,10 +163,10 @@ export default function PipelineHubPage(){
     catch(e){setActionError(e instanceof Error?e.message:'Action failed');}
   };
   const sorted=useMemo(()=>{
-    const originals=p?.source_mode==='connected'?(connected.data??[]):(records.data??[]);
+    const originals=p?.source_mode==='connected'?(connected.isSuccess?connected.data:[]):(records.isSuccess?records.data??[]:[]);
     const values=originals.map(row=>{
       if(p?.source_mode!=='manual'||!('contact_id' in row)||!row.contact_id)return row;
-      const donation=giving.data?.[row.contact_id];
+      const donation=giving.isSuccess?giving.data?.[row.contact_id]:undefined;
       return donation?{...row,field_values:{...row.field_values,...donation}}:row;
     });
     const safeSort=sortKey==='updated_at'||sortKey==='created_at'||sortKey==='next_action_due_at'
@@ -161,7 +174,7 @@ export default function PipelineHubPage(){
     if(p?.source_mode==='manual'&&
       (safeSort==='updated_at'||safeSort==='created_at'||safeSort==='next_action_due_at'))return values;
     return [...values].sort((a,b)=>comparePipelineRecords(a as CrmPipelineRecord,b as CrmPipelineRecord,safeSort));
-  },[p?.source_mode,p?.sort_field_keys,connected.data,records.data,giving.data,sortKey]);
+  },[p?.source_mode,p?.sort_field_keys,connected.data,connected.isSuccess,records.data,records.isSuccess,giving.data,giving.isSuccess,sortKey]);
   const labelOf=(r:(typeof sorted)[number])=>{
     if('displayName' in r&&typeof r.displayName==='string')return r.displayName;
     const manual=r as CrmPipelineRecord;
@@ -187,8 +200,16 @@ export default function PipelineHubPage(){
     acc[row.stage_id]=(acc[row.stage_id]??0)+1;
     return acc;
   },{});
-  const detailRecord=p?.source_mode==='manual'
-    ?(records.data??[]).find(record=>record.id===detailRecordId):undefined;
+  const detail=useQuery({
+    queryKey:['crm-pipeline-record-history',p?.tenant_id,p?.id,'record',detailRecordId,userId,crmRole],
+    queryFn:()=>pipelinesRepository.getRecord(p!,detailRecordId),
+    enabled:!!p&&p.source_mode==='manual'&&!!detailRecordId,retry:false,
+  });
+  const detailRecord=detail.isSuccess?detail.data??undefined:undefined;
+  const detailSubjects=useQuery({
+    queryKey:['pipeline-card-subjects',p?.id,'detail',detailRecordId,userId,crmRole,detail.dataUpdatedAt],
+    queryFn:()=>getPipelineCardSubjects(p!,[detailRecord!]),enabled:!!p&&!!detailRecord,retry:false,
+  });
   const visibleFields= p?cardFieldLabels(p,fields.data??[]):[];
   const sortOptions=p?availableSortFields(p,fields.data??[]):[];
   const missingCount=sorted.filter(r=>p?.subject_type==='organization'&&((p.source_mode==='connected'?(r as ConnectedPipelineCard).primaryContact:subjects.data?.[(r as CrmPipelineRecord).organization_id??'']?.primaryContact)==='Primary contact needs review')).length;
@@ -200,6 +221,7 @@ export default function PipelineHubPage(){
       <Button asChild variant="outline"><Link to="/crm/business-development/opportunities">Legacy BTY opportunities</Link></Button>
     </div>
     {list.isError&&<p role="alert" className="text-destructive">Cannot load pipelines: {list.error.message}</p>}
+    {selected&&list.isSuccess&&!p&&<p role="alert" className="text-destructive">The linked pipeline is unavailable or archived. <Button variant="link" onClick={()=>setSelected('')}>Choose an available pipeline</Button></p>}
     {actionError&&<p role="alert" className="rounded border border-destructive p-3 text-destructive">{actionError}</p>}
     <div className="flex flex-wrap items-end gap-3">
       <div className="min-w-[210px] space-y-1"><Label htmlFor="pipeline-choice">Pipeline</Label>
@@ -223,7 +245,7 @@ export default function PipelineHubPage(){
           setSelected(result.id);setNewName('');setTab('settings');
         })}>Create pipeline</Button>
       </CardContent></Card>}
-    {!p&&!list.isLoading&&<p className="rounded border p-4 text-muted-foreground">No pipelines configured yet. Create your first pipeline above. Existing records are not automatically converted.</p>}
+    {!p&&list.isSuccess&&!selected&&<p className="rounded border p-4 text-muted-foreground">No pipelines configured yet. Create your first pipeline above. Existing records are not automatically converted.</p>}
     {p&&tab==='settings'&&admin&&<section className="space-y-5">
       <Card><CardHeader><CardTitle>{p.name} · Settings</CardTitle><CardDescription>
         {p.subject_type==='organization'?'Organization name and its one global primary contact':'Person name'} always appear on every card; these cannot be removed.
@@ -411,15 +433,18 @@ export default function PipelineHubPage(){
         Search matches CRM names, global primary contacts, next actions and custom fields.
         Built-in date sorting spans the full manual pipeline; custom-field sorts and displayed counts reflect loaded matches. Load more to see additional matches.
       </p>}
+      {p.source_mode==='manual'&&detailRecordId&&detail.isPending&&<p role="status">Loading linked record…</p>}
+      {p.source_mode==='manual'&&detailRecordId&&detail.isError&&<p role="alert" className="text-destructive">Could not load this pipeline record. <Button variant="link" onClick={()=>void detail.refetch()}>Retry</Button></p>}
+      {p.source_mode==='manual'&&detailRecordId&&detail.isSuccess&&!detailRecord&&<p role="alert">Record not found in this pipeline or unavailable with your permissions.</p>}
       {p.source_mode==='manual'&&detailRecord&&<PipelineRecordDetails
         key={p.id+':'+detailRecord.id} pipeline={p} record={detailRecord} stages={stages.data??[]}
-        subjectName={subjects.data?.[(p.subject_type==='person'?detailRecord.contact_id:detailRecord.organization_id)??'']?.label??'CRM record'}
+        subjectName={detailSubjects.data?.[(p.subject_type==='person'?detailRecord.contact_id:detailRecord.organization_id)??'']?.label??'CRM record'}
         ownerName={ownerName(detailRecord.owner_profile_id)} onClose={()=>setDetailRecordId('')}/>}
       {missingCount>0&&<p role="alert" className="text-destructive">{missingCount} organizations need primary-contact review.</p>}
       {sourceBinding.isError&&<p role="alert" className="text-destructive">Source binding unavailable: {sourceBinding.error.message}</p>}
-      {giving.isError&&<p role="alert" className="text-destructive">Verified donation enrichment could not be loaded: {giving.error.message}</p>}
+      {giving.isError&&<p role="alert" className="text-destructive">Donor aggregates could not be loaded: {giving.error.message}</p>}
       {sourceBinding.data==='donor_giving'&&<p className="rounded border p-3 text-sm">
-        Donor relationship stages remain manually managed. Verified giving totals, donor type and last donation are read live from your existing donor database when a donor is linked to the CRM person; temporary test donors are excluded.
+        Donor relationship stages remain manually managed. Existing donor aggregates appear only for explicitly linked contacts; temporary test donors are excluded. Payment reconciliation and recurring status review remain pending. Amounts have no currency attribution and must not be used as reconciled financial totals.
       </p>}
       {p.source_mode==='manual'&&capabilities.mutate&&(stages.data?.length??0)>0&&<Card><CardContent className="grid gap-2 pt-4 md:grid-cols-[1fr_2fr_auto]">
         <Input aria-label="Find CRM person or organization" placeholder="Search existing CRM records" value={findSubject} onChange={e=>{setFindSubject(e.target.value);setEnrollId('');}}/>
@@ -498,6 +523,7 @@ export default function PipelineHubPage(){
               {p.subject_type==='organization'&&<td className="p-3">{contact}</td>}
               <td className="p-3 space-y-2">
                 <span>{stages.data?.find(stage=>stage.id===row.stage_id)?.name??'Unknown stage'}</span>
+                {source&&<ApplicantHandoffSummary card={source}/>}
                 {source&&['relationship_opportunities','provider_applicants'].includes(p.source_key??'')&&capabilities.mutate&&
                   <ConnectedStageEditor key={source.id+':list:'+source.sourceVersion}
                     pipeline={p} card={source} stages={stages.data??[]} busy={busy} save={act}/>}
@@ -541,6 +567,7 @@ export default function PipelineHubPage(){
                 {source?.sourceUrl&&(source.sourceUrl.startsWith("https://")
                   ?<a href={source.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline">Open source workspace</a>
                   :<Link to={source.sourceUrl} className="text-xs underline">Open source record</Link>)}
+                {source&&<ApplicantHandoffSummary card={source}/>}
                 {visibleFields.map(f=><p key={f.id} className="text-sm">{f.label}: {String(record.field_values[f.field_key]??'—')}</p>)}
                 {(manual||source?.sourceKind==='therapist_prospect')&&<p className="text-xs text-muted-foreground">
                    Assigned owner: {ownerName(manual?.owner_profile_id??source?.owner_profile_id??null)}

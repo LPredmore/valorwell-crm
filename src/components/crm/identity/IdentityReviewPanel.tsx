@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,44 +24,61 @@ const domainLabels: Record<IdentitySourceDomain, string> = {
 };
 
 export function IdentityReviewPanel({ contact }: { contact: RelationshipContactRecord }) {
-  const { crmRole, capabilities, currentTenantId } = useCrmAuth();
+  const { currentTenantId, userId, crmRole } = useCrmAuth();
+  return <IdentityReviewWorkspace key={`${currentTenantId}:${userId}:${crmRole}:${contact.id}`} contact={contact} />;
+}
+
+function IdentityReviewWorkspace({ contact }: { contact: RelationshipContactRecord }) {
+  const { crmRole, capabilities, currentTenantId, userId } = useCrmAuth();
   const canEdit = capabilities.mutate;
   const admin = crmRole === 'crm_admin';
   const queryClient = useQueryClient();
-  const key = ['identity-reviews', currentTenantId, contact.id];
+  const scope = { tenantId: currentTenantId ?? '', userId };
+  const enabled = !!currentTenantId && !!userId && contact.tenantId === currentTenantId && contact.kind === 'person';
+  const key = ['identity-reviews', currentTenantId, userId, crmRole, contact.id];
+  const eventKey = ['identity-review-events', currentTenantId, userId, crmRole, contact.id];
   const suggestions = useQuery({
-    queryKey: ['identity-suggestions', currentTenantId, contact.id, contact.email, contact.phone],
-    queryFn: () => identityReviewsRepository.findSuggestions(contact),
-    enabled: !!currentTenantId && contact.kind === 'person',
+    queryKey: ['identity-suggestions', currentTenantId, userId, crmRole, contact.id, contact.email, contact.phone],
+    queryFn: () => identityReviewsRepository.findSuggestions(contact, scope),
+    enabled,
     retry: false,
   });
-  const reviewed = useQuery({
+  const reviewed = useInfiniteQuery({
     queryKey: key,
-    queryFn: () => identityReviewsRepository.listForContact(contact.id),
-    enabled: !!currentTenantId && contact.kind === 'person',
+    queryFn: ({ pageParam }) => identityReviewsRepository.listForContact(contact.id, scope, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset,
+    enabled,
+    retry: false,
+  });
+  const events = useInfiniteQuery({
+    queryKey: eventKey,
+    queryFn: ({ pageParam }) => identityReviewsRepository.listEventsForContact(contact.id, scope, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset,
+    enabled: enabled && reviewed.isSuccess,
     retry: false,
   });
   const [domain, setDomain] = useState<IdentitySourceDomain>('relationship_contact');
   const [recordId, setRecordId] = useState('');
   const [note, setNote] = useState('');
-  const [prospectAttribution, setProspectAttribution] = useState('');
-  const [attributionReason, setAttributionReason] = useState('');
 
   const save = useMutation({
     mutationFn: (input: { targetId: string; domain: IdentitySourceDomain; decision: IdentityDecision; basis: MatchBasis; note?: string }) =>
-      identityReviewsRepository.decide({ contactId: contact.id, ...input }),
+      identityReviewsRepository.decide({ contactId: contact.id, ...input }, scope),
     onSuccess: async () => {
       setRecordId('');
-      await queryClient.invalidateQueries({ queryKey: key });
+      setNote('');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['identity-reviews', currentTenantId, userId] }),
+        queryClient.invalidateQueries({ queryKey: ['identity-review-events', currentTenantId, userId] }),
+      ]);
     },
   });
-  const attribute = useMutation({
-    mutationFn: () => identityReviewsRepository.attributeProspect(prospectAttribution.trim(), attributionReason),
-    onSuccess: () => { setProspectAttribution(''); setAttributionReason(''); },
-  });
-
-  if (contact.kind !== 'person') return null;
-  const saved = reviewed.data ?? [];
+  if (!enabled) return null;
+  const saved = reviewed.data?.pages.flatMap(page => page.items) ?? [];
+  const history = events.data?.pages.flatMap(page => page.items) ?? [];
+  const canReview = canEdit && reviewed.isSuccess && !reviewed.isFetching;
   const isUndeployed = reviewed.error instanceof IdentityReviewNotDeployedError;
 
   return (
@@ -77,7 +94,7 @@ export function IdentityReviewPanel({ contact }: { contact: RelationshipContactR
         {isUndeployed && (
           <p className="rounded border p-3 text-sm text-muted-foreground" role="status">
             Identity review storage is not deployed. Candidate discovery remains read-only;
-            approvals are unavailable until the database migration is verified.
+            approvals are currently unavailable.
           </p>
         )}
         {reviewed.isError && !isUndeployed && (
@@ -89,7 +106,7 @@ export function IdentityReviewPanel({ contact }: { contact: RelationshipContactR
           <h3 className="font-medium">Potential duplicate contacts</h3>
           {suggestions.isLoading && <p className="text-sm text-muted-foreground">Checking this tenant's relationship contacts…</p>}
           {suggestions.isError && <p role="alert" className="text-sm text-destructive">Could not check candidates.</p>}
-          {suggestions.data?.length === 0 && <p className="text-sm text-muted-foreground">No exact email or US phone matches found. No records were merged.</p>}
+          {suggestions.data?.length === 0 && <p className="text-sm text-muted-foreground">No candidates were found in the limited email/US phone search. Other matches may exist.</p>}
           {(suggestions.data ?? []).map((candidate) => {
             const decision = saved.find((review) =>
               review.linkedDomain === 'relationship_contact'
@@ -106,7 +123,7 @@ export function IdentityReviewPanel({ contact }: { contact: RelationshipContactR
                   {candidate.ambiguous && <Badge variant="outline">Shared contact detail possible — review required</Badge>}
                   {decision && <Badge variant="secondary">Reviewed: {decision.decision}</Badge>}
                 </div>
-                {canEdit && !reviewed.isError && (
+                {canReview && (
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" disabled={save.isPending}
                       onClick={() => save.mutate({
@@ -129,7 +146,8 @@ export function IdentityReviewPanel({ contact }: { contact: RelationshipContactR
 
         <section className="space-y-2" aria-label="Reviewed identity links">
           <h3 className="font-medium">Reviewed source links</h3>
-          {saved.length === 0 && !reviewed.isLoading && <p className="text-sm text-muted-foreground">No confirmed or rejected links recorded.</p>}
+          {reviewed.isLoading && <p role="status" className="text-sm text-muted-foreground">Loading reviewed links…</p>}
+          {saved.length === 0 && reviewed.isSuccess && <p className="text-sm text-muted-foreground">No confirmed or rejected links recorded.</p>}
           {saved.map((review) => {
             const otherId = review.linkedDomain === 'relationship_contact' && review.linkedRecordId === contact.id
               ? review.contactId : review.linkedRecordId;
@@ -145,7 +163,28 @@ export function IdentityReviewPanel({ contact }: { contact: RelationshipContactR
           })}
         </section>
 
-        {canEdit && !reviewed.isError && <section className="space-y-3 border-t pt-4" aria-label="Manually review a source record">
+        {reviewed.hasNextPage && <Button variant="outline" disabled={reviewed.isFetchingNextPage}
+          onClick={() => void reviewed.fetchNextPage()}>{reviewed.isFetchingNextPage ? 'Loading…' : 'Load more source links'}</Button>}
+
+        <section className="space-y-2 border-t pt-4" aria-label="Identity decision history">
+          <h3 className="font-medium">Decision history</h3>
+          {events.isLoading && <p role="status" className="text-sm text-muted-foreground">Loading review history…</p>}
+          {events.isError && <p role="alert" className="text-sm text-destructive">Review history could not be loaded.</p>}
+          {events.isSuccess && history.length === 0 && <p className="text-sm text-muted-foreground">No review events recorded.</p>}
+          {history.map(event => <div key={event.id} className="space-y-1 rounded border p-3 text-sm">
+            <p>{event.previousDecision ?? 'Unreviewed'} → {event.nextDecision} · {new Date(event.changedAt).toLocaleString()}</p>
+            <p className="break-all text-xs text-muted-foreground">Review {event.reviewId} · Reviewer {event.actorId}</p>
+            <p className="text-xs text-muted-foreground">Basis: {event.previousBasis ?? '—'} → {event.nextBasis ?? 'Historical evidence unavailable'}</p>
+            {event.previousNote && <p className="break-words text-xs text-muted-foreground">Previous evidence: {event.previousNote}</p>}
+            {event.nextNote && <p className="break-words text-xs">Evidence: {event.nextNote}</p>}
+          </div>)}
+          {events.hasNextPage && <Button variant="outline" disabled={events.isFetchingNextPage}
+            onClick={() => void events.fetchNextPage()}>{events.isFetchingNextPage ? 'Loading…' : 'Load more history'}</Button>}
+        </section>
+        {save.isError && <p role="alert" className="text-sm text-destructive">{save.error instanceof Error ? save.error.message : 'Could not record decision'}</p>}
+        {save.isSuccess && <p role="status" className="text-sm">Review decision recorded.</p>}
+
+        {canReview && <section className="space-y-3 border-t pt-4" aria-label="Manually review a source record">
           <h3 className="font-medium">Link an existing source record</h3>
           <p className="text-xs text-muted-foreground">
             Enter a UUID from a source you already have permission to access. Source-specific
@@ -160,7 +199,7 @@ export function IdentityReviewPanel({ contact }: { contact: RelationshipContactR
                   <SelectItem value="relationship_contact">Relationship contact</SelectItem>
                   <SelectItem value="bty_opportunity">BTY opportunity</SelectItem>
                   {admin && <SelectItem value="provider_applicant">Therapist application</SelectItem>}
-                  {admin && <SelectItem value="therapist_prospect">Therapist prospect (attribution required)</SelectItem>}
+                  {admin && <SelectItem value="therapist_prospect">Therapist prospect</SelectItem>}
                   {admin && <SelectItem value="client">Client intake (clinical approval required)</SelectItem>}
                 </SelectContent>
               </Select>
@@ -176,7 +215,6 @@ export function IdentityReviewPanel({ contact }: { contact: RelationshipContactR
             <Input id="identity-note" value={note} maxLength={2000} onChange={(event) => setNote(event.target.value)}
               placeholder="How was this relationship independently confirmed?" />
           </div>
-          {save.isError && <p role="alert" className="text-sm text-destructive">{save.error instanceof Error ? save.error.message : 'Could not record decision'}</p>}
           <div className="flex gap-2">
             <Button disabled={save.isPending || !recordId.trim() || note.trim().length < 8}
               onClick={() => save.mutate({ targetId: recordId.trim(), domain, decision: 'linked', basis: 'manual', note })}>
@@ -189,18 +227,6 @@ export function IdentityReviewPanel({ contact }: { contact: RelationshipContactR
           </div>
         </section>}
 
-        {admin && canEdit && !reviewed.isError && <section className="space-y-3 border-t pt-4" aria-label="Attribute an unscoped therapist prospect">
-          <h3 className="font-medium">Verify therapist prospect ownership</h3>
-          <p className="text-xs text-muted-foreground">Older therapist prospects have no tenant ID. Explicitly verify and attribute one prospect before linking it. Attribution is immutable and never runs automatically.</p>
-          <Label htmlFor="prospect-identity-id">Prospect UUID</Label>
-          <Input id="prospect-identity-id" value={prospectAttribution} onChange={(event) => setProspectAttribution(event.target.value)} />
-          <Label htmlFor="prospect-identity-reason">Source verification evidence</Label>
-          <Input id="prospect-identity-reason" value={attributionReason} onChange={(event) => setAttributionReason(event.target.value)} />
-          {attribute.isError && <p role="alert" className="text-sm text-destructive">{attribute.error instanceof Error ? attribute.error.message : 'Prospect could not be attributed'}</p>}
-          {attribute.isSuccess && <p role="status" className="text-sm">Prospect ownership verified and recorded.</p>}
-          <Button variant="outline" disabled={attribute.isPending || !prospectAttribution.trim() || attributionReason.trim().length < 8}
-            onClick={() => attribute.mutate()}>Verify prospect tenancy</Button>
-        </section>}
       </CardContent>
     </Card>
   );

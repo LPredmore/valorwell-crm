@@ -14,9 +14,9 @@ export function SafeExternalLink({ href, children }: { href: string; children: R
   return <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"><span>{children}</span><ExternalLink aria-hidden className="h-3.5 w-3.5" /></a>;
 }
 
-export function RelationshipPagination({ page, pageSize, total, onPageChange }: { page: number; pageSize: number; total: number; onPageChange: (page: number) => void }) {
+export function RelationshipPagination({ page, pageSize, total, onPageChange, disabled = false }: { disabled?: boolean; page: number; pageSize: number; total: number; onPageChange: (page: number) => void }) {
   const lastPage = Math.max(1, Math.ceil(total / pageSize));
-  return <div className="flex items-center justify-between gap-3" aria-label="Pagination"><p className="text-sm text-muted-foreground">Page {page} of {lastPage}</p><div className="flex gap-2"><Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Previous</Button><Button variant="outline" size="sm" disabled={page >= lastPage} onClick={() => onPageChange(page + 1)}>Next</Button></div></div>;
+  return <div className="flex items-center justify-between gap-3" aria-label="Pagination"><p className="text-sm text-muted-foreground">Page {page} of {lastPage}</p><div className="flex gap-2"><Button variant="outline" size="sm" disabled={disabled || page <= 1} onClick={() => onPageChange(page - 1)}>Previous</Button><Button variant="outline" size="sm" disabled={disabled || page >= lastPage} onClick={() => onPageChange(page + 1)}>Next</Button></div></div>;
 }
 
 export function ConfirmRelationshipAction({ triggerLabel, title, description, confirmLabel, onConfirm }: { triggerLabel: string; title: string; description: string; confirmLabel: string; onConfirm: () => void }) {

@@ -1,3 +1,5 @@
+import { RelationshipPipelinePanel } from '@/components/crm/relationships/RelationshipPipelinePanel';
+import { directoryReturnSearch } from '@/domain/relationships/directory-url';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { RelationshipOwnerName } from '@/components/crm/relationships/RelationshipOwnerField';
 import { RelationshipTimelinePanel } from '@/components/crm/relationships/RelationshipTimelinePanel';
@@ -5,7 +7,7 @@ import { RelationshipTasksPanel } from '@/components/crm/relationships/Relations
 import { ContactProfileEditor } from '@/components/crm/identity/ContactProfileEditor';
 import { IdentityReviewPanel } from '@/components/crm/identity/IdentityReviewPanel';
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,15 +20,22 @@ import { useRelationshipCapability } from '@/hooks/relationships/useRelationship
 import { dataProvider } from '@/services/dataProvider';
 
 export default function ContactDetailPage() {
+  const {id}=useParams();
+  const {currentTenantId,userId,crmRole}=useCrmAuth();
+  return <ContactDetailWorkspace key={`${currentTenantId}:${userId}:${crmRole}:${id}`}/>;
+}
+function ContactDetailWorkspace() {
   const { id } = useParams();
-  const { currentTenantId, userId } = useCrmAuth();
+  const [searchParams] = useSearchParams();
+  const directorySearch = directoryReturnSearch(searchParams);
+  const { currentTenantId, userId, crmRole } = useCrmAuth();
   const contacts = useRelationshipCapability('contacts');
   const organizations = useRelationshipCapability('organizations');
   const contactAvailable = contacts.capability?.available === true;
   const organizationsAvailable = organizations.capability?.available === true;
 
   const contact = useQuery({
-    queryKey: ['relationship-contact', currentTenantId, userId, id],
+    queryKey: ['relationship-contact', currentTenantId, userId, crmRole, id],
     queryFn: () => dataProvider.relationships.getContact(id!),
     enabled: contactAvailable && Boolean(currentTenantId) && Boolean(id),
     retry: false,
@@ -34,7 +43,7 @@ export default function ContactDetailPage() {
 
   const organizationQueries = useQueries({
     queries: (contact.data?.affiliations ?? []).map((affiliation) => ({
-      queryKey: ['relationship-organization', currentTenantId, userId, affiliation.organizationId],
+      queryKey: ['relationship-organization', currentTenantId, userId, crmRole, affiliation.organizationId],
       queryFn: () => dataProvider.relationships.getOrganization(affiliation.organizationId),
       enabled: organizationsAvailable && Boolean(currentTenantId),
       retry: false,
@@ -54,7 +63,7 @@ export default function ContactDetailPage() {
           <h1 className="text-3xl font-bold tracking-tight">{contact.data?.displayName ?? 'Contact detail'}</h1>
           <p className="mt-2 text-muted-foreground">Non-clinical relationship contact stored separately from client records.</p>
         </div>
-        <Button asChild variant="outline"><Link to="/crm/business-development/contacts">Back to contacts</Link></Button>
+        <Button asChild variant="outline"><Link to={`/crm/business-development/contacts${directorySearch}`}>Back to contacts</Link></Button>
       </div>
 
       <RelationshipCapabilityState state={contacts.capability} isLoading={contacts.isLoading} isError={contacts.isError} onRetry={() => { void contacts.refetch(); }} />
@@ -83,6 +92,7 @@ export default function ContactDetailPage() {
 
       {contact.data && <RelationshipTimelinePanel subject={{ contactId: contact.data.id }} />}
       {contact.data && <RelationshipTasksPanel subject={{ contactId: contact.data.id }} />}
+      {contact.data && <RelationshipPipelinePanel subject={{ contactId: contact.data.id }} />}
 
       {contact.data && <ContactProfileEditor contact={contact.data} />}
       {contact.data && <IdentityReviewPanel contact={contact.data} />}

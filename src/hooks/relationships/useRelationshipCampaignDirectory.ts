@@ -1,3 +1,4 @@
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { dataProvider } from '@/services/dataProvider';
@@ -52,10 +53,11 @@ export function useRelationshipCampaignDirectoryFilters() {
 }
 
 export function useRelationshipCampaignDirectory(filters: RelationshipCampaignFilters, enabled: boolean) {
+  const { currentTenantId, userId, crmRole, isAuthenticated } = useCrmAuth();
   return useQuery({
-    queryKey: ['relationship-campaigns', filters],
+    queryKey: ['relationship-campaigns', currentTenantId, userId, crmRole, filters],
     queryFn: () => dataProvider.relationships.listCampaigns(filters),
-    enabled,
+    enabled: enabled && isAuthenticated && Boolean(currentTenantId),
     retry: false,
   });
 }

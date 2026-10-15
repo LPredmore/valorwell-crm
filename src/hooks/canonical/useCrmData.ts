@@ -1,3 +1,4 @@
+import { requireCrmOperatorScope } from '@/repositories/crmOperatorScope';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dataProvider } from '@/services/dataProvider';
 import type { ListTasksQuery } from '@/repositories/types';
@@ -35,14 +36,14 @@ export function buildCanonicalTaskListQuery(
 }
 
 export function useTasks(q: ListTasksQuery = {}) {
-  const { currentTenantId, userId, isAuthenticated, isLoading } = useCrmAuth();
+  const { currentTenantId, userId, crmRole, isAuthenticated, isLoading } = useCrmAuth();
   const taskQuery = buildCanonicalTaskListQuery(q, {
     tenantId: currentTenantId,
     profileId: userId,
   });
 
   return useQuery({
-    queryKey: taskKeys.list(taskQuery ?? q),
+    queryKey: [...taskKeys.list(taskQuery ?? q),crmRole],
     queryFn: () => {
       if (!taskQuery) throw new Error('Task query requires an authenticated CRM operating context');
       return dataProvider.tasks.list(taskQuery);
@@ -58,7 +59,10 @@ export function useTaskMutations() {
     if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
     return currentTenantId;
   };
-  const invalidate = () => qc.invalidateQueries({ queryKey: taskKeys.all });
+  const invalidate = () => Promise.all([
+    qc.invalidateQueries({ queryKey: taskKeys.all }),
+    qc.invalidateQueries({ queryKey: ['relationship-tasks'] }),
+  ]);
   return {
     create: useMutation({ mutationFn: (input: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt'>) => dataProvider.tasks.create(tenantId(), input), onSuccess: invalidate }),
     update: useMutation({ mutationFn: (p: { id: string; patch: Partial<CrmTask> }) => dataProvider.tasks.update(tenantId(), p.id, p.patch), onSuccess: invalidate }),
@@ -70,30 +74,33 @@ export function useTaskMutations() {
 }
 
 export function useExceptions() {
-  const { currentTenantId, isAuthenticated, isLoading } = useCrmAuth();
+  const { currentTenantId, userId, crmRole, isAuthenticated, isLoading } = useCrmAuth();
   return useQuery({
-    queryKey: ['crm-exceptions', currentTenantId],
+    queryKey: ['crm-exceptions', currentTenantId, userId, crmRole],
     queryFn: () => {
       if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
       return dataProvider.exceptions.list(currentTenantId);
     },
     enabled: !isLoading && isAuthenticated && !!currentTenantId,
+    retry: false,
   });
 }
 
 export function useExceptionMutations() {
   const qc = useQueryClient();
-  const { currentTenantId } = useCrmAuth();
-  const tenantId = () => {
-    if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
-    return currentTenantId;
+  const { currentTenantId, userId, isAuthenticated, isLoading, capabilities } = useCrmAuth();
+  const tenantId = async () => {
+    if (isLoading || !isAuthenticated || !currentTenantId || !capabilities.mutate) throw new Error('CRM exception mutation access is required');
+    const scope = await requireCrmOperatorScope({ tenantId: currentTenantId, userId });
+    if (!scope.canMutate) throw new Error('CRM exception mutation access is required');
+    return scope.tenantId;
   };
   const invalidate = () => qc.invalidateQueries({ queryKey: ['crm-exceptions'] });
   return {
-    resolve: useMutation({ mutationFn: (p: { id: string; note?: string }) => dataProvider.exceptions.resolve(tenantId(), p.id, p.note), onSuccess: invalidate }),
-    dismiss: useMutation({ mutationFn: (p: { id: string; note?: string }) => dataProvider.exceptions.dismiss(tenantId(), p.id, p.note), onSuccess: invalidate }),
-    reassign: useMutation({ mutationFn: (p: { id: string; ownerId: string }) => dataProvider.exceptions.reassign(tenantId(), p.id, p.ownerId), onSuccess: invalidate }),
-    createTask: useMutation({ mutationFn: (id: string) => dataProvider.exceptions.createTaskFromException(tenantId(), id), onSuccess: () => { invalidate(); qc.invalidateQueries({ queryKey: ['crm-tasks'] }); } }),
+    resolve: useMutation({ mutationFn: async (p: { id: string; note?: string }) => dataProvider.exceptions.resolve(await tenantId(), p.id, p.note), onSuccess: invalidate }),
+    dismiss: useMutation({ mutationFn: async (p: { id: string; note?: string }) => dataProvider.exceptions.dismiss(await tenantId(), p.id, p.note), onSuccess: invalidate }),
+    reassign: useMutation({ mutationFn: async (p: { id: string; ownerId: string }) => dataProvider.exceptions.reassign(await tenantId(), p.id, p.ownerId), onSuccess: invalidate }),
+    createTask: useMutation({ mutationFn: async (id: string) => dataProvider.exceptions.createTaskFromException(await tenantId(), id), onSuccess: () => { invalidate(); qc.invalidateQueries({ queryKey: ['crm-tasks'] }); } }),
   };
 }
 
@@ -126,9 +133,9 @@ export function useEnrollments(campaignId?: string) {
 }
 
 export function useStaffList() {
-  const { currentTenantId, isAuthenticated, isLoading } = useCrmAuth();
+  const { currentTenantId, userId, crmRole, isAuthenticated, isLoading } = useCrmAuth();
   return useQuery({
-    queryKey: ['crm-staff', currentTenantId],
+    queryKey: ['crm-staff', currentTenantId,userId,crmRole],
     queryFn: () => {
       if (!currentTenantId) throw new Error('Current CRM operating tenant is required');
       return dataProvider.staff.list(currentTenantId);

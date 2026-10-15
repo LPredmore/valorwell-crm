@@ -10,6 +10,7 @@ import RelationshipUnsubscribePage from "./pages/RelationshipUnsubscribePage";
 import NewsletterUnsubscribePage from "./pages/NewsletterUnsubscribePage";
 import { CrmLayout } from "./components/crm/layout/CrmLayout";
 import { CrmLegacyRouteRedirect } from "./components/crm/layout/CrmLegacyRouteRedirect";
+import WorkspaceDashboardPage from "./pages/crm/WorkspaceDashboardPage";
 import CrmIndex from "./pages/crm/Index";
 import CrmSettings from "./pages/crm/Settings";
 import EmailStudioPage from "./pages/crm/EmailStudioPage";
@@ -28,6 +29,7 @@ import ContactDetailPage from "./pages/crm/business-development/ContactDetailPag
 import OpportunityDirectoryPage from "./pages/crm/business-development/OpportunityDirectoryPage";
 import PipelineHubPage from "./pages/crm/pipelines/PipelineHubPage";
 import TherapistProspectsPage from "./pages/crm/recruitment/TherapistProspectsPage";
+import ApplicantHandoffPage from "./pages/crm/recruitment/ApplicantHandoffPage";
 import RecruitmentCampaignPrepPage from "./pages/crm/recruitment/RecruitmentCampaignPrepPage";
 import OpportunityDetailPage from "./pages/crm/business-development/OpportunityDetailPage";
 import RelationshipImportPage from "./pages/crm/business-development/RelationshipImportPage";
@@ -39,6 +41,7 @@ import RelationshipOrchestrationPage from "./pages/crm/business-development/Rela
 import RelationshipReconciliationPage from "./pages/crm/business-development/RelationshipReconciliationPage";
 import BtyAutomationPage from "./pages/crm/business-development/BtyAutomationPage";
 import BtySchedulingActivityPage from "./pages/crm/business-development/BtySchedulingActivityPage";
+import CommunicationsHubPage from "./pages/crm/CommunicationsHubPage";
 import CommunicationsControlPlanePage from "./pages/crm/CommunicationsControlPlanePage";
 import NewsletterManagementPage from "./pages/crm/NewsletterManagementPage";
 import CampaignManagementPage from "./pages/crm/CampaignManagementPage";
@@ -85,6 +88,7 @@ const App = () => (
           </Route>
           <Route path="/crm" element={<CrmLayout />}>
             <Route index element={<CrmIndex />} />
+            <Route path="workspace" element={<WorkspaceDashboardPage />} />
             <Route path="clients" element={<CanonicalClients />} />
             <Route path="clients/:id" element={<CanonicalClientDetail />} />
             <Route path="staff" element={<CanonicalStaff />} />
@@ -92,6 +96,7 @@ const App = () => (
             <Route path="campaigns/:id" element={<CanonicalCampaignDetail />} />
             <Route path="campaigns/:id/edit" element={<CrmCampaignEditor />} />
             <Route path="campaigns/:id/enrollments" element={<CrmCampaignEnrollments />} />
+            <Route path="communications" element={<CommunicationsHubPage />} />
             <Route path="communications/campaigns" element={<CampaignManagementPage />} />
             <Route path="communications/newsletters" element={<NewsletterManagementPage />} />
             <Route path="communications/observability" element={<CommunicationsObservabilityPage />} />
@@ -123,6 +128,7 @@ const App = () => (
             <Route path="business-development/opportunities" element={<OpportunityDirectoryPage />} />
             <Route path="pipelines" element={<PipelineHubPage />} />
              <Route path="recruitment/prospects" element={<TherapistProspectsPage />} />
+             <Route path="recruitment/applicants" element={<ApplicantHandoffPage />} />
              <Route path="recruitment/sequences" element={<RecruitmentCampaignPrepPage />} />
              <Route path="recruitment/prospects/:id" element={<TherapistProspectsPage />} />
             <Route path="business-development/opportunities/:id" element={<OpportunityDetailPage />} />

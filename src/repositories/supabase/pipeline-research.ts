@@ -13,28 +13,61 @@ export async function getPipelineSourceKind(p:CrmPipeline):Promise<PipelineSourc
   if(error)throw new Error(error.message);
   return (data as {source_kind:PipelineSourceKind}|null)?.source_kind??null;
 }
+export interface ResearchPageOptions { page?:number; pageSize?:number; search?:string; view?:'unlinked'|'linked'|'all' }
 export async function listPipelineResearch(p:CrmPipeline,kind:PipelineSourceKind):Promise<ResearchCandidate[]>{
-  if(p.subject_type!=='organization'||kind==='donor_giving')return [];
+  return (await listPipelineResearchPage(p,kind,{pageSize:250,view:'all'})).items;
+}
+export async function listPipelineResearchSummary(p:CrmPipeline,kind:Exclude<PipelineSourceKind,'donor_giving'>){
+  const table=kind==='institutional_recruiting'?'relationship_institutional_recruiting_targets':'crm_va_vaccn_referral_contacts';
+  const [total,linked]=await Promise.all([
+    supabase.from(table).select('id',{count:'exact',head:true}).eq('tenant_id',p.tenant_id),
+    supabase.from(table).select('id',{count:'exact',head:true}).eq('tenant_id',p.tenant_id).not('relationship_organization_id','is',null),
+  ]);
+  if(total.error)throw new Error(total.error.message);
+  if(linked.error)throw new Error(linked.error.message);
+  return {total:total.count??0,linked:linked.count??0};
+}
+export async function listPipelineResearchPage(p:CrmPipeline,kind:PipelineSourceKind,options:ResearchPageOptions={}){
+  const page=options.page??1,pageSize=options.pageSize??25;
+  if(!Number.isSafeInteger(page)||page<1||!Number.isSafeInteger(pageSize)||pageSize<1||pageSize>250)
+    throw new Error('Invalid research page.');
+  const empty={items:[] as ResearchCandidate[],total:0,page,pageSize};
+  if(p.subject_type!=='organization'||kind==='donor_giving')return empty;
+  const from=(page-1)*pageSize;
+  // A restricted literal search cannot add PostgREST filter syntax or wildcards.
+  const search=(options.search??'').slice(0,200).replace(/[^\p{L}\p{N}\s@.+-]/gu,' ').trim();
   if(kind==='institutional_recruiting'){
-    const {data,error}=await supabase.from('relationship_institutional_recruiting_targets')
-      .select('id,organization_name,state_code,contact_name,contact_email,contact_title,specific_office,relationship_organization_id,website')
-      .eq('tenant_id',p.tenant_id).order('organization_name').limit(250);
+    let query=supabase.from('relationship_institutional_recruiting_targets')
+      .select('id,organization_name,state_code,contact_name,contact_email,contact_title,specific_office,relationship_organization_id,website',{count:'exact'})
+      .eq('tenant_id',p.tenant_id);
+    if(options.view==='unlinked')query=query.is('relationship_organization_id',null);
+    if(options.view==='linked')query=query.not('relationship_organization_id','is',null);
+    if(search)query=query.or(['organization_name','state_code','contact_name','contact_email']
+      .map(column=>`${column}.ilike.%${search}%`).join(','));
+    const {data,error,count}=await query.order('organization_name').order('id').range(from,from+pageSize-1);
     if(error)throw new Error(error.message);
-    return (data??[]).map(x=>({id:x.id,name:x.organization_name,state:x.state_code,
+    const items:ResearchCandidate[]=(data??[]).map(x=>({id:x.id,name:x.organization_name,state:x.state_code,
       sourceContact:x.contact_name??'',sourceEmail:x.contact_email??'',
       sourceRole:x.contact_title??'',detail:x.specific_office??'',
       linkedOrganizationId:x.relationship_organization_id,website:x.website}));
+    return {items,total:count??0,page,pageSize};
   }
-  const {data,error}=await supabase.from('crm_va_vaccn_referral_contacts')
-    .select('id,facility_name,station_number,state,visn,contact_name,email,contact_role,department,relationship_organization_id')
-    .eq('tenant_id',p.tenant_id).order('facility_name').limit(250);
+  let query=supabase.from('crm_va_vaccn_referral_contacts')
+    .select('id,facility_name,station_number,state,visn,contact_name,email,contact_role,department,relationship_organization_id',{count:'exact'})
+    .eq('tenant_id',p.tenant_id);
+  if(options.view==='unlinked')query=query.is('relationship_organization_id',null);
+  if(options.view==='linked')query=query.not('relationship_organization_id','is',null);
+  if(search)query=query.or(['facility_name','state','contact_name','email','station_number']
+    .map(column=>`${column}.ilike.%${search}%`).join(','));
+  const {data,error,count}=await query.order('facility_name').order('id').range(from,from+pageSize-1);
   if(error)throw new Error(error.message);
   type VaSourceRow={id:string;facility_name:string;state:string|null;contact_name:string|null;email:string|null;contact_role:string|null;station_number:string|null;visn:number|null;department:string|null;relationship_organization_id:string|null};
   const rows=(data??[]) as unknown as VaSourceRow[];
-  return rows.map(x=>({id:x.id,name:x.facility_name,state:x.state??'',
+  const items:ResearchCandidate[]=rows.map(x=>({id:x.id,name:x.facility_name,state:x.state??'',
     sourceContact:x.contact_name??'',sourceEmail:x.email??'',
     sourceRole:x.contact_role??'',detail:`Station ${x.station_number??'?'} · VISN ${x.visn??'?'} · ${x.department??''}`,
     linkedOrganizationId:x.relationship_organization_id}));
+  return {items,total:count??0,page,pageSize};
 }
 
 /** The database performs this link and the first-stage record insertion

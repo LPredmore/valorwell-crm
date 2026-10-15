@@ -6,6 +6,7 @@ import type { CrmTask, TaskStatus, OperationalException, Campaign, CampaignEnrol
 import { mockClients, mockCampaigns, mockEnrollments, mockTasks, mockExceptions, mockStaff, mockAudit, mockMessages } from '@/mocks/dataset';
 import { unavailableRelationshipsRepository } from '../relationships-unavailable';
 import { buildTaskViewPlan, sortTasksForViewPlan, taskMatchesViewPlan } from '../taskViewSemantics';
+import { taskPageRange } from '@/domain/taskWorkspaceFilters';
 
 // In-memory mutable stores so mock mutations feel real across the session.
 let clients: CanonicalClient[] = [...mockClients];
@@ -88,6 +89,7 @@ export const mockDataProvider: CrmDataProvider = {
         if (q.clientId && t.clientId !== q.clientId) return false;
         if (q.ownerIds?.length && (!t.ownerId || !q.ownerIds.includes(t.ownerId))) return false;
         if (q.statuses?.length && !q.statuses.includes(t.status)) return false;
+        if (q.priorities?.length && !q.priorities.includes(t.priority)) return false;
         if (q.dueBefore && (!t.dueAt || new Date(t.dueAt).getTime() > new Date(q.dueBefore).getTime())) return false;
         if (q.dueAfter && (!t.dueAt || new Date(t.dueAt).getTime() < new Date(q.dueAfter).getTime())) return false;
         if (q.types?.length && !q.types.includes(t.type)) return false;
@@ -97,7 +99,9 @@ export const mockDataProvider: CrmDataProvider = {
         }
         return true;
       });
-      return sortTasksForViewPlan(filtered, plan);
+      const ordered = sortTasksForViewPlan(filtered, plan);
+      const range = taskPageRange(q.page, q.pageSize);
+      return range ? ordered.slice(range[0], range[1] + 1) : ordered;
     },
     async get(tenantId, id) { await wait(30); return tasks.find(t => t.id === id && t.tenantId === tenantId) ?? null; },
     async create(tenantId, input) {
@@ -115,7 +119,7 @@ export const mockDataProvider: CrmDataProvider = {
       return this.update(tenantId, id, { status: 'Completed', completedAt: new Date().toISOString() });
     },
     async reassign(tenantId, ids, ownerId) { await wait(); tasks = tasks.map(t => t.tenantId === tenantId && ids.includes(t.id) ? { ...t, ownerId } : t); emit(); },
-    async bulkStatus(tenantId, ids, status: TaskStatus) { await wait(); tasks = tasks.map(t => t.tenantId === tenantId && ids.includes(t.id) ? { ...t, status } : t); emit(); },
+    async bulkStatus(tenantId, ids, status: TaskStatus) { await wait(); tasks = tasks.map(t => t.tenantId === tenantId && ids.includes(t.id) ? { ...t, status, completedAt: status === 'Completed' ? new Date().toISOString() : undefined } : t); emit(); },
     async bulkDueDate(tenantId, ids, dueAt) { await wait(); tasks = tasks.map(t => t.tenantId === tenantId && ids.includes(t.id) ? { ...t, dueAt } : t); emit(); },
   },
 

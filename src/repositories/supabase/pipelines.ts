@@ -122,6 +122,44 @@ export const pipelinesRepository={
     const rows=((data??[]) as CrmPipelineRecord[]).slice(0,size);
     return {rows,nextCursor:(data?.length??0)>size?rows[rows.length-1].id:null};
   },
+  /** Exact record lookup for bookmarks; independent of the currently loaded board page. */
+  async getRecord(p:CrmPipeline,id:string):Promise<CrmPipelineRecord|null>{
+    if(p.source_mode!=='manual')throw new Error('Use the source workflow for connected records.');
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+      throw new Error('Invalid pipeline record link.');
+    const {data,error}=await db.from('crm_pipeline_records').select('*')
+      .eq('tenant_id',p.tenant_id).eq('pipeline_id',p.id).eq('id',id).maybeSingle();
+    assert(error);return data as CrmPipelineRecord|null;
+  },
+  /** Relationship-only memberships. No connected clinical adapters are invoked. */
+  async subjectRecordsPage(tenantId:string,subject:{contactId:string;organizationId?:never}|{organizationId:string;contactId?:never},page=1){
+    const id=subject.contactId??subject.organizationId;
+    if(!id||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+      throw new Error('Invalid relationship record.');
+    if(!Number.isSafeInteger(page)||page<1)throw new Error('Invalid pipeline membership page.');
+    let query=db.from('crm_pipeline_records')
+      .select('id,pipeline_id,stage_id,owner_profile_id,next_action,next_action_due_at,updated_at,organization_id,associated_organization_id',{count:'exact'})
+      .eq('tenant_id',tenantId).is('source_record_id',null);
+    query=subject.contactId?query.eq('contact_id',id)
+      :query.or(`organization_id.eq.${id},associated_organization_id.eq.${id}`);
+    const offset=(page-1)*25;
+    const {data,error,count}=await query.order('updated_at',{ascending:false})
+      .order('id',{ascending:true}).range(offset,offset+24);
+    assert(error);
+    const rows=data??[];
+    const ids=[...new Set(rows.map(row=>row.pipeline_id))];
+    if(!ids.length)return {items:[],total:count??0,page,pageSize:25};
+    const [pipelines,stages]=await Promise.all([
+      db.from('crm_pipelines').select('id,name,source_mode,archived_at').eq('tenant_id',tenantId).in('id',ids),
+      db.from('crm_pipeline_stages').select('id,pipeline_id,name').eq('tenant_id',tenantId).in('pipeline_id',ids),
+    ]);
+    assert(pipelines.error);assert(stages.error);
+    return {items:rows.map(row=>({
+      ...row,pipeline:pipelines.data?.find(item=>item.id===row.pipeline_id)??null,
+      stageName:stages.data?.find(item=>item.id===row.stage_id&&item.pipeline_id===row.pipeline_id)?.name??null,
+      association:subject.organizationId&&row.associated_organization_id===id?'Related organization':'Subject',
+    })),total:count??0,page,pageSize:25};
+  },
   async enroll(p:CrmPipeline,stageId:string,subjectId:string,associatedOrganizationId?:string|null){
     if(p.source_mode!=='manual')throw new Error('Connected pipelines must be synchronized from their authoritative source.');
     const {error}=await db.from('crm_pipeline_records').insert({

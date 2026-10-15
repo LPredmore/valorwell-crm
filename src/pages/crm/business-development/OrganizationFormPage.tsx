@@ -1,3 +1,5 @@
+import { directoryReturnSearch, directoryDetailSearch } from '@/domain/relationships/directory-url';
+import { useSearchParams } from 'react-router-dom';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { RelationshipOwnerFilter } from '@/components/crm/relationships/RelationshipOwnerField';
 import { useEffect, useState } from 'react';
@@ -27,6 +29,8 @@ const initial: RelationshipOrganizationInput = {
 
 export default function OrganizationFormPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const directorySearch = directoryReturnSearch(searchParams);
   const { currentTenantId, userId, capabilities } = useCrmAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -72,7 +76,7 @@ export default function OrganizationFormPage() {
     onSuccess: (organization) => {
       void queryClient.invalidateQueries({ queryKey: ['relationship-organizations'] });
       void queryClient.invalidateQueries({ queryKey: ['relationship-organization'] });
-      navigate(`/crm/business-development/organizations/${organization.id}`);
+      navigate(`/crm/business-development/organizations/${organization.id}${directoryDetailSearch(directorySearch)}`);
     },
   });
 
@@ -92,7 +96,7 @@ export default function OrganizationFormPage() {
           <h1 className="text-3xl font-bold tracking-tight">{editing ? 'Edit organization' : 'New organization'}</h1>
           <p className="mt-2 max-w-3xl text-muted-foreground">Organization records are written only to the tenant-scoped Billing Hub relationship tables.</p>
         </div>
-        <Button asChild variant="outline"><Link to="/crm/business-development/organizations">Back to organizations</Link></Button>
+        <Button asChild variant="outline"><Link to={`/crm/business-development/organizations${directorySearch}`}>Back to organizations</Link></Button>
       </div>
 
       <RelationshipCapabilityState state={capability} isLoading={isLoading} isError={isError} onRetry={() => { void refetch(); }} />

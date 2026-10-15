@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { RelationshipCommunication } from '@/domain/relationships/delivery-contracts';
+import { requireCrmOperatorScope, type CrmOperatorScope } from '../crmOperatorScope';
 
 const PER_PAGE = 100;
 type Subject = { contactId: string; organizationId?: never } | { organizationId: string; contactId?: never };
@@ -10,23 +11,18 @@ type Subject = { contactId: string; organizationId?: never } | { organizationId:
  * remains the security boundary, and tenant selection is server-authoritative.
  * Do not read crm_email_messages (clinical-domain email records) here.
  */
-export async function listRelationshipEmails(subject: Subject, page: number): Promise<{
+export async function listRelationshipEmails(subject: Subject, page: number, scope: CrmOperatorScope): Promise<{
   items: RelationshipCommunication[]; total: number;
 }> {
   if (!Number.isSafeInteger(page) || page < 1) throw new Error('Invalid activity page.');
-  const { data: context, error: contextError } = await supabase.rpc('get_crm_operating_context');
-  if (contextError) throw new Error(contextError.message);
-  if (!context || typeof context !== 'object' || Array.isArray(context) ||
-      context.authenticated !== true || typeof context.current_tenant_id !== 'string')
-    throw new Error('An authorized CRM operating tenant is required.');
-  const tenantId = context.current_tenant_id;
+  const { tenantId } = await requireCrmOperatorScope(scope);
   let query = supabase.from('relationship_communications').select(
     'id,contact_id,organization_id,opportunity_id,campaign_id,direction,channel,status,sender_email,recipient_email,subject,provider,provider_message_id,provider_thread_id,occurred_at,sent_at,delivered_at,failed_at,created_at,updated_at',
     { count: 'exact' },
   ).eq('tenant_id', tenantId);
   query = subject.contactId ? query.eq('contact_id',subject.contactId) : query.eq('organization_id', subject.organizationId!);
   const offset = (page-1) * PER_PAGE;
-  const { data, error, count } = await query.order('occurred_at',{ascending:false}).range(offset,offset+PER_PAGE-1);
+  const { data, error, count } = await query.order('occurred_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+PER_PAGE-1);
   if(error)throw new Error(error.message);
   return {
     total: count ?? 0,

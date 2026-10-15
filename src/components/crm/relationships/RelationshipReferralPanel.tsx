@@ -1,3 +1,4 @@
+import {useCrmAuth} from '@/hooks/crm/useCrmAuth';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, FileCheck2, ShieldAlert, XCircle } from 'lucide-react';
@@ -31,10 +32,11 @@ export function RelationshipReferralPanel({
   subject: Pick<RelationshipSubject, 'organizationId' | 'contactId'>;
   entityLabel: string;
 }) {
+  const {currentTenantId,userId,crmRole,isAuthenticated}=useCrmAuth();
   const capability = useRelationshipCapability('referrals');
-  const available = capability.capability?.available === true;
+  const available = isAuthenticated&&!!currentTenantId&&capability.capability?.available === true;
   const queryClient = useQueryClient();
-  const queryKey = ['relationship-referrals', subject.organizationId ?? null, subject.contactId ?? null];
+  const queryKey = ['relationship-referrals',currentTenantId,userId,crmRole, subject.organizationId ?? null, subject.contactId ?? null];
   const [sourceCategory, setSourceCategory] = useState('community_referral');
   const [summary, setSummary] = useState('');
   const [evidenceText, setEvidenceText] = useState('');
@@ -54,6 +56,7 @@ export function RelationshipReferralPanel({
     await Promise.all([
       queryClient.invalidateQueries({ queryKey }),
       queryClient.invalidateQueries({ queryKey: ['relationship-interactions'] }),
+      queryClient.invalidateQueries({ queryKey: ['relationship-timeline-interactions',currentTenantId,userId,crmRole] }),
     ]);
   };
 

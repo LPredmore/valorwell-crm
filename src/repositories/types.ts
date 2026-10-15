@@ -13,6 +13,7 @@ import type { TaskView, TaskViewDateBounds } from '@/domain/taskViews';
 import type {
   CrmTask,
   TaskStatus,
+  TaskPriority,
   OperationalException,
   ExceptionStatus,
   Campaign,
@@ -83,6 +84,9 @@ export interface ListTasksQuery {
   ownerIds?: string[];
   clientId?: string;
   statuses?: TaskStatus[];
+  priorities?: TaskPriority[];
+  page?: number;
+  pageSize?: number;
   dueBefore?: string;
   dueAfter?: string;
   types?: string[];

@@ -3,10 +3,8 @@ import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import type {CrmPipeline,CrmPipelineStage} from '@/domain/pipelines/models';
 import type {ConnectedPipelineCard} from '@/repositories/supabase/connected-pipeline-cards';
-import {allowedBtySourceStatuses} from '@/domain/pipelines/bty-source-transitions';
-import {transitionBtyPipelineCard} from '@/repositories/supabase/bty-connected-transition';
-import {allowedApplicantSourceStatuses} from '@/domain/pipelines/applicant-source-transitions';
-import {transitionApplicantPipelineCard} from '@/repositories/supabase/applicant-connected-transition';
+import {connectedSourceAction} from '@/domain/pipelines/connected-source-actions';
+import {transitionConnectedSourceCard} from '@/repositories/supabase/connected-source-actions';
 
 export function ConnectedStageEditor({pipeline,card,stages,busy,save}:{
   pipeline:CrmPipeline;card:ConnectedPipelineCard;stages:CrmPipelineStage[];
@@ -15,25 +13,21 @@ export function ConnectedStageEditor({pipeline,card,stages,busy,save}:{
   const [open,setOpen]=useState(false);
   const [toStatus,setToStatus]=useState('');
   const [reason,setReason]=useState('');
+  const action=connectedSourceAction(pipeline.source_key,card.sourceStatus??'');
   const candidates=useMemo(()=>{
-    const allowed=pipeline.source_key==='relationship_opportunities'
-      ?allowedBtySourceStatuses(card.sourceStatus??'')
-      :pipeline.source_key==='provider_applicants'
-        ?allowedApplicantSourceStatuses(card.sourceStatus??''):[];
+    const allowed=connectedSourceAction(pipeline.source_key,card.sourceStatus??'')?.destinations??[];
     return stages.filter(stage=>stage.source_stage_key&&allowed.includes(stage.source_stage_key));
   },[pipeline.source_key,card.sourceStatus,stages]);
-  if(!['relationship_opportunities','provider_applicants'].includes(pipeline.source_key??'')
+  if(pipeline.source_mode!=='connected'||!action||card.sourceKind==='therapist_prospect'
     ||card.sourceVersion===undefined)return null;
-  const isApplicant=pipeline.source_key==='provider_applicants';
+  const isApplicant=action.requiresFollowup;
   const applicantReady=!!card.owner_profile_id&&!!card.next_action?.trim()&&!!card.next_action_due_at;
   return <div className="space-y-2">
     <Button size="sm" variant="outline" disabled={busy||candidates.length===0}
-      onClick={()=>setOpen(v=>!v)}>{open?'Cancel stage change':isApplicant?'Update applicant stage':'Change BTY stage'}</Button>
+      onClick={()=>setOpen(v=>!v)}>{open?'Cancel stage change':action.label}</Button>
     {open&&<div className="rounded border space-y-2 p-2">
       <p className="text-xs text-muted-foreground">
-        {isApplicant
-          ?'Only Contacted → Screening is allowed here, through the existing staff-authorized update contract. First-contact delivery, approval and onboarding invitations must be handled in the staff applicant workspace. No messages are sent from this control.'
-          :'This updates the audited source BTY opportunity. Ready for Campaign is managed through the existing approval workflow because it can trigger campaign enrollment. No contact is automatically treated as delivered by this control.'}
+        {action.guidance}
       </p>
       {isApplicant&&!applicantReady&&<p role="status" className="text-xs text-destructive">
         The applicant requires an assigned owner and scheduled next action. Complete those fields in the staff applicant workspace before transitioning.
@@ -50,8 +44,7 @@ export function ConnectedStageEditor({pipeline,card,stages,busy,save}:{
       </label>
       <Button size="sm" disabled={busy||!toStatus||reason.trim().length<8||(isApplicant&&!applicantReady)}
         onClick={()=>save(async()=>{
-          if(isApplicant)await transitionApplicantPipelineCard(pipeline,card,toStatus,reason);
-          else await transitionBtyPipelineCard(pipeline,card,toStatus,reason);
+          await transitionConnectedSourceCard(pipeline,card,toStatus,reason);
           setReason('');setToStatus('');setOpen(false);
         })}>Confirm source stage change</Button>
     </div>}

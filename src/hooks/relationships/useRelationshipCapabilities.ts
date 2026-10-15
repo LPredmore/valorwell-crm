@@ -20,5 +20,5 @@ export function useRelationshipCapabilities() {
 
 export function useRelationshipCapability(capability: Capability) {
   const query = useRelationshipCapabilities();
-  return { ...query, capability: query.data?.find(state => state.capability === capability) };
+  return { ...query, capability: query.isSuccess ? query.data?.find(state => state.capability === capability) : undefined };
 }

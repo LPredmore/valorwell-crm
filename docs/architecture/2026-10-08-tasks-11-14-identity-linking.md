@@ -1,3 +1,5 @@
+> Superseded identity rollout: see [current-tenant migration review](2026-10-15-identity-linking-migration-review.md). Prospects now have tenant IDs; do not apply the October 8 identity SQL alone. Use the approved standalone forward migration. Historical test results below do not validate the revised contract.
+
 # CRM modernization Tasks 11–14 — decision, implementation and rollout gates
 
 **Date:** 2026-10-08  
