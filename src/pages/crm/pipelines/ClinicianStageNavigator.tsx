@@ -1,4 +1,5 @@
 import {Button} from '@/components/ui/button';
+import {Link} from 'react-router-dom';
 import {Card,CardContent,CardDescription,CardHeader,CardTitle} from '@/components/ui/card';
 import type {CrmPipelineStage} from '@/domain/pipelines/models';
 
@@ -31,6 +32,7 @@ export function ClinicianStageNavigator({
   </CardHeader>
   <CardContent className="space-y-3">
    <div className="flex flex-wrap items-center gap-3">
+    <Button size="sm" variant="outline" asChild><Link to="/crm/recruitment/applicants">Applications &amp; staff handoff</Link></Button>
     <Button size="sm" variant={selectedStageId?'outline':'default'}
       aria-pressed={!selectedStageId} onClick={()=>onChooseStage('')}>Show all stages</Button>
     <span className="text-xs text-muted-foreground">

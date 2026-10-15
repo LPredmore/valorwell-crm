@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { getPipelineCardSubjects } from './pipeline-subjects';
 import {listRecruitmentReviewProspects} from './recruitment-review';
+import type { ApplicantHandoff } from '@/domain/pipelines/applicant-handoff';
 import type { CrmPipeline, CrmPipelineStage, CrmPipelineRecord } from '@/domain/pipelines/models';
 
 export interface ConnectedPipelineCard {
@@ -18,6 +19,7 @@ export interface ConnectedPipelineCard {
   sourceVersion?: number;
   owner_profile_id?: string|null;
   sourceKind?: 'therapist_prospect' | 'provider_applicant';
+  applicantHandoff?: ApplicantHandoff;
 }
 
 const batchSize=250;
@@ -60,7 +62,7 @@ export async function listConnectedPipelineCards(
     type Applicant={id:string;firstName:string;lastName:string;status:string;source:string;
       primaryState:string|null;licenseType:string|null;referralSource:string|null;
       nextAction:string|null;nextActionDueAt:string|null;createdAt:string;lastActivityAt:string|null;
-      ownerProfileId:string|null;version:number};
+      ownerProfileId:string|null;ownerName:string|null;convertedStaffId:string|null;version:number};
     for(let page=1;page<=20;page++){
       const {data,error}=await supabase.rpc('staff_list_provider_applicants' as never,{
         p_status:null,p_search:null,p_page:page,p_page_size:100,
@@ -75,6 +77,8 @@ export async function listConnectedPipelineCards(
         const id=stage(sourceStage);
         if(!id)continue;
         cards.push({id:row.id,stage_id:id,displayName:mapName(row.firstName,row.lastName),
+          sourceKind:'provider_applicant',
+          applicantHandoff:{ownerName:row.ownerName,convertedStaffId:row.convertedStaffId},
           field_values:{license_type:row.licenseType,primary_state:row.primaryState,source:row.source},
           created_at:row.createdAt,updated_at:row.lastActivityAt??row.createdAt,
           next_action:row.nextAction,next_action_due_at:row.nextActionDueAt,

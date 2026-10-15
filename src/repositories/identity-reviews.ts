@@ -1,6 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { identitySupabase } from '@/integrations/supabase/identity-schema';
-import type { IdentityDatabase } from '@/integrations/supabase/identity-schema';
+import type { Database } from '@/integrations/supabase/types';
 import { dataProvider } from '@/services/dataProvider';
 import {
   detectDuplicateCandidates, identityPair,
@@ -10,8 +9,8 @@ import {
 import type { RelationshipContactRecord } from '@/domain/relationships/records';
 
 // Protected applicant/prospect/client payloads are never queried by this repository.
-type ReviewRow = IdentityDatabase['public']['Tables']['crm_identity_reviews']['Row'];
-type EventRow = IdentityDatabase['public']['Tables']['crm_identity_review_events']['Row'];
+type ReviewRow = Database['public']['Tables']['crm_identity_reviews']['Row'];
+type EventRow = Database['public']['Tables']['crm_identity_review_events']['Row'];
 export type IdentityScope = { tenantId: string; userId: string };
 export type IdentityPage<T> = { items: T[]; nextOffset: number | undefined };
 const pageSize = 25;
@@ -97,7 +96,7 @@ export const identityReviewsRepository = {
     await context(scope);
     validOffset(offset);
     const filter = contactFilter(contactId);
-    const { data, error } = await identitySupabase.from('crm_identity_reviews').select('*')
+    const { data, error } = await supabase.from('crm_identity_reviews').select('*')
       .eq('tenant_id', scope.tenantId).or(filter)
       .order('updated_at', { ascending: false }).order('id', { ascending: false })
       .range(offset, offset + pageSize);
@@ -108,7 +107,7 @@ export const identityReviewsRepository = {
     await context(scope);
     validOffset(offset);
     const filter = contactFilter(contactId);
-    const { data, error } = await identitySupabase.from('crm_identity_review_events')
+    const { data, error } = await supabase.from('crm_identity_review_events')
       .select('*,review:crm_identity_reviews!inner(contact_id,linked_domain,linked_record_id)')
       .eq('tenant_id', scope.tenantId).or(filter, { referencedTable: 'review' })
       .order('changed_at', { ascending: false }).order('id', { ascending: false })
@@ -132,7 +131,7 @@ export const identityReviewsRepository = {
     const [contactId, targetId] = input.domain === 'relationship_contact'
       ? identityPair(input.contactId.toLowerCase(), input.targetId.toLowerCase())
       : [input.contactId, input.targetId];
-    const { error } = await identitySupabase.from('crm_identity_reviews').upsert({
+    const { error } = await supabase.from('crm_identity_reviews').upsert({
       tenant_id: tenantId, contact_id: contactId,
       linked_domain: input.domain, linked_record_id: targetId,
       decision: input.decision, match_basis: input.basis,

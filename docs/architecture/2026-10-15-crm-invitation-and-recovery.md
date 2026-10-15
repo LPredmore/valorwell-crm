@@ -23,6 +23,14 @@ Neither query parameters nor user-editable auth metadata grant access. No arbitr
 
 ## Deployment checklist (deferred to Task 42)
 
+### October 15 operator configuration tooling
+
+`scripts/configure-crm-auth-redirects.mjs` now provides a read-only default report and an explicit `--apply-redirects` operation. The Management API endpoint and `uri_allow_list`, `mailer_templates_invite_content` and `mailer_templates_recovery_content` fields were inspected in the current Supabase OpenAPI document. The script retains the existing allowlist string verbatim and appends only missing exact CRM returns; its PATCH contains only `uri_allow_list`. It never writes Site URL or shared templates, sends messages, creates users or grants access. It reports template routing indicators without printing the sensitive Auth config or template bodies. Indicators still require shared-portal review; they are not proof a link works.
+
+NOT RUN. Current workspace runtime reports no configured secrets or outbound identities, and available Supabase connector operations do not expose Auth config. Exact next action: configure a trusted `SUPABASE_ACCESS_TOKEN` with access to this project's Auth config, run the script without flags to inspect, then use `--apply-redirects` for additive allowlist configuration. Do not use a service-role key as a Management API credential. Inspect hosted template routing without changing shared client/clinician behavior. Record actual configuration evidence; private-browser/message acceptance remains deferred and requires explicitly approved recipients.
+
+Pure plan/template-evidence test source is prepared in `src/domain/auth/crm-auth-config.test.ts`; it has not been executed. The script itself has not been executed, including its read-only mode.
+
 1. Retain the existing shared Site URL and all client/clinician destinations. Add exact CRM allowed return URLs `https://crm.valorwell.org/auth`, `https://crm.valorwell.org/auth?flow=invite` and `https://crm.valorwell.org/auth?flow=recovery` if absent. Check query-string matching against the current hosted Auth configuration.
 2. Inspect hosted invite/recovery templates. Prefer `{{ .ConfirmationURL }}` so Auth preserves validated `redirect_to`; ensure no template hardcodes `client.valorwell.org` or overrides the explicit return. Avoid rewriting templates shared by other portals without an audit.
 3. Use the explicit script/API path for CRM invitation issuance; the generic Dashboard Invite action can still fall back to Site URL if it supplies no CRM redirect. Do not point Site URL globally to CRM.

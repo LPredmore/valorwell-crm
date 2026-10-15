@@ -2,7 +2,9 @@
 
 Date: 2026-10-15. Repository: `LPredmore/valorwell-crm`. Database: Billing Hub `ahqauomkgflopxgnlndd`.
 
-Status: APPROVED FOR IMPLEMENTATION by the user’s October 14 “Proceed” following presentation of this review. Revised source is implemented in draft PR #154. Migration application is BLOCKED: the Supabase connection returned “Invalid or expired requestState”; last successful catalog read showed both new tables absent. No successful migration, backfill, source-record edit, automated check or runtime test is claimed. Live type regeneration is pending deployment; a scoped `identity-schema.ts` extension records the approved SQL types without modifying unrelated generated contracts. Tasks 11, 12 and 14 remain open. The October 8 proposal must not be deployed unchanged.
+Status update, October 15 continuation: the user manually applied `20261015015000_crm_identity_review_links_current_tenants.sql` successfully. Catalog discovery found both identity tables, current evidence columns, RLS, policies, triggers and private helpers. The missing migration tracking row was inserted as version `20261015015000`, name `crm_identity_review_links_current_tenants`, and a subsequent catalog read returned it. No migration SQL was reapplied. Live TypeScript types were generated from Billing Hub; the temporary `identity-schema.ts` extension was removed and the repository now uses the ordinary generated client. Source remains in draft PR #154, unmerged and undeployed. No behavioral verification, automated checks, backfill or source-record edits were performed. Tasks 11, 12 and 14 remain open pending Task 42. The October 8 proposal must not be deployed unchanged.
+
+The evidence below records the earlier pre-implementation snapshot. Its absent-table observations are historical and superseded by this status update.
 
 ## Decision and intended behavior
 

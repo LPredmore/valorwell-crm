@@ -5,8 +5,7 @@ const { rpc, query, database, listContacts } = vi.hoisted(() => {
   };
   return { rpc: vi.fn(), query, database: { from: vi.fn() }, listContacts: vi.fn() };
 });
-vi.mock('@/integrations/supabase/client', () => ({ supabase: { rpc } }));
-vi.mock('@/integrations/supabase/identity-schema', () => ({ identitySupabase: database }));
+vi.mock('@/integrations/supabase/client', () => ({ supabase: { rpc, from: database.from } }));
 vi.mock('@/services/dataProvider', () => ({ dataProvider: { relationships: { listContacts } } }));
 import { identityReviewsRepository, IdentityReviewNotDeployedError } from './identity-reviews';
 const tenantId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';

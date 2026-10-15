@@ -118,6 +118,7 @@ function TherapistProspectWorkspace(){
         <p className="text-sm text-muted-foreground">Prospects remain distinct from submitted clinician applications. Campaign email and SMS sending is paused.</p>
       </div>
       <div className="flex gap-2"><Button asChild variant="outline"><Link to={pipelineLink}>Clinician pipeline</Link></Button>
+        <Button asChild variant="outline"><Link to="/crm/recruitment/applicants">Submitted applications &amp; staff handoff</Link></Button>
         <Button asChild variant="outline"><Link to="/crm/recruitment/sequences">Recruitment sequences & replies</Link></Button>
         {id&&<Button asChild variant="outline"><Link to={'/crm/recruitment/prospects'+queueSearch}>Back to filtered queue</Link></Button>}</div>
     </div>

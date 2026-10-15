@@ -20,6 +20,7 @@ import {PipelineRecordDetails} from './PipelineRecordDetails';
 import {getManualPipelineMetrics,pipelineMetricsTotals} from '@/repositories/supabase/pipeline-metrics';
 import {listTeamOwners} from '@/repositories/supabase/pipeline-team-owners';
 import {ConnectedStageEditor} from './ConnectedStageEditor';
+import {ApplicantHandoffSummary} from './ApplicantHandoffSummary';
 import {ClinicianStageNavigator} from './ClinicianStageNavigator';
 import {canMovePipelineCard,matchesPipelineView,type PipelineViewMode,type AttentionFilter,type OwnerFilter} from '@/domain/pipelines/board-view';
 import {
@@ -133,7 +134,7 @@ function PipelineHubWorkspace(){
   const saved=useQuery({queryKey:['pipeline-saved-views',p?.id,userId],queryFn:()=>pipelinesRepository.savedViews(p!,userId!),enabled:!!p&&!!userId,retry:false});
   const sourceBinding=useQuery({queryKey:['pipeline-source-binding',p?.id],
     queryFn:()=>getPipelineSourceKind(p!),enabled:!!p,retry:false});
-  const giving=useQuery({queryKey:['pipeline-donor-giving',p?.id,records.dataUpdatedAt],
+  const giving=useQuery({queryKey:['pipeline-donor-giving',p?.id,currentTenantId,userId,crmRole,records.dataUpdatedAt],
     queryFn:()=>donorValuesByContact(p!,[...new Set((records.data??[])
       .map(row=>row.contact_id).filter((id):id is string=>!!id))]),
     enabled:!!p&&sourceBinding.data==='donor_giving'&&!!records.data,retry:false});
@@ -165,7 +166,7 @@ function PipelineHubWorkspace(){
     const originals=p?.source_mode==='connected'?(connected.data??[]):(records.data??[]);
     const values=originals.map(row=>{
       if(p?.source_mode!=='manual'||!('contact_id' in row)||!row.contact_id)return row;
-      const donation=giving.data?.[row.contact_id];
+      const donation=giving.isSuccess?giving.data?.[row.contact_id]:undefined;
       return donation?{...row,field_values:{...row.field_values,...donation}}:row;
     });
     const safeSort=sortKey==='updated_at'||sortKey==='created_at'||sortKey==='next_action_due_at'
@@ -173,7 +174,7 @@ function PipelineHubWorkspace(){
     if(p?.source_mode==='manual'&&
       (safeSort==='updated_at'||safeSort==='created_at'||safeSort==='next_action_due_at'))return values;
     return [...values].sort((a,b)=>comparePipelineRecords(a as CrmPipelineRecord,b as CrmPipelineRecord,safeSort));
-  },[p?.source_mode,p?.sort_field_keys,connected.data,records.data,giving.data,sortKey]);
+  },[p?.source_mode,p?.sort_field_keys,connected.data,records.data,giving.data,giving.isSuccess,sortKey]);
   const labelOf=(r:(typeof sorted)[number])=>{
     if('displayName' in r&&typeof r.displayName==='string')return r.displayName;
     const manual=r as CrmPipelineRecord;
@@ -441,9 +442,9 @@ function PipelineHubWorkspace(){
         ownerName={ownerName(detailRecord.owner_profile_id)} onClose={()=>setDetailRecordId('')}/>}
       {missingCount>0&&<p role="alert" className="text-destructive">{missingCount} organizations need primary-contact review.</p>}
       {sourceBinding.isError&&<p role="alert" className="text-destructive">Source binding unavailable: {sourceBinding.error.message}</p>}
-      {giving.isError&&<p role="alert" className="text-destructive">Verified donation enrichment could not be loaded: {giving.error.message}</p>}
+      {giving.isError&&<p role="alert" className="text-destructive">Donor aggregates could not be loaded: {giving.error.message}</p>}
       {sourceBinding.data==='donor_giving'&&<p className="rounded border p-3 text-sm">
-        Donor relationship stages remain manually managed. Verified giving totals, donor type and last donation are read live from your existing donor database when a donor is linked to the CRM person; temporary test donors are excluded.
+        Donor relationship stages remain manually managed. Existing donor aggregates appear only for explicitly linked contacts; temporary test donors are excluded. Payment reconciliation and recurring status review remain pending. Amounts have no currency attribution and must not be used as reconciled financial totals.
       </p>}
       {p.source_mode==='manual'&&capabilities.mutate&&(stages.data?.length??0)>0&&<Card><CardContent className="grid gap-2 pt-4 md:grid-cols-[1fr_2fr_auto]">
         <Input aria-label="Find CRM person or organization" placeholder="Search existing CRM records" value={findSubject} onChange={e=>{setFindSubject(e.target.value);setEnrollId('');}}/>
@@ -522,6 +523,7 @@ function PipelineHubWorkspace(){
               {p.subject_type==='organization'&&<td className="p-3">{contact}</td>}
               <td className="p-3 space-y-2">
                 <span>{stages.data?.find(stage=>stage.id===row.stage_id)?.name??'Unknown stage'}</span>
+                {source&&<ApplicantHandoffSummary card={source}/>}
                 {source&&['relationship_opportunities','provider_applicants'].includes(p.source_key??'')&&capabilities.mutate&&
                   <ConnectedStageEditor key={source.id+':list:'+source.sourceVersion}
                     pipeline={p} card={source} stages={stages.data??[]} busy={busy} save={act}/>}
@@ -565,6 +567,7 @@ function PipelineHubWorkspace(){
                 {source?.sourceUrl&&(source.sourceUrl.startsWith("https://")
                   ?<a href={source.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline">Open source workspace</a>
                   :<Link to={source.sourceUrl} className="text-xs underline">Open source record</Link>)}
+                {source&&<ApplicantHandoffSummary card={source}/>}
                 {visibleFields.map(f=><p key={f.id} className="text-sm">{f.label}: {String(record.field_values[f.field_key]??'—')}</p>)}
                 {(manual||source?.sourceKind==='therapist_prospect')&&<p className="text-xs text-muted-foreground">
                    Assigned owner: {ownerName(manual?.owner_profile_id??source?.owner_profile_id??null)}
