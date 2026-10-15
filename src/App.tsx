@@ -10,6 +10,7 @@ import RelationshipUnsubscribePage from "./pages/RelationshipUnsubscribePage";
 import NewsletterUnsubscribePage from "./pages/NewsletterUnsubscribePage";
 import { CrmLayout } from "./components/crm/layout/CrmLayout";
 import { CrmLegacyRouteRedirect } from "./components/crm/layout/CrmLegacyRouteRedirect";
+import WorkspaceDashboardPage from "./pages/crm/WorkspaceDashboardPage";
 import CrmIndex from "./pages/crm/Index";
 import CrmSettings from "./pages/crm/Settings";
 import EmailStudioPage from "./pages/crm/EmailStudioPage";
@@ -86,6 +87,7 @@ const App = () => (
           </Route>
           <Route path="/crm" element={<CrmLayout />}>
             <Route index element={<CrmIndex />} />
+            <Route path="workspace" element={<WorkspaceDashboardPage />} />
             <Route path="clients" element={<CanonicalClients />} />
             <Route path="clients/:id" element={<CanonicalClientDetail />} />
             <Route path="staff" element={<CanonicalStaff />} />

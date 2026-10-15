@@ -103,3 +103,8 @@ Deferred Tasks acceptance also includes creating/editing/reassigning from the ma
 ### Live identity dependency blocker
 
 Read-only catalog discovery on October 15 UTC returned null for `public.crm_identity_reviews`, `public.crm_therapist_prospect_attributions` and `public.crm_identity_review_events`. The earlier runbook already documented their migration as deliberately unapplied pending signed-JWT/source-access acceptance. The current source migration is `supabase/migrations/20261008161000_crm_identity_review_links.sql`. Therefore the review UI's missing-contract state remains appropriate; this batch does not activate identity approvals or attribute prospects. The existing schema migration gate and independent acceptance work remain on the roadmap. No complete new migration audit or migration approval is claimed here.
+
+
+### Workspace dashboard (Phase 34)
+
+Added a CRM dashboard at `/crm/workspace` and made it the sidebar/default `/crm` destination. It shows a bounded My Tasks preview, separate exact relationship-reply and recruitment-review counts, BTY scheduling/client-operations launchers, and exact existing-RPC attention/stage counts for a selected manual pipeline. It does not aggregate incompatible funnels. Unavailable sources show unavailable states instead of fabricated zeroes. The System Command Center is reachable from Administration and its old URL remains valid. Client dashboard and all existing detail links remain available. No new metrics/RPC/database contracts were added. Deferred: source total reconciliation, zero vs unavailable states, stage/pipeline selection, role/tenant/user transitions, navigation/bookmarks and realistic query performance.
