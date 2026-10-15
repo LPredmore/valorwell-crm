@@ -207,3 +207,15 @@ Earlier draft/unmerged notes above are historical and superseded by this merge r
 ## Continued implementation: Zeffy ledger/report and exact staff handoff
 
 Source implemented, NOT TESTED; new database migrations NOT APPLIED. [Current contracts, dependency order and remaining gates](architecture/2026-10-15-zeffy-ledger-report-continuation.md). Billing Hub adds disabled owner-confirmed Zeffy mapping, leased API reconciliation, immutable financial evidence, refund-safe current aggregates and authenticated tenant-specific report function. CRM adds `/crm/donations` with exact cent formatting, explicit snapshot coverage and unavailable states. Staff adds exact-ID source-authorized application lookup independent of list pages/name hints, pinned handoff context and source refresh. No email identity merge, legacy processing, Ads uploader, messages, provider requests or activation. Donation form opened remains the initial intent conversion. Prepared fixtures remain under deferred task 42; preserve its full description and append overflow checks as a final continuation child/comment because the existing description is at its capacity. Earlier exact-lookup absence notes are historical; the new contract still needs reviewed application and acceptance. Publication receipts follow separately.
+
+### Continuation merge receipt
+
+Source merged under the standing owner merge instruction, with expected head SHA pinned and `[skip ci]` merge titles:
+
+| Repository / PR | Merge commit |
+| --- | --- |
+| Billing Hub [#16](https://github.com/LPredmore/valorwell-billing-hub/pull/16) | `8263253c047d0483811a7abbfa406d8b56697830` |
+| Staff [#31](https://github.com/LPredmore/valorwell-staff/pull/31) | `2522a154a2ba5a016315eadf13744eafb66e57b8` |
+| CRM [#155](https://github.com/LPredmore/valorwell-crm/pull/155) | `b3a3a66c8210e589eeaa80480ada8b22d95e4f6f` |
+
+Unrelated Billing Hub main commit `6c63d59` (BTY rendering migration) was inspected for overlap and preserved by GitHub merge. No migration tree replay. New ledger/exact-applicant migrations remain unapplied, report/capture functions not manually deployed, source/queue disabled, all tests and runtime acceptance unexecuted. Automatic hosting state is uninspected. Task 42's existing description and 20 children were preserved; appended final continuation child `6hmQfFRGxP3g4qFq` plus end comment because its description was already at 16,383 characters. Updated Tasks 40/32/34 and master/donor/recruitment notes without closing acceptance.
