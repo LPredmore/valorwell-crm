@@ -1,3 +1,5 @@
+> Superseded identity rollout: see [current-tenant migration review](2026-10-15-identity-linking-migration-review.md). Prospects now have tenant IDs; do not apply the October 8 identity SQL alone. Use the approved standalone forward migration. Historical test results below do not validate the revised contract.
+
 # CRM Phases 15–17 — implementation and release verification
 
 **Target:** existing ValorWell CRM (`LPredmore/valorwell-crm`) and the existing Billing Hub database. **No new app, tenant, cloud project, publishing jobs or data migration.**

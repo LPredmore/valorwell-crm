@@ -9,6 +9,7 @@ on:
       - 'src/pages/crm/business-development/ContactDetailPage.tsx'
       - 'src/pages/crm/business-development/OrganizationDetailPage.tsx'
       - 'supabase/migrations/*crm_identity_review_links.sql'
+      - 'supabase/migrations/*crm_identity_review_links_current_tenants.sql'
       - '.github/workflows/crm-identity-verification.yml'
   workflow_dispatch:
 
