@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
@@ -7,20 +9,56 @@ import { formatZeffyCents } from '@/domain/donations/zeffy-report';
 
 export default function ZeffyDonationsPage() {
   const { currentTenantId, userId, crmRole, capabilities, isAuthenticated } = useCrmAuth();
-  const report = useQuery({
-    queryKey: ['zeffy-donation-report', currentTenantId, userId, crmRole],
-    queryFn: () => getZeffyDonationReport(currentTenantId!),
-    enabled: isAuthenticated && !!currentTenantId && capabilities.report, retry: false,
-  });
   if (!isAuthenticated || !currentTenantId || !capabilities.report) return <p className="p-4">Select an authorized CRM reporting workspace.</p>;
+  return <ScopedDonationReport key={JSON.stringify([currentTenantId, userId, crmRole])}
+    tenantId={currentTenantId} userId={userId} crmRole={crmRole} />;
+}
+
+function ScopedDonationReport({ tenantId, userId, crmRole }: { tenantId: string; userId: string | null; crmRole: string }) {
+  const refreshing = useRef(false);
+  const [refreshStatus, setRefreshStatus] = useState<{ phase: 'idle' | 'refreshing' | 'success' | 'error'; message: string }>({ phase: 'idle', message: '' });
+  const report = useQuery({
+    queryKey: ['zeffy-donation-report', tenantId, userId, crmRole],
+    queryFn: ({ signal }) => getZeffyDonationReport(tenantId, { signal }),
+    // Attempt now and show a bounded connection failure rather than silently
+    // queueing a manual refresh until the browser reports it is online again.
+    networkMode: 'always', retry: false, refetchOnWindowFocus: false, refetchOnReconnect: false,
+  });
+  const refreshReport = async () => {
+    if (refreshing.current || report.isFetching) return;
+    refreshing.current = true;
+    setRefreshStatus({ phase: 'refreshing', message: 'Refreshing donation report…' });
+    try {
+      const result = await report.refetch({ cancelRefetch: false });
+      if (result.isError || !result.data) {
+        setRefreshStatus({ phase: 'error', message: 'Refresh failed. See the report error below; existing amounts are not shown as current.' });
+      } else {
+        const detail = !result.data.sources.length ? 'No Zeffy source is configured for this workspace.'
+          : result.data.sources.every(source => !source.enabled)
+            ? 'Payment reconciliation is paused. Refreshing the report does not import payments.'
+            : 'Showing the latest stored payment observations. This does not import payments from Zeffy.';
+        setRefreshStatus({ phase: 'success', message: `Report refreshed at ${new Date().toLocaleTimeString()}. ${detail}` });
+      }
+    } catch {
+      setRefreshStatus({ phase: 'error', message: 'The report could not be refreshed. Try Refresh report again.' });
+    } finally { refreshing.current = false; }
+  };
   return <div className="space-y-4 p-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h1 className="text-2xl font-bold">Foundation donations</h1>
-      <Button variant="outline" disabled={report.isFetching} onClick={() => void report.refetch()}>Refresh report</Button>
+      <Button variant="outline" disabled={report.isFetching || refreshStatus.phase === 'refreshing'} aria-busy={report.isFetching}
+        onClick={() => void refreshReport()}>
+        {report.isFetching && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+        {report.isFetching ? 'Refreshing report…' : 'Refresh report'}
+      </Button>
     </div>
     <p className="text-sm text-muted-foreground">Zeffy payment snapshots reconciled through authenticated provider reads. These figures cover recorded payments, not all campaign receipts or bank settlement.</p>
-    {report.isPending && <p role="status">Loading payment report…</p>}
-    {report.isError && <Card><CardHeader><CardTitle>Payment report unavailable</CardTitle><CardDescription>{report.error.message}</CardDescription></CardHeader>
+    <p className="text-sm text-muted-foreground">Refresh report reloads stored CRM payment observations. It does not fetch new payments from Zeffy or start reconciliation.</p>
+    <div role="status" aria-live="polite" aria-atomic="true" className="text-sm">
+      {report.isFetching ? (refreshStatus.phase === 'refreshing' ? 'Refreshing donation report…' : 'Loading donation report…') : refreshStatus.message}
+    </div>
+    {report.isSuccess && <p className="text-sm text-muted-foreground">Last successful report load: {new Date(report.dataUpdatedAt).toLocaleString()}</p>}
+    {report.isError && <Card role="alert"><CardHeader><CardTitle>Payment report unavailable</CardTitle><CardDescription>{report.error.message}</CardDescription></CardHeader>
       <CardContent><p>Unavailable reporting does not mean there were no donations.</p></CardContent></Card>}
     {report.isSuccess && <>
       {!report.data.sources.length ? <p>No Zeffy source is configured for this CRM tenant.</p> : <>

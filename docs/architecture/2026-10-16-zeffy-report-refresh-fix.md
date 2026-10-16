@@ -1,0 +1,9 @@
+# Foundation report refresh and secret correction
+
+October 16, 2026. Owner reported a secret binding mismatch and a Refresh report button with no visible result. Canonical binding is `ZEFFY_WEBHOOK_SECRET`; current CRM rollout instructions corrected. Billing Hub handler, fixtures and instructions corrected without copying/rotating any secret. Database code/config searches found no SQL rename needed. Full search scope and four unavailable remote-source exceptions: Billing Hub `docs/2026-10-16-zeffy-secret-and-report-fixes.md`.
+
+Report UI now has visible request progress, duplicate-click prevention, timestamped success, actionable failure and last successful load time. Paused or empty results are explained, rather than silently leaving the same screen. Provider observation time remains a separate field. Refresh reloads stored CRM payment observations; it does not synchronize Zeffy payments. Mapping/processing remains off.
+
+Repository request now has a 30-second deadline that includes stalled session retrieval, scope cancellation and safe known error mapping; strict response and tenant validation remain. The component resets query/feedback across auth/tenant/role changes, hides failed cached totals, and attempts offline refresh immediately rather than waiting indefinitely for browser-online status. Exact supported CRM origins added to backend CORS; Auth/native capability checks remain mandatory. Backend shares one 20-second deadline and returns sanitized diagnostic codes.
+
+Prepared focused UI/request and backend fixtures, NOT RUN. Tests/lint/type checks/standalone builds/browser/runtime acceptance remain deferred in task 42. No secret values, database records, gifts, Ads uploads, messages, worker/campaign activation or Social Media configuration changed. Catalog/source/deployment receipts do not establish signed-in behavior. Merge and deployment receipts are recorded separately.
