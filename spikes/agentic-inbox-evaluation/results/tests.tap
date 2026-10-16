@@ -1,0 +1,144 @@
+TAP version 13
+# Subtest: N1: actual CRM inbound handler persists body and correlates outbound reply/client
+ok 1 - N1: actual CRM inbound handler persists body and correlates outbound reply/client
+  ---
+  duration_ms: 3182.816472
+  type: 'test'
+  ...
+# Subtest: N2: repeated provider webhook creates one message and one drafting job
+ok 2 - N2: repeated provider webhook creates one message and one drafting job
+  ---
+  duration_ms: 2198.997315
+  type: 'test'
+  ...
+# Subtest: N3: existing inbound logic pauses an active campaign after reply
+ok 3 - N3: existing inbound logic pauses an active campaign after reply
+  ---
+  duration_ms: 2188.420177
+  type: 'test'
+  ...
+# Subtest: N4: inbox search combines keyword, sender, date and operating tenant
+ok 4 - N4: inbox search combines keyword, sender, date and operating tenant
+  ---
+  duration_ms: 2235.668575
+  type: 'test'
+  ...
+# Subtest: N5: thread adapter joins actual CRM reply pointers despite different provider thread IDs
+ok 5 - N5: thread adapter joins actual CRM reply pointers despite different provider thread IDs
+  ---
+  duration_ms: 2546.87128
+  type: 'test'
+  ...
+# Subtest: N6: native draft runs actual Gemini request helper with CRM context, rules and full thread
+ok 6 - N6: native draft runs actual Gemini request helper with CRM context, rules and full thread
+  ---
+  duration_ms: 3803.96479
+  type: 'test'
+  ...
+# Subtest: N7: completed draft job is idempotent and does not spend another inference
+ok 7 - N7: completed draft job is idempotent and does not spend another inference
+  ---
+  duration_ms: 3775.410323
+  type: 'test'
+  ...
+# Subtest: N8: provider outage is recorded and the same job can recover without losing the incoming email
+ok 8 - N8: provider outage is recorded and the same job can recover without losing the incoming email
+  ---
+  duration_ms: 2341.796559
+  type: 'test'
+  ...
+# Subtest: N9: follow-up action calls actual CRM task repository and preserves due-time offset
+ok 9 - N9: follow-up action calls actual CRM task repository and preserves due-time offset
+  ---
+  duration_ms: 2256.302069
+  type: 'test'
+  ...
+# Subtest: N10: foreign-tenant reads/actions and unknown action types are rejected
+ok 10 - N10: foreign-tenant reads/actions and unknown action types are rejected
+  ---
+  duration_ms: 2213.750656
+  type: 'test'
+  ...
+# Subtest: U1: unmodified upstream MIME receiver, real SQLite mailbox and agent produce a draft
+ok 11 - U1: unmodified upstream MIME receiver, real SQLite mailbox and agent produce a draft
+  ---
+  duration_ms: 2416.871406
+  type: 'test'
+  ...
+# Subtest: U2: actual upstream search, thread retrieval, folder movement and read state work
+ok 12 - U2: actual upstream search, thread retrieval, folder movement and read state work
+  ---
+  duration_ms: 2433.708487
+  type: 'test'
+  ...
+# Subtest: U3: unmodified inbound path duplicates a re-delivered RFC message (observed integration gap)
+ok 13 - U3: unmodified inbound path duplicates a re-delivered RFC message (observed integration gap)
+  ---
+  duration_ms: 2851.499135
+  type: 'test'
+  ...
+# Subtest: U4: unmodified automatic drafting has thread context but lacks CRM context and prior chat corrections
+ok 14 - U4: unmodified automatic drafting has thread context but lacks CRM context and prior chat corrections
+  ---
+  duration_ms: 2280.004721
+  type: 'test'
+  ...
+# Subtest: U5: stock agent exposes email tools but no CRM task/calendar tools
+ok 15 - U5: stock agent exposes email tools but no CRM task/calendar tools
+  ---
+  duration_ms: 2479.674636
+  type: 'test'
+  ...
+# Subtest: U6: shared upstream environment can address another mailbox; CRM authorization must be added
+ok 16 - U6: shared upstream environment can address another mailbox; CRM authorization must be added
+  ---
+  duration_ms: 2077.075026
+  type: 'test'
+  ...
+# Prompt injection scanner failed, skipping auto-draft: scripted scanner outage
+# Skipping auto-draft due to detected prompt injection: 1df25724-ff02-42cc-8b69-984031498f4e
+# Subtest: U7: scanner outage blocks drafting while retaining incoming email
+ok 17 - U7: scanner outage blocks drafting while retaining incoming email
+  ---
+  duration_ms: 2120.726637
+  type: 'test'
+  ...
+# Subtest: B1: unchanged upstream tools can search/read canonical CRM records via a scoped adapter
+ok 18 - B1: unchanged upstream tools can search/read canonical CRM records via a scoped adapter
+  ---
+  duration_ms: 2225.027014
+  type: 'test'
+  ...
+# Subtest: B2: unchanged upstream agent can draft onto canonical CRM records with explicitly added CRM context
+ok 19 - B2: unchanged upstream agent can draft onto canonical CRM records with explicitly added CRM context
+  ---
+  duration_ms: 2178.206671
+  type: 'test'
+  ...
+# Subtest: B3: original upstream draft ID is preserved by canonical-storage adapter
+ok 20 - B3: original upstream draft ID is preserved by canonical-storage adapter
+  ---
+  duration_ms: 3098.581111
+  type: 'test'
+  ...
+# Subtest: B4: CRM follow-up actions need the same custom task bridge in either architecture
+ok 21 - B4: CRM follow-up actions need the same custom task bridge in either architecture
+  ---
+  duration_ms: 2665.627824
+  type: 'test'
+  ...
+# Subtest: B5: email transport is an explicit integration point, not supplied by the mailbox adapter
+ok 22 - B5: email transport is an explicit integration point, not supplied by the mailbox adapter
+  ---
+  duration_ms: 2623.957161
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 56466.630319
