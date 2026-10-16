@@ -62,7 +62,7 @@ function ScopedDonationReport({ tenantId, userId, crmRole }: { tenantId: string;
       <CardContent><p>Unavailable reporting does not mean there were no donations.</p></CardContent></Card>}
     {report.isSuccess && <>
       {!report.data.sources.length ? <p>No Zeffy source is configured for this CRM tenant.</p> : <>
-        {report.data.sources.every(source => !source.enabled) && <p role="status" className="rounded border p-3">Payment reconciliation is paused. Stored observations, if any, remain visible.</p>}
+        {report.data.sources.every(source => !source.enabled) && <p className="rounded border p-3">Payment reconciliation is paused. Stored observations, if any, remain visible.</p>}
         <p className="text-sm">Last observed: {report.data.lastObservedAt ? new Date(report.data.lastObservedAt).toLocaleString() : 'No authenticated payment observations recorded'} · Pending reviews: {BigInt(report.data.pendingPayments).toLocaleString()}</p>
         {!report.data.currencies.length ? <p>No payment snapshots have been recorded. This is not a campaign donation total.</p> :
           <div className="overflow-x-auto rounded border"><table className="w-full text-sm">
