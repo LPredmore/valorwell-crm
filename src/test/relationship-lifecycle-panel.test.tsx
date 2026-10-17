@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RelationshipLifecyclePanel } from '@/components/crm/relationships/RelationshipLifecyclePanel';
 import { capabilityState } from '@/domain/relationships/capabilities';
 
+// These component tests provide an authorized CRM scope without a live session.
+vi.mock('@/hooks/crm/useCrmAuth', () => ({
+  useCrmAuth: () => ({ currentTenantId: 'tenant-1', userId: 'user-1', crmRole: 'admin', isAuthenticated: true }),
+}));
+
 const { relationships, useRelationshipCapability } = vi.hoisted(() => ({
   relationships: {
     listStageHistory: vi.fn(),

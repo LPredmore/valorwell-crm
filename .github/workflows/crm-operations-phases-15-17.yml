@@ -3,6 +3,9 @@ name: CRM Operations Phases 15-17
 on:
   pull_request:
     paths:
+      # Shared CRM relationship/pipeline typing participates in the full-app typecheck.
+      - 'src/pages/crm/pipelines/PipelineRecordDetails.tsx'
+      - 'src/repositories/supabase/pipelines.ts'
       - 'src/domain/relationships/activity-timeline*'
       - 'src/repositories/supabase/relationship-tasks.ts'
       - 'src/repositories/supabase/relationship-activity.ts'

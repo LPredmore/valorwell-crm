@@ -3,6 +3,9 @@ name: CRM Identity Verification
 on:
   pull_request:
     paths:
+      # Shared CRM relationship/pipeline typing participates in the full-app typecheck.
+      - 'src/pages/crm/pipelines/PipelineRecordDetails.tsx'
+      - 'src/repositories/supabase/pipelines.ts'
       - 'src/domain/identity/**'
       - 'src/repositories/identity-reviews.ts'
       - 'src/repositories/identity-reviews.test.ts'

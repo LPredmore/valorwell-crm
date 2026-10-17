@@ -31,7 +31,8 @@ export function PipelineRecordDetails({
   onClose: () => void;
 }) {
   const {userId,crmRole}=useCrmAuth();
-  const subject=pipeline.subject_type==='person'&&record.contact_id?{contactId:record.contact_id}
+  const subject: {contactId:string;organizationId?:never}|{organizationId:string;contactId?:never}|null =
+    pipeline.subject_type==='person'&&record.contact_id?{contactId:record.contact_id}
     :pipeline.subject_type==='organization'&&record.organization_id?{organizationId:record.organization_id}:null;
   const history = useInfiniteQuery({
     queryKey: ['crm-pipeline-record-history', pipeline.tenant_id, pipeline.id, record.id,userId,crmRole],

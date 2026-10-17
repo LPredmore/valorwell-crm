@@ -3,6 +3,9 @@ name: CRM Navigation Verification
 on:
   pull_request:
     paths:
+      # Shared CRM relationship/pipeline typing participates in the full-app typecheck.
+      - 'src/pages/crm/pipelines/PipelineRecordDetails.tsx'
+      - 'src/repositories/supabase/pipelines.ts'
       - 'src/App.tsx'
       - 'src/components/crm/layout/**'
       - 'src/pages/crm/SocialMediaManagerPage.tsx'

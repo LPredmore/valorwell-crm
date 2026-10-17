@@ -146,7 +146,8 @@ export const pipelinesRepository={
     const {data,error,count}=await query.order('updated_at',{ascending:false})
       .order('id',{ascending:true}).range(offset,offset+24);
     assert(error);
-    const rows=data??[];
+    type MembershipRow=Pick<CrmPipelineRecord,'id'|'pipeline_id'|'stage_id'|'owner_profile_id'|'next_action'|'next_action_due_at'|'updated_at'|'organization_id'|'associated_organization_id'>;
+    const rows=(data??[]) as MembershipRow[];
     const ids=[...new Set(rows.map(row=>row.pipeline_id))];
     if(!ids.length)return {items:[],total:count??0,page,pageSize:25};
     const [pipelines,stages]=await Promise.all([
@@ -154,9 +155,13 @@ export const pipelinesRepository={
       db.from('crm_pipeline_stages').select('id,pipeline_id,name').eq('tenant_id',tenantId).in('pipeline_id',ids),
     ]);
     assert(pipelines.error);assert(stages.error);
+    // Selected column shapes are explicit: PostgREST's inferred partial-row type
+    // is `never` for this locally defined CRM schema, despite valid columns.
+    const pipelineRows=(pipelines.data??[]) as Pick<CrmPipeline,'id'|'name'|'source_mode'|'archived_at'>[];
+    const stageRows=(stages.data??[]) as Pick<CrmPipelineStage,'id'|'pipeline_id'|'name'>[];
     return {items:rows.map(row=>({
-      ...row,pipeline:pipelines.data?.find(item=>item.id===row.pipeline_id)??null,
-      stageName:stages.data?.find(item=>item.id===row.stage_id&&item.pipeline_id===row.pipeline_id)?.name??null,
+      ...row,pipeline:pipelineRows.find(item=>item.id===row.pipeline_id)??null,
+      stageName:stageRows.find(item=>item.id===row.stage_id&&item.pipeline_id===row.pipeline_id)?.name??null,
       association:subject.organizationId&&row.associated_organization_id===id?'Related organization':'Subject',
     })),total:count??0,page,pageSize:25};
   },
