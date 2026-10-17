@@ -185,6 +185,70 @@ async function fullGmailReconciliation(
   };
 }
 
+/**
+ * Gmail history IDs can expire after a week. A full mailbox scan cannot always
+ * complete in a single webhook/HTTP invocation. Before establishing a fresh
+ * live cursor, durably record the outstanding historical interval for a
+ * separate paginated backfill. This prevents losing the gap silently.
+ */
+async function checkpointExpiredGmailHistory(
+  admin: SupabaseClient,
+  runtime: GoogleRuntime,
+  accessToken: string,
+  state: SyncState,
+) {
+  const profile = await googleJson("https://gmail.googleapis.com/gmail/v1/users/me/profile", accessToken);
+  if (String(profile.emailAddress ?? "").toLowerCase() !== GMAIL_MAILBOX) {
+    throw new Error("Connected Gmail mailbox no longer matches info@valorwell.org.");
+  }
+  const freshHistoryId = String(profile.historyId ?? "");
+  if (!freshHistoryId) throw new Error("Gmail recovery cannot establish a valid history cursor.");
+
+  // Durability order is intentional: record the unprocessed historical interval
+  // before advancing the live history cursor. A failed issue write must fail
+  // the cutover rather than silently discarding mail from the prior interval.
+  const gapKey = `gmail-history-gap:${runtime.id}:${state.gmailHistoryId ?? "initial"}`;
+  const { error: gapError } = await admin.from("relationship_reconciliation_issues").insert({
+    tenant_id: TENANT_ID,
+    issue_type: "sync_error",
+    severity: "critical",
+    status: "open",
+    source: "gmail",
+    external_event_id: gapKey,
+    summary: "Gmail historical messages remain unprocessed after an expired history cursor; paginated backfill required.",
+    details: {
+      recovery_kind: "expired_gmail_history",
+      gmail_connection_id: runtime.id,
+      last_verified_sync_at: state.lastSuccessfulSyncAt ?? null,
+      previous_history_id: state.gmailHistoryId ?? null,
+      recovery_baseline_history_id: freshHistoryId,
+      requires_historical_backfill: true,
+    },
+  });
+  if (gapError && gapError.code !== "23505") {
+    throw new Error(`Could not preserve Gmail historical-backfill obligation: ${gapError.message}`);
+  }
+
+  await updateState(admin, {
+    p_connection_id: runtime.id,
+    p_gmail_history_id: freshHistoryId,
+    p_error_code: "historical_backfill_pending",
+    p_error_reason: "Expired Gmail history; live cursor restored with a durable pending reconciliation issue.",
+  });
+  console.warn(JSON.stringify({
+    component: "relationship-google-sync",
+    event: "history_gap_checkpointed",
+    pendingFrom: state.lastSuccessfulSyncAt ?? null,
+    historicalBackfillPending: true,
+  }));
+  return {
+    mode: "live_cursor_restored",
+    historicalBackfillPending: true,
+    pendingFrom: state.lastSuccessfulSyncAt ?? null,
+    historyId: freshHistoryId,
+  };
+}
+
 export async function syncGmail(
   admin: SupabaseClient,
   notificationHistoryId?: string,
@@ -216,7 +280,7 @@ export async function syncGmail(
     } while (pageToken);
   } catch (error) {
     if ((error as Error & { status?: number }).status === 404) {
-      return fullGmailReconciliation(admin, runtime, accessToken, state);
+      return checkpointExpiredGmailHistory(admin, runtime, accessToken, state);
     }
     throw error;
   }
