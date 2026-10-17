@@ -19,6 +19,7 @@ import {
 type SyncState = {
   gmailHistoryId?: string;
   gmailWatchExpiration?: string;
+  lastSuccessfulSyncAt?: string;
   calendarSyncToken?: string;
 };
 
@@ -53,7 +54,14 @@ async function processGmailMessage(
   accessToken: string,
   messageId: string,
 ) {
-  const metadata = await googleJson(metadataUrl(messageId, "metadata"), accessToken);
+  // Gmail history/list can race with deletion, including archived or moved messages.
+  // A missing single message must not strand the mailbox's recovery cursor.
+  const metadata = await googleJson(metadataUrl(messageId, "metadata"), accessToken)
+    .catch((error: Error & { status?: number }) => {
+      if (error.status === 404) return null;
+      throw error;
+    });
+  if (!metadata) return { messageId, matched: false, skipped: "message_not_found" };
   const payload = (metadata.payload ?? {}) as Record<string, unknown>;
   const headers = headerMap(payload);
   const from = firstEmail(headers.from ?? "");
@@ -88,7 +96,12 @@ async function processGmailMessage(
     }
     return { messageId, matched: false, ambiguous: decision.ambiguous === true };
   }
-  const full = await googleJson(metadataUrl(messageId, "full"), accessToken);
+  const full = await googleJson(metadataUrl(messageId, "full"), accessToken)
+    .catch((error: Error & { status?: number }) => {
+      if (error.status === 404) return null;
+      throw error;
+    });
+  if (!full) return { messageId, matched: false, skipped: "message_not_found" };
   const fullPayload = (full.payload ?? {}) as Record<string, unknown>;
   const { data, error } = await admin.rpc("ingest_relationship_gmail_message", {
     p_tenant_id: TENANT_ID,
@@ -110,11 +123,28 @@ async function fullGmailReconciliation(
   admin: SupabaseClient,
   runtime: GoogleRuntime,
   accessToken: string,
+  state: SyncState,
 ) {
+  // Snapshot the history cursor BEFORE scanning. Mail added during the scan
+  // remains visible in the next incremental history call.
+  const profile = await googleJson("https://gmail.googleapis.com/gmail/v1/users/me/profile", accessToken);
+  if (String(profile.emailAddress ?? "").toLowerCase() !== GMAIL_MAILBOX) {
+    throw new Error("Connected Gmail mailbox no longer matches info@valorwell.org.");
+  }
+  const baselineHistoryId = String(profile.historyId ?? "");
+  if (!baselineHistoryId) throw new Error("Gmail profile did not return a recovery history cursor.");
+
+  // Overlap the previous verified sync by one day to avoid timezone and
+  // mid-processing boundaries. Initial onboarding uses the original 90-day scope.
+  const lastSuccess = state.lastSuccessfulSyncAt ? Date.parse(state.lastSuccessfulSyncAt) : NaN;
+  const startingAt = Number.isFinite(lastSuccess)
+    ? new Date(lastSuccess - 86_400_000)
+    : new Date(Date.now() - 90 * 86_400_000);
+  const day = startingAt.toISOString().slice(0, 10).replaceAll("-", "/");
   const messageIds: string[] = [];
   let pageToken: string | undefined;
   do {
-    const params = new URLSearchParams({ q: "newer_than:90d", maxResults: "100" });
+    const params = new URLSearchParams({ q: `after:${day}`, maxResults: "100" });
     if (pageToken) params.set("pageToken", pageToken);
     const page = await googleJson(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params}`,
@@ -122,23 +152,37 @@ async function fullGmailReconciliation(
     );
     for (const item of (page.messages ?? []) as Array<{ id?: string }>) {
       if (item.id) messageIds.push(item.id);
-      if (messageIds.length >= 500) break;
     }
-    pageToken = messageIds.length < 500 && typeof page.nextPageToken === "string" ? page.nextPageToken : undefined;
+    // Never advance the cursor after a silent limit/truncation. Larger historical
+    // mailboxes require an explicit paginated backfill, not an incomplete "success".
+    if (messageIds.length > 1200) {
+      throw new Error("Gmail recovery exceeds the safe 1200-message batch; cursor preserved for historical backfill.");
+    }
+    pageToken = typeof page.nextPageToken === "string" ? page.nextPageToken : undefined;
   } while (pageToken);
-  const results: unknown[] = [];
-  for (const id of messageIds) results.push(await processGmailMessage(admin, accessToken, id));
-  const profile = await googleJson("https://gmail.googleapis.com/gmail/v1/users/me/profile", accessToken);
-  if (String(profile.emailAddress ?? "").toLowerCase() !== GMAIL_MAILBOX) {
-    throw new Error("Connected Gmail mailbox no longer matches info@valorwell.org.");
+
+  const results: Array<{ matched?: boolean; skipped?: string }> = [];
+  // Gmail lists newest first. Process older messages first so references to
+  // earlier outbound conversations are available for subsequent reply matching.
+  for (let end = messageIds.length; end > 0; end -= 8) {
+    const batch = messageIds.slice(Math.max(0, end - 8), end).reverse();
+    const observed = await Promise.all(batch.map((id) => processGmailMessage(admin, accessToken, id)));
+    results.push(...observed);
   }
   await updateState(admin, {
     p_connection_id: runtime.id,
-    p_gmail_history_id: String(profile.historyId ?? ""),
+    p_gmail_history_id: baselineHistoryId,
     p_success: true,
     p_full_reconciliation: true,
   });
-  return { mode: "full", processed: results.length, results };
+  return {
+    mode: "full",
+    scanned: messageIds.length,
+    processed: results.filter((item) => !item.skipped).length,
+    skippedUnavailable: results.filter((item) => item.skipped === "message_not_found").length,
+    matched: results.filter((item) => item.matched === true).length,
+    historyId: baselineHistoryId,
+  };
 }
 
 export async function syncGmail(
@@ -150,7 +194,7 @@ export async function syncGmail(
   if (runtime.googleAccountEmail.toLowerCase() !== GMAIL_MAILBOX) throw new Error("Gmail mailbox restriction failed.");
   const accessToken = await refreshGoogleAccessToken(runtime);
   const state = await syncState(admin, runtime.id);
-  if (!state.gmailHistoryId) return fullGmailReconciliation(admin, runtime, accessToken);
+  if (!state.gmailHistoryId) return fullGmailReconciliation(admin, runtime, accessToken, state);
   const ids = new Set<string>();
   let pageToken: string | undefined;
   let latestHistoryId = notificationHistoryId ?? state.gmailHistoryId;
@@ -172,7 +216,7 @@ export async function syncGmail(
     } while (pageToken);
   } catch (error) {
     if ((error as Error & { status?: number }).status === 404) {
-      return fullGmailReconciliation(admin, runtime, accessToken);
+      return fullGmailReconciliation(admin, runtime, accessToken, state);
     }
     throw error;
   }
@@ -199,7 +243,8 @@ export async function renewGmailWatch(admin: SupabaseClient) {
   });
   await updateState(admin, {
     p_connection_id: runtime.id,
-    p_gmail_history_id: String(watch.historyId ?? ""),
+    // A watch's current history ID must never overwrite an unprocessed cursor.
+    // The reconciliation path alone advances gmail_history_id on verified completion.
     p_gmail_watch_expiration: new Date(Number(watch.expiration)).toISOString(),
     p_success: true,
   });
