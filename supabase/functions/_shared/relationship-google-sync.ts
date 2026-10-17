@@ -328,6 +328,129 @@ export async function syncGmail(
   };
 }
 
+
+/**
+ * Handle exactly one bounded page of the historical Gmail gap. The row-level
+ * lease and checkpoints are durable SQL RPCs, independent from the LIVE history
+ * cursor. Failed pages are retried without skipping messages.
+ */
+export async function backfillGmailBatch(admin: SupabaseClient) {
+  const { data: candidates, error: listError } = await admin
+    .from("relationship_reconciliation_issues")
+    .select("id,details,created_at")
+    .eq("tenant_id", TENANT_ID)
+    .eq("source", "gmail")
+    .eq("issue_type", "sync_error")
+    .eq("status", "open")
+    .order("created_at", { ascending: true })
+    .limit(50);
+  if (listError) throw new Error(`Gmail backfill issue discovery failed: ${listError.message}`);
+  const issue = (candidates ?? []).find((row) => row.details?.requires_historical_backfill === true);
+  if (!issue) return { skipped: true, reason: "no_pending_gmail_history_gap" };
+
+  const runtime = await connectionRuntime(admin, "gmail");
+  if (!runtime || runtime.googleAccountEmail.toLowerCase() !== GMAIL_MAILBOX) {
+    throw new Error("Gmail backfill has no authorized canonical mailbox.");
+  }
+  if (issue.details?.gmail_connection_id !== runtime.id) {
+    throw new Error("Gmail historical gap is not associated with the active mailbox.");
+  }
+
+  const { data: claimed, error: claimError } = await admin.rpc("claim_relationship_gmail_backfill", {
+    p_tenant_id: TENANT_ID,
+    p_issue_id: issue.id,
+    p_lease_seconds: 90,
+  });
+  if (claimError) throw new Error(`Gmail backfill lease acquisition failed: ${claimError.message}`);
+  if (claimed?.acquired !== true) {
+    return { skipped: true, reason: String(claimed?.reason ?? "not_acquired") };
+  }
+
+  const leaseToken = String(claimed.leaseToken ?? "");
+  const details = claimed.details as Record<string, unknown>;
+  const createdAt = String(claimed.issueCreatedAt ?? issue.created_at ?? "");
+  try {
+    const fromTime = Date.parse(String(details.last_verified_sync_at ?? ""));
+    const throughTime = Date.parse(createdAt);
+    if (!Number.isFinite(fromTime) || !Number.isFinite(throughTime) || fromTime > throughTime) {
+      throw new Error("Gmail historical-backfill interval cannot be verified.");
+    }
+    const gmailDay = (ms: number) => new Date(ms).toISOString().slice(0,10).replaceAll("-", "/");
+    const query = `after:${gmailDay(fromTime - 86_400_000)} before:${gmailDay(throughTime + 2 * 86_400_000)}`;
+    const accessToken = await refreshGoogleAccessToken(runtime);
+    const params = new URLSearchParams({ q: query, maxResults: "8" });
+    const pageToken = typeof details.backfill_page_token === "string" ? details.backfill_page_token : "";
+    if (pageToken) params.set("pageToken", pageToken);
+    const page = await googleJson(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params}`,
+      accessToken,
+    );
+    const ids = ((page.messages ?? []) as Array<{ id?: string }>)
+      .map((item) => item.id).filter((value): value is string => Boolean(value));
+    if (ids.length > 8) throw new Error("Gmail API returned more than the bounded eight-message batch.");
+    const nextPageToken = typeof page.nextPageToken === "string" ? page.nextPageToken : null;
+    // Retry-safe ingestion is idempotent using the provider message ID. Keep the
+    // rate below Google quota limits and the execution within the pg_net timeout.
+    const results: Array<{ matched?: boolean; ambiguous?: boolean; skipped?: string }> = [];
+    for (let i = 0; i < ids.length; i += 2) {
+      results.push(...await Promise.all(
+        ids.slice(i, i + 2).map((id) => processGmailMessage(admin, accessToken, id)),
+      ));
+    }
+    const counts = {
+      scanned: ids.length,
+      matched: results.filter((row) => row.matched === true).length,
+      ambiguous: results.filter((row) => row.ambiguous === true).length,
+      unavailable: results.filter((row) => row.skipped === "message_not_found").length,
+    };
+    const { data: checkpoint, error: checkpointError } = await admin.rpc(
+      "checkpoint_relationship_gmail_backfill", {
+        p_tenant_id: TENANT_ID,
+        p_issue_id: issue.id,
+        p_lease_token: leaseToken,
+        p_next_page_token: nextPageToken,
+        p_has_more: Boolean(nextPageToken),
+        p_scanned: counts.scanned,
+        p_matched: counts.matched,
+        p_ambiguous: counts.ambiguous,
+        p_unavailable: counts.unavailable,
+      },
+    );
+    if (checkpointError) throw new Error(`Gmail backfill checkpoint failed: ${checkpointError.message}`);
+    console.log(JSON.stringify({
+      component: "relationship-gmail-backfill",
+      event: checkpoint.complete ? "scanned_interval_complete" : "batch_checkpointed",
+      issueId: issue.id,
+      ...counts,
+      cumulativeScanned: checkpoint.scanned,
+      remainingPages: Boolean(nextPageToken),
+    }));
+    return {
+      mode: "historical_backfill",
+      complete: checkpoint.complete,
+      issueId: issue.id,
+      batch: counts,
+      total: checkpoint,
+    };
+  } catch (error) {
+    const status = (error as Error & { status?: number }).status;
+    const errorCode = status ? `google_http_${status}` : "backfill_processing_error";
+    const { error: releaseError } = await admin.rpc("release_relationship_gmail_backfill", {
+      p_tenant_id: TENANT_ID, p_issue_id: issue.id,
+      p_lease_token: leaseToken, p_error_code: errorCode,
+    });
+    if (releaseError) {
+      console.error(JSON.stringify({
+        component: "relationship-gmail-backfill",
+        event: "lease_release_failed",
+        issueId: issue.id,
+        errorCode: releaseError.code,
+      }));
+    }
+    throw new Error(`Gmail backfill page failed (${errorCode}); retry is safe; cursor unchanged.`);
+  }
+}
+
 export async function renewGmailWatch(admin: SupabaseClient) {
   const runtime = await connectionRuntime(admin, "gmail");
   if (!runtime) return { skipped: true, reason: "gmail_not_connected" };

@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js@2.4.5/edge-runtime.d.ts";
 import { adminClient, json, TENANT_ID } from "../_shared/relationship-google.ts";
 import {
   observationFlags,
+  backfillGmailBatch,
   renewCalendarWatch,
   renewGmailWatch,
   syncCalendar,
@@ -42,6 +43,11 @@ Deno.serve(async (request: Request) => {
           error: message,
         }));
       }
+    }
+
+    if (input.mode === "gmail_backfill") {
+      if (flags.gmail) await attempt("gmailBackfill", () => backfillGmailBatch(admin));
+      return json({ mode: input.mode, flags, results, failures }, failures.length ? 502 : 200);
     }
 
     // Renew first and independently. Renewal no longer changes the mailbox cursor.
