@@ -82,7 +82,7 @@ function EmailReviewGroupEvidence({ groupKey }: { groupKey: string }) {
         <span className="font-medium">{item.subject || '(No subject recorded)'}</span>
       </div>
       <p className="text-xs text-muted-foreground">
-        {item.sender || 'Sender not stored'} · {item.classification.replaceAll('_', ' ')}
+        {item.sender || 'Sender not stored'} · {item.classification.replace(/_/g, ' ')}
       </p>
       <div className="flex gap-3 text-xs">
         {item.candidateOpportunityId && <Link className="text-primary hover:underline"
@@ -153,11 +153,11 @@ function EmailReconciliationQueue() {
         <div className="space-y-1">
           {group.organizationId ?
             <Link className="font-medium text-primary hover:underline" to={`/crm/business-development/organizations/${group.organizationId}`}>{group.organizationName ?? 'Open organization'}</Link> :
-            <p className="font-medium">Unlinked messages: {group.classifications.join(', ').replaceAll('_', ' ')}</p>}
+            <p className="font-medium">Unlinked messages: {group.classifications.join(', ').replace(/_/g, ' ')}</p>}
           <p className="text-sm text-muted-foreground">
             {group.issueCount} unresolved messages · {group.candidateOpportunityCount} candidate opportunities
           </p>
-          <p className="text-xs text-muted-foreground">Evidence types: {group.classifications.join(', ').replaceAll('_', ' ')}</p>
+          <p className="text-xs text-muted-foreground">Evidence types: {group.classifications.join(', ').replace(/_/g, ' ')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline"
