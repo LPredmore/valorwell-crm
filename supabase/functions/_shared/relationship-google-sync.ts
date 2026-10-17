@@ -246,7 +246,7 @@ export async function renewGmailWatch(admin: SupabaseClient) {
     // A watch's current history ID must never overwrite an unprocessed cursor.
     // The reconciliation path alone advances gmail_history_id on verified completion.
     p_gmail_watch_expiration: new Date(Number(watch.expiration)).toISOString(),
-    p_success: true,
+    // Renewal does not establish that any messages were successfully synchronized.
   });
   return { historyId: watch.historyId, expiration: watch.expiration };
 }
