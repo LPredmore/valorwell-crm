@@ -378,7 +378,7 @@ export async function backfillGmailBatch(admin: SupabaseClient) {
     const gmailDay = (ms: number) => new Date(ms).toISOString().slice(0,10).replaceAll("-", "/");
     const query = `after:${gmailDay(fromTime - 86_400_000)} before:${gmailDay(throughTime + 2 * 86_400_000)}`;
     const accessToken = await refreshGoogleAccessToken(runtime);
-    const params = new URLSearchParams({ q: query, maxResults: "8" });
+    const params = new URLSearchParams({ q: query, maxResults: "20" });
     const pageToken = typeof details.backfill_page_token === "string" ? details.backfill_page_token : "";
     if (pageToken) params.set("pageToken", pageToken);
     const page = await googleJson(
@@ -387,14 +387,14 @@ export async function backfillGmailBatch(admin: SupabaseClient) {
     );
     const ids = ((page.messages ?? []) as Array<{ id?: string }>)
       .map((item) => item.id).filter((value): value is string => Boolean(value));
-    if (ids.length > 8) throw new Error("Gmail API returned more than the bounded eight-message batch.");
+    if (ids.length > 20) throw new Error("Gmail API returned more than the bounded twenty-message batch.");
     const nextPageToken = typeof page.nextPageToken === "string" ? page.nextPageToken : null;
     // Retry-safe ingestion is idempotent using the provider message ID. Keep the
     // rate below Google quota limits and the execution within the pg_net timeout.
     const results: Array<{ matched?: boolean; ambiguous?: boolean; skipped?: string }> = [];
-    for (let i = 0; i < ids.length; i += 2) {
+    for (let i = 0; i < ids.length; i += 4) {
       results.push(...await Promise.all(
-        ids.slice(i, i + 2).map((id) => processGmailMessage(admin, accessToken, id)),
+        ids.slice(i, i + 4).map((id) => processGmailMessage(admin, accessToken, id)),
       ));
     }
     const counts = {
