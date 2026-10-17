@@ -166,6 +166,8 @@ export function CrmAuthProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    // Capture the stable ref object used to invalidate pending auth requests on cleanup.
+    const cleanupRequestVersion = requestVersion;
     active.current=true;
     bindSelectedCrmScope(null);
     refresh();
@@ -176,7 +178,7 @@ export function CrmAuthProvider({ children }: { children: ReactNode }) {
       bindSelectedCrmScope(null);
       void refresh();
     });
-    return () => {active.current=false;requestVersion.current++;unbindSelectedCrmScope();subscription.unsubscribe();};
+    return () => {active.current=false;cleanupRequestVersion.current++;unbindSelectedCrmScope();subscription.unsubscribe();};
   }, [refresh,buildFailClosed]);
 
   return (
