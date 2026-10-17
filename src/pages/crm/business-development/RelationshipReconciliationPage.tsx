@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { relationshipTasksRepository } from '@/repositories/supabase/relationship-tasks';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +16,109 @@ import {
   getRelationshipIntegrity,
   previewBtyReconciliation,
 } from '@/lib/crm/relationship-orchestration';
+
+
+type EmailReviewGroup = {
+  groupKey: string;
+  organizationId: string | null;
+  organizationName: string | null;
+  issueCount: number;
+  reviewTaskId: string | null;
+  candidateOpportunityCount: number;
+  classifications: string[];
+};
+type EmailReviewQueueResult = {
+  summary: { openIssues?: number; candidateOpportunities?: number; existingCommunications?: number; awaitingReview?: number };
+  groups: EmailReviewGroup[];
+};
+// The queue RPCs are additive to the deployed database and may precede
+// regeneration of typed Supabase definitions.
+const queueRpc = supabase as unknown as {
+  rpc: (name: string, args: Record<string, unknown>) => Promise<{
+    data: unknown;
+    error: { message: string } | null;
+  }>;
+};
+async function loadEmailReviewQueue(): Promise<EmailReviewQueueResult> {
+  const { data, error } = await queueRpc.rpc('list_relationship_email_review_queue', { p_limit: 100 });
+  if (error) throw new Error(error.message);
+  if (!data || typeof data !== 'object') throw new Error('Review queue did not return valid data.');
+  return data as EmailReviewQueueResult;
+}
+function EmailReconciliationQueue() {
+  const { currentTenantId, isAuthenticated, capabilities, userId } = useCrmAuth();
+  const queryClient = useQueryClient();
+  const key = ['relationship-email-review-queue', currentTenantId];
+  const queue = useQuery({
+    queryKey: key,
+    queryFn: loadEmailReviewQueue,
+    enabled: isAuthenticated && Boolean(currentTenantId),
+    retry: false,
+  });
+  const create = useMutation({
+    mutationFn: async (group: EmailReviewGroup) => {
+      if (!group.organizationId) throw new Error('Unlinked messages require manual identity review first.');
+      if (!currentTenantId || !capabilities.mutate) throw new Error('CRM operator permission required.');
+      const taskId = await relationshipTasksRepository.create(
+        { organizationId: group.organizationId },
+        {
+          title: 'Review BTY email associations · ' + (group.organizationName ?? 'Organization'),
+          description: 'Reconcile ' + group.issueCount + ' unresolved email evidence items against the existing CRM conversation and opportunity. No automatic email sending or stage transition is authorized.',
+          priority: 'High',
+          ownerId: userId,
+        },
+        { tenantId: currentTenantId, userId },
+      );
+      const { error } = await queueRpc.rpc('link_relationship_email_review_task', {
+        p_group_key: group.groupKey,
+        p_task_id: taskId,
+      });
+      if (error) throw new Error('Review task was created but could not be connected to the issue group: ' + error.message);
+      return taskId;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: key }),
+        queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
+      ]);
+    },
+  });
+  const data = queue.data;
+  return <Card>
+    <CardHeader>
+      <CardTitle>Historical email reconciliation</CardTitle>
+      <CardDescription>Message scanning is complete. Proposed associations are evidence for review, not confirmed opportunity changes. This queue is non-clinical and never sends email automatically.</CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      {queue.isLoading && <p className="text-sm text-muted-foreground">Loading reconciliation evidence…</p>}
+      {queue.isError && <p role="alert" className="text-sm text-destructive">{queue.error instanceof Error ? queue.error.message : 'Review queue unavailable'}</p>}
+      {data && <div className="flex flex-wrap gap-2">
+        <Badge variant="outline">{data.summary.openIssues ?? 0} unresolved email issues</Badge>
+        <Badge variant="secondary">{data.summary.candidateOpportunities ?? 0} opportunity candidates</Badge>
+        <Badge variant="outline">{data.summary.existingCommunications ?? 0} stored communication links</Badge>
+      </div>}
+      {create.isError && <p role="alert" className="text-sm text-destructive">{create.error instanceof Error ? create.error.message : 'Task creation failed.'}</p>}
+      {data?.groups.map(group => <div key={group.groupKey} className="flex flex-wrap items-start justify-between gap-3 rounded border p-3">
+        <div className="space-y-1">
+          {group.organizationId ?
+            <Link className="font-medium text-primary hover:underline" to={`/crm/business-development/organizations/${group.organizationId}`}>{group.organizationName ?? 'Open organization'}</Link> :
+            <p className="font-medium">Unlinked messages: {group.classifications.join(', ').replaceAll('_', ' ')}</p>}
+          <p className="text-sm text-muted-foreground">
+            {group.issueCount} unresolved messages · {group.candidateOpportunityCount} candidate opportunities
+          </p>
+          <p className="text-xs text-muted-foreground">Evidence types: {group.classifications.join(', ').replaceAll('_', ' ')}</p>
+        </div>
+        {group.reviewTaskId ? <Badge variant="secondary">CRM task linked</Badge> :
+          group.organizationId && capabilities.mutate ?
+            <Button size="sm" variant="outline" disabled={create.isPending}
+              onClick={() => create.mutate(group)}>Create review task</Button> :
+            <Badge variant="outline">Manual review</Badge>}
+      </div>)}
+      {data && data.groups.length === 0 && <p className="text-sm text-muted-foreground">No open email reconciliation cases.</p>}
+      <Button size="sm" variant="outline" disabled={queue.isFetching} onClick={() => void queue.refetch()}>Refresh review queue</Button>
+    </CardContent>
+  </Card>;
+}
 
 export default function RelationshipReconciliationPage() {
   const [proposals, setProposals] = useState<ReconciliationProposal[] | null>(null);
@@ -33,6 +139,8 @@ export default function RelationshipReconciliationPage() {
       <div><h1 className="text-3xl font-bold">Legacy BTY reconciliation</h1><p className="mt-2 text-muted-foreground">Generate a dry run, review every proposal, then apply the reviewed corrections through the activity engine.</p></div>
       <Button asChild variant="outline"><Link to="/crm/business-development/orchestration">Back to orchestration</Link></Button>
     </div>
+
+    <EmailReconciliationQueue />
 
     <Card><CardHeader><CardTitle>Dry run</CardTitle><CardDescription>The dry run never writes. Applying is blocked until the reconciliation-writes switch is enabled.</CardDescription></CardHeader><CardContent className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
