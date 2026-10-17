@@ -106,35 +106,53 @@ function EmailReconciliationQueue() {
     enabled: isAuthenticated && Boolean(currentTenantId),
     retry: false,
   });
+  const [bulkProcessed, setBulkProcessed] = useState(0);
+  const createReviewTask = async (group: EmailReviewGroup): Promise<string> => {
+    if (!group.organizationId) throw new Error('Unlinked messages require manual identity review first.');
+    if (!currentTenantId || !capabilities.mutate) throw new Error('CRM operator permission required.');
+    const taskId = await relationshipTasksRepository.create(
+      { organizationId: group.organizationId },
+      {
+        title: 'Review BTY email associations · ' + (group.organizationName ?? 'Organization'),
+        description: 'Reconcile ' + group.issueCount + ' unresolved email evidence items against the existing CRM conversation and opportunity. No automatic email sending or stage transition is authorized.',
+        priority: 'High',
+        ownerId: userId,
+      },
+      { tenantId: currentTenantId, userId },
+    );
+    const { error } = await queueRpc.rpc('link_relationship_email_review_task', {
+      p_group_key: group.groupKey,
+      p_task_id: taskId,
+    });
+    if (error) throw new Error('Review task was created but could not be connected to the issue group: ' + error.message);
+    return taskId;
+  };
+  const refreshTasks = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: key }),
+      queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
+    ]);
+  };
   const create = useMutation({
-    mutationFn: async (group: EmailReviewGroup) => {
-      if (!group.organizationId) throw new Error('Unlinked messages require manual identity review first.');
-      if (!currentTenantId || !capabilities.mutate) throw new Error('CRM operator permission required.');
-      const taskId = await relationshipTasksRepository.create(
-        { organizationId: group.organizationId },
-        {
-          title: 'Review BTY email associations · ' + (group.organizationName ?? 'Organization'),
-          description: 'Reconcile ' + group.issueCount + ' unresolved email evidence items against the existing CRM conversation and opportunity. No automatic email sending or stage transition is authorized.',
-          priority: 'High',
-          ownerId: userId,
-        },
-        { tenantId: currentTenantId, userId },
-      );
-      const { error } = await queueRpc.rpc('link_relationship_email_review_task', {
-        p_group_key: group.groupKey,
-        p_task_id: taskId,
-      });
-      if (error) throw new Error('Review task was created but could not be connected to the issue group: ' + error.message);
-      return taskId;
+    mutationFn: createReviewTask,
+    onSuccess: refreshTasks,
+  });
+  const bulk = useMutation({
+    mutationFn: async (groups: EmailReviewGroup[]) => {
+      let processed = 0;
+      for (const group of groups) {
+        // Keep the loop sequential to preserve the operator's browser session,
+        // rate-limit provider calls and make interrupted work safe to resume.
+        await createReviewTask(group);
+        processed++;
+        setBulkProcessed(processed);
+      }
+      return processed;
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: key }),
-        queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
-      ]);
-    },
+    onSettled: refreshTasks,
   });
   const data = queue.data;
+  const pendingOrganizations = (data?.groups ?? []).filter(group => group.organizationId && !group.reviewTaskId);
   return <Card>
     <CardHeader>
       <CardTitle>Historical email reconciliation</CardTitle>
@@ -149,6 +167,18 @@ function EmailReconciliationQueue() {
         <Badge variant="outline">{data.summary.existingCommunications ?? 0} stored communication links</Badge>
       </div>}
       {create.isError && <p role="alert" className="text-sm text-destructive">{create.error instanceof Error ? create.error.message : 'Task creation failed.'}</p>}
+      {capabilities.mutate && pendingOrganizations.length > 0 && <div className="space-y-2 rounded border p-3">
+        <p className="text-sm text-muted-foreground">Creating tasks is an internal, review-only action. It does not approve candidate links, change opportunity stages, or send email.</p>
+        <Button size="sm" variant="outline" disabled={bulk.isPending || create.isPending}
+          onClick={() => { setBulkProcessed(0); bulk.mutate(pendingOrganizations); }}>
+          {bulk.isPending ? 'Creating review tasks…' : `Create review tasks for ${pendingOrganizations.length} organizations`}
+        </Button>
+        {bulk.isPending && <p className="text-xs text-muted-foreground">{bulkProcessed} of {pendingOrganizations.length} linked</p>}
+        {bulk.isError && <p role="alert" className="text-sm text-destructive">
+          Some tasks may already have been created. Refresh and retry only unlinked groups. {bulk.error instanceof Error ? bulk.error.message : ''}
+        </p>}
+      </div>}
+
       {data?.groups.map(group => <div key={group.groupKey} className="flex flex-wrap items-start justify-between gap-3 rounded border p-3">
         <div className="space-y-1">
           {group.organizationId ?
@@ -166,7 +196,7 @@ function EmailReconciliationQueue() {
           </Button>
           {group.reviewTaskId ? <Badge variant="secondary">CRM task linked</Badge> :
             group.organizationId && capabilities.mutate ?
-              <Button size="sm" variant="outline" disabled={create.isPending}
+              <Button size="sm" variant="outline" disabled={create.isPending || bulk.isPending}
                 onClick={() => create.mutate(group)}>Create review task</Button> :
               <Badge variant="outline">Manual review</Badge>}
         </div>
