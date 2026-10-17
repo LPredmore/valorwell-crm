@@ -27,23 +27,43 @@ Deno.serve(async (request: Request) => {
     const input = await request.json().catch(() => ({})) as { mode?: string };
     const flags = await observationFlags(admin);
     const results: Record<string, unknown> = {};
-
-    if (input.mode === "gmail_watch_only") {
-      if (flags.gmail) results.gmailWatch = await renewGmailWatch(admin);
-      console.log(JSON.stringify({ component: "relationship-google-maintenance", event: "complete", mode: input.mode, flags }));
-      return json({ mode: input.mode, flags, results });
+    const failures: string[] = [];
+    async function attempt(label: string, run: () => Promise<unknown>) {
+      try {
+        results[label] = await run();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        failures.push(label);
+        results[label] = { error: message };
+        console.error(JSON.stringify({
+          component: "relationship-google-maintenance",
+          event: "operation_failed",
+          operation: label,
+          error: message,
+        }));
+      }
     }
 
-    if (flags.gmail) {
-      results.gmailSync = await syncGmail(admin);
-      results.gmailWatch = await renewGmailWatch(admin);
+    // Renew first and independently. Renewal no longer changes the mailbox cursor.
+    // A failed or long-running sync must not let the Pub/Sub watch silently expire.
+    if (flags.gmail) await attempt("gmailWatch", () => renewGmailWatch(admin));
+    if (input.mode !== "gmail_watch_only") {
+      if (flags.gmail) await attempt("gmailSync", () => syncGmail(admin));
+      if (flags.calendar) {
+        await attempt("calendarSync", () => syncCalendar(admin));
+        await attempt("calendarWatch", () => renewCalendarWatch(admin));
+      }
     }
-    if (flags.calendar) {
-      results.calendarSync = await syncCalendar(admin);
-      results.calendarWatch = await renewCalendarWatch(admin);
-    }
-    console.log(JSON.stringify({ component: "relationship-google-maintenance", event: "complete", mode: input.mode ?? "scheduled", flags }));
-    return json({ mode: input.mode ?? "scheduled", flags, results });
+    console.log(JSON.stringify({
+      component: "relationship-google-maintenance",
+      event: failures.length ? "partial_failure" : "complete",
+      mode: input.mode ?? "scheduled",
+      flags,
+      failures,
+    }));
+    // The caller must see the actual worker status, not a false success because
+    // pg_cron successfully queued an HTTP request.
+    return json({ mode: input.mode ?? "scheduled", flags, results, failures }, failures.length ? 502 : 200);
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
