@@ -1,5 +1,6 @@
 import {fireEvent,render,screen} from '@testing-library/react';
 import {describe,expect,it,vi} from 'vitest';
+import {MemoryRouter} from 'react-router-dom';
 import {ClinicianStageNavigator} from '@/pages/crm/pipelines/ClinicianStageNavigator';
 import type {CrmPipelineStage} from '@/domain/pipelines/models';
 
@@ -19,8 +20,8 @@ const stages=[
 
 describe('Prospective Clinicians stage navigator',()=>{
  it('shows every configured prospect and applicant stage, including empty stages',()=>{
-  render(<ClinicianStageNavigator stages={stages} selectedStageId="" onChooseStage={vi.fn()}
-   loadedCounts={{'p-review':200}} totalLoaded={200} loading={false}/>);
+  render(<MemoryRouter><ClinicianStageNavigator stages={stages} selectedStageId="" onChooseStage={vi.fn()}
+   loadedCounts={{'p-review':200}} totalLoaded={200} loading={false}/></MemoryRouter>);
   expect(screen.getByText(/6 configured stages/)).toBeInTheDocument();
   expect(screen.getByText('Prospect recruitment (5)')).toBeInTheDocument();
   expect(screen.getByText('Submitted applications (1)')).toBeInTheDocument();
@@ -31,12 +32,12 @@ describe('Prospective Clinicians stage navigator',()=>{
  });
  it('selects a stage and allows showing all again without changing source data',()=>{
   const choose=vi.fn();
-  const {rerender}=render(<ClinicianStageNavigator stages={stages} selectedStageId="" onChooseStage={choose}
-   loadedCounts={{'p-review':200}} totalLoaded={200} loading={false}/>);
+  const {rerender}=render(<MemoryRouter><ClinicianStageNavigator stages={stages} selectedStageId="" onChooseStage={choose}
+   loadedCounts={{'p-review':200}} totalLoaded={200} loading={false}/></MemoryRouter>);
   fireEvent.click(screen.getByRole('button',{name:/Prospects — Responded/}));
   expect(choose).toHaveBeenCalledWith('p-reply');
-  rerender(<ClinicianStageNavigator stages={stages} selectedStageId="p-reply" onChooseStage={choose}
-   loadedCounts={{'p-review':200}} totalLoaded={200} loading={false}/>);
+  rerender(<MemoryRouter><ClinicianStageNavigator stages={stages} selectedStageId="p-reply" onChooseStage={choose}
+   loadedCounts={{'p-review':200}} totalLoaded={200} loading={false}/></MemoryRouter>);
   fireEvent.click(screen.getByRole('button',{name:'Show all stages'}));
   expect(choose).toHaveBeenCalledWith('');
  });
