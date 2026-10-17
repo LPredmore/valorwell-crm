@@ -45,9 +45,60 @@ async function loadEmailReviewQueue(): Promise<EmailReviewQueueResult> {
   if (!data || typeof data !== 'object') throw new Error('Review queue did not return valid data.');
   return data as EmailReviewQueueResult;
 }
+
+type ReviewIssue = {
+  issueId: string;
+  source: string;
+  classification: string;
+  sender: string;
+  subject: string;
+  candidateContactId: string | null;
+  candidateOpportunityId: string | null;
+  existingCommunicationId: string | null;
+  issueCreatedAt: string;
+  providerMessageId: string;
+};
+function EmailReviewGroupEvidence({ groupKey }: { groupKey: string }) {
+  const issues = useQuery({
+    queryKey: ['relationship-email-review-group-issues', groupKey],
+    queryFn: async (): Promise<ReviewIssue[]> => {
+      const { data, error } = await queueRpc.rpc('list_relationship_email_review_group_issues', {
+        p_group_key: groupKey,
+        p_limit: 75,
+      });
+      if (error) throw new Error(error.message);
+      if (!Array.isArray(data)) throw new Error('No verified message list was returned.');
+      return data as ReviewIssue[];
+    },
+    retry: false,
+  });
+  return <div className="w-full space-y-2 rounded bg-muted/30 p-3">
+    <p className="text-xs text-muted-foreground">Read-only source evidence. No message body is exposed and no stage is changed.</p>
+    {issues.isLoading && <p className="text-sm">Loading source evidence…</p>}
+    {issues.isError && <p className="text-sm text-destructive">{issues.error instanceof Error ? issues.error.message : 'Evidence unavailable'}</p>}
+    {issues.data?.map(item => <div className="space-y-1 border-b pb-2 text-sm" key={item.issueId}>
+      <div className="flex flex-wrap gap-2">
+        <Badge variant="outline">{item.source}</Badge>
+        <span className="font-medium">{item.subject || '(No subject recorded)'}</span>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {item.sender || 'Sender not stored'} · {item.classification.replaceAll('_', ' ')}
+      </p>
+      <div className="flex gap-3 text-xs">
+        {item.candidateOpportunityId && <Link className="text-primary hover:underline"
+          to={`/crm/business-development/opportunities/${item.candidateOpportunityId}`}>Candidate opportunity</Link>}
+        {item.existingCommunicationId && <span>Stored communication link</span>}
+        <span>Issue {item.issueId.slice(0, 8)}</span>
+      </div>
+    </div>)}
+    {issues.data?.length === 75 && <p className="text-xs text-muted-foreground">Showing the first 75 issues for this group.</p>}
+  </div>;
+}
+
 function EmailReconciliationQueue() {
   const { currentTenantId, isAuthenticated, capabilities, userId } = useCrmAuth();
   const queryClient = useQueryClient();
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const key = ['relationship-email-review-queue', currentTenantId];
   const queue = useQuery({
     queryKey: key,
@@ -108,11 +159,18 @@ function EmailReconciliationQueue() {
           </p>
           <p className="text-xs text-muted-foreground">Evidence types: {group.classifications.join(', ').replaceAll('_', ' ')}</p>
         </div>
-        {group.reviewTaskId ? <Badge variant="secondary">CRM task linked</Badge> :
-          group.organizationId && capabilities.mutate ?
-            <Button size="sm" variant="outline" disabled={create.isPending}
-              onClick={() => create.mutate(group)}>Create review task</Button> :
-            <Badge variant="outline">Manual review</Badge>}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline"
+            onClick={() => setExpandedGroup(expandedGroup === group.groupKey ? null : group.groupKey)}>
+            {expandedGroup === group.groupKey ? 'Hide evidence' : 'View evidence'}
+          </Button>
+          {group.reviewTaskId ? <Badge variant="secondary">CRM task linked</Badge> :
+            group.organizationId && capabilities.mutate ?
+              <Button size="sm" variant="outline" disabled={create.isPending}
+                onClick={() => create.mutate(group)}>Create review task</Button> :
+              <Badge variant="outline">Manual review</Badge>}
+        </div>
+        {expandedGroup === group.groupKey && <EmailReviewGroupEvidence groupKey={group.groupKey} />}
       </div>)}
       {data && data.groups.length === 0 && <p className="text-sm text-muted-foreground">No open email reconciliation cases.</p>}
       <Button size="sm" variant="outline" disabled={queue.isFetching} onClick={() => void queue.refetch()}>Refresh review queue</Button>
