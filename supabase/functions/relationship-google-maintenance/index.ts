@@ -54,16 +54,24 @@ Deno.serve(async (request: Request) => {
         await attempt("calendarWatch", () => renewCalendarWatch(admin));
       }
     }
+    const historicalBackfillPending = (
+      results.gmailSync !== null && typeof results.gmailSync === "object" &&
+      (results.gmailSync as Record<string, unknown>).historicalBackfillPending === true
+    );
     console.log(JSON.stringify({
       component: "relationship-google-maintenance",
-      event: failures.length ? "partial_failure" : "complete",
+      event: failures.length ? "partial_failure" : historicalBackfillPending ? "degraded_backfill_pending" : "complete",
       mode: input.mode ?? "scheduled",
       flags,
       failures,
+      historicalBackfillPending,
     }));
-    // The caller must see the actual worker status, not a false success because
-    // pg_cron successfully queued an HTTP request.
-    return json({ mode: input.mode ?? "scheduled", flags, results, failures }, failures.length ? 502 : 200);
+    // The caller sees a distinct degraded status until historical coverage is
+    // restored; successful watch renewal does not imply backlog completion.
+    return json(
+      { mode: input.mode ?? "scheduled", flags, results, failures, historicalBackfillPending },
+      failures.length ? 502 : historicalBackfillPending ? 207 : 200,
+    );
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
