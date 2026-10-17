@@ -186,7 +186,7 @@ async function fullGmailReconciliation(
 }
 
 /**
- * Gmail history IDs can expire after a week. A full mailbox scan cannot always
+ * Gmail history IDs can expire or accumulate a large unread backlog. A full mailbox scan cannot always
  * complete in a single webhook/HTTP invocation. Before establishing a fresh
  * live cursor, durably record the outstanding historical interval for a
  * separate paginated backfill. This prevents losing the gap silently.
@@ -215,9 +215,9 @@ async function checkpointExpiredGmailHistory(
     status: "open",
     source: "gmail",
     external_event_id: gapKey,
-    summary: "Gmail historical messages remain unprocessed after an expired history cursor; paginated backfill required.",
+    summary: "Gmail historical messages remain unprocessed after a stale or expired history cursor; paginated backfill required.",
     details: {
-      recovery_kind: "expired_gmail_history",
+      recovery_kind: "stale_or_expired_gmail_history",
       gmail_connection_id: runtime.id,
       last_verified_sync_at: state.lastSuccessfulSyncAt ?? null,
       previous_history_id: state.gmailHistoryId ?? null,
@@ -233,7 +233,7 @@ async function checkpointExpiredGmailHistory(
     p_connection_id: runtime.id,
     p_gmail_history_id: freshHistoryId,
     p_error_code: "historical_backfill_pending",
-    p_error_reason: "Expired Gmail history; live cursor restored with a durable pending reconciliation issue.",
+    p_error_reason: "Stale or expired Gmail history; live cursor restored with a durable pending reconciliation issue.",
   });
   console.warn(JSON.stringify({
     component: "relationship-google-sync",
@@ -259,40 +259,73 @@ export async function syncGmail(
   const accessToken = await refreshGoogleAccessToken(runtime);
   const state = await syncState(admin, runtime.id);
   if (!state.gmailHistoryId) return fullGmailReconciliation(admin, runtime, accessToken, state);
-  const ids = new Set<string>();
-  let pageToken: string | undefined;
-  let latestHistoryId = notificationHistoryId ?? state.gmailHistoryId;
+
+  // A single bounded Gmail history page fits scheduled HTTP invocations. Do
+  // NOT use page.historyId as the next cursor when more pages exist: it reflects
+  // the current mailbox, not necessarily the last fully processed page.
+  const params = new URLSearchParams({
+    startHistoryId: state.gmailHistoryId,
+    historyTypes: "messageAdded",
+    maxResults: "25",
+  });
+  let page: Record<string, unknown>;
   try {
-    do {
-      const params = new URLSearchParams({ startHistoryId: state.gmailHistoryId, historyTypes: "messageAdded", maxResults: "500" });
-      if (pageToken) params.set("pageToken", pageToken);
-      const page = await googleJson(
-        `https://gmail.googleapis.com/gmail/v1/users/me/history?${params}`,
-        accessToken,
-      );
-      for (const history of (page.history ?? []) as Array<Record<string, unknown>>) {
-        for (const added of (history.messagesAdded ?? []) as Array<{ message?: { id?: string } }>) {
-          if (added.message?.id) ids.add(added.message.id);
-        }
-      }
-      latestHistoryId = String(page.historyId ?? latestHistoryId);
-      pageToken = typeof page.nextPageToken === "string" ? page.nextPageToken : undefined;
-    } while (pageToken);
+    page = await googleJson(
+      `https://gmail.googleapis.com/gmail/v1/users/me/history?${params}`,
+      accessToken,
+    );
   } catch (error) {
     if ((error as Error & { status?: number }).status === 404) {
       return checkpointExpiredGmailHistory(admin, runtime, accessToken, state);
     }
     throw error;
   }
-  const results: unknown[] = [];
-  for (const id of ids) results.push(await processGmailMessage(admin, accessToken, id));
+
+  const history = (page.history ?? []) as Array<Record<string, unknown>>;
+  const hasMore = typeof page.nextPageToken === "string";
+  const lastSynced = state.lastSuccessfulSyncAt ? Date.parse(state.lastSuccessfulSyncAt) : NaN;
+  // A long-running backlog cannot block the live mailbox or be silently
+  // truncated. Preserve its evidence and recover historical messages via the
+  // dedicated paginated reconciliation process.
+  if (hasMore && (!Number.isFinite(lastSynced) || Date.now() - lastSynced > 48 * 3600_000)) {
+    return checkpointExpiredGmailHistory(admin, runtime, accessToken, state);
+  }
+
+  const ids = new Set<string>();
+  for (const item of history) {
+    for (const added of (item.messagesAdded ?? []) as Array<{ message?: { id?: string } }>) {
+      if (added.message?.id) ids.add(added.message.id);
+    }
+  }
+  const messageIds = [...ids];
+  const results: Array<{ matched?: boolean; skipped?: string }> = [];
+  for (let i = 0; i < messageIds.length; i += 6) {
+    results.push(...await Promise.all(
+      messageIds.slice(i, i + 6).map((id) => processGmailMessage(admin, accessToken, id)),
+    ));
+  }
+  const lastHistoryRecordId = history.length
+    ? String(history[history.length - 1].id ?? "")
+    : "";
+  const nextHistoryId = hasMore
+    ? lastHistoryRecordId
+    : String(page.historyId ?? notificationHistoryId ?? state.gmailHistoryId);
+  if (!nextHistoryId || (hasMore && nextHistoryId === state.gmailHistoryId)) {
+    throw new Error("Gmail history page cannot be checkpointed without losing messages.");
+  }
   await updateState(admin, {
     p_connection_id: runtime.id,
-    p_gmail_history_id: latestHistoryId,
+    p_gmail_history_id: nextHistoryId,
     p_notification: Boolean(notificationHistoryId),
     p_success: true,
   });
-  return { mode: "history", processed: results.length, historyId: latestHistoryId, results };
+  return {
+    mode: "history",
+    processed: results.filter((row) => !row.skipped).length,
+    skippedUnavailable: results.filter((row) => row.skipped).length,
+    hasMore,
+    historyId: nextHistoryId,
+  };
 }
 
 export async function renewGmailWatch(admin: SupabaseClient) {
