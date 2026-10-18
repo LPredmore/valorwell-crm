@@ -17,7 +17,7 @@ with expected(label, signature, expected_anon, expected_authenticated, expected_
     ('email_reply_correlate', 'public.crm_correlate_client_email_reply(uuid)', false, false, true),
     ('campaign_concurrency', 'public.crm_evaluate_campaign_concurrency(uuid,uuid,text,uuid)', false, false, true),
     ('crm_automation_event', 'public.crm_emit_automation_event(uuid,text,text,uuid,text,jsonb,text,uuid,timestamptz)', false, false, true),
-    ('crm_internal_tenant_check', 'public._crm_enrollment_tenant_check(uuid)', false, false, false),
+    ('crm_internal_tenant_check', 'public._crm_enrollment_tenant_check(uuid)', false, false, true),
     ('crm_manual_enrollment_api', 'public.crm_enroll_clients_in_campaign(uuid,uuid[],text,uuid,text)', false, true, true),
     ('crm_donor_overview_api', 'public.crm_donor_overview()', false, true, true),
     ('crm_legacy_replay_api', 'public.crm_enqueue_donor_transactions(text,boolean,integer)', false, true, true)
