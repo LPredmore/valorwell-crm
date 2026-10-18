@@ -67,7 +67,10 @@ select 'title_change_trigger_search_path' as check_name,
             'private.invalidate_ai_operations_video_downstream_on_title_change()'
           )
             and not p.prosecdef
-            and coalesce(p.proconfig,array[]::text[]) @> array['search_path=']
+            and exists (
+              select 1 from unnest(coalesce(p.proconfig,array[]::text[])) cfg
+              where cfg in ('search_path=','search_path=""')
+            )
        ) then 'PASS' else 'FAIL' end as result;
 
 select 'legacy_donor_transaction_view_browser_denial' as check_name,
