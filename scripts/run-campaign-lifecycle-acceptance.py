@@ -180,6 +180,49 @@ def extra_jwt(s):
       codes.append(code)
     return dict(http_statuses=codes)
    run('CRM internal helpers reject anonymous and genuine signed browser JWT calls',helpers_denied)
+   # Test the *exact* production emitter body against isolated, clearly
+   # synthetic dependencies. Do not impersonate a production campaign engine.
+   # Existing current-main migration 00600 is applied unmodified here.
+   s.execute(
+    b.sql_file(crm/'supabase/tests/crm_emitter_exact_body_isolated_fixture.sql')
+    +b.sql_file(crm/'supabase/migrations/20261019000600_restrict_crm_automation_event_emitter.sql')
+    +"notify pgrst,'reload schema';"
+   )
+   import time
+   time.sleep(.5)
+   emitter=state['rest']+'/rpc/crm_emit_automation_event'
+   def emitter_args(key):
+    return dict(
+     p_tenant_id=core.TENANT,
+     p_event_type='synthetic_security_probe',
+     p_subject_type='fixture_subject',
+     p_subject_id=ENROLL1,
+     p_idempotency_key=key,
+     p_payload={'fixture': True},
+     p_source='isolated_acceptance',
+    )
+   def emitter_browser_denied():
+    observed=[]
+    for identity in [None,*state['tokens']]:
+     code,data=original_request(emitter,identity,emitter_args(str(uuid.uuid4())))
+     assert code in [401,403,404],(code,data)
+     if code==404:assert data.get('code')=='PGRST202',data
+     observed.append(code)
+    assert s.value('select count(*) from public.crm_automation_events')==0
+    assert s.value('select count(*) from public.crm_emitter_test_jobs')==0
+    return dict(http_statuses=observed,event_rows=0,synthetic_jobs=0)
+   run('CRM emitter exact body denies anonymous and two real signed user JWTs',emitter_browser_denied)
+   def emitter_trusted_service():
+    key=str(uuid.uuid4())
+    code,data=original_request(emitter,state['service'],emitter_args(key))
+    assert code==200 and str(uuid.UUID(str(data)))==str(data),(code,data)
+    again,again_data=original_request(emitter,state['service'],emitter_args(key))
+    assert again==200 and again_data is None,(again,again_data)
+    assert s.value('select count(*) from public.crm_automation_events')==1
+    assert s.value('select count(*) from public.crm_emitter_test_jobs')==1
+    return dict(http_statuses=[code,again],event_rows=1,synthetic_jobs=1,
+                provider_sends=0,actual_campaign_worker_executed=False)
+   run('CRM emitter service JWT executes exact body once and preserves idempotency',emitter_trusted_service)
    def signed_lifecycle():
     codes=[]
     for name in ['crm_pause_enrollment','crm_resume_enrollment','crm_cancel_enrollment','crm_mark_enrollment_responded','crm_restart_enrollment']:
