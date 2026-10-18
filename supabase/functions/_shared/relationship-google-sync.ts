@@ -116,7 +116,11 @@ async function processGmailMessage(
     p_label_ids: Array.isArray(full.labelIds) ? full.labelIds : [],
   });
   if (error) throw new Error(error.message);
-  return { messageId, matched: true, result: data };
+  // A successful RPC transport does not establish that a communication was
+  // persisted. Ingestion can reject a false thread anchor and return matched:false.
+  const ingested = (data ?? {}) as Record<string, unknown>;
+  const captured = ingested.observed === true || ingested.matched === true;
+  return { messageId, matched: captured, result: data };
 }
 
 async function fullGmailReconciliation(
