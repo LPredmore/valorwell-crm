@@ -79,3 +79,33 @@ select 'legacy_donor_transaction_view_browser_denial' as check_name,
              and not has_table_privilege('authenticated','public.crm_donor_transactions_v','SELECT')
              and has_table_privilege('service_role','public.crm_donor_transactions_v','SELECT')
             then 'PASS' else 'FAIL' end as result;
+
+-- Exact ledger audit for the complete nine-migration release. Read-only: before
+-- rollout each version is legitimately MISSING; after staged deployment all nine
+-- must appear exactly once in this shared production ledger.
+with expected(version, repository, purpose) as (
+ values
+ ('20261019000100','billing','Stripe RPC browser grant'),
+ ('20261019000200','crm','idempotency helper grants'),
+ ('20261019000300','billing','claim and payroll worker grants'),
+ ('20261019000310','crm','campaign lifecycle/idempotency'),
+ ('20261019000400','crm','internal campaign and Social queue grants'),
+ ('20261019000410','crm','AI title trigger search path'),
+ ('20261019000500','crm','legacy donor fail-closed'),
+ ('20261019000600','crm','automation emitter grants'),
+ ('20261019000800','crm','missing/foreign enrollment HTTP 403')
+)
+select 'security_migration_ledger' as check_name, e.version, e.repository, e.purpose,
+       case when exists(select 1 from supabase_migrations.schema_migrations m
+                        where m.version=e.version) then 'PASS' else 'MISSING' end as result
+from expected e order by version;
+
+-- Classify the new forward-only #187 HTTP regression without invoking a
+-- potentially mutating campaign function. This is a catalog assertion; true
+-- signed-JWT HTTP behavior must still be exercised in disposable acceptance.
+select 'inaccessible_campaign_enrollment_denied_http_403' as check_name,
+       case when to_regprocedure('public._crm_enrollment_tenant_check(uuid)') is null
+            then 'MISSING'
+            when pg_get_functiondef(to_regprocedure('public._crm_enrollment_tenant_check(uuid)'))
+                 like '%enrollment_not_found%42501%'
+            then 'PASS' else 'FAIL' end as result;
