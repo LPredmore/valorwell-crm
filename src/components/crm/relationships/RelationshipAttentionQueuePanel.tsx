@@ -28,8 +28,18 @@ type QueueSummary = {
   waitingExternal: number;
   clear: number;
   notAssessed: number;
+  standaloneOrganizationActions: number;
+  organizationsWithoutOpportunities: number;
 };
-type QueueResult = { summary: QueueSummary; items: QueueRow[] };
+type OrganizationWork = {
+  organizationId: string;
+  organizationName: string;
+  attentionStatus: 'needs_action' | 'manual_review';
+  nextAction: string | null;
+  dueAt: string | null;
+  unassociatedIssues: number;
+};
+type QueueResult = { summary: QueueSummary; items: QueueRow[]; organizationItems: OrganizationWork[] };
 const labels: Record<QueueStatus, string> = {
   awaiting_approval: 'Awaiting approval',
   manual_review: 'Manual review',
@@ -82,6 +92,8 @@ export function RelationshipAttentionQueuePanel() {
         <Badge variant="outline">{summary.waitingExternal} waiting</Badge>
         <Badge variant="secondary">{summary.clear} clear</Badge>
         <Badge variant="outline">{summary.notAssessed} not assessed</Badge>
+        <Badge variant="outline">{summary.standaloneOrganizationActions} organization-level follow-ups</Badge>
+        <Badge variant="outline">{summary.organizationsWithoutOpportunities} organizations without opportunities</Badge>
       </div>}
       {queue.data?.items.map(item => <div key={item.id} className="space-y-1 rounded border p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -99,6 +111,21 @@ export function RelationshipAttentionQueuePanel() {
           {' '}· {item.unresolvedIssueCount} unresolved associations
         </p>
       </div>)}
+      {(queue.data?.organizationItems?.length ?? 0) > 0 && <div className="space-y-2 border-t pt-3">
+        <p className="font-medium">Organization-wide follow-ups not owned by an opportunity</p>
+        <p className="text-xs text-muted-foreground">Includes organizations without a BTY opportunity and independent relationship obligations.</p>
+        {queue.data?.organizationItems.map(item => <div key={item.organizationId} className="space-y-1 rounded border p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Link className="font-medium text-primary hover:underline"
+              to={`/crm/business-development/organizations/${item.organizationId}`}>{item.organizationName}</Link>
+            <Badge variant="outline">{labels[item.attentionStatus]}</Badge>
+          </div>
+          {item.nextAction && <p className="text-sm">{item.nextAction}</p>}
+          <p className="text-xs text-muted-foreground">Due: {centralDue(item.dueAt)}
+            {' '}· {item.unassociatedIssues} unresolved organization-only email associations
+          </p>
+        </div>)}
+      </div>}
       {queue.isSuccess && queue.data.items.length === 0 &&
         <p className="text-sm text-muted-foreground">No action-ready relationships. Unassessed opportunities still need evaluation.</p>}
       {queue.isSuccess && queue.data.items.length === 40 &&
