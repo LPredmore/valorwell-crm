@@ -3,6 +3,7 @@ import { adminClient, json, TENANT_ID } from "../_shared/relationship-google.ts"
 import {
   observationFlags,
   backfillGmailBatch,
+  replayExactBtyGmailCandidates,
   renewCalendarWatch,
   renewGmailWatch,
   syncCalendar,
@@ -43,6 +44,15 @@ Deno.serve(async (request: Request) => {
           error: message,
         }));
       }
+    }
+
+    if (input.mode === "gmail_exact_replay") {
+      if (flags.gmail) await attempt("gmailExactReplay",
+        () => replayExactBtyGmailCandidates(admin));
+      return json(
+        { mode: input.mode, flags, results, failures },
+        failures.length ? 502 : 200,
+      );
     }
 
     if (input.mode === "gmail_backfill") {
