@@ -4,6 +4,7 @@ import { directoryReturnSearch, directoryDetailSearch } from '@/domain/relations
 import { useEffect, useState } from 'react';
 import { RelationshipPagination } from '@/components/crm/relationships/RelationshipWorkspacePrimitives';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { RelationshipAttentionPanel } from '@/components/crm/relationships/RelationshipAttentionPanel';
 import { RelationshipOwnerName } from '@/components/crm/relationships/RelationshipOwnerField';
 import { RelationshipTimelinePanel } from '@/components/crm/relationships/RelationshipTimelinePanel';
 import { RelationshipTasksPanel } from '@/components/crm/relationships/RelationshipTasksPanel';
@@ -80,8 +81,8 @@ function OrganizationDetailWorkspace() {
           <Summary label="Veteran affiliated" value={organization.data.veteranAffiliated === undefined ? 'Not recorded' : organization.data.veteranAffiliated ? 'Yes' : 'No'} />
           <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Assigned owner</p><p className="mt-1 text-sm"><RelationshipOwnerName ownerId={organization.data.ownerId} /></p></div>
           <Summary label="Organization website" value={organization.data.website ?? 'Not recorded'} />
-          <Summary label="Next action" value={organization.data.nextAction ?? 'None'} />
-          <Summary label="Next action due" value={formatDate(organization.data.nextActionDueAt)} />
+          <Summary label="Organization-only next action" value={organization.data.nextAction ?? 'See opportunity attention overview'} />
+          <Summary label="Organization-only action due" value={formatDate(organization.data.nextActionDueAt)} />
           <Summary label="Last contact" value={formatDate(organization.data.lastContactAt)} />
           <div className="sm:col-span-2 lg:col-span-4"><Badge variant={organization.data.doNotContact ? 'destructive' : 'secondary'}>{organization.data.doNotContact ? 'Do not contact' : 'Contact allowed'}</Badge></div>
         </CardContent>
@@ -99,6 +100,7 @@ function OrganizationDetailWorkspace() {
         </CardContent>
       </Card>}
 
+      {organization.data && <RelationshipAttentionPanel organizationId={organization.data.id} />}
       {organization.data && <RelationshipTimelinePanel subject={{ organizationId: organization.data.id }} />}
       {organization.data && <RelationshipTasksPanel subject={{ organizationId: organization.data.id }} />}
       {organization.data && <RelationshipPipelinePanel subject={{ organizationId: organization.data.id }} />}
