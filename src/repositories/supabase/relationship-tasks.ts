@@ -5,8 +5,8 @@ import { requireCrmOperatorScope, type CrmOperatorScope } from '../crmOperatorSc
 
 /** Relationship subjects use the generated canonical crm_tasks contract. */
 export type RelationshipTaskSubject =
-  | { contactId: string; organizationId?: never }
-  | { organizationId: string; contactId?: never };
+  | { contactId: string; organizationId?: never; opportunityId?: never }
+  | { organizationId: string; opportunityId?: string; contactId?: never };
 export interface RelationshipTaskRow {
   id: string;
   tenant_id: string;
@@ -37,7 +37,7 @@ export class RelationshipTasksNotDeployedError extends Error {
 function checkError(error: { code?: string; message: string } | null): void {
   if (!error) return;
   if (['42703', 'PGRST204', 'PGRST205'].includes(error.code ?? '') ||
-    /column.*relationship_(contact|organization)_id|schema cache/i.test(error.message)) {
+    /column.*relationship_(contact|organization|opportunity)_id|schema cache/i.test(error.message)) {
     throw new RelationshipTasksNotDeployedError();
   }
   throw new Error(error.message);
@@ -54,6 +54,7 @@ export const relationshipTasksRepository = {
       .eq('tenant_id', tenantId);
     query = subject.contactId ? query.eq('relationship_contact_id', subject.contactId)
       : query.eq('relationship_organization_id', subject.organizationId!);
+    if (subject.opportunityId) query = query.eq('relationship_opportunity_id', subject.opportunityId);
     if (options.view === 'open' || options.view === 'overdue') {
       query = query.in('status', ['not_started', 'in_progress', 'waiting', 'blocked']);
     }
@@ -87,6 +88,7 @@ export const relationshipTasksRepository = {
         due_at: input.dueAt || null,
         relationship_contact_id: subject.contactId ?? null,
         relationship_organization_id: subject.organizationId ?? null,
+        relationship_opportunity_id: subject.opportunityId ?? null,
       })
       .select('id')
       .single();
