@@ -33,3 +33,9 @@ replay refusal, including overlapping synthetic provider identities under two
 real signed tenant JWTs. New migration versions are checked across all three
 shared-database checkouts before initialization; `--check-migration-sequence-only`
 performs that read-only check without creating a database.
+
+## October 18 emitter regression extension (post-PR #181)
+
+The current runner adds **two additional scenario groups** to the previously reported 78 (the old Codex record remains 78/78 and must not be rewritten as a new execution result). The fixture in `supabase/tests/crm_emitter_exact_body_isolated_fixture.sql` embeds the exact `crm_emit_automation_event` function body inspected from the live read-only catalog on 2026-10-18, with only synthetic dependency tables/functions. The runner uses genuine GoTrue-signed anonymous/tenant-user tokens to assert direct PostgREST denial after applying unchanged migration `20261019000600`, then verifies positive trusted service JWT execution, duplicate-key idempotency and one synthetic downstream job. No real message transport, real campaign rule engine, donor job, payment, clinical row or social publishing occurs.
+
+**Limit:** The downstream `crm_enqueue_campaign_trigger_jobs` and `private.crm_resolve_person` dependencies are minimal isolated stubs. This explicitly does *not* prove that a real trigger condition, active campaign, or worker queue runs correctly, nor does it cover full schema replay. The full actual worker/trigger/authorized browser acceptance remains a release blocker. The extra groups are not independently executed merely by source CI; capture fresh `additional-jwt-outcomes.json` / runner results and actual clean exit before upgrading the count from 78 to 80.
