@@ -39,3 +39,33 @@ performs that read-only check without creating a database.
 The current runner adds **two additional scenario groups** to the previously reported 78 (the old Codex record remains 78/78 and must not be rewritten as a new execution result). The fixture in `supabase/tests/crm_emitter_exact_body_isolated_fixture.sql` embeds the exact `crm_emit_automation_event` function body inspected from the live read-only catalog on 2026-10-18, with only synthetic dependency tables/functions. The runner uses genuine GoTrue-signed anonymous/tenant-user tokens to assert direct PostgREST denial after applying unchanged migration `20261019000600`, then verifies positive trusted service JWT execution, duplicate-key idempotency and one synthetic downstream job. No real message transport, real campaign rule engine, donor job, payment, clinical row or social publishing occurs.
 
 **Limit:** The downstream `crm_enqueue_campaign_trigger_jobs` and `private.crm_resolve_person` dependencies are minimal isolated stubs. This explicitly does *not* prove that a real trigger condition, active campaign, or worker queue runs correctly, nor does it cover full schema replay. The full actual worker/trigger/authorized browser acceptance remains a release blocker. The extra groups are not independently executed merely by source CI; capture fresh `additional-jwt-outcomes.json` / runner results and actual clean exit before upgrading the count from 78 to 80.
+
+## Optional worker-body supplement
+
+Pass `--extended-workers` to add seven scenario groups to the unchanged 80-group
+suite. The supplement extracts the exact checked-in Social Media queue, campaign
+trigger-enqueue, concurrency evaluator and email-reply correlation bodies. It
+checks anonymous and real signed browser denials, trusted service execution,
+queue uniqueness, correlation and step cancellation, plus all five lifecycle
+transitions and replay under genuine GoTrue operator/admin identities.
+
+A separate disposable GoTrue instance also issues a genuine anonymous-user JWT
+(`is_anonymous=true`, PostgreSQL role `authenticated`), distinct from the local
+signer's `anon` role token. Its database system identifier is checked through the
+container route before startup. Email signup is disabled and SMTP is loopback
+port 9. No provider transport or publishing dispatcher is installed.
+
+Dependency tables are explicitly minimal contracts. The trigger feature-flag
+helper is a synthetic true control; identity resolution remains the earlier
+synthetic stub. These tests prove real function-body and JWT behavior, **not** a
+full-schema deployment, actual rule-engine processing, outbound sending, Stripe
+posting, claims/Stedi finalization or payroll integration. Missing authoritative
+base-schema and worker bodies remain release blockers.
+
+Forward migration `20261019000800_campaign_lifecycle_forbidden_response.sql`
+corrects the lifecycle helper's missing/foreign-target denial from SQLSTATE
+`P0002` (PostgREST HTTP 500) to `42501` (HTTP 403). Both target cases keep the
+same message and no existence disclosure. The eight earlier security migration
+files remain unchanged and retain their order; this is a separate follow-on.
+The signed foreign-target regression requires HTTP 403 before and after the
+correction, failing on the previous implementation.

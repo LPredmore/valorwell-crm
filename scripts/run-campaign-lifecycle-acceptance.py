@@ -6,8 +6,10 @@ parser.add_argument('--billing-repo',type=Path,required=True)
 parser.add_argument('--clients-repo',type=Path,required=True)
 parser.add_argument('--output-dir',type=Path)
 parser.add_argument('--check-migration-sequence-only',action='store_true')
+parser.add_argument('--extended-workers',action='store_true',help='Also execute actual CRM worker bodies against explicit minimal contracts; not full-schema proof')
 parser.add_argument('--baseline',action='store_true',help='Reproduce failures before the new corrective migration; never changes expected assertions')
 args=parser.parse_args()
+extended_workers=args.extended_workers
 crm=Path(__file__).resolve().parents[1]
 clients=args.clients_repo.resolve()
 scripts=args.billing_repo.resolve()/'scripts'
@@ -46,6 +48,7 @@ create table public.crm_activity_events(id uuid default gen_random_uuid(),tenant
 create table public.crm_idempotency_keys(key text primary key,operation text,actor_id uuid,tenant_id uuid,target_id uuid,status text,expires_at timestamptz,result_json jsonb,updated_at timestamptz default now());
 '''+b.sql_file(m/'20260717171202_33c1c18e-b3cd-417a-b1d8-af7abe097eb5.sql')+b.sql_file(m/'20260719155541_repair_crm_manual_enrollment_rpc.sql')+b.sql_file(m/'20260719155555_harden_crm_campaign_rpc_grants.sql')+b.sql_file(m/'20261019000200_revoke_direct_crm_idempotency_helpers.sql'))
  for correction in ([] if args.baseline else sorted(m.glob('*campaign_lifecycle_authorization_and_idempotency.sql'))): s.execute(b.sql_file(correction))
+ for correction in ([] if args.baseline else sorted(m.glob('*campaign_lifecycle_forbidden_response.sql'))): s.execute(b.sql_file(correction))
  for enroll,tenant in [(ENROLL1,core.TENANT),(ENROLL2,core.TENANT),(ENROLL3,core.TENANT2)]:
   s.execute(f"insert into public.crm_campaign_enrollments(id,tenant_id,client_id,campaign_id,status) values({lit(enroll)},{lit(tenant)},gen_random_uuid(),gen_random_uuid(),'active');")
  def denied_readonly():
@@ -255,6 +258,9 @@ def extra_jwt(s):
     assert s.value('select count(*) from public.crm_donor_ingest_queue')==0
     return observed
    run('current donor reporting with overlapping synthetic identities remains tenant scoped under real JWTs and queues nothing',signed_donor)
+   if extended_workers:
+    from campaign_worker_acceptance import run_workers
+    run_workers(s,crm,core,security,original_request,state,run)
 
 
   result=original_request(url,token,body,method,headers,timeout)
