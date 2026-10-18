@@ -47,6 +47,14 @@ begin
       raise exception 'Review required: trusted CRM emitter caller changed: %',caller_name;
     end if;
   end loop;
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='private' and p.proname='crm_process_donor_transaction'
+      and p.prosecdef and pg_get_userbyid(p.proowner)='postgres'
+      and p.prosrc like '%crm_emit_automation_event%'
+  ) then
+    raise exception 'Review required: private trusted donor event caller changed';
+  end if;
 end $test$;
 
 -- Full release acceptance must also prove genuine signed-JWT RPC denial
