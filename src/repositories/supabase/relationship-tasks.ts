@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { dataProvider } from '@/services/dataProvider';
 import type { TaskPriority, TaskStatus } from '@/domain/operations';
 import { requireCrmOperatorScope, type CrmOperatorScope } from '../crmOperatorScope';
@@ -21,6 +22,41 @@ export interface RelationshipTaskRow {
   completed_at: string | null;
   updated_at: string;
 }
+// Keep the nonclinical task query narrowly typed until generated Supabase
+// types include the new opportunity link. Avoid deep recursive app-wide schema
+// instantiation when filtering on the additive column.
+type TaskInsert = {
+  tenant_id: string;
+  created_by_profile_id: string;
+  title: string;
+  description?: string | null;
+  type?: string;
+  priority?: string;
+  status?: string;
+  owner_id?: string | null;
+  due_at?: string | null;
+  relationship_contact_id?: string | null;
+  relationship_organization_id?: string | null;
+  relationship_opportunity_id?: string | null;
+};
+type TaskDb = {
+  public: {
+    Tables: {
+      crm_tasks: {
+        Row: RelationshipTaskRow & { relationship_opportunity_id: string | null };
+        Insert: TaskInsert;
+        Update: Partial<TaskInsert>;
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
+const scopedTaskDb = supabase as unknown as SupabaseClient<TaskDb>;
+
 export const statusLabels: Record<RelationshipTaskRow['status'], TaskStatus> = {
   not_started: 'Not Started', in_progress: 'In Progress', waiting: 'Waiting',
   blocked: 'Blocked', completed: 'Completed', canceled: 'Canceled',
@@ -49,7 +85,7 @@ export const relationshipTasksRepository = {
     const { tenantId } = await requireCrmOperatorScope(scope);
     // Select only task columns relevant to this non-clinical subject; never
     // fetch client task descriptions and then filter in browser memory.
-    let query = supabase.from('crm_tasks')
+    let query = scopedTaskDb.from('crm_tasks')
       .select('id,tenant_id,relationship_contact_id,relationship_organization_id,title,description,status,priority,owner_id,due_at,completed_at,updated_at')
       .eq('tenant_id', tenantId);
     query = subject.contactId ? query.eq('relationship_contact_id', subject.contactId)
@@ -75,7 +111,7 @@ export const relationshipTasksRepository = {
     if (!title || title.length > 200) throw new Error('Enter a task title of 1–200 characters.');
     // Explicit insert of canonical crm_tasks row and relation in ONE transaction:
     // no orphan task is created if the subject link is invalid.
-    const { data, error } = await supabase.from('crm_tasks')
+    const { data, error } = await scopedTaskDb.from('crm_tasks')
       .insert({
         tenant_id: ctx.tenantId,
         created_by_profile_id: ctx.userId,
