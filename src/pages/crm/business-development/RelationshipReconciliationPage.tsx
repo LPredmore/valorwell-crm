@@ -59,6 +59,25 @@ type ReviewIssue = {
   providerMessageId: string;
 };
 function EmailReviewGroupEvidence({ groupKey }: { groupKey: string }) {
+  const queryClient = useQueryClient();
+  const { capabilities } = useCrmAuth();
+  const approve = useMutation({
+    mutationFn: async (issue: ReviewIssue) => {
+      if (!issue.candidateOpportunityId || issue.classification !== 'unique_sender_opportunity_candidate') {
+        throw new Error('An exact single-opportunity candidate is required.');
+      }
+      const { error } = await queueRpc.rpc('approve_relationship_email_issue', {
+        p_issue_id: issue.issueId, p_opportunity_id: issue.candidateOpportunityId,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['relationship-email-review-queue'] }),
+        queryClient.invalidateQueries({ queryKey: ['relationship-email-review-group-issues', groupKey] }),
+      ]);
+    },
+  });
   const issues = useQuery({
     queryKey: ['relationship-email-review-group-issues', groupKey],
     queryFn: async (): Promise<ReviewIssue[]> => {
@@ -87,10 +106,14 @@ function EmailReviewGroupEvidence({ groupKey }: { groupKey: string }) {
       <div className="flex gap-3 text-xs">
         {item.candidateOpportunityId && <Link className="text-primary hover:underline"
           to={`/crm/business-development/opportunities/${item.candidateOpportunityId}`}>Candidate opportunity</Link>}
+        {capabilities.mutate && item.candidateOpportunityId && item.classification === 'unique_sender_opportunity_candidate' &&
+          <Button size="sm" variant="outline" disabled={approve.isPending}
+            onClick={() => approve.mutate(item)}>Approve exact association</Button>}
         {item.existingCommunicationId && <span>Stored communication link</span>}
         <span>Issue {item.issueId.slice(0, 8)}</span>
       </div>
     </div>)}
+    {approve.isError && <p role="alert" className="text-xs text-destructive">{approve.error instanceof Error ? approve.error.message : 'Approval failed'}</p>}
     {issues.data?.length === 75 && <p className="text-xs text-muted-foreground">Showing the first 75 issues for this group.</p>}
   </div>;
 }
