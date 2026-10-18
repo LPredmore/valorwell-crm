@@ -111,21 +111,25 @@ export const relationshipTasksRepository = {
     if (!title || title.length > 200) throw new Error('Enter a task title of 1–200 characters.');
     // Explicit insert of canonical crm_tasks row and relation in ONE transaction:
     // no orphan task is created if the subject link is invalid.
-    const { data, error } = await scopedTaskDb.from('crm_tasks')
-      .insert({
-        tenant_id: ctx.tenantId,
-        created_by_profile_id: ctx.userId,
-        title,
-        description: input.description?.trim() || null,
-        type: 'general',
-        priority: priorityValues[input.priority],
-        status: 'not_started',
-        owner_id: input.ownerId || null,
-        due_at: input.dueAt || null,
-        relationship_contact_id: subject.contactId ?? null,
-        relationship_organization_id: subject.organizationId ?? null,
-        relationship_opportunity_id: subject.opportunityId ?? null,
-      })
+    // Insertion uses the app's normal typed task contract. Keep the additive
+    // opportunity column in a variable rather than an excess-property literal
+    // until the generated database types are refreshed.
+    const taskInsert = {
+      tenant_id: ctx.tenantId,
+      created_by_profile_id: ctx.userId,
+      title,
+      description: input.description?.trim() || null,
+      type: 'general' as const,
+      priority: priorityValues[input.priority],
+      status: 'not_started' as const,
+      owner_id: input.ownerId || null,
+      due_at: input.dueAt || null,
+      relationship_contact_id: subject.contactId ?? null,
+      relationship_organization_id: subject.organizationId ?? null,
+      relationship_opportunity_id: subject.opportunityId ?? null,
+    };
+    const { data, error } = await supabase.from('crm_tasks')
+      .insert(taskInsert)
       .select('id')
       .single();
     checkError(error);
