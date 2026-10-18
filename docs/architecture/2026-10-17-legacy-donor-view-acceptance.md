@@ -26,7 +26,7 @@ This was a real PostgreSQL RLS/view test with synthetic records, not a mocked
 service response. It establishes the defect in repository source, not the
 current deployment configuration.
 
-Forward migration `20261017160127_restrict_legacy_donor_transaction_view.sql`
+Forward migration `20261018030152_restrict_legacy_donor_transaction_view.sql`
 revokes browser/PUBLIC access to this global legacy view. Existing service-only
 reads and tenant-scoped donor-table reads are preserved. No source ownership is
 inferred from shared email/contact IDs; no historical records or legacy
@@ -67,3 +67,7 @@ Remaining boundary: source ownership, live legacy ingestion correctness and
 browser transaction reporting remain unavailable/unverified. Re-enabling the
 browser view requires an explicit ownership/security design. No migration was
 applied remotely, and this fix is not merged or deployed.
+
+
+## Live migration lineage update — 2026-10-18
+Read-only Supabase catalog verified migration version `20261018030152` already recorded and anon/authenticated SELECT revoked while service-role SELECT remains. Repository migration filename reconciled to that exact recorded version to avoid a second migration application. This records deployed ACL status, not a live signed-JWT test or approval to restore browser reporting.
