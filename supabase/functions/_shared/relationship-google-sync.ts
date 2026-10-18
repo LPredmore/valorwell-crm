@@ -78,7 +78,7 @@ async function processGmailMessage(
   });
   if (matchError) throw new Error(matchError.message);
   const decision = (match ?? {}) as Record<string, unknown>;
-  if (decision.observationEnabled !== true || decision.matched !== true) {
+  if (decision.observationEnabled !== true || (decision.matched !== true && decision.unanchoredCandidate !== true)) {
     if (decision.ambiguous === true || decision.likelyRelationship === true) {
       const { error } = await admin.rpc("ingest_relationship_gmail_message", {
         p_tenant_id: TENANT_ID,
@@ -449,6 +449,43 @@ export async function backfillGmailBatch(admin: SupabaseClient) {
     }
     throw new Error(`Gmail backfill page failed (${errorCode}); retry is safe; cursor unchanged.`);
   }
+}
+
+
+/**
+ * Targeted replay of historically ambiguous messages that have a unique
+ * exact-sender, organization and primary-contact BTY opportunity. Everything
+ * else stays in the human review queue. No outbound messages are sent.
+ */
+export async function replayExactBtyGmailCandidates(admin: SupabaseClient) {
+  const runtime = await connectionRuntime(admin, "gmail");
+  if (!runtime || runtime.googleAccountEmail.toLowerCase() !== GMAIL_MAILBOX) {
+    throw new Error("Authorized canonical Gmail mailbox unavailable for exact replay.");
+  }
+  const { data, error } = await admin.rpc("list_pending_exact_bty_gmail_message_ids", {
+    p_limit: 6,
+  });
+  if (error) throw new Error(`Exact BTY replay discovery failed: ${error.message}`);
+  if (!Array.isArray(data)) throw new Error("Exact BTY replay did not return a message list.");
+  const ids = data.filter((id): id is string => typeof id === "string" && Boolean(id));
+  if (ids.length === 0) return { complete: true, replayed: 0, captured: 0 };
+  const accessToken = await refreshGoogleAccessToken(runtime);
+  const results = [];
+  for (let i = 0; i < ids.length; i += 2) {
+    results.push(...await Promise.all(ids.slice(i, i + 2)
+      .map((id) => processGmailMessage(admin, accessToken, id))));
+  }
+  const captured = results.filter((row) => row.matched).length;
+  const unavailable = results.filter((row) => row.skipped === "message_not_found").length;
+  console.log(JSON.stringify({
+    component: "relationship-google-sync",
+    event: "exact_bty_replay_batch",
+    scanned: ids.length,
+    captured,
+    unavailable,
+    requiresMoreReconciliation: true,
+  }));
+  return { complete: false, replayed: ids.length, captured, unavailable };
 }
 
 export async function renewGmailWatch(admin: SupabaseClient) {
