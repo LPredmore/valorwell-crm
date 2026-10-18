@@ -2,6 +2,7 @@ import { directoryDetailSearch } from '@/domain/relationships/directory-url';
 import { useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { RelationshipAttentionQueuePanel } from '@/components/crm/relationships/RelationshipAttentionQueuePanel';
 import { RelationshipOwnerFilter } from '@/components/crm/relationships/RelationshipOwnerField';
 import { relationshipStages } from '@/domain/relationships/contracts';
 import { useState } from 'react';
@@ -59,6 +60,8 @@ export default function OrganizationDirectoryPage() {
           <Button asChild variant="outline"><Link to="/crm/business-development/status">System status</Link></Button>
         </div>
       </div>
+
+      {available && <RelationshipAttentionQueuePanel />}
 
       <Card>
         <CardHeader><CardTitle>Directory filters</CardTitle><CardDescription>Only fields stored by the current Billing Hub relationship schema are available.</CardDescription></CardHeader>
