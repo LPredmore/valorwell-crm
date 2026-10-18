@@ -26,3 +26,10 @@ the evidence directory. Clusters and containers are stopped on completion.
 Synthetic dependency tables are reviewed minimal contracts, not a reconstruction
 of the complete production schema. This suite does not prove full application
 browser workflows, live deployment, or external payment webhook behavior.
+
+
+Current-main compatibility also covers fail-closed retired-donor reporting and
+replay refusal, including overlapping synthetic provider identities under two
+real signed tenant JWTs. New migration versions are checked across all three
+shared-database checkouts before initialization; `--check-migration-sequence-only`
+performs that read-only check without creating a database.

@@ -5,6 +5,7 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--billing-repo',type=Path,required=True)
 parser.add_argument('--clients-repo',type=Path,required=True)
 parser.add_argument('--output-dir',type=Path)
+parser.add_argument('--check-migration-sequence-only',action='store_true')
 parser.add_argument('--baseline',action='store_true',help='Reproduce failures before the new corrective migration; never changes expected assertions')
 args=parser.parse_args()
 crm=Path(__file__).resolve().parents[1]
@@ -16,6 +17,19 @@ import zeffy_acceptance_5c as core
 import zeffy_acceptance_5c_security as security
 import zeffy_acceptance_5c_jwt as jwt
 b=core.b
+# All three repositories address one shared Supabase migration history. Reject
+# newly authored version collisions before creating any disposable database.
+versions={}
+for repository in [crm,clients,args.billing_repo.resolve()]:
+ for migration in (repository/'supabase/migrations').glob('*.sql'):
+  version=migration.name[:14]
+  if version.isdigit() and version>='20261018000000':
+   content=migration.read_text(encoding='utf-8').replace('\r\n','\n')
+   if version in versions and versions[version][1]!=content:
+    raise RuntimeError(f'Migration version collision: {versions[version][0]} and {migration}')
+   versions[version]=(migration,content)
+print('PASS shared acceptance migration versions are unique',flush=True)
+if args.check_migration_sequence_only: sys.exit(0)
 original_bootstrap=security.bootstrap
 ENROLL1='30000000-0000-4000-8000-000000000001'
 ENROLL2='30000000-0000-4000-8000-000000000002'
@@ -101,6 +115,18 @@ create table public.crm_idempotency_keys(key text primary key,operation text,act
  s.check(7,'campaign public RPC grants internal helper isolation and volatile locking preserved',lambda:s.execute("set app.zeffy_isolated_fixture='yes';"+b.sql_file(crm/'supabase/tests/campaign_lifecycle_rpc_boundary.sql')))
 
 
+
+ # Apply the independently merged current-main retired-donor correction using
+ # its exact operating context. No processor or transport is installed/called.
+ s.execute(security.definition((m/'20260721233609_relationship_campaign_foundation_rpcs.sql').read_text(encoding='utf-8'),'private.relationship_campaign_context')+b.sql_file(m/'20261019000500_fail_closed_legacy_donor_attribution.sql')+"revoke all on function public.crm_donor_overview(),public.crm_enqueue_donor_transactions(text,boolean,integer) from public;grant execute on function public.crm_donor_overview(),public.crm_enqueue_donor_transactions(text,boolean,integer) to authenticated;")
+ def donor_current():
+  s.execute(b.sql_file(crm/'supabase/tests/legacy_donor_attribution_acl_contract.sql'))
+  for actor in [core.ALICE,core.BOB]:
+   overview=s.value('select public.crm_donor_overview()',security.auth(actor))
+   assert overview['donors']==1 and overview['totalDonations'] is None and overview['totalDonationsStatus']=='legacy_source_tenant_ownership_unverified',overview
+   s.deny("select public.crm_enqueue_donor_transactions('synthetic refusal',true,10);",'LEGACY_DONOR_SOURCE_OWNERSHIP_REQUIRED',prefix=security.auth(actor))
+  assert s.value('select count(*) from public.crm_donor_ingest_queue')==0
+ s.check(10,'current donor overview omits unverified global totals and authorized legacy replay fails closed',donor_current)
  # Install the exact Stripe function against minimal synthetic row types. It is
  # not invoked to post money; only missing-session and privilege boundaries run.
  s.execute('''
@@ -169,6 +195,24 @@ def extra_jwt(s):
     codes.append(code)
     return dict(http_statuses=codes,roles='actual GoTrue-signed crm_readonly tenant member')
    run('all six public campaign mutation RPCs reject a genuine readonly tenant JWT',signed_lifecycle)
+   def signed_donor():
+    for tenant,amount in [(core.TENANT,11),(core.TENANT2,22)]:
+     s.execute(f"insert into public.crm_donors(tenant_id,givebutter_contact_id,display_name,lifetime_amount) values({lit(tenant)},'synthetic-overlapping-provider-id','Synthetic shared identity',{amount});")
+    observed=[]
+    for index,identity in enumerate(state['tokens']):
+     code,data=original_request(state['rest']+'/rpc/crm_donor_overview',identity,{})
+     assert code==200 and data['donors']==2 and data['lifetimeAmount']==[11,22][index] and data['totalDonations'] is None,(code,data)
+     claims=json.loads(__import__('base64').urlsafe_b64decode(identity.split('.')[1]+'=='));uid=claims['sub']
+     s.execute(f"update public.crm_user_capabilities set crm_role='crm_operator' where profile_id={lit(uid)};")
+     try:
+      denied,error=original_request(state['rest']+'/rpc/crm_enqueue_donor_transactions',identity,dict(p_reason='synthetic refusal',p_historical=True,p_limit=10))
+      assert denied==403 and 'LEGACY_DONOR_SOURCE_OWNERSHIP_REQUIRED' in error.get('message',''),(denied,error)
+     finally:s.execute(f"update public.crm_user_capabilities set crm_role='crm_readonly' where profile_id={lit(uid)};")
+     observed.append(dict(status=code,overview=data,replay_status=denied))
+    assert s.value('select count(*) from public.crm_donor_ingest_queue')==0
+    return observed
+   run('current donor reporting with overlapping synthetic identities remains tenant scoped under real JWTs and queues nothing',signed_donor)
+
 
   result=original_request(url,token,body,method,headers,timeout)
   if '/token?grant_type=password' in url and result[0]==200:state['tokens'].append(result[1]['access_token'])
