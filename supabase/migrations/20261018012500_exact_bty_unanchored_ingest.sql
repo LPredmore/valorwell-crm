@@ -31,10 +31,10 @@ begin
     p_tenant_id,p_gmail_message_id,p_gmail_thread_id,p_headers,p_from_email,p_to_emails,p_subject
   );
   v_direction:=v_match->>'direction';
-  // A reply lacking a prior outbound anchor can still be stored when the
-  // provider-authoritative mailbox, exact sender, contact, organization and
-  // single primary-contact BTY opportunity are independently established.
-  // No opportunity lifecycle, campaign or outbound-send mutation occurs.
+  -- A reply lacking a prior outbound anchor can still be stored when the
+  -- provider-authoritative mailbox, exact sender, contact, organization and
+  -- single primary-contact BTY opportunity are independently established.
+  -- No opportunity lifecycle, campaign or outbound-send mutation occurs.
   if coalesce((v_match->>'matched')::boolean,false) is not true then
     v_candidate:=private.find_exact_bty_inbound_candidate(
       p_tenant_id,p_from_email,p_to_emails,p_subject);
