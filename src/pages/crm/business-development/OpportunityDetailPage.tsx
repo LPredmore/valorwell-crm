@@ -22,6 +22,8 @@ import type { OperatorActivityType } from '@/domain/relationships/orchestration-
 import { getOpportunityOrchestration, recordOperatorActivity, retryAutoEnrollment } from '@/lib/crm/relationship-orchestration';
 import { canRunOperatorAction } from '@/domain/relationships/activation-gating';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
+import { RelationshipAttentionPanel } from '@/components/crm/relationships/RelationshipAttentionPanel';
+import { RelationshipTasksPanel } from '@/components/crm/relationships/RelationshipTasksPanel';
 import { listTeamOwners } from '@/repositories/supabase/pipeline-team-owners';
 
 
@@ -235,6 +237,16 @@ function OpportunityDetailWorkspace() {
           </CardContent>
         </Card>
       )}
+
+      {available && opportunity.isSuccess && opportunity.data && <>
+        <RelationshipAttentionPanel
+          organizationId={opportunity.data.organizationId} opportunityId={opportunity.data.id}
+        />
+        <RelationshipTasksPanel subject={{
+          organizationId: opportunity.data.organizationId,
+          opportunityId: opportunity.data.id,
+        }} />
+      </>}
 
       {available && opportunity.isSuccess && opportunity.data && (
         <Card>

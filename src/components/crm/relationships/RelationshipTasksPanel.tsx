@@ -26,7 +26,7 @@ function isOverdue(task: RelationshipTaskRow) {
 
 export function RelationshipTasksPanel({ subject }: { subject: RelationshipTaskSubject }) {
   const { currentTenantId, crmRole, userId } = useCrmAuth();
-  return <RelationshipTasksContent key={`${currentTenantId}:${userId}:${crmRole}:${subject.contactId ?? subject.organizationId}`} subject={subject} />;
+  return <RelationshipTasksContent key={`${currentTenantId}:${userId}:${crmRole}:${subject.contactId ?? subject.organizationId}:${subject.opportunityId ?? ''}`} subject={subject} />;
 }
 
 function RelationshipTasksContent({ subject }: { subject: RelationshipTaskSubject }) {
@@ -43,7 +43,7 @@ function RelationshipTasksContent({ subject }: { subject: RelationshipTaskSubjec
   const [editDueAt, setEditDueAt] = useState('');
   const [editPriority, setEditPriority] = useState<TaskPriority>('Normal');
   const [editStatus, setEditStatus] = useState<TaskStatus>('Not Started');
-  const subjectKey = subject.contactId ? 'contact:' + subject.contactId : 'organization:' + subject.organizationId;
+  const subjectKey = subject.contactId ? 'contact:' + subject.contactId : subject.opportunityId ? 'opportunity:' + subject.opportunityId : 'organization:' + subject.organizationId;
   const key = ['relationship-tasks', currentTenantId, userId, crmRole, subjectKey];
   const scope = { tenantId: currentTenantId ?? '', userId };
   const query = useInfiniteQuery({
@@ -62,6 +62,7 @@ function RelationshipTasksContent({ subject }: { subject: RelationshipTaskSubjec
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: key }),
         queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['relationship-attention-overview'] }),
       ]);
     },
   });
@@ -75,6 +76,7 @@ function RelationshipTasksContent({ subject }: { subject: RelationshipTaskSubjec
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: key }),
         queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['relationship-attention-overview'] }),
       ]);
     },
   });

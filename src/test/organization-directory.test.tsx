@@ -9,6 +9,11 @@ const { useRelationshipCapability, useOrganizationDirectory } = vi.hoisted(() =>
   useOrganizationDirectory: vi.fn(),
 }));
 
+// This test covers directory behavior; attention queue is tested through its own authenticated data path.
+vi.mock('@/components/crm/relationships/RelationshipAttentionQueuePanel', () => ({
+  RelationshipAttentionQueuePanel: () => <div>Relationship attention queue</div>,
+}));
+
 vi.mock('@/hooks/relationships/useRelationshipCapabilities', () => ({ useRelationshipCapability: (...args: unknown[]) => useRelationshipCapability(...args) }));
 vi.mock('@/hooks/relationships/useOrganizationDirectory', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/hooks/relationships/useOrganizationDirectory')>();
