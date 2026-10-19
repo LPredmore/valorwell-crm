@@ -4,6 +4,7 @@ import { buildRelationshipResendContent } from "./email-content.ts";
 
 type ClaimedWork = {
   workItemId: string;
+  tenantId: string;
   claimToken: string;
   attemptCount: number;
   maxAttempts: number;
@@ -129,7 +130,7 @@ Deno.serve(async (request: Request) => {
       const { data: communicationRow, error: communicationRowError } = await admin
         .from("relationship_communications")
         .select("campaign_id,campaign_step_id,enrollment_id")
-        .eq("tenant_id", TENANT_ID)
+        .eq("tenant_id", work.tenantId)
         .eq("id", communication.id)
         .single();
       if (communicationRowError) throw new Error(`Unable to load communication context: ${communicationRowError.message}`);
@@ -137,7 +138,7 @@ Deno.serve(async (request: Request) => {
       const { data: stepRow, error: stepRowError } = await admin
         .from("relationship_campaign_steps")
         .select("position,metadata")
-        .eq("tenant_id", TENANT_ID)
+        .eq("tenant_id", work.tenantId)
         .eq("id", communicationRow.campaign_step_id)
         .single();
       if (stepRowError) throw new Error(`Unable to load campaign step context: ${stepRowError.message}`);
@@ -153,7 +154,7 @@ Deno.serve(async (request: Request) => {
         const { data: rootStep, error: rootStepError } = await admin
           .from("relationship_campaign_steps")
           .select("id")
-          .eq("tenant_id", TENANT_ID)
+          .eq("tenant_id", work.tenantId)
           .eq("campaign_id", communicationRow.campaign_id)
           .eq("position", replyToStepPosition)
           .single();
@@ -164,7 +165,7 @@ Deno.serve(async (request: Request) => {
         const { data: rootCommunication, error: rootCommunicationError } = await admin
           .from("relationship_communications")
           .select("subject,provider_message_id,provider_thread_id,sent_at")
-          .eq("tenant_id", TENANT_ID)
+          .eq("tenant_id", work.tenantId)
           .eq("enrollment_id", communicationRow.enrollment_id)
           .eq("campaign_step_id", rootStep.id)
           .eq("direction", "outbound")

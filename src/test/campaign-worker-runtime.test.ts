@@ -5,12 +5,12 @@ import { edgeRuntime } from './edge-worker-runtime';
 const trigger = 'supabase/functions/campaign-trigger-worker/index.ts';
 const relationship = 'supabase/functions/relationship-campaign-worker/index.ts';
 const service = { authorization: 'Bearer synthetic-service' };
-const job = { workItemId: 'synthetic-work', claimToken: 'synthetic-lease', attemptCount: 1, maxAttempts: 3 };
+const job = { tenantId: '00000000-0000-0000-0000-000000000001', workItemId: 'synthetic-work', claimToken: 'synthetic-lease', attemptCount: 1, maxAttempts: 3 };
 const communication = { id: 'synthetic-communication', senderEmail: 'sender@example.invalid', recipientEmail: 'recipient@example.invalid', subject: 'Synthetic', renderedText: 'Synthetic only', providerIdempotencyKey: 'stable-synthetic-delivery' };
 
-function delivery(options: { status?: number; networkError?: boolean; attempt?: number; prepareError?: boolean; reply?: boolean; rootMissing?: boolean; recordingError?: boolean } = {}) {
+function delivery(options: { status?: number; networkError?: boolean; attempt?: number; prepareError?: boolean; reply?: boolean; rootMissing?: boolean; recordingError?: boolean; tenantId?: string } = {}) {
   const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
-    if (name === 'claim_relationship_campaign_work') return { data: [{ ...job, attemptCount: options.attempt ?? 1 }], error: null };
+    if (name === 'claim_relationship_campaign_work') return { data: [{ ...job, tenantId: options.tenantId ?? job.tenantId, attemptCount: options.attempt ?? 1 }], error: null };
     if (name === 'prepare_relationship_campaign_delivery') return options.prepareError ? { data: null, error: { message: 'suppressed' } } : { data: communication, error: null };
     if (name === 'relationship_worker_token_valid') return { data: args.p_token === 'synthetic-worker-token', error: null };
     return options.recordingError ? { data: null, error: { message: 'record unavailable' } } : { data: { outcome: args.p_outcome }, error: null };
@@ -77,6 +77,14 @@ describe('actual relationship worker orchestration (synthetic RPC and provider)'
     expect((post[1]!.headers as Record<string, string>)['idempotency-key']).toBe(communication.providerIdempotencyKey);
     expect(t.rpc).toHaveBeenLastCalledWith('record_relationship_delivery_result', expect.objectContaining({ p_communication_id: communication.id, p_claim_token: job.claimToken, p_outcome: 'sent', p_provider_message_id: 'synthetic-provider-id', p_provider_thread_id: '<synthetic-sent@example.invalid>' }));
     expect(t.queries.every((q) => q.filters.some(([key, value]) => key === 'tenant_id' && value === '00000000-0000-0000-0000-000000000001'))).toBe(true);
+  });
+  it('loads communication and thread context from the tenant returned by the trusted claim', async () => {
+    const tenantId = '22222222-2222-4222-8222-222222222222';
+    const t = delivery({ reply: true, tenantId });
+    await t.run({}, service);
+    expect(t.transport).toHaveBeenCalled();
+    expect(t.queries.length).toBeGreaterThan(2);
+    expect(t.queries.every((q) => q.filters.some(([key, value]) => key === 'tenant_id' && value === tenantId))).toBe(true);
   });
   it.each([429, 500, 503])('retries transient provider status %i with a scheduled backoff', async (status) => {
     const t = delivery({ status }); await t.run({}, service);
