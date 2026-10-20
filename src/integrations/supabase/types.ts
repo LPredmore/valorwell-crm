@@ -19371,6 +19371,7 @@ export type Database = {
       }
       provider_applicants: {
         Row: {
+          applicant_origin: string | null
           application_data: Json
           close_reason: string | null
           closed_at: string | null
@@ -19402,6 +19403,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          applicant_origin?: string | null
           application_data?: Json
           close_reason?: string | null
           closed_at?: string | null
@@ -19433,6 +19435,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          applicant_origin?: string | null
           application_data?: Json
           close_reason?: string | null
           closed_at?: string | null
