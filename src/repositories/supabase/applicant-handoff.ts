@@ -95,6 +95,13 @@ export type ApplicantProfessionalDetails = {
   reportedLicenseType: string | null; reportedLicensedStates: string[];
   licenseStatesToVerify: string[]; licenseStateEvidence: string | null;
   clinicalHighlights: string[];
+  recruitingCommunicationAllowed: boolean;
+  recruitingCommunicationScope: string | null;
+  marketingConsentStatus: string | null;
+  likelyLicenseType: string | null;
+  likelyLicensedStates: string[];
+  likelyLicenseAssessment: string | null;
+  licenseConfirmationStatus: string | null;
 };
 
 /** Tenant-matched, staff-authorized applicant details; never query the protected table directly. */
@@ -119,5 +126,12 @@ export async function getApplicantProfessionalDetails(tenantId: string, applican
     licenseStatesToVerify: strings(review.licenseStatesToVerify),
     licenseStateEvidence: nullableText(review.licenseStateEvidence),
     clinicalHighlights: strings(review.clinicalHighlights),
+    recruitingCommunicationAllowed: review.recruitingCommunicationAllowed === true,
+    recruitingCommunicationScope: nullableText(review.recruitingCommunicationScope),
+    marketingConsentStatus: nullableText(review.marketingConsentStatus),
+    likelyLicenseType: nullableText(review.likelyLicenseType),
+    likelyLicensedStates: strings(review.likelyLicensedStates),
+    likelyLicenseAssessment: nullableText(review.likelyLicenseAssessment),
+    licenseConfirmationStatus: nullableText(review.licenseConfirmationStatus),
   };
 }
