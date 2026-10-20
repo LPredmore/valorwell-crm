@@ -1,0 +1,93 @@
+{
+  "ordered_pending_ten": [
+    {
+      "repository": "crm",
+      "version": "20261019000200",
+      "sha256": "4ede96d545264ee0e3d7c06ad409393962e29915434736c9061afa88cf0e3314",
+      "path": "supabase/migrations/20261019000200_revoke_direct_crm_idempotency_helpers.sql",
+      "status": "NOT_RUN_FULL_SCHEMA",
+      "provenance": "GitHub main 68412f50a16a8dd4471973d53342e521dd80e7f7"
+    },
+    {
+      "repository": "billing",
+      "version": "20261019000300",
+      "sha256": "a27d6e22a409d75772bf45d3c63d3c1784dd7e551a2c79ba5da1cefba8e3b3e9",
+      "path": "supabase/migrations/20261019000300_claim_payroll_internal_rpc_acl.sql",
+      "status": "NOT_RUN_FULL_SCHEMA",
+      "provenance": "Lovable read-only snapshot ff33c920265b6bed6e4fe636e4440f67449f7c3a; GitHub main unverified"
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000310",
+      "sha256": "b2db8632a53b28ede9aa79d2118294440918195351cf7273841fcab543c32ad7",
+      "path": "supabase/migrations/20261019000310_campaign_lifecycle_authorization_and_idempotency.sql",
+      "status": "NOT_RUN_FULL_SCHEMA",
+      "provenance": "GitHub main 68412f50a16a8dd4471973d53342e521dd80e7f7"
+    },
+    {
+      "repository": "crm-draft193",
+      "version": "20261019165842",
+      "sha256": "89404791b3d91e1d9585c82e4b2ef4bd329f92c67b9da9102322bbc46dab08da",
+      "path": "supabase/migrations/20261019165842_crm_campaign_membership_profile_contract.sql",
+      "status": "NOT_RUN_FULL_SCHEMA",
+      "provenance": "GitHub PR193 head 566b912f4b29d497703cae0737bd29a9f744afe5"
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000400",
+      "sha256": "20ad3f8e35de44160811bd2848dcaa81ca1c679330c4479a6e6f88cb60b242b1",
+      "path": "supabase/migrations/20261019000400_internal_campaign_social_worker_acl.sql",
+      "status": "NOT_RUN_FULL_SCHEMA",
+      "provenance": "GitHub main 68412f50a16a8dd4471973d53342e521dd80e7f7"
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000410",
+      "sha256": "ee3588dc3205b86d724d15509c8d1881b9b1456bdee8f1ed62cb33d84305abd3",
+      "path": "supabase/migrations/20261019000410_ai_ops_title_trigger_search_path.sql",
+      "status": "NOT_RUN_FULL_SCHEMA",
+      "provenance": "GitHub main 68412f50a16a8dd4471973d53342e521dd80e7f7"
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000500",
+      "sha256": "959046ab269918c7a4c1faf0279d39cfae9e1f733dd4270aec7be95e844f80a1",
+      "path": "supabase/migrations/20261019000500_fail_closed_legacy_donor_attribution.sql",
+      "status": "NOT_RUN_FULL_SCHEMA",
+      "provenance": "GitHub main 68412f50a16a8dd4471973d53342e521dd80e7f7"
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000600",
+      "sha256": "0cb2d52694155152ffe4d50751927efd23c16fd63e7651ae9ab26a2a5ef20820",
+      "path": "supabase/migrations/20261019000600_restrict_crm_automation_event_emitter.sql",
+      "status": "NOT_RUN_FULL_SCHEMA",
+      "provenance": "GitHub main 68412f50a16a8dd4471973d53342e521dd80e7f7"
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000800",
+      "sha256": "23ec40992fce188b59dbb3b51d641b4ed50cd83155c72f17ef2149fdf8501335",
+      "path": "supabase/migrations/20261019000800_campaign_lifecycle_forbidden_response.sql",
+      "status": "NOT_RUN_FULL_SCHEMA",
+      "provenance": "GitHub main 68412f50a16a8dd4471973d53342e521dd80e7f7"
+    },
+    {
+      "repository": "billing",
+      "version": "20261019085103",
+      "sha256": "3da8a52d63096979a9e111ade49eb73d6f11b343e0e433ae5ac34f2357aef827",
+      "path": "supabase/migrations/20261019085103_claim_status_authorization_boundary.sql",
+      "status": "NOT_RUN_FULL_SCHEMA",
+      "provenance": "Lovable read-only snapshot ff33c920265b6bed6e4fe636e4440f67449f7c3a; GitHub main unverified"
+    }
+  ],
+  "separate_stedi": {
+    "version": "20261018235900",
+    "status": "BLOCKED_PRIVATE_PR34_SOURCE_UNAVAILABLE"
+  },
+  "stripe": {
+    "source_version": "20261019000100",
+    "applied_version": "20261019232604",
+    "action": "DO_NOT_REAPPLY"
+  }
+}

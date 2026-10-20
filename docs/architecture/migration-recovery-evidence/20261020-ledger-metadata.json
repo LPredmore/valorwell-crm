@@ -1,0 +1,5774 @@
+[
+  {
+    "version": "20251201181524",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "20816d2b027e515b7582b7efd0185ef5"
+  },
+  {
+    "version": "20251201195701",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "c6f977f53a6a109fd5083b59da282427"
+  },
+  {
+    "version": "20251201200225",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "fc0413c3c007f3fb0f3428b08201a414"
+  },
+  {
+    "version": "20251201204020",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "f1a503175720605baea839fba8bc273a"
+  },
+  {
+    "version": "20251201221800",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "eedb049e158bd1d1cc2d8921ef81e789"
+  },
+  {
+    "version": "20251202210440",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "a2d2b618483ea7548a7fff77584c17b8"
+  },
+  {
+    "version": "20251204191522",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "ad28163a9ace121ac47264be4d4ece13"
+  },
+  {
+    "version": "20251204230809",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "cc1ab7edc6e201d99bdc5c31ad55818b"
+  },
+  {
+    "version": "20251208140349",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "d9e52b15b547e1d434d3f99effd761e5"
+  },
+  {
+    "version": "20251218210106",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "16295707204e353e59a1cc5f079d7573"
+  },
+  {
+    "version": "20251219002759",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "86bea774ab9e4d97db58f8c271411783"
+  },
+  {
+    "version": "20251219022451",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "ffea47aa75504607d8b6ae61d1fc2fd2"
+  },
+  {
+    "version": "20251219145642",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "3fcd825effdf5bc34ccf90dc739fa087"
+  },
+  {
+    "version": "20251219222422",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "6897877ef0cc6790f06b4e02a63af5f3"
+  },
+  {
+    "version": "20251220130435",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "f9a594d001b665097263fdf4e5b3d7b2"
+  },
+  {
+    "version": "20251220170919",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "3f62aa7f017b009fd1fa4791c3ad1a5b"
+  },
+  {
+    "version": "20251220192043",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "e1de1314bc4b1157ac90efffaa23cdab"
+  },
+  {
+    "version": "20251220212754",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "9f5e56ddf1d48341698d7b5a6eecaf14"
+  },
+  {
+    "version": "20251220235504",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "bb2db23d0bd028cd4c89bcea09381cb1"
+  },
+  {
+    "version": "20251231040322",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "83d0a91647e2768616ea1d533b0f21bd"
+  },
+  {
+    "version": "20260114163150",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "abd5185db81c9b042df89be41f4cbe6d"
+  },
+  {
+    "version": "20260116031836",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "23330d1b2e692bce2de600a3368ea56d"
+  },
+  {
+    "version": "20260116125537",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "0ede0bd25684faf71db27cfeb8711a3f"
+  },
+  {
+    "version": "20260116132403",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "076aa48f77cf2390dd5dc5dd0997d79e"
+  },
+  {
+    "version": "20260116150421",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "032327122384bbb04bd880854bdc74ec"
+  },
+  {
+    "version": "20260120010945",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "594d555ff101418f4da41df6fcfbab3c"
+  },
+  {
+    "version": "20260122115508",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "b2a8908a550dba19fc9285f193df54b3"
+  },
+  {
+    "version": "20260122203837",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "57e69be77ee61d15093d9e36049e8d8f"
+  },
+  {
+    "version": "20260122212933",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "8842cb42a959c41d8eb83097dde583ea"
+  },
+  {
+    "version": "20260122214338",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "6c65b63fef0155c5b50ebfc696df6368"
+  },
+  {
+    "version": "20260124162302",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "5b627fe6819681105dfa5e3d2ba09864"
+  },
+  {
+    "version": "20260126185437",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "83321a045c4310f885ececcd799eaed5"
+  },
+  {
+    "version": "20260127134748",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "db62600e69c7951368ce08c14b6f676c"
+  },
+  {
+    "version": "20260127234543",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "b5e72f725675c910c7d9e7bd4295fb79"
+  },
+  {
+    "version": "20260128155450",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "a5bb7fb82bdecf03354c10135d594fb6"
+  },
+  {
+    "version": "20260128171932",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "51364767501138d991b52093c3145f10"
+  },
+  {
+    "version": "20260128214158",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "6143780d51d729c7229fd17084d35056"
+  },
+  {
+    "version": "20260129003830",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "21d5e377765c3ff332d5d10bbd55e060"
+  },
+  {
+    "version": "20260129153158",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "0c729af5bd2037ba1c00aeee6cdbc1d6"
+  },
+  {
+    "version": "20260129183125",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "5b02a282243c490662f6a7e8297ab469"
+  },
+  {
+    "version": "20260129190342",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "9eb693bfcdbd13e2b9d72169d74c2821"
+  },
+  {
+    "version": "20260129195131",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "d529dcb4ac16d4638d55acd5f55f325b"
+  },
+  {
+    "version": "20260130120828",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "ba3889817364bff636038d269aa62eba"
+  },
+  {
+    "version": "20260130210317",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "a7b80c8ffb8dc10ad0b735098a92de3d"
+  },
+  {
+    "version": "20260202124921",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "a1f3d29511f4e64f7c22fc43505f48eb"
+  },
+  {
+    "version": "20260206210449",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "09dac72c1a9655e4af3f5b6f170f0009"
+  },
+  {
+    "version": "20260207105825",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "951458bf435bf1dcbac83eb16cf72b8f"
+  },
+  {
+    "version": "20260207131301",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "1927809f73eab056d385f831c715f80e"
+  },
+  {
+    "version": "20260208005429",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "5dc007b5b0acbedcc84e318574eff3d4"
+  },
+  {
+    "version": "20260208125522",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "2ef93da9ac9f229a1516617d8566612a"
+  },
+  {
+    "version": "20260208135058",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "b96ecac5b1ab9d70341ce30c36482f88"
+  },
+  {
+    "version": "20260209152128",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "fdc61d930a1c44132e53c4ef48978388"
+  },
+  {
+    "version": "20260209154937",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "320beece1cddfcb9d8db71fe39a177d5"
+  },
+  {
+    "version": "20260209160942",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "7be24d527b1a9e9bf6df448086086f9a"
+  },
+  {
+    "version": "20260209163113",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "113bf8a569164adab433f532db8f0553"
+  },
+  {
+    "version": "20260209174305",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "2215f6786555e25e0f34efa8a0b9af3e"
+  },
+  {
+    "version": "20260210010110",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "41d8db9e050cd5179948fb0ce91ef492"
+  },
+  {
+    "version": "20260210144053",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "e8d72b38674e8c9105381b77334c0bde"
+  },
+  {
+    "version": "20260210145220",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "e40e6aeee1525132b67ff66e7246c290"
+  },
+  {
+    "version": "20260212184119",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "e88abf883d4cfd8fb958f2dfce85c1e1"
+  },
+  {
+    "version": "20260212213604",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "bedf22019c6cae88b92b186ca7166512"
+  },
+  {
+    "version": "20260212214826",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "ac9298789a47a2aaf6154495a5c33aeb"
+  },
+  {
+    "version": "20260218181622",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "911d9d59e5d53cc15fa728a41cda79ce"
+  },
+  {
+    "version": "20260218194708",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "d1082d71e823620ebbb826bbe7474583"
+  },
+  {
+    "version": "20260218222451",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "dd890d23a83c35a68e4b9d150449393e"
+  },
+  {
+    "version": "20260218224911",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "6f2b875a62e69a3e88082b6f6772c8ee"
+  },
+  {
+    "version": "20260219120103",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "68bfa98e968c8b1c740b7d708e439d43"
+  },
+  {
+    "version": "20260219142548",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "46db025abc4b039478b2646dc86a2b13"
+  },
+  {
+    "version": "20260219153453",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "ee20abd5a6567e241751ce351d75405b"
+  },
+  {
+    "version": "20260219160132",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "de1a5ed37249f1bbf1d2a40142900913"
+  },
+  {
+    "version": "20260219170154",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "35e9a841c116da6b8e42740dcebb2658"
+  },
+  {
+    "version": "20260219190525",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "d841d2d56bed7936a826623061a825ff"
+  },
+  {
+    "version": "20260310173557",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "c6ad7e37c0c63db32031ee3d329e8f68"
+  },
+  {
+    "version": "20260311132156",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "3e5fa4445b327b4e269028f325eb6c8f"
+  },
+  {
+    "version": "20260311150811",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "ec5affc0747cd9d4735f4e8a36b9d8bf"
+  },
+  {
+    "version": "20260311163154",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "908120309eba3d518ecc3120c154961b"
+  },
+  {
+    "version": "20260311200910",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "0abef62d8e409f3d2776f391a126b1b2"
+  },
+  {
+    "version": "20260311201511",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "75f4f8e3f9217d795162d161eafb8f6f"
+  },
+  {
+    "version": "20260311202709",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "fd325e23eb109c0749658bdf918d2d17"
+  },
+  {
+    "version": "20260311210235",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "85fa8ffee9c7be242afca9129f163fd7"
+  },
+  {
+    "version": "20260311210932",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "5d5f3ffd1fb701b52d1871970a66c1c0"
+  },
+  {
+    "version": "20260312125959",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "de7c4d8858e314a9eafab5a238184a78"
+  },
+  {
+    "version": "20260312133639",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "232f319fea9610178a8cb642e79959bc"
+  },
+  {
+    "version": "20260312205047",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "cba48f67872ab7a79a221db588ff5b60"
+  },
+  {
+    "version": "20260313114907",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "61d5dc5439a079534622269a86488b7a"
+  },
+  {
+    "version": "20260313150855",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "451d702c21eea5ccd78876bc0595c60f"
+  },
+  {
+    "version": "20260313152328",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "7384682330df3c0dff7b6616eb8f1a53"
+  },
+  {
+    "version": "20260313155520",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "3cc06a37c516de1fd7ef1851fec41a1b"
+  },
+  {
+    "version": "20260313163805",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "73b6eb8e3521088fb5f88e0daab30256"
+  },
+  {
+    "version": "20260313202911",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "6363f35c8cf226849a58266119152395"
+  },
+  {
+    "version": "20260313203019",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "db1108d47ee0512a5758327b12badc3a"
+  },
+  {
+    "version": "20260313203538",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "aa6672eb885679ec920f62fa0ca268b0"
+  },
+  {
+    "version": "20260313204014",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "29497aa2fefed298d942ba48faef11ed"
+  },
+  {
+    "version": "20260313214442",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "5fde24771fe9b727225f8d809fd4f4d2"
+  },
+  {
+    "version": "20260314142548",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "a1bb68efd82866c9ab8365b0bf59cc26"
+  },
+  {
+    "version": "20260316142744",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "b36fc6e81b9229635dc6cc7ce7a986b3"
+  },
+  {
+    "version": "20260316142904",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "ca9e2ec51a29c8e640c2d9ffed325452"
+  },
+  {
+    "version": "20260316161525",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "94f5a06bfc19fc2c1a0d681fead6c6c2"
+  },
+  {
+    "version": "20260316161615",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "4335379b103fadf62d4a127901adacce"
+  },
+  {
+    "version": "20260316211656",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "42b2d37fc2fbeca35490baaf315d854e"
+  },
+  {
+    "version": "20260316214901",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "749555d75df628956ca2747c32d3cb18"
+  },
+  {
+    "version": "20260317181749",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "79e0f075459989400d9b67dd1ab8f094"
+  },
+  {
+    "version": "20260323145034",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "911d9f9ae71a1ed7fb8b0352bab3a7cc"
+  },
+  {
+    "version": "20260323172023",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "28511e6d9928e3812f7f56447d757524"
+  },
+  {
+    "version": "20260323172343",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "6b3b8bbfbb404dc4fd897c2c314023a8"
+  },
+  {
+    "version": "20260323174519",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "82220182803a4db5b301e84f9268b29c"
+  },
+  {
+    "version": "20260323181233",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "e2f5d444657987562f21fbc8348a74bb"
+  },
+  {
+    "version": "20260323193623",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "357d907f6fa3eda11fbacb43bbe69b0c"
+  },
+  {
+    "version": "20260323195626",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "7a8328d9b2b22cc47ffc54414036a270"
+  },
+  {
+    "version": "20260323233334",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "d20fcfebe0cb8a93efc01def1bd64a88"
+  },
+  {
+    "version": "20260324204644",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "6295eba439815f2a923a0e9a90b870fa"
+  },
+  {
+    "version": "20260327094804",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "8391ef50ff173ddce35b1775fe24bb8f"
+  },
+  {
+    "version": "20260327163717",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "4d965ea6d660fadfd41fc5145dc729f4"
+  },
+  {
+    "version": "20260329223304",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "f94dcc444ab81193f6689b356c65d005"
+  },
+  {
+    "version": "20260331191208",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "43bc919f92103ad1f824bfac062ef56e"
+  },
+  {
+    "version": "20260403173121",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "7a38341afebed4e2ff38821865893b30"
+  },
+  {
+    "version": "20260408155424",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "3ff6d15d1ac96e026b1141f83d117d29"
+  },
+  {
+    "version": "20260420194808",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "73f1f90b235d30aa2c647a5da60338b8"
+  },
+  {
+    "version": "20260427155345",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "919cb15069e26b46858b75254550b62e"
+  },
+  {
+    "version": "20260427170650",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "3ed6c120dc682a9ce4fb4aa167facb79"
+  },
+  {
+    "version": "20260427193628",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "0a732a6cc499b054c1c989da7783d50d"
+  },
+  {
+    "version": "20260427193728",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "e86b467fedb0ee0c43e1cb7b02a443c3"
+  },
+  {
+    "version": "20260514174904",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "b11289092cb2b1e4bc35e2412797678e"
+  },
+  {
+    "version": "20260514175934",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "11badb1e6a1f5ad4beb3b0839608e869"
+  },
+  {
+    "version": "20260514192348",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "3c5857226707ea6860ab34c7e344b35b"
+  },
+  {
+    "version": "20260518180850",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "e321bc0aa9c291b301cf99390b4d8ba7"
+  },
+  {
+    "version": "20260522172354",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "90ed964676a9303be888e0a8b9305eee"
+  },
+  {
+    "version": "20260522185548",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "f2ecfb48b9b29e91959bcc0638ba278f"
+  },
+  {
+    "version": "20260522193958",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "7b1e092b47e135a487e5fe35b7116aad"
+  },
+  {
+    "version": "20260522195833",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "8680718b757756b87d84caa378d68d93"
+  },
+  {
+    "version": "20260522202438",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "781764ba9b552931a0484c0bc6b87056"
+  },
+  {
+    "version": "20260522202921",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "037c1ca1e1d4da2f096587e58c9f85f1"
+  },
+  {
+    "version": "20260522203305",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "96b530d7f921e131d55ab005e0098446"
+  },
+  {
+    "version": "20260522210711",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "75c3f9176b3e0b2272fd64f7694b2867"
+  },
+  {
+    "version": "20260522210840",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "c153410dfeaafbf90c08443b2c227fe8"
+  },
+  {
+    "version": "20260522215906",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "f259b5b2cf5310a062d7ce2255c14c73"
+  },
+  {
+    "version": "20260522223803",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "af240b1eeecf189a11ae7eaa77bce08e"
+  },
+  {
+    "version": "20260619151617",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "5abf1d00fbb48bd6522ef8009c5fcc7f"
+  },
+  {
+    "version": "20260619153409",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "be21037719d34932656e66b844d86a2f"
+  },
+  {
+    "version": "20260619155848",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "4be4273f6c8d4a075ec0f082f51e3335"
+  },
+  {
+    "version": "20260701204836",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "35adf8fc5facb4aae8d38a33e6cd950b"
+  },
+  {
+    "version": "20260701224546",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "a8cb8287712cbb9129fe862b9534067b"
+  },
+  {
+    "version": "20260702001757",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "bc96d8798c1cdd77339776e4d9bf3609"
+  },
+  {
+    "version": "20260702193526",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "5969bae959d9e20b853deb2b9bf31d84"
+  },
+  {
+    "version": "20260702194835",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "292ea00518e2572594a0bc539dd68158"
+  },
+  {
+    "version": "20260702202716",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "ecf6cbb55ae84a798b248817b02e72c0"
+  },
+  {
+    "version": "20260702202741",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "632dcf2775a00aa8d733cc35118f7eb4"
+  },
+  {
+    "version": "20260702202833",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "843f5c080827f4f3ff533bdb748b06da"
+  },
+  {
+    "version": "20260702205544",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "40577b0b8807bee143e58bc872c56427"
+  },
+  {
+    "version": "20260702223234",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "b01fd9cbd34edbada39ec04534f12e10"
+  },
+  {
+    "version": "20260703002105",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "e709913983f82adc1f2a090a52d87ef2"
+  },
+  {
+    "version": "20260703064536",
+    "name": "",
+    "statement_count": 1,
+    "body_md5": "ce119e1d994e23a2e2585220aa145f87"
+  },
+  {
+    "version": "20260710135932",
+    "name": "remove_no_longer_eligible_patient_status_v2",
+    "statement_count": 1,
+    "body_md5": "927af4e5327878b99dc427ad04b78ae9"
+  },
+  {
+    "version": "20260710141614",
+    "name": "remove_active_patient_status",
+    "statement_count": 1,
+    "body_md5": "930b888f0013c9b78889322eb631c398"
+  },
+  {
+    "version": "20260710230202",
+    "name": "create_pre_ehr_work_table_snapshot_20260710",
+    "statement_count": 1,
+    "body_md5": "60008aac611834bfe93d3ea0be7d5123"
+  },
+  {
+    "version": "20260711044903",
+    "name": "add_canonical_client_state_contract",
+    "statement_count": 1,
+    "body_md5": "0e9494fa3a9774b0824e14a17fa58c04"
+  },
+  {
+    "version": "20260711045040",
+    "name": "expand_client_state_audit_history",
+    "statement_count": 1,
+    "body_md5": "dc3fbbf6791542b4337a1cd887eba308"
+  },
+  {
+    "version": "20260711051445",
+    "name": "fix_client_state_audit_source_enforcement",
+    "statement_count": 1,
+    "body_md5": "df3bf63df4ce735e8867d82ed446528a"
+  },
+  {
+    "version": "20260711051757",
+    "name": "lock_down_client_state_audit_trigger_functions",
+    "statement_count": 1,
+    "body_md5": "b8cce230db78a9b1f7f125411ed0f020"
+  },
+  {
+    "version": "20260711052024",
+    "name": "optimize_client_status_history_rls",
+    "statement_count": 1,
+    "body_md5": "16d12fd60e68dc12b7b34e1b26261e28"
+  },
+  {
+    "version": "20260711120835",
+    "name": "prepare_client_journey_transition_engine",
+    "statement_count": 1,
+    "body_md5": "a5ad95491a05c77892cc1ce527762982"
+  },
+  {
+    "version": "20260711120907",
+    "name": "add_client_journey_lifecycle_and_state_rpcs",
+    "statement_count": 1,
+    "body_md5": "92809acbab7eb8479d61ac84b8f34f22"
+  },
+  {
+    "version": "20260711120943",
+    "name": "complete_client_journey_state_rpcs",
+    "statement_count": 1,
+    "body_md5": "be0b3aaee0fbca1fb2d52ac7b1ae4d7d"
+  },
+  {
+    "version": "20260711121705",
+    "name": "build_client_state_transition_engine_core",
+    "statement_count": 1,
+    "body_md5": "342a3f6859ab056b4789551eab0b8f59"
+  },
+  {
+    "version": "20260711121733",
+    "name": "add_client_lifecycle_transition_rpcs",
+    "statement_count": 1,
+    "body_md5": "245101506fa9693858a9f641623d7235"
+  },
+  {
+    "version": "20260711121736",
+    "name": "allow_admin_at_risk_override_for_as_needed",
+    "statement_count": 1,
+    "body_md5": "c783bb533c826f51ca0529cae9a65585"
+  },
+  {
+    "version": "20260711122037",
+    "name": "reconcile_client_journey_transition_core",
+    "statement_count": 1,
+    "body_md5": "0414c15f33f44b91a4ab5c78bc020215"
+  },
+  {
+    "version": "20260711122049",
+    "name": "reconcile_client_lifecycle_engine_context",
+    "statement_count": 1,
+    "body_md5": "8be6ddbf7fce15596dffcf7b54617cd8"
+  },
+  {
+    "version": "20260711122130",
+    "name": "reconcile_client_dimension_engine_context",
+    "statement_count": 1,
+    "body_md5": "282d1322595be19f0af64d3616bbd92c"
+  },
+  {
+    "version": "20260711122150",
+    "name": "reconcile_client_journey_state_rpcs",
+    "statement_count": 1,
+    "body_md5": "4457f07dc8fdc4dfa60685ce1c23910c"
+  },
+  {
+    "version": "20260711122151",
+    "name": "remove_duplicate_client_state_engine_helpers",
+    "statement_count": 1,
+    "body_md5": "a064171df57dc75daaf3aa0ac7c660de"
+  },
+  {
+    "version": "20260711122326",
+    "name": "stabilize_client_state_engine_helpers",
+    "statement_count": 1,
+    "body_md5": "0b9c672036ae20c04c0da63e15fe4202"
+  },
+  {
+    "version": "20260711122349",
+    "name": "stabilize_client_lifecycle_rpcs",
+    "statement_count": 1,
+    "body_md5": "39a68ff2c04db36e1a12f6369cc4d3cd"
+  },
+  {
+    "version": "20260711122437",
+    "name": "stabilize_client_dimension_rpcs",
+    "statement_count": 1,
+    "body_md5": "2c4fc0d3ed989b707ada44ef72291f39"
+  },
+  {
+    "version": "20260711122858",
+    "name": "finalize_client_state_engine_guards",
+    "statement_count": 1,
+    "body_md5": "11f4d8934370c04747bc85342f443fdb"
+  },
+  {
+    "version": "20260711123330",
+    "name": "finalize_client_journey_transition_engine",
+    "statement_count": 1,
+    "body_md5": "e87b0cbf206fb00884a7999d952fe23f"
+  },
+  {
+    "version": "20260711123617",
+    "name": "restrict_client_state_system_rpcs_to_service_role",
+    "statement_count": 1,
+    "body_md5": "883cc79be93ff48147ec5775cc81ab2e"
+  },
+  {
+    "version": "20260711131754",
+    "name": "create_phase4_client_journey_reconciliation_ledgers",
+    "statement_count": 1,
+    "body_md5": "5924909178a147f4199bc46c95da8d66"
+  },
+  {
+    "version": "20260711132034",
+    "name": "initialize_phase4_client_journey_run",
+    "statement_count": 1,
+    "body_md5": "09bb3c90e4e16edc1e22f6bb8b4dbc38"
+  },
+  {
+    "version": "20260711132120",
+    "name": "snapshot_phase4_client_journey_reconciliation",
+    "statement_count": 1,
+    "body_md5": "d7bbb659b5080cd73187f610e10a9620"
+  },
+  {
+    "version": "20260711132313",
+    "name": "normalize_neutral_role_in_client_state_guard",
+    "statement_count": 1,
+    "body_md5": "ac77c362e3511386189f95c75a657941"
+  },
+  {
+    "version": "20260711132406",
+    "name": "apply_phase4_canonical_client_state",
+    "statement_count": 1,
+    "body_md5": "ada0be3b03fc29fb87b5cb895673e6ce"
+  },
+  {
+    "version": "20260711132452",
+    "name": "create_phase4_client_journey_exceptions_and_report",
+    "statement_count": 1,
+    "body_md5": "79a0b81c95a7631aaafee356d31bfea1"
+  },
+  {
+    "version": "20260711135801",
+    "name": "upgrade_client_journey_exception_schema",
+    "statement_count": 1,
+    "body_md5": "c3579d01f053fe3b73c5d161445e229a"
+  },
+  {
+    "version": "20260711135939",
+    "name": "add_client_journey_exception_workflows",
+    "statement_count": 1,
+    "body_md5": "3e92a298123c228d075999544f8e9f49"
+  },
+  {
+    "version": "20260711135957",
+    "name": "add_client_journey_exception_views",
+    "statement_count": 1,
+    "body_md5": "14fd7e0371bad72c7c948565503844f7"
+  },
+  {
+    "version": "20260711140057",
+    "name": "add_client_journey_exception_reason_catalog",
+    "statement_count": 1,
+    "body_md5": "ff40a4919798bf80ceccc712ecc2ce81"
+  },
+  {
+    "version": "20260711140155",
+    "name": "automate_client_journey_operational_exceptions",
+    "statement_count": 1,
+    "body_md5": "1dbbd78995181f5c3b67ad3156038f3d"
+  },
+  {
+    "version": "20260711140338",
+    "name": "add_client_journey_exception_owner_options",
+    "statement_count": 1,
+    "body_md5": "d5f32cde50d5aa3404365f7ea1398d1e"
+  },
+  {
+    "version": "20260711140816",
+    "name": "restrict_client_journey_exception_owner_options",
+    "statement_count": 1,
+    "body_md5": "2e8f94f3dcb854ef3ad8a91c7218fbf1"
+  },
+  {
+    "version": "20260711141204",
+    "name": "preserve_client_journey_exception_human_controls",
+    "statement_count": 1,
+    "body_md5": "ce9e32e3a6193cf3d896afd3fc11dbf0"
+  },
+  {
+    "version": "20260711141842",
+    "name": "avoid_noop_client_journey_exception_updates",
+    "statement_count": 1,
+    "body_md5": "66a7390dde5280e45a5bef671a05080d"
+  },
+  {
+    "version": "20260711142214",
+    "name": "index_client_journey_exception_audit_foreign_keys",
+    "statement_count": 1,
+    "body_md5": "8072fc7814a7d8bb2b500cbffeadd440"
+  },
+  {
+    "version": "20260711154835",
+    "name": "centralize_therapist_eligibility_and_selection",
+    "statement_count": 1,
+    "body_md5": "d7d9bdb077b923c99ec7949a6f304e3a"
+  },
+  {
+    "version": "20260711155056",
+    "name": "stabilize_idempotent_therapist_selection",
+    "statement_count": 1,
+    "body_md5": "ca46c38dd4d50f0ff5c5dcfbcd40bd4c"
+  },
+  {
+    "version": "20260711164504",
+    "name": "establish_selected_therapist_relationship",
+    "statement_count": 1,
+    "body_md5": "7ef04de29cd082b99f6d6877fc40f9ae"
+  },
+  {
+    "version": "20260711172208",
+    "name": "build_provider_demand_operations_and_reevaluation",
+    "statement_count": 1,
+    "body_md5": "79c6bdd7e0d59858a1da18da22bed3f8"
+  },
+  {
+    "version": "20260711172242",
+    "name": "wire_provider_demand_reevaluation_events",
+    "statement_count": 1,
+    "body_md5": "1b82beaa22ff73ecf7eb3a2f823f99e9"
+  },
+  {
+    "version": "20260711172336",
+    "name": "schedule_provider_demand_reevaluation",
+    "statement_count": 1,
+    "body_md5": "4a8ddcdea2c85bf5327b25d9068b06d3"
+  },
+  {
+    "version": "20260711173815",
+    "name": "index_provider_demand_foreign_keys",
+    "statement_count": 1,
+    "body_md5": "f7a825975f559da4d028a567408d96e9"
+  },
+  {
+    "version": "20260711192545",
+    "name": "centralize_client_care_readiness",
+    "statement_count": 1,
+    "body_md5": "f7cf61e3b7ec7d073ed4d40239748f11"
+  },
+  {
+    "version": "20260711192646",
+    "name": "preserve_idempotent_therapist_selection",
+    "statement_count": 1,
+    "body_md5": "188689bcb822ae8a2de6cfcaa8f16997"
+  },
+  {
+    "version": "20260711193708",
+    "name": "sync_history_emergency_contacts",
+    "statement_count": 1,
+    "body_md5": "6b9191efc810cb2e86b3469483bc04b7"
+  },
+  {
+    "version": "20260711194504",
+    "name": "grant_admin_emergency_contact_management",
+    "statement_count": 1,
+    "body_md5": "03bda4b9bedbb677433a1830b99f9bf8"
+  },
+  {
+    "version": "20260711194746",
+    "name": "automate_intake_readiness_from_evidence",
+    "statement_count": 1,
+    "body_md5": "44cc2faa35e6305cbc012052c517113b"
+  },
+  {
+    "version": "20260712005302",
+    "name": "phase9_eligibility_schema_and_rls",
+    "statement_count": 1,
+    "body_md5": "eb4f9bd4fda4460af3444679d144de87"
+  },
+  {
+    "version": "20260712005329",
+    "name": "phase9_eligibility_status_and_acknowledgement",
+    "statement_count": 1,
+    "body_md5": "f19485e8b3f3fd441571c8635580909c"
+  },
+  {
+    "version": "20260712005352",
+    "name": "phase9_record_eligibility_result",
+    "statement_count": 1,
+    "body_md5": "81d31480758110173ec5847c045da983"
+  },
+  {
+    "version": "20260712005425",
+    "name": "phase9_separate_intake_and_selection_gates",
+    "statement_count": 1,
+    "body_md5": "3b6ba08e30da378a62a55db48a7040ec"
+  },
+  {
+    "version": "20260712005442",
+    "name": "phase9_reconcile_existing_eligibility_results",
+    "statement_count": 1,
+    "body_md5": "5ef1aaf00842be2a0d53171ee0992d67"
+  },
+  {
+    "version": "20260712010957",
+    "name": "phase9_invalidate_stale_insurance_verification",
+    "statement_count": 1,
+    "body_md5": "3b30cdc68a4fe01f5df31cd64e3eeff8"
+  },
+  {
+    "version": "20260712012532",
+    "name": "phase9_add_insurance_verification_version",
+    "statement_count": 1,
+    "body_md5": "bbca1ca2e87b642fbce2f93f2b63f860"
+  },
+  {
+    "version": "20260712012614",
+    "name": "phase9_use_versioned_eligibility_evidence",
+    "statement_count": 1,
+    "body_md5": "6c3fc0dad87f751280dfcf0fea3e35bf"
+  },
+  {
+    "version": "20260712012643",
+    "name": "phase9_enforce_versioned_readiness_gate",
+    "statement_count": 1,
+    "body_md5": "cf4cab0cc1ea5c6f594a5251ac4d4a65"
+  },
+  {
+    "version": "20260712013833",
+    "name": "phase9_index_eligibility_foreign_keys",
+    "statement_count": 1,
+    "body_md5": "f465e4e4c695ea983335786c683f99f2"
+  },
+  {
+    "version": "20260712120818",
+    "name": "phase9_capture_exact_insurance_version",
+    "statement_count": 1,
+    "body_md5": "4f2b4c2f6d3e755c488fc8ee5c3aa393"
+  },
+  {
+    "version": "20260712120856",
+    "name": "phase9_use_exact_insurance_version",
+    "statement_count": 1,
+    "body_md5": "ac80c98c8b6b0de9d79826ab67f402d4"
+  },
+  {
+    "version": "20260712120930",
+    "name": "phase9_record_against_exact_insurance_version",
+    "statement_count": 1,
+    "body_md5": "78fcb36f71dcbe662df5e30f3afe5610"
+  },
+  {
+    "version": "20260712121230",
+    "name": "phase9_align_with_canonical_verification_version",
+    "statement_count": 1,
+    "body_md5": "9145f6587653f123866ab042a70d354c"
+  },
+  {
+    "version": "20260712125417",
+    "name": "phase10_dual_scheduling_branches",
+    "statement_count": 1,
+    "body_md5": "0bc743b971bb10a357dbfa3a117ca1f2"
+  },
+  {
+    "version": "20260712130332",
+    "name": "phase10_preserve_ongoing_self_scheduling",
+    "statement_count": 1,
+    "body_md5": "516143a204488748c0286fab106ed056"
+  },
+  {
+    "version": "20260712130715",
+    "name": "phase10_lock_down_appointment_trigger",
+    "statement_count": 1,
+    "body_md5": "e08640bd51654d5ab3caca1a9e6777a2"
+  },
+  {
+    "version": "20260712185342",
+    "name": "pre_overhaul_table_changes_snapshot_v1",
+    "statement_count": 1,
+    "body_md5": "ff23e0b27861b8fe9a8a88abba15e6a8"
+  },
+  {
+    "version": "20260712185418",
+    "name": "overhaul_core_runtime_tables_v1",
+    "statement_count": 1,
+    "body_md5": "2f775bfd5a1dcd7152c5a75b29a0a633"
+  },
+  {
+    "version": "20260712185546",
+    "name": "overhaul_provider_enums_v1",
+    "statement_count": 1,
+    "body_md5": "2e4676719cc05831fb2a15caefcdf24b"
+  },
+  {
+    "version": "20260712185555",
+    "name": "overhaul_staff_capacity_columns_v1",
+    "statement_count": 1,
+    "body_md5": "c684269c198e4dc61ccdaa05cea49e6c"
+  },
+  {
+    "version": "20260712185607",
+    "name": "overhaul_staff_capacity_constraints_v1",
+    "statement_count": 1,
+    "body_md5": "ed07cda9ee67f3c566114fb779ecdc81"
+  },
+  {
+    "version": "20260712185623",
+    "name": "overhaul_staff_license_readiness_columns_v1",
+    "statement_count": 1,
+    "body_md5": "3800c53ede89e324301670ce29e9f517"
+  },
+  {
+    "version": "20260712185638",
+    "name": "overhaul_pathway_readiness_scope_v1",
+    "statement_count": 1,
+    "body_md5": "3cbc01ec717cfbdae0df21eb7dd79780"
+  },
+  {
+    "version": "20260712185649",
+    "name": "overhaul_staff_clinical_routing_readiness_v1",
+    "statement_count": 1,
+    "body_md5": "8544c582fe26247b6b8df6c9e42954e3"
+  },
+  {
+    "version": "20260712185701",
+    "name": "overhaul_provider_capacity_snapshots_v1",
+    "statement_count": 1,
+    "body_md5": "37621ec545c077885424f8ec6a076657"
+  },
+  {
+    "version": "20260712185718",
+    "name": "overhaul_provider_matchability_tables_v1",
+    "statement_count": 1,
+    "body_md5": "3c4c95185f3c8b9f183fa2c68669790e"
+  },
+  {
+    "version": "20260712185751",
+    "name": "overhaul_provider_network_exception_catalog_v1",
+    "statement_count": 1,
+    "body_md5": "37f1e2b154b6e38d80638d5076a2d0d0"
+  },
+  {
+    "version": "20260712185834",
+    "name": "overhaul_provider_network_exception_table_v1",
+    "statement_count": 1,
+    "body_md5": "ef0dabcf021f288f44b7686e07553c0f"
+  },
+  {
+    "version": "20260712185911",
+    "name": "overhaul_provider_network_exception_indexes_v1a",
+    "statement_count": 1,
+    "body_md5": "889e7b3e6adb1c54ea38833a2087c510"
+  },
+  {
+    "version": "20260712185926",
+    "name": "overhaul_provider_network_exception_security_v1",
+    "statement_count": 1,
+    "body_md5": "ce6d8e8cdb2fbe9bc9d018abfdd3d19c"
+  },
+  {
+    "version": "20260712185944",
+    "name": "overhaul_provider_network_exception_history_table_v1",
+    "statement_count": 1,
+    "body_md5": "baa3c134f108e875860d596615a0592d"
+  },
+  {
+    "version": "20260712185953",
+    "name": "overhaul_provider_network_exception_history_security_v1",
+    "statement_count": 1,
+    "body_md5": "2d3f6a0cd2081dd589b5a6fc2773d87b"
+  },
+  {
+    "version": "20260712190013",
+    "name": "overhaul_provider_workforce_enums_v1",
+    "statement_count": 1,
+    "body_md5": "93a4f2404395a03b4fd0ffdfbcdb59f5"
+  },
+  {
+    "version": "20260712190025",
+    "name": "overhaul_provider_applicants_v1",
+    "statement_count": 1,
+    "body_md5": "8261943e8d0fe8ebb2bc2e756156e218"
+  },
+  {
+    "version": "20260712190034",
+    "name": "overhaul_provider_applicant_followups_v1",
+    "statement_count": 1,
+    "body_md5": "033eeafbf8a738d1329e2caad4c0c015"
+  },
+  {
+    "version": "20260712190100",
+    "name": "overhaul_provider_availability_confirmation_table_v1",
+    "statement_count": 1,
+    "body_md5": "d238cc39aa6ff18c7d09cc0419d57c39"
+  },
+  {
+    "version": "20260712190117",
+    "name": "overhaul_provider_availability_confirmation_indexes_v1",
+    "statement_count": 1,
+    "body_md5": "7dd9d1800e983341371ee63a19e4868d"
+  },
+  {
+    "version": "20260712190135",
+    "name": "overhaul_provider_availability_confirmation_rls_v1",
+    "statement_count": 1,
+    "body_md5": "1bb0ebc9aceea7e61651dbf0167b9c6b"
+  },
+  {
+    "version": "20260712190152",
+    "name": "overhaul_provider_availability_confirmation_privileges_v1",
+    "statement_count": 1,
+    "body_md5": "bdc244ed7934f60f1d7e972e46bf74e5"
+  },
+  {
+    "version": "20260712190216",
+    "name": "overhaul_provider_contact_failures_base_v1",
+    "statement_count": 1,
+    "body_md5": "5f936cc1dbc02f8f6b46b7078927fd44"
+  },
+  {
+    "version": "20260712190226",
+    "name": "overhaul_provider_contact_failures_extensions_v1",
+    "statement_count": 1,
+    "body_md5": "b63f77e63c0d2eeab9cc609df944f98b"
+  },
+  {
+    "version": "20260712190237",
+    "name": "overhaul_provider_contact_failures_constraints_v1",
+    "statement_count": 1,
+    "body_md5": "2c93d25164a2fc46475c3af9e91f1232"
+  },
+  {
+    "version": "20260712190254",
+    "name": "overhaul_provider_contact_failures_indexes_v1",
+    "statement_count": 1,
+    "body_md5": "c387c12a0433fd96f05836e40827c7c5"
+  },
+  {
+    "version": "20260712190348",
+    "name": "overhaul_provider_contact_failures_rls_v1",
+    "statement_count": 1,
+    "body_md5": "6f50e9fb8a114e9e0bd957e7f9257e9e"
+  },
+  {
+    "version": "20260712190359",
+    "name": "overhaul_provider_contact_failures_privileges_v1",
+    "statement_count": 1,
+    "body_md5": "0c76e7d249ffb033a97ed23155a61560"
+  },
+  {
+    "version": "20260712190407",
+    "name": "overhaul_provider_contact_failure_history_table_v1",
+    "statement_count": 1,
+    "body_md5": "d0512b7a737356ea638f54d639217d6d"
+  },
+  {
+    "version": "20260712190415",
+    "name": "overhaul_provider_contact_failure_history_indexes_v1",
+    "statement_count": 1,
+    "body_md5": "cf3305a87ad421c728e6e8481807d2be"
+  },
+  {
+    "version": "20260712190424",
+    "name": "overhaul_provider_contact_failure_history_privileges_v1",
+    "statement_count": 1,
+    "body_md5": "c87c08399df2ef9e874655f75b734ec2"
+  },
+  {
+    "version": "20260712190430",
+    "name": "overhaul_provider_exception_applicant_fk_v1",
+    "statement_count": 1,
+    "body_md5": "6b8ad0ddffe2a9353bc24adc0cd5b58f"
+  },
+  {
+    "version": "20260712190449",
+    "name": "overhaul_state_launch_enum_v1",
+    "statement_count": 1,
+    "body_md5": "aefea48840e2c04700e5e537e95026d0"
+  },
+  {
+    "version": "20260712190459",
+    "name": "overhaul_state_intelligence_configuration_v1",
+    "statement_count": 1,
+    "body_md5": "2eba59ebea164a8a622307d69793e4a6"
+  },
+  {
+    "version": "20260712190522",
+    "name": "overhaul_state_market_status_base_v1",
+    "statement_count": 1,
+    "body_md5": "15eab1827fb806a4fdcf77be5ae8ab40"
+  },
+  {
+    "version": "20260712190531",
+    "name": "overhaul_state_market_status_constraints_v1",
+    "statement_count": 1,
+    "body_md5": "f6aa3a742bc11a449e941fa6717a4d59"
+  },
+  {
+    "version": "20260712190539",
+    "name": "overhaul_state_market_status_security_v1",
+    "statement_count": 1,
+    "body_md5": "c8edce9c1f36f52d55d85fc539ac88d5"
+  },
+  {
+    "version": "20260712190554",
+    "name": "overhaul_state_market_snapshots_v1",
+    "statement_count": 1,
+    "body_md5": "4335e5a4cb4a876258f9eba83d90739e"
+  },
+  {
+    "version": "20260712190616",
+    "name": "overhaul_state_market_overrides_table_v1",
+    "statement_count": 1,
+    "body_md5": "294105e6391f8f158ae86eba6029b0d0"
+  },
+  {
+    "version": "20260712190623",
+    "name": "overhaul_state_market_overrides_indexes_v1",
+    "statement_count": 1,
+    "body_md5": "3ce9190df58675cac3e02d8a1c1a4092"
+  },
+  {
+    "version": "20260712190632",
+    "name": "overhaul_state_market_overrides_privileges_v1",
+    "statement_count": 1,
+    "body_md5": "1c7c93f58217bd73f1896a5bd5991a9a"
+  },
+  {
+    "version": "20260712190639",
+    "name": "overhaul_state_market_status_override_fk_v1",
+    "statement_count": 1,
+    "body_md5": "7c9e8bf8fe32913ec9b9554cc26cf796"
+  },
+  {
+    "version": "20260712190656",
+    "name": "overhaul_vaccn_enums_v1",
+    "statement_count": 1,
+    "body_md5": "b767265e840cd8cbe4f680525a540da3"
+  },
+  {
+    "version": "20260712190705",
+    "name": "overhaul_vaccn_sop_versions_v1",
+    "statement_count": 1,
+    "body_md5": "c68b9ef0cade43f468b8c49467323c1f"
+  },
+  {
+    "version": "20260712190721",
+    "name": "overhaul_vaccn_sop_steps_v1",
+    "statement_count": 1,
+    "body_md5": "56c7bdd5acbda4e8c4240b5babde336c"
+  },
+  {
+    "version": "20260712190730",
+    "name": "overhaul_vaccn_registration_cases_base_v1",
+    "statement_count": 1,
+    "body_md5": "cb658c58f5922d08c67d4560973ad810"
+  },
+  {
+    "version": "20260712190741",
+    "name": "overhaul_vaccn_registration_cases_constraints_v1",
+    "statement_count": 1,
+    "body_md5": "208f332c0f92df77edb3480c13f52009"
+  },
+  {
+    "version": "20260712190755",
+    "name": "overhaul_vaccn_registration_cases_rls_v1",
+    "statement_count": 1,
+    "body_md5": "51805d252c1fc3ce3b0b8e52434f2468"
+  },
+  {
+    "version": "20260712190809",
+    "name": "overhaul_vaccn_registration_cases_privileges_v1",
+    "statement_count": 1,
+    "body_md5": "858daab9bbf7e07c542e437d3f352206"
+  },
+  {
+    "version": "20260712190823",
+    "name": "overhaul_vaccn_case_step_progress_v1",
+    "statement_count": 1,
+    "body_md5": "51e936df67e97bf5aa56838359aa3820"
+  },
+  {
+    "version": "20260712190829",
+    "name": "overhaul_vaccn_case_step_progress_security_v1",
+    "statement_count": 1,
+    "body_md5": "f24c9978b22cadc887b0d4c61cf62e55"
+  },
+  {
+    "version": "20260712190838",
+    "name": "overhaul_vaccn_case_step_progress_privileges_v1",
+    "statement_count": 1,
+    "body_md5": "121e5e15b62b8382f00c0356541b14ab"
+  },
+  {
+    "version": "20260712190848",
+    "name": "overhaul_vaccn_registration_case_history_v1",
+    "statement_count": 1,
+    "body_md5": "405cc2a67efa840252e5193e696499b4"
+  },
+  {
+    "version": "20260712190904",
+    "name": "overhaul_vaccn_registration_case_history_privileges_v1",
+    "statement_count": 1,
+    "body_md5": "001da76443357f9864a731b2949825a4"
+  },
+  {
+    "version": "20260712190930",
+    "name": "overhaul_validate_existing_data_constraints_v1",
+    "statement_count": 1,
+    "body_md5": "dc3c5413fffc08740c49b7610fe70a6f"
+  },
+  {
+    "version": "20260713031809",
+    "name": "20260713031808_9571ae9a-f452-4d19-9463-f0e2afe2d482",
+    "statement_count": 1,
+    "body_md5": "246f0098c3c100cfee27fadf13f30927"
+  },
+  {
+    "version": "20260713032218",
+    "name": "20260713032217_ee36d289-a74e-4375-8b21-b7bbbf378830",
+    "statement_count": 1,
+    "body_md5": "a96ed5d59a5be2372b92845adf179c64"
+  },
+  {
+    "version": "20260713032812",
+    "name": "20260713032811_7803985f-9dc4-4202-897d-64afb87f2ff8",
+    "statement_count": 1,
+    "body_md5": "dd1c0e33e630faeb120174168bfb768a"
+  },
+  {
+    "version": "20260713034617",
+    "name": "20260713034615_b5965003-ad2e-4a33-af17-6a94f4654f5f",
+    "statement_count": 1,
+    "body_md5": "299a473998efbc9bb534e3bb072bd0c7"
+  },
+  {
+    "version": "20260714022505",
+    "name": "publish_staff_contract_foundation_and_rls",
+    "statement_count": 1,
+    "body_md5": "586bd4e1dd73c642e794e030ff5f160d"
+  },
+  {
+    "version": "20260714023026",
+    "name": "add_staff_contract_support_tables",
+    "statement_count": 1,
+    "body_md5": "cd3f6ffc18dfa6e42ca984ccb8ddd22c"
+  },
+  {
+    "version": "20260714023048",
+    "name": "publish_provider_capacity_contract",
+    "statement_count": 1,
+    "body_md5": "f84735302b1074d288c7b4c0efe0dc46"
+  },
+  {
+    "version": "20260714023105",
+    "name": "publish_provider_readiness_contract",
+    "statement_count": 1,
+    "body_md5": "55c2182f62d9b7ab85e4a5f2a3c86a81"
+  },
+  {
+    "version": "20260714023119",
+    "name": "publish_provider_contact_failure_contract",
+    "statement_count": 1,
+    "body_md5": "872bd8e3d6971589f2b3d8664ee96f88"
+  },
+  {
+    "version": "20260714023138",
+    "name": "publish_provider_profile_update_contract",
+    "statement_count": 1,
+    "body_md5": "ecc31a6435f26cf53871041c656e4c22"
+  },
+  {
+    "version": "20260714023155",
+    "name": "publish_provider_capacity_update_contract",
+    "statement_count": 1,
+    "body_md5": "090140371fbac42ad4b6598cc4e6196d"
+  },
+  {
+    "version": "20260714023208",
+    "name": "publish_provider_accepting_contracts",
+    "statement_count": 1,
+    "body_md5": "c40125253ff32dba909f0c99b1c12854"
+  },
+  {
+    "version": "20260714023300",
+    "name": "publish_provider_profile_image_contract",
+    "statement_count": 1,
+    "body_md5": "44b091f797db763f3b60d629bcecbe8e"
+  },
+  {
+    "version": "20260714023311",
+    "name": "publish_client_canonical_state_contract",
+    "statement_count": 1,
+    "body_md5": "d7e4983f812dac0849a66e9a19374a05"
+  },
+  {
+    "version": "20260714023321",
+    "name": "publish_assigned_clients_contract",
+    "statement_count": 1,
+    "body_md5": "fe81072084f5e6b23af9abd55ad12b5c"
+  },
+  {
+    "version": "20260714023338",
+    "name": "publish_staff_client_list_contract",
+    "statement_count": 1,
+    "body_md5": "72002ba037c54669e3530fed65fdd028"
+  },
+  {
+    "version": "20260714023406",
+    "name": "publish_client_correction_contract",
+    "statement_count": 1,
+    "body_md5": "afc53e0939892b031c12766ce5cf49f7"
+  },
+  {
+    "version": "20260714023427",
+    "name": "publish_client_assignment_and_closure_contracts",
+    "statement_count": 1,
+    "body_md5": "6e120862f97286713e05d6bb35f9193a"
+  },
+  {
+    "version": "20260714023540",
+    "name": "publish_staff_exception_read_contracts",
+    "statement_count": 1,
+    "body_md5": "186a3ba87b48b6b3a681cc58512643b5"
+  },
+  {
+    "version": "20260714023558",
+    "name": "publish_create_client_journey_exception_contract",
+    "statement_count": 1,
+    "body_md5": "31197e5a62ab635da012c916919ffa51"
+  },
+  {
+    "version": "20260714023620",
+    "name": "publish_client_journey_exception_transition_contracts",
+    "statement_count": 1,
+    "body_md5": "d00bd29991d634b5fe9ecf229b05c709"
+  },
+  {
+    "version": "20260714023643",
+    "name": "publish_staff_provider_demand_list_contract",
+    "statement_count": 1,
+    "body_md5": "ccecf4f199d65833f0386e8047404836"
+  },
+  {
+    "version": "20260714023702",
+    "name": "publish_provider_demand_action_contracts",
+    "statement_count": 1,
+    "body_md5": "05325d6d980a3b919111cd9d4ec771be"
+  },
+  {
+    "version": "20260714023805",
+    "name": "align_exception_resolution_contract_signature",
+    "statement_count": 1,
+    "body_md5": "49f5d2667f77ef84b6adcff02f0c2ff8"
+  },
+  {
+    "version": "20260714024023",
+    "name": "publish_staff_available_slots_contract",
+    "statement_count": 1,
+    "body_md5": "a0e04bfc1a5d0dfbfd0fc23c4b84ee61"
+  },
+  {
+    "version": "20260714024043",
+    "name": "publish_create_appointment_contract",
+    "statement_count": 1,
+    "body_md5": "cd4ecf03c4e2fed65dffbc4843393826"
+  },
+  {
+    "version": "20260714024103",
+    "name": "publish_appointment_reschedule_cancel_contracts",
+    "statement_count": 1,
+    "body_md5": "cbb5189922d8a7c47e5b205802de25a7"
+  },
+  {
+    "version": "20260714024134",
+    "name": "publish_recurring_appointment_series_contracts",
+    "statement_count": 1,
+    "body_md5": "1e8417b67214d792916b4704b6d188af"
+  },
+  {
+    "version": "20260714024154",
+    "name": "publish_appointment_correction_and_documented_status_contracts",
+    "statement_count": 1,
+    "body_md5": "c5f392196c0634d58e90c0dd32825fb9"
+  },
+  {
+    "version": "20260714024506",
+    "name": "publish_create_client_account_request_contract",
+    "statement_count": 1,
+    "body_md5": "7b4ea6124db87b69ba5b001feb3d0ea3"
+  },
+  {
+    "version": "20260714024520",
+    "name": "publish_submit_claim_reservation_contract",
+    "statement_count": 1,
+    "body_md5": "66bd09fcf31c24c4f9b009f7c7d45e3d"
+  },
+  {
+    "version": "20260714024818",
+    "name": "allow_payroll_execution_request_progress",
+    "statement_count": 1,
+    "body_md5": "1d6fec84d2464587702e2de73c86b97f"
+  },
+  {
+    "version": "20260714024828",
+    "name": "add_payroll_execution_request_link",
+    "statement_count": 1,
+    "body_md5": "30ef92179d698b45051dba538a10f1e0"
+  },
+  {
+    "version": "20260714025851",
+    "name": "fix_documented_session_payroll_handoff_lookup",
+    "statement_count": 1,
+    "body_md5": "220adce69b27f9321a35e313f063c5cf"
+  },
+  {
+    "version": "20260714030137",
+    "name": "seed_staff_exception_contract_reason_codes_v4",
+    "statement_count": 1,
+    "body_md5": "3a106f22028013d311169129e084cc4c"
+  },
+  {
+    "version": "20260714030324",
+    "name": "fix_exception_reopen_state_contract",
+    "statement_count": 1,
+    "body_md5": "2d72fbeb5a7ad4364aeb8b5b08495433"
+  },
+  {
+    "version": "20260714030734",
+    "name": "publish_staff_backend_contract_release_20260714_v2",
+    "statement_count": 1,
+    "body_md5": "cda46f018bc3b9a7d6b73fa03cc86e56"
+  },
+  {
+    "version": "20260714133740",
+    "name": "20260714133737_79de6bd2-15fe-4564-a790-81f40b80b33b",
+    "statement_count": 1,
+    "body_md5": "3e134781fb991d4d16ac3cf09fa872dc"
+  },
+  {
+    "version": "20260714134051",
+    "name": "20260714134044_8c7810d5-65b8-4b28-8cc9-d9950067c1bf",
+    "statement_count": 1,
+    "body_md5": "355fc71f46593fa97c5ff3b16cc69176"
+  },
+  {
+    "version": "20260714134144",
+    "name": "20260714134141_21ea8682-b18c-456d-a8ad-1065c002e637",
+    "statement_count": 1,
+    "body_md5": "993ebb72d72f703432492ea696c48f30"
+  },
+  {
+    "version": "20260714151801",
+    "name": "crm_campaign_claim_recovery_hardening",
+    "statement_count": 1,
+    "body_md5": "a1359f4ce0353be0b53e9e0ddb219b4d"
+  },
+  {
+    "version": "20260714151815",
+    "name": "crm_contract_version_and_idempotency_hardening",
+    "statement_count": 1,
+    "body_md5": "9f8e1dd6b08567345410eb7132b248a4"
+  },
+  {
+    "version": "20260714151832",
+    "name": "crm_eligibility_manual_review_persistence",
+    "statement_count": 1,
+    "body_md5": "0d126dbf7d1e981a20a975f653d2588e"
+  },
+  {
+    "version": "20260714151937",
+    "name": "crm_canonical_mutation_engine",
+    "statement_count": 1,
+    "body_md5": "b101a3a6b0ebb6b54323453063e55679"
+  },
+  {
+    "version": "20260714152001",
+    "name": "crm_public_mutation_contract_wrappers",
+    "statement_count": 1,
+    "body_md5": "f72e57a7c72a28bc217839e0603e183c"
+  },
+  {
+    "version": "20260714152043",
+    "name": "crm_communication_policy_contract_hardening",
+    "statement_count": 1,
+    "body_md5": "0ac3d9c93eabcfd9180e265e2a27e1dc"
+  },
+  {
+    "version": "20260714152102",
+    "name": "crm_service_remove_contract",
+    "statement_count": 1,
+    "body_md5": "98947c048d69b230fe516c1c6ba2717f"
+  },
+  {
+    "version": "20260714152120",
+    "name": "crm_canonical_view_contract_hardening",
+    "statement_count": 1,
+    "body_md5": "9ab23feaabfdef07878eb595de38814b"
+  },
+  {
+    "version": "20260714152142",
+    "name": "crm_report_views_core_hardening",
+    "statement_count": 1,
+    "body_md5": "b7e96626cedc4b111de8dd2c4999dc0c"
+  },
+  {
+    "version": "20260714152212",
+    "name": "crm_campaign_report_view_fix",
+    "statement_count": 1,
+    "body_md5": "7c21e2d359df7dff1847cf12605274b2"
+  },
+  {
+    "version": "20260714152221",
+    "name": "crm_task_report_view_fix",
+    "statement_count": 1,
+    "body_md5": "5cd481ce3964c71c7357560087dbe92f"
+  },
+  {
+    "version": "20260714152229",
+    "name": "crm_exception_report_view_fix",
+    "statement_count": 1,
+    "body_md5": "ac6473059f0ca78b385eedef201f796e"
+  },
+  {
+    "version": "20260714152239",
+    "name": "crm_protected_client_column_grants",
+    "statement_count": 1,
+    "body_md5": "5f84a53bf401ee8a28c24cb6054c2594"
+  },
+  {
+    "version": "20260714152301",
+    "name": "crm_legacy_privilege_and_clickup_retirement_v2",
+    "statement_count": 1,
+    "body_md5": "00a42db158b60b90a610fe527afe36c9"
+  },
+  {
+    "version": "20260714153139",
+    "name": "crm_role_helper_caller_binding",
+    "statement_count": 1,
+    "body_md5": "4723810ee0f508b26ca020603b261874"
+  },
+  {
+    "version": "20260714153529",
+    "name": "crm_role_helpers_use_authoritative_user_roles",
+    "statement_count": 1,
+    "body_md5": "0291201ee3aac35332442024dd55fc39"
+  },
+  {
+    "version": "20260714153610",
+    "name": "crm_rls_require_authoritative_staff_roles",
+    "statement_count": 1,
+    "body_md5": "69671f2f609cb95559a74be1ec2d67a9"
+  },
+  {
+    "version": "20260714154309",
+    "name": "crm_user_roles_and_inbound_sms_rls_hardening",
+    "statement_count": 1,
+    "body_md5": "593e4dd4a2539270689f39d8858fbafd"
+  },
+  {
+    "version": "20260714154317",
+    "name": "crm_legacy_rpc_execution_lockdown",
+    "statement_count": 1,
+    "body_md5": "620c179e1647fe0799b868a4a617da39"
+  },
+  {
+    "version": "20260714154326",
+    "name": "crm_internal_mapping_search_path_hardening",
+    "statement_count": 1,
+    "body_md5": "bc49066e87a5d705b8705043f89ca299"
+  },
+  {
+    "version": "20260714154426",
+    "name": "crm_remaining_legacy_trigger_and_utility_hardening",
+    "statement_count": 1,
+    "body_md5": "ebf38e83945adf9c833b67817ad6ef46"
+  },
+  {
+    "version": "20260714155413",
+    "name": "crm_idempotent_replay_precedes_concurrency",
+    "statement_count": 1,
+    "body_md5": "8517987ae0e1885e4e9ed1b808c4f0dc"
+  },
+  {
+    "version": "20260714155525",
+    "name": "crm_canonical_guard_context_alignment",
+    "statement_count": 1,
+    "body_md5": "fdbab6370aaa5989785483a70f1198dc"
+  },
+  {
+    "version": "20260714155544",
+    "name": "crm_remove_guard_context_alignment",
+    "statement_count": 1,
+    "body_md5": "d856495473fee80550f54bc70dae8a82"
+  },
+  {
+    "version": "20260714155621",
+    "name": "crm_activity_event_taxonomy_alignment",
+    "statement_count": 1,
+    "body_md5": "2c8d35eb3ec1babb23073f6843e24c7f"
+  },
+  {
+    "version": "20260715215206",
+    "name": "20260715215203_4dea9bfc-6d0d-458c-abe6-ac94d68eaab5",
+    "statement_count": 1,
+    "body_md5": "11c4c6890694898da11fb380916490e8"
+  },
+  {
+    "version": "20260715220219",
+    "name": "20260715220217_af5ca3d4-b59a-4be8-81b0-3954e869265f",
+    "statement_count": 1,
+    "body_md5": "b118609647ea32de14a5a46969923713"
+  },
+  {
+    "version": "20260715222706",
+    "name": "20260715222705_d59639ba-3bae-46be-ba18-fb745699a1da",
+    "statement_count": 1,
+    "body_md5": "7de5c77e9640e118741a9417c5e50439"
+  },
+  {
+    "version": "20260715224036",
+    "name": "20260715224035_6369b349-f59d-491f-b44a-9e4f46b48a40",
+    "statement_count": 1,
+    "body_md5": "49849bc6d2c4e1a8cfc9e85e75d00ad5"
+  },
+  {
+    "version": "20260715230111",
+    "name": "20260715230109_b59cf704-4b2d-4b4d-9b97-7c17505f1db8",
+    "statement_count": 1,
+    "body_md5": "5f46dd8cff579ba64829d2648f620b99"
+  },
+  {
+    "version": "20260715230411",
+    "name": "20260715230408_72a3c75a-2c8c-4515-9f82-a3fc839a1454",
+    "statement_count": 1,
+    "body_md5": "275ab16c7e384c57c21bdf82f8dd6549"
+  },
+  {
+    "version": "20260715232925",
+    "name": "20260715232924_86c4edb6-77f2-4031-bc9f-21a293cbee70",
+    "statement_count": 1,
+    "body_md5": "9c0ca7cc7abcfec751da3080d74ce280"
+  },
+  {
+    "version": "20260715233135",
+    "name": "20260715233129_b7547be3-1e82-4057-a588-b5e6404785e5",
+    "statement_count": 1,
+    "body_md5": "2f81c3e21e5219a2c3f426774d1ef214"
+  },
+  {
+    "version": "20260716013622",
+    "name": "20260716013621_789a12cf-61a5-42eb-a872-0ec5bd1f1f13",
+    "statement_count": 1,
+    "body_md5": "5cc7a12a0659ebd22f4f8bd8111f8ec7"
+  },
+  {
+    "version": "20260716013843",
+    "name": "20260716013842_a744cf50-e788-466d-b767-a0a8860a6079",
+    "statement_count": 1,
+    "body_md5": "81b9af145292c93bc4c83b0e5d8160bb"
+  },
+  {
+    "version": "20260716013900",
+    "name": "20260716013859_d4d2db0b-d46c-499c-af6d-cb490099fd89",
+    "statement_count": 1,
+    "body_md5": "00eba6541a290a8115b43edc6720f269"
+  },
+  {
+    "version": "20260716013915",
+    "name": "20260716013914_5d790ace-ea0e-4207-bbb5-1290f18c1c9c",
+    "statement_count": 1,
+    "body_md5": "0020652707eb9d64d1188ad5a8d5339c"
+  },
+  {
+    "version": "20260716013944",
+    "name": "20260716013943_58066bbc-0070-4b3a-8abe-e84cc8b5a34d",
+    "statement_count": 1,
+    "body_md5": "fbbb54fde79e73c519918092756dd11d"
+  },
+  {
+    "version": "20260716014007",
+    "name": "20260716014005_2c466855-6384-4262-adfa-3ef7eed58df8",
+    "statement_count": 1,
+    "body_md5": "d10dbd60ca027cb7c54763635d4ebdfa"
+  },
+  {
+    "version": "20260716020651",
+    "name": "20260716020650_f68df4e1-69de-4dc1-a394-69a081eef6bf",
+    "statement_count": 1,
+    "body_md5": "ccb39a663c90e4f152de228e811d84b5"
+  },
+  {
+    "version": "20260716020912",
+    "name": "20260716020910_a8757b8e-6f24-4758-996d-baa257495838",
+    "statement_count": 1,
+    "body_md5": "e989fd487454302d4b2909d246289d28"
+  },
+  {
+    "version": "20260716022457",
+    "name": "20260716022456_bb30669e-a3a4-49ff-bfc6-800ad5efd78b",
+    "statement_count": 1,
+    "body_md5": "1b3016d1c634d0857a93cbb35a36bfc8"
+  },
+  {
+    "version": "20260716205654",
+    "name": "20260716205652_cbc9de51-b23c-441f-b07d-60bf95903eac",
+    "statement_count": 1,
+    "body_md5": "950b2b233409d9694a420a9ffd61b263"
+  },
+  {
+    "version": "20260716224615",
+    "name": "20260716224613_6036a058-bbbf-4b3f-ab98-84b3d55c9e2b",
+    "statement_count": 1,
+    "body_md5": "5209d879e084cf67be22942294397c8a"
+  },
+  {
+    "version": "20260717015641",
+    "name": "20260717015640_064c9808-c6f1-43e5-96dc-cd57a39bd959",
+    "statement_count": 1,
+    "body_md5": "e9a2353a4a9b012eee6d88bba05c1b70"
+  },
+  {
+    "version": "20260717020453",
+    "name": "20260717020452_5ee446a1-6e81-4de6-b03a-8a3e65269b3a",
+    "statement_count": 1,
+    "body_md5": "15c0071af0fc7ea713ceba18112968df"
+  },
+  {
+    "version": "20260717105202",
+    "name": "20260717105201_5c15b703-1d42-497c-a817-c8785e7b1a20",
+    "statement_count": 1,
+    "body_md5": "4a6610f729f5ce4f98aefb60dbd1d757"
+  },
+  {
+    "version": "20260717110012",
+    "name": "20260717110010_333c2296-7daa-426e-80d3-b2c289251e30",
+    "statement_count": 1,
+    "body_md5": "ea57abc51d59d019344538316c5b4ef8"
+  },
+  {
+    "version": "20260717110220",
+    "name": "20260717110218_7e4013b8-b7f2-4c09-a9dc-0d4a3a2ebd03",
+    "statement_count": 1,
+    "body_md5": "74e47457f4cf952875e5ec0f94ded285"
+  },
+  {
+    "version": "20260717111016",
+    "name": "20260717111013_cfec59d9-2641-413a-99c2-f2d6cfe9c88a",
+    "statement_count": 1,
+    "body_md5": "815834cc6acff317bedb1725885ca4f7"
+  },
+  {
+    "version": "20260717111252",
+    "name": "20260717111250_27241a41-18c7-47ac-90bd-51ac05f2d737",
+    "statement_count": 1,
+    "body_md5": "0f72ec56b90324f7f98515a0ae18fc88"
+  },
+  {
+    "version": "20260717111611",
+    "name": "20260717111610_77ac3c6f-1b1d-47a6-b5f0-978bf747aa9a",
+    "statement_count": 1,
+    "body_md5": "b7b718a94ed796e38da357c5c89abc20"
+  },
+  {
+    "version": "20260717112645",
+    "name": "20260717112640_7a1331c9-1731-4efe-a720-785f20a2fa32",
+    "statement_count": 1,
+    "body_md5": "0ad508bca18c579ca22c5418c9761c2f"
+  },
+  {
+    "version": "20260717113116",
+    "name": "20260717113115_09036d2c-5fe4-4cad-b988-c899de602ae3",
+    "statement_count": 1,
+    "body_md5": "2ea9dbbbe4681a8c7d61b40ce16b7741"
+  },
+  {
+    "version": "20260717113404",
+    "name": "20260717113402_be43c09c-71d9-4b2b-a008-4e3b8ac707a6",
+    "statement_count": 1,
+    "body_md5": "508ae21d6633d957ad3fb74d4dd78889"
+  },
+  {
+    "version": "20260717121153",
+    "name": "20260717121151_fc680196-7c04-4119-a079-06c327096645",
+    "statement_count": 1,
+    "body_md5": "fc509e0b333d619e915136a42760f24d"
+  },
+  {
+    "version": "20260717122118",
+    "name": "20260717122116_4aa1e511-a8a2-45ec-a0b1-f3b42437fc1e",
+    "statement_count": 1,
+    "body_md5": "955d8d8b898a2a5ab99815ed8cb45176"
+  },
+  {
+    "version": "20260717124117",
+    "name": "20260717124116_449d486e-07a5-4025-b244-c7cda2a0022a",
+    "statement_count": 1,
+    "body_md5": "21a3ab04f481a57a321d6e809bc596a9"
+  },
+  {
+    "version": "20260717132829",
+    "name": "20260717132828_9ad62827-2762-4d44-b38e-a03f7e2981db",
+    "statement_count": 1,
+    "body_md5": "e6ab47773bca961148ce8478282f62e1"
+  },
+  {
+    "version": "20260717133431",
+    "name": "20260717133429_93b791ab-419b-4fd8-8315-54a2352821a3",
+    "statement_count": 1,
+    "body_md5": "764757479b302801d7196d7bacc96d5e"
+  },
+  {
+    "version": "20260717134704",
+    "name": "20260717134700_914be85c-6dd3-4a7d-a549-489f37e76a59",
+    "statement_count": 1,
+    "body_md5": "e0e77bacf65cc3f217abac4318b12100"
+  },
+  {
+    "version": "20260717135301",
+    "name": "20260717135258_9f5ddd76-7daf-4f86-a05a-b9ef8dc4cead",
+    "statement_count": 1,
+    "body_md5": "7e21c5ff492ddc7700a170752b186b8a"
+  },
+  {
+    "version": "20260717143704",
+    "name": "20260717143703_5638a7bd-5604-4a13-bc81-54df1d4fbe75",
+    "statement_count": 1,
+    "body_md5": "c274e588d63adb74c9962278b63658bf"
+  },
+  {
+    "version": "20260717155630",
+    "name": "20260717155628_c67f8be6-0150-4a19-b331-7608103bf65e",
+    "statement_count": 1,
+    "body_md5": "6984a2b6910ccbaa8ff2c26187e95b91"
+  },
+  {
+    "version": "20260717165846",
+    "name": "20260717165836_3b8969a5-ed63-4e78-9836-1e06d8013574",
+    "statement_count": 1,
+    "body_md5": "2696ad0a52084af896b2c1f4b4ab0895"
+  },
+  {
+    "version": "20260717170219",
+    "name": "20260717170216_78fabb0e-2c22-4e72-8d9b-e1a90632c6de",
+    "statement_count": 1,
+    "body_md5": "3a0b01f67e8076e335c10dcbc5c67858"
+  },
+  {
+    "version": "20260717170928",
+    "name": "relationship_intake_core_tables",
+    "statement_count": 1,
+    "body_md5": "fc7eb840338397c69fc9061fc3d8ec6c"
+  },
+  {
+    "version": "20260717170952",
+    "name": "relationship_intake_submission_tables",
+    "statement_count": 1,
+    "body_md5": "cdbf2f25ddc8d5620608b12c8f998cf7"
+  },
+  {
+    "version": "20260717171024",
+    "name": "relationship_intake_helper_functions",
+    "statement_count": 1,
+    "body_md5": "2f40b2253955e214e8c5189ac28ca2c4"
+  },
+  {
+    "version": "20260717171051",
+    "name": "provider_applicant_website_router",
+    "statement_count": 1,
+    "body_md5": "9ed1963235d696dcf395fdb1da2a3568"
+  },
+  {
+    "version": "20260717171115",
+    "name": "ocs_website_intake_router",
+    "statement_count": 1,
+    "body_md5": "b90ae04d5d6dbb48072373ce141f9552"
+  },
+  {
+    "version": "20260717171138",
+    "name": "bty_website_intake_router",
+    "statement_count": 1,
+    "body_md5": "325a4ce4daacbb641222289fa1b69e58"
+  },
+  {
+    "version": "20260717171206",
+    "name": "20260717171202_33c1c18e-b3cd-417a-b1d8-af7abe097eb5",
+    "statement_count": 1,
+    "body_md5": "1d5cedece83d90f5d32771fb3510dd8b"
+  },
+  {
+    "version": "20260717171226",
+    "name": "relationship_intake_rls_flags",
+    "statement_count": 1,
+    "body_md5": "e0813ebbc73e0f38096d0104d28f5051"
+  },
+  {
+    "version": "20260717171247",
+    "name": "revoke_anon_relationship_contacts",
+    "statement_count": 1,
+    "body_md5": "ef524a6104ec0da4757c0a6badb7fe00"
+  },
+  {
+    "version": "20260717171307",
+    "name": "revoke_anon_relationship_catalog_orgs",
+    "statement_count": 1,
+    "body_md5": "947ba91dd550efe653818dd20a7455a3"
+  },
+  {
+    "version": "20260717171315",
+    "name": "revoke_anon_relationship_roles",
+    "statement_count": 1,
+    "body_md5": "ffd1daa7c700444fb6179d82fe69c428"
+  },
+  {
+    "version": "20260717171329",
+    "name": "revoke_anon_influencer_profiles",
+    "statement_count": 1,
+    "body_md5": "c905c1f697d821fd3813fbf7d3118f86"
+  },
+  {
+    "version": "20260717171339",
+    "name": "revoke_anon_website_submissions",
+    "statement_count": 1,
+    "body_md5": "5651d1858ed595a6bf5046f08f38c8bd"
+  },
+  {
+    "version": "20260717171351",
+    "name": "revoke_anon_intake_migration_runs",
+    "statement_count": 1,
+    "body_md5": "d5ddca8062c6d841fdd367fc4ef06f76"
+  },
+  {
+    "version": "20260717171359",
+    "name": "relationship_staff_policies_core",
+    "statement_count": 1,
+    "body_md5": "638cef6497616b43efd44e888a2af503"
+  },
+  {
+    "version": "20260717171409",
+    "name": "relationship_staff_policies_links",
+    "statement_count": 1,
+    "body_md5": "399232e00681c39e624e4d1de2d7ef18"
+  },
+  {
+    "version": "20260717171421",
+    "name": "relationship_staff_policies_profiles",
+    "statement_count": 1,
+    "body_md5": "c35fea62a8d1f33f0ec6e2d16039bd60"
+  },
+  {
+    "version": "20260717171431",
+    "name": "relationship_self_service_policies",
+    "statement_count": 1,
+    "body_md5": "ba9d6a939341059c203acc0213541a92"
+  },
+  {
+    "version": "20260717171451",
+    "name": "relationship_social_self_read_write",
+    "statement_count": 1,
+    "body_md5": "7f635706a4954992466680176f70893d"
+  },
+  {
+    "version": "20260717171500",
+    "name": "relationship_social_self_update_delete",
+    "statement_count": 1,
+    "body_md5": "e02a9bdb8157d03263a15690202f3264"
+  },
+  {
+    "version": "20260717171528",
+    "name": "restrict_website_intake_tenant_helper",
+    "statement_count": 1,
+    "body_md5": "097078cb33dc3f8d0399a0afe0d193ce"
+  },
+  {
+    "version": "20260717171537",
+    "name": "restrict_website_state_helper",
+    "statement_count": 1,
+    "body_md5": "532baa186581e60d66406a4f71b6b779"
+  },
+  {
+    "version": "20260717171545",
+    "name": "restrict_website_contact_helper",
+    "statement_count": 1,
+    "body_md5": "8671d4e408732f9bea48c68b6bdcbafa"
+  },
+  {
+    "version": "20260717171553",
+    "name": "restrict_website_organization_helper",
+    "statement_count": 1,
+    "body_md5": "7d44f18b39a332af70355bc0991f8d86"
+  },
+  {
+    "version": "20260717171600",
+    "name": "restrict_website_contact_role_helper",
+    "statement_count": 1,
+    "body_md5": "e660b71227a9b5c8a02d4530bf5dcaac"
+  },
+  {
+    "version": "20260717171608",
+    "name": "restrict_website_organization_role_helper",
+    "statement_count": 1,
+    "body_md5": "4acda6066e31419ad757c95b159e1bc6"
+  },
+  {
+    "version": "20260717171617",
+    "name": "restrict_website_provider_helper",
+    "statement_count": 1,
+    "body_md5": "bca54025b946484bf7d9377b312e7f03"
+  },
+  {
+    "version": "20260717171627",
+    "name": "grant_public_clinician_submission_rpc",
+    "statement_count": 1,
+    "body_md5": "52190df3b44b51a270bb0ebd9f5abdb1"
+  },
+  {
+    "version": "20260717171637",
+    "name": "grant_public_ocs_submission_rpc",
+    "statement_count": 1,
+    "body_md5": "8cba3d88957375278ca4829ab7fc844a"
+  },
+  {
+    "version": "20260717171647",
+    "name": "grant_public_bty_submission_rpc",
+    "statement_count": 1,
+    "body_md5": "c5eb913b88074e751a32d477e1f26bd5"
+  },
+  {
+    "version": "20260717171755",
+    "name": "20260717171753_ce9cced2-e495-41c9-8ab8-7ea752db9f89",
+    "statement_count": 1,
+    "body_md5": "2dca5d9a0f4e1e4e90bbd3fdbf98556d"
+  },
+  {
+    "version": "20260717172050",
+    "name": "therapist_crm_bundle_importer",
+    "statement_count": 1,
+    "body_md5": "86694815476231fa35b63265914883c8"
+  },
+  {
+    "version": "20260717174933",
+    "name": "lock_historical_bundle_importer",
+    "statement_count": 1,
+    "body_md5": "7b5539b509a473958770dc00f11709ce"
+  },
+  {
+    "version": "20260717175609",
+    "name": "fix_bundle_importer_digest_path",
+    "statement_count": 1,
+    "body_md5": "00d1c53533c8dde1e15cba6aab74ecf1"
+  },
+  {
+    "version": "20260717182743",
+    "name": "20260717182741_a8ff40de-7630-439d-9a71-add4e9dd15e8",
+    "statement_count": 1,
+    "body_md5": "4be08972b3759e34da9b04d6aea7e641"
+  },
+  {
+    "version": "20260717184001",
+    "name": "restrict_website_intake_helpers",
+    "statement_count": 1,
+    "body_md5": "5f0c09fd4f0034be24a59b6da5704400"
+  },
+  {
+    "version": "20260717190107",
+    "name": "create_legacy_relationship_avatar_manifest",
+    "statement_count": 1,
+    "body_md5": "47e1ce4a559691216d804b16c7ebd25b"
+  },
+  {
+    "version": "20260717190511",
+    "name": "temporary_import_legacy_relationship_profiles",
+    "statement_count": 1,
+    "body_md5": "0da016624777f363b102b3dc0e3843d3"
+  },
+  {
+    "version": "20260717190849",
+    "name": "remove_unused_legacy_profile_import_rpc",
+    "statement_count": 1,
+    "body_md5": "2137df893dab639769b767c7c42bbc8e"
+  },
+  {
+    "version": "20260717203826",
+    "name": "therapist_crm_interest_importer",
+    "statement_count": 1,
+    "body_md5": "649f917ecec01d444a482b7d2e590a37"
+  },
+  {
+    "version": "20260717204243",
+    "name": "preserve_interest_competitor_null_fields",
+    "statement_count": 1,
+    "body_md5": "57017531b9a12ed57999e6473b8f5ba1"
+  },
+  {
+    "version": "20260717204832",
+    "name": "exclude_legacy_auth_ids_from_interest_targets",
+    "statement_count": 1,
+    "body_md5": "32d601960781907b8c36322a1cf536b5"
+  },
+  {
+    "version": "20260719112717",
+    "name": "establish_relationship_crm_architecture",
+    "statement_count": 1,
+    "body_md5": "6604f819a2c8758fc542d2ece58f7727"
+  },
+  {
+    "version": "20260719155508",
+    "name": "expand_crm_campaign_activity_events",
+    "statement_count": 1,
+    "body_md5": "65b9abb1596da287db89acb564720c78"
+  },
+  {
+    "version": "20260719155541",
+    "name": "repair_crm_manual_enrollment_rpc",
+    "statement_count": 1,
+    "body_md5": "bd3d942d60cbd01f1870fbbac9da8d86"
+  },
+  {
+    "version": "20260719155555",
+    "name": "harden_crm_campaign_rpc_grants",
+    "statement_count": 1,
+    "body_md5": "0a7f1fb2dc6e94871c81c5cddc4b0cd1"
+  },
+  {
+    "version": "20260720195132",
+    "name": "harden_relationship_tenant_rls",
+    "statement_count": 1,
+    "body_md5": "2fd6ba45277d60cf161d155c9f364c4b"
+  },
+  {
+    "version": "20260720195211",
+    "name": "fix_relationship_rls_tenant_correlations",
+    "statement_count": 1,
+    "body_md5": "c27d09937f87162e76fec3c8b66ae448"
+  },
+  {
+    "version": "20260720200826",
+    "name": "index_relationship_affiliations_tenant_queries",
+    "statement_count": 1,
+    "body_md5": "e1e5bcaf606e0036c1587473950af4ac"
+  },
+  {
+    "version": "20260721155417",
+    "name": "relationship_lifecycle_columns",
+    "statement_count": 1,
+    "body_md5": "06fbde45ea4112f3eb180061f421fffb"
+  },
+  {
+    "version": "20260721155510",
+    "name": "relationship_lifecycle_tables",
+    "statement_count": 1,
+    "body_md5": "93f9e37c7c68933fb43005871e523042"
+  },
+  {
+    "version": "20260721155548",
+    "name": "relationship_stage_transition_rpc",
+    "statement_count": 1,
+    "body_md5": "e579db7a2ca4757e0d2ada0cd746f422"
+  },
+  {
+    "version": "20260721155857",
+    "name": "relationship_lifecycle_tenant_integrity",
+    "statement_count": 1,
+    "body_md5": "db35b5def54786ac2289abd1347a50a8"
+  },
+  {
+    "version": "20260721163100",
+    "name": "clinician_interest_provisioning",
+    "statement_count": 1,
+    "body_md5": "3f4654caf074a4524ba1afbe1471fec3"
+  },
+  {
+    "version": "20260721164752",
+    "name": "clinician_interest_defer_staff_role",
+    "statement_count": 1,
+    "body_md5": "313a157bf2a3ffd24cfe7bc1d376acfb"
+  },
+  {
+    "version": "20260721170109",
+    "name": "relationship_lifecycle_interaction_audit_trigger",
+    "statement_count": 1,
+    "body_md5": "5759bf57264c65f25a778e31c33cd64d"
+  },
+  {
+    "version": "20260721170947",
+    "name": "overflow_referral_sources",
+    "statement_count": 1,
+    "body_md5": "a451efd39e71ddf83537d63b82184386"
+  },
+  {
+    "version": "20260721171318",
+    "name": "overflow_referral_source_honeypot",
+    "statement_count": 1,
+    "body_md5": "9230921a28381a0f040180cc9d934a7a"
+  },
+  {
+    "version": "20260721195410",
+    "name": "relationship_referral_workflow",
+    "statement_count": 1,
+    "body_md5": "0c00538c0afacefc3034d063f049b382"
+  },
+  {
+    "version": "20260721203043",
+    "name": "relationship_opportunity_workflow",
+    "statement_count": 1,
+    "body_md5": "05b4e5d55e1f6318e610fc69172e3ac3"
+  },
+  {
+    "version": "20260721204446",
+    "name": "relationship_opportunity_grants_hardening",
+    "statement_count": 1,
+    "body_md5": "76963a2697c15ebfb9843af71b77fc20"
+  },
+  {
+    "version": "20260721205313",
+    "name": "relationship_opportunity_policy_index_hardening",
+    "statement_count": 1,
+    "body_md5": "a6f09b86a15e861db1a7615d0b517216"
+  },
+  {
+    "version": "20260721212928",
+    "name": "relationship_import_backend_tables",
+    "statement_count": 1,
+    "body_md5": "5d7f2643b148f3581f4f91b4fc3a0d39"
+  },
+  {
+    "version": "20260721213300",
+    "name": "relationship_import_preview_resolution",
+    "statement_count": 1,
+    "body_md5": "d4efd14264e67d6638dcc4618fb82bf2"
+  },
+  {
+    "version": "20260721213644",
+    "name": "relationship_import_transactional_commit",
+    "statement_count": 1,
+    "body_md5": "c48fa68f998a4498b722e62f99d2005d"
+  },
+  {
+    "version": "20260721214117",
+    "name": "relationship_import_semantic_validation",
+    "statement_count": 1,
+    "body_md5": "01b7631170fd5c4c64ece09a8e7ba317"
+  },
+  {
+    "version": "20260721220629",
+    "name": "relationship_import_fk_index_hardening",
+    "statement_count": 1,
+    "body_md5": "10ecb9dfa56b29821e06249d300b0e97"
+  },
+  {
+    "version": "20260721221803",
+    "name": "relationship_import_resolution_notes",
+    "statement_count": 1,
+    "body_md5": "764258635932cd20bcefe4a3476b7550"
+  },
+  {
+    "version": "20260721233353",
+    "name": "relationship_campaign_foundation_tables",
+    "statement_count": 1,
+    "body_md5": "9c264e545a1f4cd8b33e1a83e3b03009"
+  },
+  {
+    "version": "20260721233421",
+    "name": "relationship_campaign_security_audit",
+    "statement_count": 1,
+    "body_md5": "919bd811813e5f0599c6fcb7f2490656"
+  },
+  {
+    "version": "20260721233609",
+    "name": "relationship_campaign_foundation_rpcs",
+    "statement_count": 1,
+    "body_md5": "1665dbe428de21c37309e29fe327a4da"
+  },
+  {
+    "version": "20260721235006",
+    "name": "relationship_campaign_fk_index_hardening",
+    "statement_count": 1,
+    "body_md5": "aae02d027e16c973d364c0315d1c2a7f"
+  },
+  {
+    "version": "20260721235117",
+    "name": "relationship_campaign_private_policy",
+    "statement_count": 1,
+    "body_md5": "6daad05e47f5e154a394e3ffc367ab58"
+  },
+  {
+    "version": "20260721235413",
+    "name": "relationship_campaign_unconditional_fk_indexes",
+    "statement_count": 1,
+    "body_md5": "61f35be665c0d8b0b34d073135b2ee0b"
+  },
+  {
+    "version": "20260722010621",
+    "name": "relationship_campaign_enrollment_foundation",
+    "statement_count": 1,
+    "body_md5": "8bd5d7f4078a6b1a45fc27f128e033f8"
+  },
+  {
+    "version": "20260722011058",
+    "name": "relationship_campaign_enrollment_orchestration",
+    "statement_count": 1,
+    "body_md5": "e337570c5918d5d13d053fedc9a5305c"
+  },
+  {
+    "version": "20260722013217",
+    "name": "relationship_campaign_enrollment_hardening",
+    "statement_count": 1,
+    "body_md5": "d51368f04f5d085d861f13d09f5c97b5"
+  },
+  {
+    "version": "20260722014338",
+    "name": "relationship_campaign_work_step_fk_index",
+    "statement_count": 1,
+    "body_md5": "92eb63d64b56ce0543eae6efd8da7d06"
+  },
+  {
+    "version": "20260722174700",
+    "name": "relationship_communication_safety_tables",
+    "statement_count": 1,
+    "body_md5": "a3bd17b05ed9f2ba41d0e9c1f15db661"
+  },
+  {
+    "version": "20260722175346",
+    "name": "relationship_communication_safety_evaluator",
+    "statement_count": 1,
+    "body_md5": "61f8d6b2d5031e8bfb0c0f6e198fdc7a"
+  },
+  {
+    "version": "20260722175451",
+    "name": "relationship_communication_safety_mutations",
+    "statement_count": 1,
+    "body_md5": "b0d23e15c37b069be443938d805ccb23"
+  },
+  {
+    "version": "20260722175548",
+    "name": "relationship_communication_unsubscribe_rpcs",
+    "statement_count": 1,
+    "body_md5": "89cbf3b526ae8c1424da53e1060eab0f"
+  },
+  {
+    "version": "20260722175815",
+    "name": "relationship_communication_safety_enforcement",
+    "statement_count": 1,
+    "body_md5": "9b458e0f17254bdfee5d4e5493fa70cc"
+  },
+  {
+    "version": "20260722181740",
+    "name": "relationship_communication_safety_privilege_hardening",
+    "statement_count": 1,
+    "body_md5": "6d0c2718d089352340827767fcb8f204"
+  },
+  {
+    "version": "20260722200628",
+    "name": "relationship_delivery_canonical_tables",
+    "statement_count": 1,
+    "body_md5": "ccb5b4481bced39454dca6d845601d54"
+  },
+  {
+    "version": "20260722200641",
+    "name": "relationship_delivery_control_and_reads",
+    "statement_count": 1,
+    "body_md5": "ccb5b4481bced39454dca6d845601d54"
+  },
+  {
+    "version": "20260722200655",
+    "name": "relationship_delivery_outbound_execution",
+    "statement_count": 1,
+    "body_md5": "ccb5b4481bced39454dca6d845601d54"
+  },
+  {
+    "version": "20260722200705",
+    "name": "relationship_delivery_provider_events_and_replies",
+    "statement_count": 1,
+    "body_md5": "ccb5b4481bced39454dca6d845601d54"
+  },
+  {
+    "version": "20260722201451",
+    "name": "relationship_delivery_wrapper_hardening",
+    "statement_count": 1,
+    "body_md5": "8b37f7650f07df26371a6dbfcf6f7768"
+  },
+  {
+    "version": "20260722201749",
+    "name": "relationship_delivery_fk_index_hardening",
+    "statement_count": 1,
+    "body_md5": "e0430355d9686637cd7bee8d419ac266"
+  },
+  {
+    "version": "20260722215631",
+    "name": "relationship_search_documents_and_indexes",
+    "statement_count": 1,
+    "body_md5": "eb8547c26c0ac53c0d81e76d9047a5b4"
+  },
+  {
+    "version": "20260722215723",
+    "name": "relationship_reporting_read_models",
+    "statement_count": 1,
+    "body_md5": "6ae0e87352c6edd5d311c28e83d4772e"
+  },
+  {
+    "version": "20260722215843",
+    "name": "relationship_search_and_reporting_rpcs",
+    "statement_count": 1,
+    "body_md5": "789ed7e65847350a53988b9ed06216cc"
+  },
+  {
+    "version": "20260722220116",
+    "name": "relationship_self_service_policy_helper_access",
+    "statement_count": 1,
+    "body_md5": "a25c9a4055971b96c650d7869e6c7774"
+  },
+  {
+    "version": "20260722225111",
+    "name": "relationship_final_authorization_and_read_model_hardening",
+    "statement_count": 1,
+    "body_md5": "ce62db153745eae19ad4c968ed5fb563"
+  },
+  {
+    "version": "20260722225302",
+    "name": "relationship_release_contract_foundation",
+    "statement_count": 1,
+    "body_md5": "b834712b085f2a771c91f46a8f173927"
+  },
+  {
+    "version": "20260723022405",
+    "name": "relationship_final_fk_index_hardening",
+    "statement_count": 1,
+    "body_md5": "17c9ac57a605d285f71e2d0ae120f9ca"
+  },
+  {
+    "version": "20260723144102",
+    "name": "crm_resend_only_email_transport",
+    "statement_count": 1,
+    "body_md5": "d987a8207adae7dc5229a7835d29eca9"
+  },
+  {
+    "version": "20260723164221",
+    "name": "email_studio_database_foundation",
+    "statement_count": 1,
+    "body_md5": "532cc529d18ba8a0a5dcc3505e05d593"
+  },
+  {
+    "version": "20260723165429",
+    "name": "email_studio_remove_redundant_bulk_template_fk",
+    "statement_count": 1,
+    "body_md5": "27e86f9e6bb97ac2ebb949996969d77b"
+  },
+  {
+    "version": "20260723174820",
+    "name": "canonical_client_action_contract_v2",
+    "statement_count": 1,
+    "body_md5": "e3fea642a2517a9ad38ef8db668e7f78"
+  },
+  {
+    "version": "20260723181505",
+    "name": "assigned_client_self_scheduling_continuity",
+    "statement_count": 1,
+    "body_md5": "02c03623c177e233c75d3120014fbfff"
+  },
+  {
+    "version": "20260723181941",
+    "name": "email_studio_template_lifecycle",
+    "statement_count": 1,
+    "body_md5": "96ee20fec9803fd1f1319782c518d4fa"
+  },
+  {
+    "version": "20260723182141",
+    "name": "email_studio_template_lifecycle_role_order_fix",
+    "statement_count": 1,
+    "body_md5": "9a713ecf1c59898ac734297521532690"
+  },
+  {
+    "version": "20260723182310",
+    "name": "email_studio_template_lifecycle_capability_authority",
+    "statement_count": 1,
+    "body_md5": "b98f7749b19a97a12f873c9d175676bd"
+  },
+  {
+    "version": "20260723190051",
+    "name": "client_appointment_management",
+    "statement_count": 1,
+    "body_md5": "2fe147aeb96380c76593abe8d18361f0"
+  },
+  {
+    "version": "20260723203103",
+    "name": "pass4_reactivation_next_action_insurance",
+    "statement_count": 1,
+    "body_md5": "cfd751e00540db50561b9dd42a13ca19"
+  },
+  {
+    "version": "20260723210544",
+    "name": "public_client_statement_links",
+    "statement_count": 1,
+    "body_md5": "49e133e6b9c84c44d2fb0754c2e9c190"
+  },
+  {
+    "version": "20260723210854",
+    "name": "normalize_public_statement_client_name",
+    "statement_count": 1,
+    "body_md5": "e7dc10e32a163a907fb666ebf776a535"
+  },
+  {
+    "version": "20260723212257",
+    "name": "index_client_statement_link_creator",
+    "statement_count": 1,
+    "body_md5": "b5ebf49d27c46b9cdd9f01b482603547"
+  },
+  {
+    "version": "20260723213909",
+    "name": "relationship_import_stale_preview_errors",
+    "statement_count": 1,
+    "body_md5": "fafdccb9e309422754571a9eeb9681c1"
+  },
+  {
+    "version": "20260723222315",
+    "name": "pass6_truthful_appointment_replay_idempotency",
+    "statement_count": 1,
+    "body_md5": "5f9a4c176f2321a0f8e04d56e45664c3"
+  },
+  {
+    "version": "20260724135319",
+    "name": "email_studio_relationship_campaign_integration",
+    "statement_count": 1,
+    "body_md5": "51f4585cfd89c9309dfe294a99ca0ff1"
+  },
+  {
+    "version": "20260724135737",
+    "name": "email_studio_relationship_variable_renderer_alignment",
+    "statement_count": 1,
+    "body_md5": "b65138a49b11d11b75d8d1326426098b"
+  },
+  {
+    "version": "20260724154254",
+    "name": "email_studio_client_campaign_integration",
+    "statement_count": 1,
+    "body_md5": "977548d2b8bba5e4e0d5617917b66cef"
+  },
+  {
+    "version": "20260724165638",
+    "name": "email_studio_client_campaign_null_safe_mode_validation",
+    "statement_count": 1,
+    "body_md5": "b853e9e0455c818cf6133870a0a01f88"
+  },
+  {
+    "version": "20260724184749",
+    "name": "email_studio_bulk_newsletter_schema",
+    "statement_count": 1,
+    "body_md5": "5fada9ef69d89c5680b8988732761b0b"
+  },
+  {
+    "version": "20260724184809",
+    "name": "email_studio_bulk_newsletter_authorization",
+    "statement_count": 1,
+    "body_md5": "0209c8683902a6505f26eee0444f0d88"
+  },
+  {
+    "version": "20260724184837",
+    "name": "email_studio_bulk_newsletter_jobs",
+    "statement_count": 1,
+    "body_md5": "f11e6a41081cc4612467b817b03e6aed"
+  },
+  {
+    "version": "20260724184912",
+    "name": "email_studio_bulk_newsletter_tokens",
+    "statement_count": 1,
+    "body_md5": "0ad6437d94132c3304d4dde3ed5ce973"
+  },
+  {
+    "version": "20260724185005",
+    "name": "email_studio_bulk_newsletter_unsubscribe",
+    "statement_count": 1,
+    "body_md5": "3d5ac4b7bc1aedf47c0ad94796ef8c15"
+  },
+  {
+    "version": "20260724190007",
+    "name": "email_studio_bulk_newsletter_rpc_acl_hardening",
+    "statement_count": 1,
+    "body_md5": "523a5a4bc05b90613df60db0215e51a8"
+  },
+  {
+    "version": "20260724190242",
+    "name": "email_studio_bulk_newsletter_rls_initplan_hardening",
+    "statement_count": 1,
+    "body_md5": "16f103dd5ae58fdd558c7b226bb4c57d"
+  },
+  {
+    "version": "20260724201136",
+    "name": "email_studio_staff_broadcast_integration",
+    "statement_count": 1,
+    "body_md5": "ed9f58e8fcd929b94cde67cf7d1d4ed0"
+  },
+  {
+    "version": "20260724211009",
+    "name": "email_studio_staff_broadcast_review_hardening",
+    "statement_count": 1,
+    "body_md5": "5a82683dc8c06a6c9b10f2b1b6c53b6c"
+  },
+  {
+    "version": "20260724211553",
+    "name": "email_studio_staff_broadcast_staff_fk_index",
+    "statement_count": 1,
+    "body_md5": "b30f7ac3debbcf854c800dcd994e58e7"
+  },
+  {
+    "version": "20260724212235",
+    "name": "email_studio_staff_broadcast_null_status_eligibility",
+    "statement_count": 1,
+    "body_md5": "9c982498fc1008031d4ed7651e8492d6"
+  },
+  {
+    "version": "20260726204829",
+    "name": "email_studio_staff_template_attribution",
+    "statement_count": 1,
+    "body_md5": "145dfb38d003c67ce033a35988df02ba"
+  },
+  {
+    "version": "20260726205023",
+    "name": "email_studio_staff_template_scope_guards",
+    "statement_count": 1,
+    "body_md5": "38dfcec16b29452a455dc69e7ea8bc9b"
+  },
+  {
+    "version": "20260727090357",
+    "name": "20260727090354_b13bd487-9887-402e-90dc-aabd7c2fb732",
+    "statement_count": 1,
+    "body_md5": "c482c3f5c161178779c02e66e750f6d3"
+  },
+  {
+    "version": "20260727113000",
+    "name": "streamline_bty_public_forms",
+    "statement_count": 1,
+    "body_md5": "2507405221a878ca46761beed8ee845b"
+  },
+  {
+    "version": "20260727124816",
+    "name": "create_relationship_target_cities",
+    "statement_count": 1,
+    "body_md5": "bdc719849e03a2aab916563f0b38fb59"
+  },
+  {
+    "version": "20260727125131",
+    "name": "harden_relationship_target_cities_grants",
+    "statement_count": 1,
+    "body_md5": "44fd0bea2a510dac43851eb16859898e"
+  },
+  {
+    "version": "20260728113518",
+    "name": "relationship_client_nomination_personalization",
+    "statement_count": 1,
+    "body_md5": "7e2a7fee5684b089749b4886cee192f6"
+  },
+  {
+    "version": "20260728180824",
+    "name": "bulk_relationship_campaign_enrollment_candidates",
+    "statement_count": 1,
+    "body_md5": "a102ee61584a7688cce5b17a59ad1324"
+  },
+  {
+    "version": "20260728204900",
+    "name": "fix_bulk_relationship_campaign_contact_roles",
+    "statement_count": 1,
+    "body_md5": "21747405f127528793da51ef669dd1a4"
+  },
+  {
+    "version": "20260801103637",
+    "name": "appointment_provisioning_hardening",
+    "statement_count": 1,
+    "body_md5": "7ffbb8684240473899151504d04b1e2a"
+  },
+  {
+    "version": "20260801103729",
+    "name": "weekly_recurring_appointment_contract",
+    "statement_count": 1,
+    "body_md5": "ea23bbf220f45acdbaa1a59f0a2cf57f"
+  },
+  {
+    "version": "20260803082135",
+    "name": "prepare_therapist_crm_retirement",
+    "statement_count": 1,
+    "body_md5": "ab2b4ba23fd2740f7552b80b1c77d908"
+  },
+  {
+    "version": "20260803091038",
+    "name": "fix_stripe_webhook_atomic_processing",
+    "statement_count": 1,
+    "body_md5": "12b4badce773ce99260e4b6eba5ea394"
+  },
+  {
+    "version": "20260803091431",
+    "name": "schedule_stale_payment_link_cleanup",
+    "statement_count": 1,
+    "body_md5": "be8cf25da0ac0f7b82a71aa901d242be"
+  },
+  {
+    "version": "20260803141742",
+    "name": "normalize_legacy_relationship_provenance",
+    "statement_count": 1,
+    "body_md5": "9c4ab6e76fc99b35622197798d65819c"
+  },
+  {
+    "version": "20260803174305",
+    "name": "bind_billing_hub_stripe_account",
+    "statement_count": 1,
+    "body_md5": "a7523401748078c4a386f693a08f242b"
+  },
+  {
+    "version": "20260804200455",
+    "name": "harden_donation_conversion_funnel",
+    "statement_count": 1,
+    "body_md5": "b73fa80d84db43d9f98431a14f317350"
+  },
+  {
+    "version": "20260804202052",
+    "name": "add_donation_cta_medium_fields",
+    "statement_count": 1,
+    "body_md5": "0bef842fd94b6d7247643286233307e3"
+  },
+  {
+    "version": "20260805212843",
+    "name": "google_data_manager_donation_uploads",
+    "statement_count": 1,
+    "body_md5": "3c8160efd49da3c109fe90235de6c646"
+  },
+  {
+    "version": "20260805213644",
+    "name": "google_data_manager_exactly_one_identifier",
+    "statement_count": 1,
+    "body_md5": "42c096ab487943dfed1c2e650f5f2b13"
+  },
+  {
+    "version": "20260805213723",
+    "name": "google_data_manager_privilege_verification",
+    "statement_count": 1,
+    "body_md5": "f1980b360ece31c9d00a0089b077b090"
+  },
+  {
+    "version": "20260806203440",
+    "name": "therapist_match_authority_schema",
+    "statement_count": 1,
+    "body_md5": "4085bacbde942797a0cd8817a7c47ae2"
+  },
+  {
+    "version": "20260806203612",
+    "name": "therapist_match_authority_request_and_activation",
+    "statement_count": 1,
+    "body_md5": "18c6f21928faad0e1a3b3f22d4225b33"
+  },
+  {
+    "version": "20260806203727",
+    "name": "therapist_match_authority_commands_and_context",
+    "statement_count": 1,
+    "body_md5": "c874a0083b681cc9f9c2e84b87c9770c"
+  },
+  {
+    "version": "20260806203818",
+    "name": "therapist_match_authority_workers_and_projection",
+    "statement_count": 1,
+    "body_md5": "9629b94e1cd6393eacd3d7ecd505f454"
+  },
+  {
+    "version": "20260806205541",
+    "name": "client_portal_support_requests",
+    "statement_count": 1,
+    "body_md5": "26fba24c60b17d086b7ce4a5b247b889"
+  },
+  {
+    "version": "20260806205616",
+    "name": "fix_client_portal_support_due_interval",
+    "statement_count": 1,
+    "body_md5": "99c44b006c45075e8d9125dd1ce996ec"
+  },
+  {
+    "version": "20260806210703",
+    "name": "therapist_match_staff_review_contracts",
+    "statement_count": 1,
+    "body_md5": "f464a2fb56f1a7b994f4474b7b2d3042"
+  },
+  {
+    "version": "20260806211144",
+    "name": "therapist_authority_action_contract_and_message_rls",
+    "statement_count": 1,
+    "body_md5": "6c6f0289a7cf2fd7968f4b4ec84ec7a1"
+  },
+  {
+    "version": "20260806211404",
+    "name": "legacy_relationship_containment_commands",
+    "statement_count": 1,
+    "body_md5": "6d0d2a7d9aaf6c2c17b63768ed69b446"
+  },
+  {
+    "version": "20260806211506",
+    "name": "tighten_legacy_current_care_evidence",
+    "statement_count": 1,
+    "body_md5": "6a3a8423a9b3b755deb0d8eee0b79f1e"
+  },
+  {
+    "version": "20260806212718",
+    "name": "fix_legacy_containment_state_engine_context",
+    "statement_count": 1,
+    "body_md5": "b3647e710ea1ba88bc92b4df18533281"
+  },
+  {
+    "version": "20260806213046",
+    "name": "fix_legacy_review_state_engine_context",
+    "statement_count": 1,
+    "body_md5": "7be3165f6377d22e8ce478dd3dbcc883"
+  },
+  {
+    "version": "20260806213818",
+    "name": "fix_message_policy_admin_helper_execute",
+    "statement_count": 1,
+    "body_md5": "84d5e6364382daacf6bc9d113ccd68b3"
+  },
+  {
+    "version": "20260807041049",
+    "name": "normalize_legacy_review_client_lifecycle",
+    "statement_count": 1,
+    "body_md5": "34bf696380f43692df704f06639a84a9"
+  },
+  {
+    "version": "20260807041216",
+    "name": "apply_legacy_review_lifecycle_normalization_v4",
+    "statement_count": 1,
+    "body_md5": "1b5771c3fcc3a644c242691d7929f9ab"
+  },
+  {
+    "version": "20260807041848",
+    "name": "create_legacy_relationship_reconciliation_tasks",
+    "statement_count": 1,
+    "body_md5": "e63bfcb6d48f4e8b2dbfe13f5e64b346"
+  },
+  {
+    "version": "20260807042927",
+    "name": "retire_interactive_legacy_containment_commands",
+    "statement_count": 1,
+    "body_md5": "d013435ff2549261c0c1ef3096308b9f"
+  },
+  {
+    "version": "20260807043112",
+    "name": "index_therapist_match_authority_foreign_keys",
+    "statement_count": 1,
+    "body_md5": "2d49c3b605c8a34877cf401452c86675"
+  },
+  {
+    "version": "20260807224346",
+    "name": "fix_staff_all_clients_pagination",
+    "statement_count": 1,
+    "body_md5": "addeec9642044e733069c4c6e0ea4349"
+  },
+  {
+    "version": "20260809164922",
+    "name": "beyond_the_yellow_lifecycle_orchestration",
+    "statement_count": 1,
+    "body_md5": "4e996de60ee071005daefa598bc27d2e"
+  },
+  {
+    "version": "20260809165036",
+    "name": "bty_orchestration_fk_indexes",
+    "statement_count": 1,
+    "body_md5": "52ee4ceeb0072811bd03de3e5dfeaa7d"
+  },
+  {
+    "version": "20260809222012",
+    "name": "d0515b8f-31ae-4c5b-bc23-bf2795eee901",
+    "statement_count": 1,
+    "body_md5": "a88e6ea398d8ccd75f248e08422f0f3f"
+  },
+  {
+    "version": "20260809222055",
+    "name": "299fa381-28a4-4cbe-a451-62898eea7652",
+    "statement_count": 1,
+    "body_md5": "5b477843acf040e873a188b726d25af2"
+  },
+  {
+    "version": "20260812133910",
+    "name": "provider_applicant_communication_contract",
+    "statement_count": 1,
+    "body_md5": "bfb1f9322944af6531a6e4f89d24ad99"
+  },
+  {
+    "version": "20260812133944",
+    "name": "repair_creator_follower_summary",
+    "statement_count": 1,
+    "body_md5": "3995c74140ef9d78d84e55f68844f75c"
+  },
+  {
+    "version": "20260812134010",
+    "name": "provider_applicant_no_response_status",
+    "statement_count": 1,
+    "body_md5": "c4f69c970625a756a744c100f0ad24c8"
+  },
+  {
+    "version": "20260812134023",
+    "name": "provider_applicant_staff_workflow",
+    "statement_count": 1,
+    "body_md5": "b0d02b72f82a8e67051cb838bcee63af"
+  },
+  {
+    "version": "20260813023423",
+    "name": "clinical_finalization_schema_v2",
+    "statement_count": 1,
+    "body_md5": "449d656e11220aade88cfe0a0d688f84"
+  },
+  {
+    "version": "20260813023523",
+    "name": "clinical_finalization_runtime_v2",
+    "statement_count": 1,
+    "body_md5": "af1a02df882d1b172c6811abf92c5640"
+  },
+  {
+    "version": "20260813025341",
+    "name": "signed_service_financial_activation_v1",
+    "statement_count": 1,
+    "body_md5": "0e684d309f0d946de3024a6063f40ae2"
+  },
+  {
+    "version": "20260813025411",
+    "name": "canonical_payroll_generation_v1",
+    "statement_count": 1,
+    "body_md5": "3f3943e7371aa91324d5ec4d2f6f7825"
+  },
+  {
+    "version": "20260813025432",
+    "name": "repair_finance_cron_auth_v1",
+    "statement_count": 1,
+    "body_md5": "2b3fed5e5bfdee6bffad7c6e7f97926a"
+  },
+  {
+    "version": "20260813030106",
+    "name": "billing_service_exception_retry_v1",
+    "statement_count": 1,
+    "body_md5": "19e163b05b1755eb5c8a898487265f55"
+  },
+  {
+    "version": "20260813030436",
+    "name": "billing_service_exception_read_v1",
+    "statement_count": 1,
+    "body_md5": "61057b49210ec918834e29d372d33a1e"
+  },
+  {
+    "version": "20260813090700",
+    "name": "retire_documented_completion_authority",
+    "statement_count": null,
+    "body_md5": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "version": "20260813090800",
+    "name": "harden_documented_projection_trigger",
+    "statement_count": null,
+    "body_md5": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "version": "20260813090900",
+    "name": "canonical_reschedule_completion_guard",
+    "statement_count": null,
+    "body_md5": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "version": "20260813091500",
+    "name": "canonical_qualifying_session_lifecycle",
+    "statement_count": null,
+    "body_md5": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "version": "20260813091600",
+    "name": "harden_at_risk_scheduler",
+    "statement_count": null,
+    "body_md5": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "version": "20260813093500",
+    "name": "canonical_therapist_relationship_evidence",
+    "statement_count": null,
+    "body_md5": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "version": "20260813100500",
+    "name": "retire_legacy_containment_authority",
+    "statement_count": null,
+    "body_md5": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "version": "20260814014240",
+    "name": "386ff98d-4f30-45bf-80da-6370b06b7996",
+    "statement_count": 1,
+    "body_md5": "2cf7b8d057995226a3478c55076b0dec"
+  },
+  {
+    "version": "20260814014448",
+    "name": "b1564890-5d0e-40f5-918b-9a565dd98ed4",
+    "statement_count": 1,
+    "body_md5": "be12343fe9886e94753296e4afbd4778"
+  },
+  {
+    "version": "20260814014541",
+    "name": "d824f881-91c3-4948-bf38-0c3bc1536280",
+    "statement_count": 1,
+    "body_md5": "9fb9ddab068a6078c7234a31b36aded3"
+  },
+  {
+    "version": "20260814192408",
+    "name": "billing_cron_vault_secret_validator",
+    "statement_count": 1,
+    "body_md5": "e22bb992a3e9bb8d5cfd972336d39326"
+  },
+  {
+    "version": "20260814192742",
+    "name": "route_finance_crons_through_billing_auth_bridge",
+    "statement_count": 1,
+    "body_md5": "2bcb680f2b0e627a8a55f8797beedb00"
+  },
+  {
+    "version": "20260814214740",
+    "name": "810c841e-d64b-4666-b1de-ed7cabbaf6a7",
+    "statement_count": 1,
+    "body_md5": "87f07ba948fcfaa94520cc0d4debb159"
+  },
+  {
+    "version": "20260814214834",
+    "name": "e0b9d13c-58c8-48e5-86bb-25513702936a",
+    "statement_count": 1,
+    "body_md5": "86311d49831c23f2b602adf4740d04d9"
+  },
+  {
+    "version": "20260814215050",
+    "name": "49841235-4830-4988-9aee-6e79482d5d6e",
+    "statement_count": 1,
+    "body_md5": "a282395661f1342675c2d1517106ea6c"
+  },
+  {
+    "version": "20260814221322",
+    "name": "a9c43e79-b2f1-4753-85ca-8575a65cdf84",
+    "statement_count": 1,
+    "body_md5": "28829fa73e4b9109774e1d07fad9ab5c"
+  },
+  {
+    "version": "20260814221416",
+    "name": "4aa8fe73-6c82-49e3-891b-3e7fd1a68f42",
+    "statement_count": 1,
+    "body_md5": "67dcef67d6106e4eda49549fee9521c9"
+  },
+  {
+    "version": "20260814222512",
+    "name": "edd0a777-28cc-4abb-85f8-c3a103d2d2cb",
+    "statement_count": 1,
+    "body_md5": "0e4e45f5c97d430ec706cb6cad019657"
+  },
+  {
+    "version": "20260814225003",
+    "name": "5806c9fc-a990-4b69-90f0-602a89c45e05",
+    "statement_count": 1,
+    "body_md5": "8105f4810380acb997975aabb877e134"
+  },
+  {
+    "version": "20260814231211",
+    "name": "59d74165-870f-420d-8c40-dc630dbf19d1",
+    "statement_count": 1,
+    "body_md5": "7094b04d1148e72313faf3e2e02e007d"
+  },
+  {
+    "version": "20260814231248",
+    "name": "6d79ca9f-e5ed-468b-8d04-41ff77c62921",
+    "statement_count": 1,
+    "body_md5": "0c627369c844de0893d5fff6fcfb48c2"
+  },
+  {
+    "version": "20260814231833",
+    "name": "5765b3d5-6d44-43e0-a7e7-46600ab31327",
+    "statement_count": 1,
+    "body_md5": "13018084961f1a2d88b99d6ec09bea54"
+  },
+  {
+    "version": "20260814232425",
+    "name": "25e39a5d-7c9e-4882-b1f5-30de6a49ea55",
+    "statement_count": 1,
+    "body_md5": "e84881f9ddb8a391665375edc12c7e62"
+  },
+  {
+    "version": "20260814233410",
+    "name": "949bba11-a048-4773-8774-ab98bf9c9cff",
+    "statement_count": 1,
+    "body_md5": "94aa369c82e283f05282da3e17089573"
+  },
+  {
+    "version": "20260814234102",
+    "name": "99869c67-db4d-43ba-ab79-79ea0c9ba2bc",
+    "statement_count": 1,
+    "body_md5": "1da96496a4fae2b225c3c16659608c41"
+  },
+  {
+    "version": "20260815005714",
+    "name": "954e5504-f96d-4a60-aba0-38faeb1504e7",
+    "statement_count": 1,
+    "body_md5": "eb79f13959dc317ccaecacd2938f3360"
+  },
+  {
+    "version": "20260815005852",
+    "name": "f09e6e59-bcce-4bf1-ae24-616c22ea4887",
+    "statement_count": 1,
+    "body_md5": "45992bce94c29e7811e46f7961265017"
+  },
+  {
+    "version": "20260815010144",
+    "name": "8a7e9815-820e-4361-912d-15176f90ec4b",
+    "statement_count": 1,
+    "body_md5": "40b256e0be88f6a4b5ba80e142bec9cc"
+  },
+  {
+    "version": "20260815010416",
+    "name": "ed4f09fe-08a9-42d1-8fb1-86e0356b53e5",
+    "statement_count": 1,
+    "body_md5": "e3838a27802b75d0d45f2ac08d4a700b"
+  },
+  {
+    "version": "20260815022132",
+    "name": "e1dc1d8f-3160-45bd-8911-e5a9c276d5f7",
+    "statement_count": 1,
+    "body_md5": "d2a027654f380d12969c338137f65644"
+  },
+  {
+    "version": "20260815044209",
+    "name": "49b4aceb-7c52-4486-bdeb-6d352016419f",
+    "statement_count": 1,
+    "body_md5": "82bdf6a2613df1a5ff1e9f67cbb4763f"
+  },
+  {
+    "version": "20260815044710",
+    "name": "d0692a4b-60d0-4c91-9b5a-82d76cb328e6",
+    "statement_count": 1,
+    "body_md5": "5fa5a56e1531f3bacdd4988823aeabcb"
+  },
+  {
+    "version": "20260815044956",
+    "name": "ade28195-b890-4095-b912-9126b0d0edca",
+    "statement_count": 1,
+    "body_md5": "5cc5e8ce46a1070f7a90f939ecf8f75b"
+  },
+  {
+    "version": "20260815120917",
+    "name": "46d1993f-9f29-4563-ba19-0832e63a8e06",
+    "statement_count": 1,
+    "body_md5": "b325c5a4fb20a81b1dbe4afc0d65807f"
+  },
+  {
+    "version": "20260815121628",
+    "name": "b35bf495-8234-4f9c-9c8a-b78ca01dcf1c",
+    "statement_count": 1,
+    "body_md5": "5c7305b35176afcbe363b941e0d0e654"
+  },
+  {
+    "version": "20260815122814",
+    "name": "3480af60-749d-432b-8ae6-9f5c9e160da9",
+    "statement_count": 1,
+    "body_md5": "09a4dbd507694db18516f6854ee112af"
+  },
+  {
+    "version": "20260815132743",
+    "name": "d49f961f-1bab-4057-b802-b544e70bfbe4",
+    "statement_count": 1,
+    "body_md5": "5639c113a28ac8ed808598ad7b39a180"
+  },
+  {
+    "version": "20260815132820",
+    "name": "50be7dbe-b1ed-481d-abf6-ceb6c4ddc947",
+    "statement_count": 1,
+    "body_md5": "92b2105a86bfd9ef857005b144a2ecfe"
+  },
+  {
+    "version": "20260815145441",
+    "name": "65301232-e25c-4ace-b1bb-e85d499b00aa",
+    "statement_count": 1,
+    "body_md5": "0d60aaea097e698182b92915dfcccd52"
+  },
+  {
+    "version": "20260815145718",
+    "name": "63a8c80d-2fd4-45c2-b0dd-a003ad5b5cf2",
+    "statement_count": 1,
+    "body_md5": "20d806a170f5356446253505481cdea2"
+  },
+  {
+    "version": "20260815145911",
+    "name": "1c875329-95a5-4b08-89cd-2999684175d2",
+    "statement_count": 1,
+    "body_md5": "4517ab1f43492d37d60c4f05e84f8931"
+  },
+  {
+    "version": "20260815171234",
+    "name": "ai_ops_per_work_type_model_routing",
+    "statement_count": 1,
+    "body_md5": "12505f76b8db11d8d1ec877d8be4684c"
+  },
+  {
+    "version": "20260815171336",
+    "name": "ai_ops_phase2_module_enums",
+    "statement_count": 1,
+    "body_md5": "5c4aa400156dfd9d965c7f9d7c62b7f3"
+  },
+  {
+    "version": "20260815171524",
+    "name": "ai_ops_phase2_core_collectors",
+    "statement_count": 1,
+    "body_md5": "08f1e5d2545c15a846ff5a37c6d71886"
+  },
+  {
+    "version": "20260815171620",
+    "name": "ai_ops_phase2_ingest_wrappers",
+    "statement_count": 1,
+    "body_md5": "2d33dbebad1dc134d0a7a3b4fde58a63"
+  },
+  {
+    "version": "20260815172004",
+    "name": "ai_ops_phase3_relationship_growth_collectors",
+    "statement_count": 1,
+    "body_md5": "24afb56000ca70b6bc8f6a064d29a7a7"
+  },
+  {
+    "version": "20260815172422",
+    "name": "ai_ops_content_opportunities_schema",
+    "statement_count": 1,
+    "body_md5": "51013db9d659bdc819bb4be342c13b2d"
+  },
+  {
+    "version": "20260815172854",
+    "name": "ai_ops_youtube_content_performance",
+    "statement_count": 1,
+    "body_md5": "29a6e3e56e7c731e7f5ecc22b8a91ee7"
+  },
+  {
+    "version": "20260815173006",
+    "name": "ai_ops_bty_weekly_sop_modules",
+    "statement_count": 1,
+    "body_md5": "315620d4eda916235220e64bc00f0284"
+  },
+  {
+    "version": "20260815173956",
+    "name": "ai_ops_bty_snapshot_ids",
+    "statement_count": 1,
+    "body_md5": "35ac8ec1edcbf52c8014b482713a5568"
+  },
+  {
+    "version": "20260816150806",
+    "name": "fix_ai_ops_weekly_pattern_cutoff",
+    "statement_count": 1,
+    "body_md5": "fddc8dd564e4f2754e8cbc333a1ee636"
+  },
+  {
+    "version": "20260816174505",
+    "name": "ai_ops_sop_controls_runtime_v1",
+    "statement_count": 1,
+    "body_md5": "5cd0f4fa45c2f1119ea2439fa47fdfc4"
+  },
+  {
+    "version": "20260816180655",
+    "name": "replace_legacy_gemini_flash_model",
+    "statement_count": 1,
+    "body_md5": "dabb258fc1602d4f2a3e7486eab7ff04"
+  },
+  {
+    "version": "20260816183309",
+    "name": "501e291b-3ab9-41a9-891b-2a5c59ad6793",
+    "statement_count": 1,
+    "body_md5": "d07d95406d9cbaba56a9f67636ff923e"
+  },
+  {
+    "version": "20260816185647",
+    "name": "25520ece-fd0d-433f-886f-ccf17e823934",
+    "statement_count": 1,
+    "body_md5": "1f59067c48d612291e1cda91806922b1"
+  },
+  {
+    "version": "20260816195536",
+    "name": "7e6f5bc5-eb88-4356-8f67-ce0ce8550509",
+    "statement_count": 1,
+    "body_md5": "8fb65f80d29c19ec575e01a61a38c921"
+  },
+  {
+    "version": "20260816195604",
+    "name": "7696b5aa-97fe-42b7-87d4-18993f843487",
+    "statement_count": 1,
+    "body_md5": "abb2f5b33b51318db2a9b4b3b186d831"
+  },
+  {
+    "version": "20260816195629",
+    "name": "2fa7b202-31fb-4107-a2c2-97999dec24a1",
+    "statement_count": 1,
+    "body_md5": "18bfbbb44ae3d950362023aca5f6bcfe"
+  },
+  {
+    "version": "20260816195657",
+    "name": "5c574ea6-08e8-4d03-a73c-f4afb5cd0100",
+    "statement_count": 1,
+    "body_md5": "18bfbbb44ae3d950362023aca5f6bcfe"
+  },
+  {
+    "version": "20260816210251",
+    "name": "enforce_ai_ops_flash_model",
+    "statement_count": 1,
+    "body_md5": "f056d0c3998d9f8d67f9d261f239e8e5"
+  },
+  {
+    "version": "20260816214845",
+    "name": "7e14752a-1565-4cf1-a8e9-da260b072a4a",
+    "statement_count": 1,
+    "body_md5": "8a6f8984728e5c7cb0e6f4a3a327b384"
+  },
+  {
+    "version": "20260816223201",
+    "name": "c21e8a22-5efc-4f8e-a93e-84debaa730e7",
+    "statement_count": 1,
+    "body_md5": "edf6a32a156792c066021cb053fe1b72"
+  },
+  {
+    "version": "20260816232029",
+    "name": "5968d32d-9cd9-4c5d-8479-270214cbccc7",
+    "statement_count": 1,
+    "body_md5": "682a9f0b147ec679f75cb6038693a336"
+  },
+  {
+    "version": "20260816232154",
+    "name": "42ddfc40-0c7a-4189-8f48-1cb18ad41fd5",
+    "statement_count": 1,
+    "body_md5": "289d8e0ae2901a5b381bf151d22d6f2e"
+  },
+  {
+    "version": "20260816232422",
+    "name": "e66f78b4-0963-4e44-b6fb-ad2efb706fbd",
+    "statement_count": 1,
+    "body_md5": "ba1e938d19438d0807c12cd1412b9517"
+  },
+  {
+    "version": "20260816233909",
+    "name": "e71597ec-5c94-4ee5-88f4-49fc924f1b1d",
+    "statement_count": 1,
+    "body_md5": "69a8f4a951861b11ecbab8e67f0bb025"
+  },
+  {
+    "version": "20260816233945",
+    "name": "8ed9b340-5990-4631-b7f9-978f5f4f8323",
+    "statement_count": 1,
+    "body_md5": "8f405014c9b90451e4a833a9f880a851"
+  },
+  {
+    "version": "20260817001429",
+    "name": "e5ae19c2-79e4-4860-8fc3-d8185f93c1a3",
+    "statement_count": 1,
+    "body_md5": "adb1fea4777060c388b99ef40a150f0c"
+  },
+  {
+    "version": "20260817015610",
+    "name": "a7f01d0e-01c5-4816-b648-d6b79ae6b231",
+    "statement_count": 1,
+    "body_md5": "374fba1c5c79f1546b7dfcff634fa280"
+  },
+  {
+    "version": "20260817165659",
+    "name": "content_opportunities_youtube_gemini36",
+    "statement_count": 1,
+    "body_md5": "a600e68304fb8c616f7004fec5a9b23b"
+  },
+  {
+    "version": "20260817172622",
+    "name": "migrate_all_active_gemini_to_3_6_flash",
+    "statement_count": 1,
+    "body_md5": "c178ce6b720523f50901d1fd1229bc9a"
+  },
+  {
+    "version": "20260818190857",
+    "name": "exclude_closed_clients_from_durable_eligibility_exceptions",
+    "statement_count": 1,
+    "body_md5": "8afa67ec6e555ddd92357b5b85dc79fc"
+  },
+  {
+    "version": "20260818203316",
+    "name": "remove_video_idea_discovery_runtime",
+    "statement_count": 1,
+    "body_md5": "e770aaf77193106489842f1bd9f5aac0"
+  },
+  {
+    "version": "20260818204327",
+    "name": "drop_video_idea_discovery_storage",
+    "statement_count": 1,
+    "body_md5": "fc77575c5c019d808e109d8dc4aa3b33"
+  },
+  {
+    "version": "20260818233238",
+    "name": "release_legacy_campaign_status_trigger_constraint",
+    "statement_count": 1,
+    "body_md5": "ff91f3cc64b30f463cccaf29b75d6b89"
+  },
+  {
+    "version": "20260818233339",
+    "name": "client_campaign_lifecycle_engagement_automation",
+    "statement_count": 1,
+    "body_md5": "c068dafce49b285a6e03b1f4c2820b8d"
+  },
+  {
+    "version": "20260818233823",
+    "name": "align_campaign_activity_event_types",
+    "statement_count": 1,
+    "body_md5": "d6edb303eb567220a5841a44332a81d9"
+  },
+  {
+    "version": "20260819105029",
+    "name": "allow_bty_recommended_two_touch_followup",
+    "statement_count": 1,
+    "body_md5": "d56ba388a30f5bef76c0e41259e8ee6b"
+  },
+  {
+    "version": "20260819105550",
+    "name": "bty_recommended_campaign_recommendation_guard",
+    "statement_count": 1,
+    "body_md5": "448443dd677d112af123b7dbadad4238"
+  },
+  {
+    "version": "20260819132220",
+    "name": "bty_nomination_repeat_suppression",
+    "statement_count": 1,
+    "body_md5": "926ce41d9e80fc03b3eacf4377f6d729"
+  },
+  {
+    "version": "20260819132438",
+    "name": "bty_recommended_followup_reply_thread",
+    "statement_count": 1,
+    "body_md5": "9680c8f8f93062927c72730b00c397a0"
+  },
+  {
+    "version": "20260819140407",
+    "name": "bty_recommended_nomination_auto_enrollment",
+    "statement_count": 1,
+    "body_md5": "7c0dbb7084efe70dfebf797a226e227b"
+  },
+  {
+    "version": "20260819140618",
+    "name": "activate_bty_recommended_organization_auto_enrollment",
+    "statement_count": 1,
+    "body_md5": "2169b851fa0446cc594e0944a5468267"
+  },
+  {
+    "version": "20260819161148",
+    "name": "repair_bty_recommended_outreach_delivery",
+    "statement_count": 1,
+    "body_md5": "36bdd6e36176621c2c66454d1fa30719"
+  },
+  {
+    "version": "20260819200503",
+    "name": "client_journey_ai_exact_exception_context",
+    "statement_count": 1,
+    "body_md5": "771e805a1995f633a433078d47f85c20"
+  },
+  {
+    "version": "20260819203123",
+    "name": "client_journey_finding_lifecycle_and_reporting",
+    "statement_count": 1,
+    "body_md5": "7d793a2927c93892b977b729ac658410"
+  },
+  {
+    "version": "20260819203538",
+    "name": "client_journey_deterministic_executive_brief_section",
+    "statement_count": 1,
+    "body_md5": "d78f9f34f92750e5358ce5e9d476b23c"
+  },
+  {
+    "version": "20260819205412",
+    "name": "decouple_clinical_finalization_from_provisioning",
+    "statement_count": 1,
+    "body_md5": "ae982bcf5280a7f6f3fd440272dd9ba7"
+  },
+  {
+    "version": "20260819205429",
+    "name": "guard_finalized_appointment_corrections",
+    "statement_count": 1,
+    "body_md5": "fa4acccbc22744fd53376f75917e8af6"
+  },
+  {
+    "version": "20260819205443",
+    "name": "repair_clinical_finalization_outbox_identity",
+    "statement_count": 1,
+    "body_md5": "6880769304c10fcf349f30e37fbc24e5"
+  },
+  {
+    "version": "20260819205503",
+    "name": "publish_clinical_financial_handoff_status",
+    "statement_count": 1,
+    "body_md5": "cddc207c504d2619feac6a79c51673fc"
+  },
+  {
+    "version": "20260819210041",
+    "name": "ai_ops_billing_exception_semantics",
+    "statement_count": 1,
+    "body_md5": "5e8305b58852d34491479b3519ec6dcd"
+  },
+  {
+    "version": "20260819210140",
+    "name": "allow_draft_appointment_finalization",
+    "statement_count": 1,
+    "body_md5": "3930aa348633f8eceaf6d6d0c2f6e4b4"
+  },
+  {
+    "version": "20260819220143",
+    "name": "client_journey_deterministic_material_change_gate",
+    "statement_count": 1,
+    "body_md5": "badfea2313f25efb0976cbdaa64e274f"
+  },
+  {
+    "version": "20260819220930",
+    "name": "client_journey_exact_prior_ai_finding_reassessment",
+    "statement_count": 1,
+    "body_md5": "0076ff0a304d0d2eda40d114948a6b49"
+  },
+  {
+    "version": "20260819235305",
+    "name": "fix_ai_operations_model_worker_throttling",
+    "statement_count": 1,
+    "body_md5": "69eeb27bdbf29edd6f82e88b2a45c9aa"
+  },
+  {
+    "version": "20260819235616",
+    "name": "enforce_ai_operations_worker_concurrency_ceiling",
+    "statement_count": 1,
+    "body_md5": "a9d15803cb0aa1e6fd28d931c477ca95"
+  },
+  {
+    "version": "20260819235733",
+    "name": "clinical_recovery_control_plane",
+    "statement_count": 1,
+    "body_md5": "bbb9e3947935f103b52f4cc18a6a5717"
+  },
+  {
+    "version": "20260819235839",
+    "name": "clinical_financial_reconciliation_v2",
+    "statement_count": 1,
+    "body_md5": "8506232bfafa13767c23742e55c0e982"
+  },
+  {
+    "version": "20260819235952",
+    "name": "clinical_recovery_provenance_ai_ops",
+    "statement_count": 1,
+    "body_md5": "1754f552ee5a6038102748b18f170374"
+  },
+  {
+    "version": "20260820000434",
+    "name": "activate_clinical_finalization_v3",
+    "statement_count": 1,
+    "body_md5": "de066d9c02991228bd6f68af640cf651"
+  },
+  {
+    "version": "20260820000910",
+    "name": "service_date_payroll_rate_snapshot",
+    "statement_count": 1,
+    "body_md5": "252a6fca9f398438e8cc83633ab641c5"
+  },
+  {
+    "version": "20260820001750",
+    "name": "record_clinical_contract_v2_consumers",
+    "statement_count": 1,
+    "body_md5": "0992db65089f15a087b8757bff4fa066"
+  },
+  {
+    "version": "20260820161925",
+    "name": "retire_bty_discovery_automation",
+    "statement_count": 1,
+    "body_md5": "0a4d3b53ca140f1ee616e59e8326c5ea"
+  },
+  {
+    "version": "20260820202243",
+    "name": "newsletter_prelaunch_containment",
+    "statement_count": 1,
+    "body_md5": "af39a0bca21e8909d06ecb702037f53e"
+  },
+  {
+    "version": "20260820202643",
+    "name": "newsletter_core_schema",
+    "statement_count": 1,
+    "body_md5": "7bd325d389bc86d163dde1c16383e417"
+  },
+  {
+    "version": "20260820202856",
+    "name": "newsletter_operator_api_and_suppression",
+    "statement_count": 1,
+    "body_md5": "c4acc64f0f2b18345010ba8c9f53d0d1"
+  },
+  {
+    "version": "20260820203114",
+    "name": "newsletter_atomic_orchestration_and_runtime",
+    "statement_count": 1,
+    "body_md5": "b2729c99e3c9e2cb5ef173639fc79f77"
+  },
+  {
+    "version": "20260820203145",
+    "name": "fix_newsletter_mailbox_identity_regex",
+    "statement_count": 1,
+    "body_md5": "659f521c8838926fbd6c8e70046c2e89"
+  },
+  {
+    "version": "20260820203721",
+    "name": "newsletter_email_studio_scope_and_control_plane",
+    "statement_count": 1,
+    "body_md5": "7f82137650ed0f85a3b0ed2e7b250801"
+  },
+  {
+    "version": "20260820204255",
+    "name": "retire_legacy_bulk_newsletter_creation",
+    "statement_count": 1,
+    "body_md5": "7d886c4272eec4496e725d03a8af58c0"
+  },
+  {
+    "version": "20260821193413",
+    "name": "reconcile_ai_ops_operation_registry",
+    "statement_count": 1,
+    "body_md5": "2eeba5be3b06d460b8ec62186c4aa6c3"
+  },
+  {
+    "version": "20260821204311",
+    "name": "decouple_payroll_eligibility_from_financial_hold",
+    "statement_count": 1,
+    "body_md5": "8969c8071f5c62eb2a0425fd03d7a643"
+  },
+  {
+    "version": "20260821204431",
+    "name": "fix_legacy_qualifying_session_ordinal_rerank",
+    "statement_count": 1,
+    "body_md5": "28ddb6049ea54dc6f9818deef68180b9"
+  },
+  {
+    "version": "20260821204553",
+    "name": "align_billing_service_event_claim_states_with_recovery",
+    "statement_count": 1,
+    "body_md5": "368885fe1e55b2c2f4e3bb728ec56ab9"
+  },
+  {
+    "version": "20260822115030",
+    "name": "deterministic_bucket2_monitoring",
+    "statement_count": 1,
+    "body_md5": "5ff5029e1844e50760858ce192e2bd1b"
+  },
+  {
+    "version": "20260822115041",
+    "name": "bucket2_monitoring_seven_days",
+    "statement_count": 1,
+    "body_md5": "584f69a048efaf79bf0e3223210230a9"
+  },
+  {
+    "version": "20260822120022",
+    "name": "bucket2_cutover_hardening",
+    "statement_count": 1,
+    "body_md5": "145fa8ae225639899bbcc56ab7851f76"
+  },
+  {
+    "version": "20260822124835",
+    "name": "ai_ops_bucket2_completion",
+    "statement_count": 1,
+    "body_md5": "8852cc7bb292d1f6c6d0645ff71c972e"
+  },
+  {
+    "version": "20260822134201",
+    "name": "allow_auto_finalize_friday_execution_log_trigger",
+    "statement_count": 1,
+    "body_md5": "16f0700a1ae8248a6d052580280823d5"
+  },
+  {
+    "version": "20260825092407",
+    "name": "restore_nightly_claim_submission_contract",
+    "statement_count": 1,
+    "body_md5": "00d3b169bceb6959bb0077bd83cd8246"
+  },
+  {
+    "version": "20260825092553",
+    "name": "harden_claim_submission_replay",
+    "statement_count": 1,
+    "body_md5": "2d24dfe6d9762dc73fde209408afb581"
+  },
+  {
+    "version": "20260825093030",
+    "name": "schedule_nightly_claimmd_submission",
+    "statement_count": 1,
+    "body_md5": "e05a1c4d024f4495045abf317ac91324"
+  },
+  {
+    "version": "20260825093245",
+    "name": "validate_nightly_claimmd_bridge_dry_run",
+    "statement_count": 1,
+    "body_md5": "d681a4932bb4d56a81c4ff37242325d2"
+  },
+  {
+    "version": "20260825101849",
+    "name": "normalize_unsubmitted_recovery_services_to_standard",
+    "statement_count": 1,
+    "body_md5": "103e235c435130d517cf5ab15ded59ae"
+  },
+  {
+    "version": "20260825105115",
+    "name": "accept_postgres_uuid_claim_submission_action_keys",
+    "statement_count": 1,
+    "body_md5": "cc8c1b5b13c059c42c85c30ff75b87c6"
+  },
+  {
+    "version": "20260825110159",
+    "name": "reconcile_claim_submission_poststate",
+    "statement_count": 1,
+    "body_md5": "c0bfa0b6b6f207a73849b48da5a8264c"
+  },
+  {
+    "version": "20260825110253",
+    "name": "fix_reconcile_claim_submission_batch_lookup",
+    "statement_count": 1,
+    "body_md5": "68817bf3f91d6fa16808205d7293f1b0"
+  },
+  {
+    "version": "20260825132638",
+    "name": "fix_claim_pcn_max_length",
+    "statement_count": 1,
+    "body_md5": "36ddd41f2df1ac9ac9cc501ed9d55f71"
+  },
+  {
+    "version": "20260825132715",
+    "name": "add_claim_resubmission_repair_audit",
+    "statement_count": 1,
+    "body_md5": "3a20f4ac1a24aa423d06616b56cf2dc3"
+  },
+  {
+    "version": "20260825132901",
+    "name": "add_one_time_pcn_repair_resubmission_runner",
+    "statement_count": 1,
+    "body_md5": "e56dcc43f43658b8a1d67c307887296b"
+  },
+  {
+    "version": "20260825133014",
+    "name": "route_pcn_repair_resubmission_through_cron_bridge",
+    "statement_count": 1,
+    "body_md5": "3e4ae6ef6e19cc4e1204226a265d9be8"
+  },
+  {
+    "version": "20260825133142",
+    "name": "add_one_time_pcn_repair_status_refresh_runner",
+    "statement_count": 1,
+    "body_md5": "418f24277dad1638c735fae1ca0dc0ff"
+  },
+  {
+    "version": "20260825133204",
+    "name": "fix_one_time_pcn_repair_status_refresh_runner",
+    "statement_count": 1,
+    "body_md5": "5b8a42d9512eb1505c5a190c171077e5"
+  },
+  {
+    "version": "20260825133543",
+    "name": "guard_claimmd_ack_from_false_acceptance",
+    "statement_count": 1,
+    "body_md5": "e1d2105a28babc154ac6eb04c0220bf4"
+  },
+  {
+    "version": "20260825133646",
+    "name": "add_one_time_claimmd_repair_probe_runner",
+    "statement_count": 1,
+    "body_md5": "ac7a96335da97d9c245ed7d2be26b53f"
+  },
+  {
+    "version": "20260825134509",
+    "name": "archive_failed_champva_pcn_attempt_history",
+    "statement_count": 1,
+    "body_md5": "3cd7cd66837ab5bddd0edd355290228e"
+  },
+  {
+    "version": "20260825134745",
+    "name": "watch_repaired_champva_claim_status",
+    "statement_count": 1,
+    "body_md5": "bd706bf3eff4e4e0a0e98f32cb009073"
+  },
+  {
+    "version": "20260825162837",
+    "name": "guard_claimmd_receipt_only_from_false_acceptance",
+    "statement_count": 1,
+    "body_md5": "7b7c63558648058c51da09503b97c4a4"
+  },
+  {
+    "version": "20260825212108",
+    "name": "staff_documentation_work_queue",
+    "statement_count": 1,
+    "body_md5": "5b61ad1a19eddf79dd39a4345270440b"
+  },
+  {
+    "version": "20260826172152",
+    "name": "payroll_statement_control_plane_v1",
+    "statement_count": 1,
+    "body_md5": "741edf12e4f03ebd7e4c220f73c8f3e1"
+  },
+  {
+    "version": "20260826172250",
+    "name": "fix_payroll_transition_record_aliases_v1",
+    "statement_count": 1,
+    "body_md5": "1aee21f144628f96303b8257e1f73c5c"
+  },
+  {
+    "version": "20260826172808",
+    "name": "billing_payroll_candidate_summary_v1",
+    "statement_count": 1,
+    "body_md5": "bf30cc90e833596ceedb0e1afc85e3f4"
+  },
+  {
+    "version": "20260826185511",
+    "name": "payroll_lifecycle_v2_provenance_foundation",
+    "statement_count": 1,
+    "body_md5": "96e3568f0c0c3427978e57931abc9619"
+  },
+  {
+    "version": "20260826185813",
+    "name": "payroll_lifecycle_v2_read_model",
+    "statement_count": 1,
+    "body_md5": "ce791457b44a591ddca2ce7b6eac26c9"
+  },
+  {
+    "version": "20260826190026",
+    "name": "payroll_lifecycle_v2_transitions",
+    "statement_count": 1,
+    "body_md5": "2781f076f909d75dc7f02fddd15f5759"
+  },
+  {
+    "version": "20260828165918",
+    "name": "capture_closed_period_payroll_before_friday_finalization",
+    "statement_count": 1,
+    "body_md5": "66aaa75e47a59893d638bba659ca1df4"
+  },
+  {
+    "version": "20260828170128",
+    "name": "limit_friday_payroll_catchup_to_post_snapshot_changes",
+    "statement_count": 1,
+    "body_md5": "4b23d6b46709a5a03dd564562abd0223"
+  },
+  {
+    "version": "20260828170548",
+    "name": "enforce_friday_payroll_completeness_and_surface_historical_gaps",
+    "statement_count": 1,
+    "body_md5": "36fcacb9c11e41fa8ac99e40be2bc8a1"
+  },
+  {
+    "version": "20260828170635",
+    "name": "surface_historical_payroll_gaps_without_standard_runs",
+    "statement_count": 1,
+    "body_md5": "18f5137258ee4a8dd5c30f247c7cb7b1"
+  },
+  {
+    "version": "20260829022644",
+    "name": "credentialing_private_core",
+    "statement_count": 1,
+    "body_md5": "09f7d10e25d006ac68cc650ca994ca31"
+  },
+  {
+    "version": "20260829022824",
+    "name": "credentialing_private_workflow",
+    "statement_count": 1,
+    "body_md5": "199f03e3e831975650310ceec1d2c54d"
+  },
+  {
+    "version": "20260829031848",
+    "name": "credentialing_v3_private_drafts",
+    "statement_count": 1,
+    "body_md5": "0c8dc6c0ca479ef55cabb27e00ff4496"
+  },
+  {
+    "version": "20260829032212",
+    "name": "credentialing_v3_workflow_projection",
+    "statement_count": 1,
+    "body_md5": "d676dbbd0afb831deca2126038a967b4"
+  },
+  {
+    "version": "20260829032249",
+    "name": "credentialing_v3_helpers",
+    "statement_count": 1,
+    "body_md5": "3df76d00fba36e81141dcc26b0c5f35d"
+  },
+  {
+    "version": "20260829032324",
+    "name": "credentialing_v3_validator",
+    "statement_count": 1,
+    "body_md5": "956edd4bf2f6ada4fb87b486b72b22e6"
+  },
+  {
+    "version": "20260829032605",
+    "name": "credentialing_v3_applicant_api",
+    "statement_count": 1,
+    "body_md5": "092d9add7dfb384b877a9547c6dd9bfb"
+  },
+  {
+    "version": "20260829032829",
+    "name": "credentialing_v3_projection_review",
+    "statement_count": 1,
+    "body_md5": "0dc101480113c65bf05dfba40fda76a0"
+  },
+  {
+    "version": "20260829032847",
+    "name": "credentialing_v3_ensure_initial_case",
+    "statement_count": 1,
+    "body_md5": "0485e51ab841fb2c517986093a0eb32a"
+  },
+  {
+    "version": "20260829033809",
+    "name": "credentialing_v3_outbox_leases",
+    "statement_count": 1,
+    "body_md5": "d8db1e617759f6585cad7dc352019a6f"
+  },
+  {
+    "version": "20260829141614",
+    "name": "credentialing_v3_ownership_enrollment",
+    "statement_count": 1,
+    "body_md5": "9845ffa52c951e53232e194ab99f4b13"
+  },
+  {
+    "version": "20260829142522",
+    "name": "credentialing_v3_email_outbox_cron",
+    "statement_count": 1,
+    "body_md5": "21e43b930e4c49e6151bccdbb6c4cba9"
+  },
+  {
+    "version": "20260829150359",
+    "name": "create_crm_va_vaccn_referral_contacts",
+    "statement_count": 1,
+    "body_md5": "31cc5bbcb280cb95551a40fe241d4350"
+  },
+  {
+    "version": "20260903204203",
+    "name": "add_stripe_customer_bindings",
+    "statement_count": 1,
+    "body_md5": "4e38167f43f1a7e5f6a0bde222b01b4a"
+  },
+  {
+    "version": "20260903204701",
+    "name": "bty_nominee_research_rotation",
+    "statement_count": 1,
+    "body_md5": "1d12227427e1732a3b391a219b3ebb87"
+  },
+  {
+    "version": "20260903204702",
+    "name": "persist_stripe_payment_allocation_plan",
+    "statement_count": 1,
+    "body_md5": "38a343c8115a71914d2bffe35b4558a7"
+  },
+  {
+    "version": "20260904020325",
+    "name": "harden_stripe_financial_integrity",
+    "statement_count": 1,
+    "body_md5": "801bf090b34bd396fff64152a44a6dfb"
+  },
+  {
+    "version": "20260904020350",
+    "name": "enforce_canonical_stripe_account",
+    "statement_count": 1,
+    "body_md5": "96eb47325084f4a695b31346baf20afa"
+  },
+  {
+    "version": "20260904020406",
+    "name": "add_stripe_integrity_monitor",
+    "statement_count": 1,
+    "body_md5": "13292e6f61af59b6b93e9e4c51fe3fdb"
+  },
+  {
+    "version": "20260904020837",
+    "name": "block_checkout_with_unapplied_credit",
+    "statement_count": 1,
+    "body_md5": "06eeffb50df6e66d3f38da849239d347"
+  },
+  {
+    "version": "20260904230845",
+    "name": "add_bty_kc_chiefs_client_nomination_campaign",
+    "statement_count": 1,
+    "body_md5": "3d86876a62147ceff4292ee320322e2a"
+  },
+  {
+    "version": "20260905133210",
+    "name": "expand_eligibility_failure_outcomes",
+    "statement_count": 1,
+    "body_md5": "274af0c5f2b7a1c5f70679219cd0c2e2"
+  },
+  {
+    "version": "20260905133316",
+    "name": "classify_eligibility_payer_failures_v2",
+    "statement_count": 1,
+    "body_md5": "4e411d58c5c01605a49aedfd88a3ec95"
+  },
+  {
+    "version": "20260905133339",
+    "name": "eligibility_failure_outcome_contract_guard",
+    "statement_count": 1,
+    "body_md5": "d3883514011a0b8f3f0bb344887edd99"
+  },
+  {
+    "version": "20260908191801",
+    "name": "create_zeffy_webhook_events",
+    "statement_count": 1,
+    "body_md5": "9d00e11efa21ae8c7ea8513117103488"
+  },
+  {
+    "version": "20260908211030",
+    "name": "e4160edc-1bfa-4222-9328-a75d1589c0d2",
+    "statement_count": 1,
+    "body_md5": "71d36e1d719127d4490fc9b6cb686b98"
+  },
+  {
+    "version": "20260910105825",
+    "name": "create_relationship_institutional_recruiting_targets",
+    "statement_count": 1,
+    "body_md5": "f9e51265639a17188e941779007c0e46"
+  },
+  {
+    "version": "20260910111005",
+    "name": "centralize_research_state_rotations",
+    "statement_count": 1,
+    "body_md5": "b6ef1f0e693063d41c314aab80c8eacd"
+  },
+  {
+    "version": "20260910143652",
+    "name": "decouple_bty_research_policy_from_backend",
+    "statement_count": 1,
+    "body_md5": "6a4aa51845381a9aa3a0e1ce5d8d3300"
+  },
+  {
+    "version": "20260910215751",
+    "name": "newsletter_marketing_sender",
+    "statement_count": 1,
+    "body_md5": "7e952c6f041570e90c2fa29bf05d21e3"
+  },
+  {
+    "version": "20260911184704",
+    "name": "create_therapist_outreach_prospects",
+    "statement_count": 1,
+    "body_md5": "f83009ed1864a6eb1eed8c808662d0da"
+  },
+  {
+    "version": "20260911184745",
+    "name": "add_therapist_outreach_prospects_updated_at_trigger",
+    "statement_count": 1,
+    "body_md5": "1faa072d1a8770921696014505b8065a"
+  },
+  {
+    "version": "20260911190646",
+    "name": "add_outreach_contactability_to_therapist_prospects",
+    "statement_count": 1,
+    "body_md5": "78883c2c8edbb4cec71e72338a0f1018"
+  },
+  {
+    "version": "20260911193503",
+    "name": "add_research_state_rotation_progress",
+    "statement_count": 1,
+    "body_md5": "e00418f98f00d072ba49e0fe913df1b1"
+  },
+  {
+    "version": "20260913125916",
+    "name": "homepage_documented_monthly_impact",
+    "statement_count": 1,
+    "body_md5": "45ed3a7b438e9105eb7afecfba601ca2"
+  },
+  {
+    "version": "20260913132719",
+    "name": "weekly_homepage_documented_impact_snapshot",
+    "statement_count": 1,
+    "body_md5": "60b5967a341c47aa0033b9afc5d4ae8f"
+  },
+  {
+    "version": "20260913134549",
+    "name": "monthly_homepage_documented_impact_snapshot_schedule",
+    "statement_count": 1,
+    "body_md5": "7d334634bef3d75355919e8bdac4b07e"
+  },
+  {
+    "version": "20260915102838",
+    "name": "youtube_public_video_library",
+    "statement_count": 1,
+    "body_md5": "84c0ae3d0f48d90afd050973db9495d8"
+  },
+  {
+    "version": "20260915103257",
+    "name": "tune_youtube_public_video_library_schedule",
+    "statement_count": 1,
+    "body_md5": "6cb590704ebf1957056c36249536aa18"
+  },
+  {
+    "version": "20260915103637",
+    "name": "route_youtube_public_library_to_dedicated_sync",
+    "statement_count": 1,
+    "body_md5": "030b4b8423c59afc6e4ebe5e885eff93"
+  },
+  {
+    "version": "20260915103853",
+    "name": "separate_youtube_metadata_and_gemini_transcript_jobs",
+    "statement_count": 1,
+    "body_md5": "d7038d9b22a6bfba88aa23e9b5416ec4"
+  },
+  {
+    "version": "20260915104055",
+    "name": "limit_gemini_transcript_worker_to_one_per_run",
+    "statement_count": 1,
+    "body_md5": "dcb6e8514b36b303fdcacb71fe62b945"
+  },
+  {
+    "version": "20260915115204",
+    "name": "fix_relationship_campaign_worker_failure_handling",
+    "statement_count": 1,
+    "body_md5": "f614355427f9217a7a3056dab109544b"
+  },
+  {
+    "version": "20260915115518",
+    "name": "fix_relationship_safety_revalidation_delivery_state",
+    "statement_count": 1,
+    "body_md5": "7b6972e8a7558c4ef26a63c7a938669b"
+  },
+  {
+    "version": "20260915195852",
+    "name": "claimmd_source_evidence",
+    "statement_count": 1,
+    "body_md5": "f1e5840aa1ed78db68f0bed7f747c808"
+  },
+  {
+    "version": "20260915200257",
+    "name": "create_website_resources_and_reddit_authority",
+    "statement_count": 1,
+    "body_md5": "2b7d4345af955fd231dd0b4dca000def"
+  },
+  {
+    "version": "20260915200436",
+    "name": "seed_current_valorwell_resources",
+    "statement_count": 1,
+    "body_md5": "dfca691cb1ae9ecb9b72aded386e47b8"
+  },
+  {
+    "version": "20260915205454",
+    "name": "claimmd_legacy_era_identity_guard",
+    "statement_count": 1,
+    "body_md5": "2b12d37cce780db99031cb0f68893282"
+  },
+  {
+    "version": "20260915210017",
+    "name": "claimmd_era_identity_event_fk_index",
+    "statement_count": 1,
+    "body_md5": "930fbb375da418fba344cb02395d7a75"
+  },
+  {
+    "version": "20260915222440",
+    "name": "billing_integration_execution_truth",
+    "statement_count": 1,
+    "body_md5": "3354fed052255f4e48d37b25b77ebc99"
+  },
+  {
+    "version": "20260915224913",
+    "name": "claimmd_durable_inboxes",
+    "statement_count": 1,
+    "body_md5": "e0a582f050f866616d5c55aa579836f4"
+  },
+  {
+    "version": "20260915231405",
+    "name": "claimmd_inbox_auto_enqueue",
+    "statement_count": 1,
+    "body_md5": "6bf8440b54db31440f95fd71eafa2944"
+  },
+  {
+    "version": "20260915231836",
+    "name": "schedule_claimmd_response_inbox_worker",
+    "statement_count": 1,
+    "body_md5": "b79a746df93ab9573f7cdc264e9dda2f"
+  },
+  {
+    "version": "20260915233638",
+    "name": "phase06_recovery_containment",
+    "statement_count": 1,
+    "body_md5": "57636ff28e76dac6f1e03bbb559f8a8f"
+  },
+  {
+    "version": "20260915233712",
+    "name": "repair_billing_enum_contracts",
+    "statement_count": 1,
+    "body_md5": "6fb37e64da5af44d7615096c5895ed49"
+  },
+  {
+    "version": "20260915233953",
+    "name": "allow_multiple_era_claim_rows_per_claim",
+    "statement_count": 1,
+    "body_md5": "cca8b246b0fba092cb9d7cf282d0af46"
+  },
+  {
+    "version": "20260916134049",
+    "name": "increase_youtube_gemini_transcript_batch_to_three",
+    "statement_count": 1,
+    "body_md5": "9478afefaa08adfe7fd1a3250b9fe66b"
+  },
+  {
+    "version": "20260916153500",
+    "name": "phase12_claim_line_financial_states",
+    "statement_count": 1,
+    "body_md5": "0268d0a1f186067ba37e258476404aaf"
+  },
+  {
+    "version": "20260916153600",
+    "name": "phase12_era_adjudication_ownership",
+    "statement_count": 1,
+    "body_md5": "b58a43f1fff3dbb8f1c009f3eb7f92b3"
+  },
+  {
+    "version": "20260916170000",
+    "name": "phase13_payment_report_contract",
+    "statement_count": 1,
+    "body_md5": "542b0b899b590a86c4967d83def1cdd3"
+  },
+  {
+    "version": "20260916192729",
+    "name": "website_resources_category_article_structure",
+    "statement_count": 1,
+    "body_md5": "c825ad4ff80c15b703164fb47fffd95d"
+  },
+  {
+    "version": "20260916200000",
+    "name": "phase14_submission_history_protection",
+    "statement_count": 1,
+    "body_md5": "3f8982d96db94b3811b87fa37a4f8e0a"
+  },
+  {
+    "version": "20260917081055",
+    "name": "phase21_claim_submission_attempts",
+    "statement_count": 1,
+    "body_md5": "66108b989f61ff52ef7516105020aa53"
+  },
+  {
+    "version": "20260917081111",
+    "name": "phase22_forward_status_attempt_binding",
+    "statement_count": 1,
+    "body_md5": "255429245bf816e05affea3600c8dad7"
+  },
+  {
+    "version": "20260917081518",
+    "name": "forward_submission_lifecycle_v2",
+    "statement_count": 1,
+    "body_md5": "2688ef91cb1685747b57c2396c975507"
+  },
+  {
+    "version": "20260917083104",
+    "name": "add_per_state_research_search_progress",
+    "statement_count": 1,
+    "body_md5": "92d8538abd6497c7b9ae556a9dff4ba6"
+  },
+  {
+    "version": "20260917083624",
+    "name": "remove_redundant_research_state_search_progress_index",
+    "statement_count": 1,
+    "body_md5": "4fca0622e0f84f064b36d6cf1fec37c9"
+  },
+  {
+    "version": "20260917094805",
+    "name": "fix_claimmd_response_cursor_upsert",
+    "statement_count": 1,
+    "body_md5": "1559f84177de00c4a084558135045247"
+  },
+  {
+    "version": "20260917175914",
+    "name": "add_claim_clearinghouse_routes",
+    "statement_count": 1,
+    "body_md5": "94c84dd62c403fb2266480ae43a470cc"
+  },
+  {
+    "version": "20260917180124",
+    "name": "exclude_stedi_routes_from_claimmd_nightly_candidates",
+    "statement_count": 1,
+    "body_md5": "396cdc7cdae472822e6b0582048ff26f"
+  },
+  {
+    "version": "20260917180231",
+    "name": "block_stedi_routes_from_claimmd_reservations",
+    "statement_count": 1,
+    "body_md5": "1afeb06e918d29a7030d2cdc95d6c228"
+  },
+  {
+    "version": "20260917180327",
+    "name": "generalize_claim_submission_attempts_for_stedi",
+    "statement_count": 1,
+    "body_md5": "9ec9134b86c592aa6b74f9a50fd95a08"
+  },
+  {
+    "version": "20260917224349",
+    "name": "schedule_stedi_pilot_submit_20260917_1800ct",
+    "statement_count": 1,
+    "body_md5": "91b7c681728e438432fa31362f36abc5"
+  },
+  {
+    "version": "20260918005725",
+    "name": "d26dde6a-0811-488a-8520-ac840330d8d8",
+    "statement_count": 1,
+    "body_md5": "1011f8621190691b74030508f92703af"
+  },
+  {
+    "version": "20260918010703",
+    "name": "5586c4c4-18ed-4264-a767-d9766e0b99e8",
+    "statement_count": 1,
+    "body_md5": "bbcd68a6dc7edae1e64a9fa3013d9462"
+  },
+  {
+    "version": "20260918012715",
+    "name": "87182e09-4b20-4b63-9a91-2e2379ed840c",
+    "statement_count": 1,
+    "body_md5": "50ce4755a70d7180c41106033b28fb0d"
+  },
+  {
+    "version": "20260918192602",
+    "name": "resource_platform_v2",
+    "statement_count": 1,
+    "body_md5": "d94a94bf6d1853654658a83813fe3ec7"
+  },
+  {
+    "version": "20260918193458",
+    "name": "resource_editorial_order",
+    "statement_count": 1,
+    "body_md5": "e2924dc9b21b07e75cae0cbf84e9d8a5"
+  },
+  {
+    "version": "20260918194636",
+    "name": "resource_source_organizations",
+    "statement_count": 1,
+    "body_md5": "31e8ed027a29752eede0f41c498f047c"
+  },
+  {
+    "version": "20260918200208",
+    "name": "6c3f3510-1d43-41de-8868-3363f9f473e2",
+    "statement_count": 1,
+    "body_md5": "838ec66a0a82ad283b27a2321051da09"
+  },
+  {
+    "version": "20260918200316",
+    "name": "3881c2c4-be8b-49e7-8a12-3d84903be817",
+    "statement_count": 1,
+    "body_md5": "2eef2ec0a5ee0532f04a6144921f2a6c"
+  },
+  {
+    "version": "20260918200603",
+    "name": "6bdff54e-37bf-4f9f-8dd0-0cf14efb8a10",
+    "statement_count": 1,
+    "body_md5": "7f2548f0f96799e3278aa2b22c10498a"
+  },
+  {
+    "version": "20260918200723",
+    "name": "stedi_lifecycle_targeted_refresh",
+    "statement_count": 1,
+    "body_md5": "758b9a33abbd1f619713631336366758"
+  },
+  {
+    "version": "20260918200846",
+    "name": "afbbd36a-97db-4412-8890-3a9e597fc773",
+    "statement_count": 1,
+    "body_md5": "344f5421bef24269e5f14d954c492085"
+  },
+  {
+    "version": "20260918200931",
+    "name": "2dbafdbc-d543-4ef3-8cf8-7bd2da06b3b4",
+    "statement_count": 1,
+    "body_md5": "592814cbff43131419b0a7bde73c1ca7"
+  },
+  {
+    "version": "20260918201050",
+    "name": "e7afb241-b59a-4ef7-b831-a66d620c9fa9",
+    "statement_count": 1,
+    "body_md5": "d0f4248c912f88c4ebd699ccbc81900e"
+  },
+  {
+    "version": "20260918201716",
+    "name": "dd437186-081d-48d0-840a-82ea5cb27bac",
+    "statement_count": 1,
+    "body_md5": "31d8399ac896f26640f94fedb1298f15"
+  },
+  {
+    "version": "20260918202647",
+    "name": "fix_friday_payroll_approval_and_noon_send",
+    "statement_count": 1,
+    "body_md5": "433a032afb48c4936cd1dcd6654c5251"
+  },
+  {
+    "version": "20260918203951",
+    "name": "resource_architecture_v2_foundation",
+    "statement_count": 1,
+    "body_md5": "d12cf87026b1c42298c632b7c65ee6ce"
+  },
+  {
+    "version": "20260918204124",
+    "name": "reconcile_resource_architecture_v2",
+    "statement_count": 1,
+    "body_md5": "593c9fa0be9e7c0a2a73807dbdef6fb3"
+  },
+  {
+    "version": "20260918234718",
+    "name": "c1cd9335-ae22-44af-b825-8ad9c8231765",
+    "statement_count": 1,
+    "body_md5": "1d0575b80eed4c531d0f0a53dc018c09"
+  },
+  {
+    "version": "20260919000523",
+    "name": "move_friday_payroll_send_to_730pm_central",
+    "statement_count": 1,
+    "body_md5": "0fdb6ef7e1e64eb40df7bf652a362e43"
+  },
+  {
+    "version": "20260919002456",
+    "name": "restrict_resource_public_view",
+    "statement_count": 1,
+    "body_md5": "04bbbd364e466e8e4cced7937dac4ab8"
+  },
+  {
+    "version": "20260919002752",
+    "name": "resource_safe_public_projection",
+    "statement_count": 1,
+    "body_md5": "0d1ec84e50077b1b8aa7e7bbb55f61e4"
+  },
+  {
+    "version": "20260919013713",
+    "name": "resource_final_public_cutover",
+    "statement_count": 1,
+    "body_md5": "0740ec3cd836d693ff86692a1934f0b8"
+  },
+  {
+    "version": "20260919032650",
+    "name": "stedi_nightly_lifecycle_and_acceptance_contract",
+    "statement_count": 1,
+    "body_md5": "76693dfcbda366558edd3af4eb660a78"
+  },
+  {
+    "version": "20260919032710",
+    "name": "reconcile_stedi_lifecycle_cron",
+    "statement_count": 1,
+    "body_md5": "3b80c317fbff118dd2c8ff9013128577"
+  },
+  {
+    "version": "20260919032716",
+    "name": "stedi_realtime_276_277",
+    "statement_count": 1,
+    "body_md5": "d830a4fa3a8d8e5704a8c0b8a0e8f4fd"
+  },
+  {
+    "version": "20260920131928",
+    "name": "allow_private_bty_youtube_videos",
+    "statement_count": 1,
+    "body_md5": "770e25073620a72c94f92766bf1f8cc3"
+  },
+  {
+    "version": "20260920221844",
+    "name": "add_bty_video_processing_pipeline",
+    "statement_count": 1,
+    "body_md5": "01cc0167907943c784e12328c7b58fbd"
+  },
+  {
+    "version": "20260920221956",
+    "name": "add_bty_video_pipeline_settings",
+    "statement_count": 1,
+    "body_md5": "414ac1014eee991b3c24fe0d0fa7c6ea"
+  },
+  {
+    "version": "20260920222009",
+    "name": "index_bty_video_job_foreign_keys",
+    "statement_count": 1,
+    "body_md5": "81fa6891e41e466940e7da831bf25e3d"
+  },
+  {
+    "version": "20260921010954",
+    "name": "route_bty_clips_to_drive_and_expand_clip_metadata",
+    "statement_count": 1,
+    "body_md5": "7b213d8ba54a4c1883eb52006de74ce8"
+  },
+  {
+    "version": "20260921011009",
+    "name": "make_drive_authoritative_for_bty_clip_files",
+    "statement_count": 1,
+    "body_md5": "b022460653118a9ee94aadf949f2bdcd"
+  },
+  {
+    "version": "20260921112247",
+    "name": "support_part_and_short_clip_identification",
+    "statement_count": 1,
+    "body_md5": "ee14a78a8c5f72a437bee482ca687b7c"
+  },
+  {
+    "version": "20260921161252",
+    "name": "667a6845-8e56-43aa-aedb-c9f9409bf909",
+    "statement_count": 1,
+    "body_md5": "65fa740fa8e8d29fc25c1fd4f67976e1"
+  },
+  {
+    "version": "20260921170919",
+    "name": "repair_relationship_reply_correlation",
+    "statement_count": 1,
+    "body_md5": "e66c99dbabf9a91a9abaf8b785aa2dfe"
+  },
+  {
+    "version": "20260922202542",
+    "name": "social_media_publish_queue",
+    "statement_count": 1,
+    "body_md5": "ed15071842f6ebb0ac674d1bc1cfd3a7"
+  },
+  {
+    "version": "20260923114850",
+    "name": "youtube_oauth_handoff",
+    "statement_count": 1,
+    "body_md5": "cc1153db53775dcc5d1bac38d1280eab"
+  },
+  {
+    "version": "20260923114929",
+    "name": "youtube_oauth_handoff_public",
+    "statement_count": 1,
+    "body_md5": "2e731c8afdcdc5433b4a409a4a718b97"
+  },
+  {
+    "version": "20260923124242",
+    "name": "e8698d67-fe40-4d05-8597-45eba23d7945",
+    "statement_count": 1,
+    "body_md5": "a7b072e0ac1ce74f76ff9c8e9052fe99"
+  },
+  {
+    "version": "20260923125428",
+    "name": "project_episode_cover_publication_defaults",
+    "statement_count": 1,
+    "body_md5": "0829a4df816511cc9f16b5f2cf567c30"
+  },
+  {
+    "version": "20260924131110",
+    "name": "social_media_atomic_publish_claim",
+    "statement_count": 1,
+    "body_md5": "3e5ef2707a6491acc284b5b4cf71ed4c"
+  },
+  {
+    "version": "20260924204316",
+    "name": "harden_client_eligibility_persistence_v2",
+    "statement_count": 1,
+    "body_md5": "17eba4f0c6997ccb2e50dddcea7c2e70"
+  },
+  {
+    "version": "20260924221039",
+    "name": "restore_resource_public_projection_boundary",
+    "statement_count": 1,
+    "body_md5": "a0cb62794bb18813b56541dbcc0f0057"
+  },
+  {
+    "version": "20260925024651",
+    "name": "replace_at_risk_edge_cron_with_database_job",
+    "statement_count": 1,
+    "body_md5": "674a796eaa5a976cbe7c37d16f9b604c"
+  },
+  {
+    "version": "20260925024821",
+    "name": "add_vault_backed_cron_secret_validator",
+    "statement_count": 1,
+    "body_md5": "face790322fdfcd933bd0ec1bf64be21"
+  },
+  {
+    "version": "20260925025331",
+    "name": "restore_at_risk_http_cron_with_vault_auth",
+    "statement_count": 1,
+    "body_md5": "1cc4c3b8f2a2fa95023d29358250c6a1"
+  },
+  {
+    "version": "20260925025415",
+    "name": "fix_active_care_legacy_status_enum_projection",
+    "statement_count": 1,
+    "body_md5": "ed97eddc256cb81e32c9e44d53d5d452"
+  },
+  {
+    "version": "20261005161259",
+    "name": "add_video_part_numbers",
+    "statement_count": 1,
+    "body_md5": "6b3d755299f544709c73faab6c84220c"
+  },
+  {
+    "version": "20261005163913",
+    "name": "da2ca7d5-9411-46ed-801d-a2aded2ec9f1",
+    "statement_count": 1,
+    "body_md5": "c9250d114e4c35a7e39d7cc58a9fb70b"
+  },
+  {
+    "version": "20261005171601",
+    "name": "add_hook_text_to_video_clips",
+    "statement_count": 1,
+    "body_md5": "123b65cb1d427f5c3aff8345696aa373"
+  },
+  {
+    "version": "20261005175327",
+    "name": "add_primary_speaker_to_video_clips",
+    "statement_count": 1,
+    "body_md5": "5114659cc2b198c1fa020f5a20cc97d0"
+  },
+  {
+    "version": "20261005175527",
+    "name": "drop_unused_transcript_speaker_label",
+    "statement_count": 1,
+    "body_md5": "9479703dfc70a4d27644a27dcf00374f"
+  },
+  {
+    "version": "20261005205615",
+    "name": "add_thumbnail_pose_fields_to_video_clips",
+    "statement_count": 1,
+    "body_md5": "871331596d2c0a35d2ba87a59c1868e6"
+  },
+  {
+    "version": "20261005215247",
+    "name": "add_automatic_video_thumbnail_generation",
+    "statement_count": 1,
+    "body_md5": "2d12e13b7ea88c662db9ae26a3ca38cd"
+  },
+  {
+    "version": "20261005215832",
+    "name": "make_video_thumbnail_metadata_fallback_safe",
+    "statement_count": 1,
+    "body_md5": "1013956d446e6536257b6e87d16f2f63"
+  },
+  {
+    "version": "20261005220026",
+    "name": "harden_video_thumbnail_enqueue_conflicts",
+    "statement_count": 1,
+    "body_md5": "74ca0c36b43744d21e9d902d52b35d3e"
+  },
+  {
+    "version": "20261006140149",
+    "name": "bty_workflow_hardening_foundation",
+    "statement_count": 1,
+    "body_md5": "14ef2539128f0f3915522df3f9883c0a"
+  },
+  {
+    "version": "20261006140608",
+    "name": "bty_dependency_orchestrator_health",
+    "statement_count": 1,
+    "body_md5": "56156f0c062e7b5f50761aab12300de1"
+  },
+  {
+    "version": "20261006141343",
+    "name": "bty_render_worker_lease_refinement",
+    "statement_count": 1,
+    "body_md5": "a1b38ee1954112e935e41c7aec859628"
+  },
+  {
+    "version": "20261006142611",
+    "name": "bty_current_revision_and_cron_hardening",
+    "statement_count": 1,
+    "body_md5": "95dfce9f1c9692ad6de4647e2fc8e7bb"
+  },
+  {
+    "version": "20261006213130",
+    "name": "allow_project_cover_metadata_video_job_type",
+    "statement_count": 1,
+    "body_md5": "0a56c13fa6c6e5049342d5833efb57dd"
+  },
+  {
+    "version": "20261006230538",
+    "name": "force_google_drive_video_storage",
+    "statement_count": 1,
+    "body_md5": "1a2f6c64ba9c4ff82fc14b66a14cbdbb"
+  },
+  {
+    "version": "20261006234232",
+    "name": "create_video_r2_drive_migration_queue",
+    "statement_count": 1,
+    "body_md5": "4f3d97bde8123b5ca9dbb8acda04a6cc"
+  },
+  {
+    "version": "20261006234303",
+    "name": "add_video_r2_drive_migration_lease",
+    "statement_count": 1,
+    "body_md5": "5b95c5d135fb033c8f743e5d273f855a"
+  },
+  {
+    "version": "20261006235101",
+    "name": "expose_legacy_r2_migration_token_to_service_role",
+    "statement_count": 1,
+    "body_md5": "f72e9618c9f735b70c034dfde2f0f5cc"
+  },
+  {
+    "version": "20261007000204",
+    "name": "schedule_r2_to_drive_video_migration",
+    "statement_count": 1,
+    "body_md5": "1906d1000e2cf01a45e782121d276d60"
+  },
+  {
+    "version": "20261007015742",
+    "name": "normalize_crm_task_exception_owner_profiles",
+    "statement_count": 1,
+    "body_md5": "94192a3f41518540481c8cda234946fe"
+  },
+  {
+    "version": "20261007015859",
+    "name": "index_crm_exceptions_owner_profile",
+    "statement_count": 1,
+    "body_md5": "0fe0ff947a8b4719ddd7ee0a01c043d2"
+  },
+  {
+    "version": "20261007121828",
+    "name": "split_bty_hook_generation_pipeline",
+    "statement_count": 1,
+    "body_md5": "0ef5c8e47fb9e436bb20f1f72005d41b"
+  },
+  {
+    "version": "20261007122228",
+    "name": "harden_bty_manual_hook_override_flow",
+    "statement_count": 1,
+    "body_md5": "f5a787921865811dfebeecc4d240a570"
+  },
+  {
+    "version": "20261007140519",
+    "name": "phase9_tenant_activity_event_audit_fix",
+    "statement_count": 1,
+    "body_md5": "32d246f62e4df13d9d74dc65b1ee1649"
+  },
+  {
+    "version": "20261007170147",
+    "name": "allow_parts_only_single_clip_workflow_exceptions",
+    "statement_count": 1,
+    "body_md5": "5e32781e51fc11edca9a3b2902b53bc7"
+  },
+  {
+    "version": "20261007180144",
+    "name": "add_optional_short_payoff_cold_opens",
+    "statement_count": 1,
+    "body_md5": "bbfc18492e21accb2cb7419c66628386"
+  },
+  {
+    "version": "20261007185558",
+    "name": "f5c5f99f-f754-468c-bd08-3240199047a9",
+    "statement_count": 1,
+    "body_md5": "37b89d21e7e215f92c17f2209ca7eb13"
+  },
+  {
+    "version": "20261007185720",
+    "name": "8d34287f-f051-4882-9a7a-a6d6dc43eef9",
+    "statement_count": 1,
+    "body_md5": "571aa10ca27358fce3ef312627008ce6"
+  },
+  {
+    "version": "20261007191945",
+    "name": "56dcbb44-e2f7-4947-94be-8e703fdaed73",
+    "statement_count": 1,
+    "body_md5": "17eb0e29156233576f5d06a87fcf1944"
+  },
+  {
+    "version": "20261007225520",
+    "name": "1cd08fab-c0b6-479a-b966-cf702c716466",
+    "statement_count": 1,
+    "body_md5": "71a023dc8e086545c114594998dff700"
+  },
+  {
+    "version": "20261007230347",
+    "name": "05b85b6e-710e-426a-aa09-59e2c43a2029",
+    "statement_count": 1,
+    "body_md5": "1e97bba4cab0b313d73e44f14bc96275"
+  },
+  {
+    "version": "20261007230810",
+    "name": "270a224c-7485-44ef-945c-31f92b898095",
+    "statement_count": 1,
+    "body_md5": "7cac4621a7cd34745c2368f91f540a63"
+  },
+  {
+    "version": "20261008220027",
+    "name": "bty_public_feature_catalog_from_relationship_organizations",
+    "statement_count": 1,
+    "body_md5": "b5406c992f797a16efd8e0f30afb674f"
+  },
+  {
+    "version": "20261008220040",
+    "name": "fix_bty_feature_url_domain_regex",
+    "statement_count": 1,
+    "body_md5": "6b3309d3068825e0bbc06cd704415644"
+  },
+  {
+    "version": "20261008220848",
+    "name": "restore_invoker_resource_public_projection_column_reads",
+    "statement_count": 1,
+    "body_md5": "f999d2e02957fc06ed8872ded26084bc"
+  },
+  {
+    "version": "20261008221543",
+    "name": "crm_relationship_task_subjects_20261008",
+    "statement_count": 1,
+    "body_md5": "1a79fd9e962ceb536ed0e9af5250e7d7"
+  },
+  {
+    "version": "20261009043826",
+    "name": "crm_configurable_pipelines_20261009",
+    "statement_count": 1,
+    "body_md5": "be80b052135305b440e69a290b9d8c55"
+  },
+  {
+    "version": "20261009110340",
+    "name": "seed_valorwell_pipeline_configuration_20261009",
+    "statement_count": 1,
+    "body_md5": "6645e4eb782c13f1ee939d1cbdb17dce"
+  },
+  {
+    "version": "20261009110343",
+    "name": "crm_personal_pipeline_optional_organization_20261009",
+    "statement_count": 1,
+    "body_md5": "03e9604449dd684092e46a0f069f2442"
+  },
+  {
+    "version": "20261009113858",
+    "name": "crm_research_pipeline_reconciliation_20261009",
+    "statement_count": 1,
+    "body_md5": "458553ffcbfcc9ce4fbbcf15ffc93580"
+  },
+  {
+    "version": "20261009122053",
+    "name": "auto_primary_single_contact_organization_20261009",
+    "statement_count": 1,
+    "body_md5": "47350d4375888281b6340ab876370ad4"
+  },
+  {
+    "version": "20261009153752",
+    "name": "pipeline_stage_rules_and_saved_views_20261009",
+    "statement_count": 1,
+    "body_md5": "9e74c5dbf0a946ae4d605654990f2cd9"
+  },
+  {
+    "version": "20261009170904",
+    "name": "crm_applicant_pipeline_staff_tenant_scope_20261009",
+    "statement_count": 1,
+    "body_md5": "6c16b6eddf5f8b9f5c2481d89ba53a92"
+  },
+  {
+    "version": "20261009190819",
+    "name": "lock_down_crm_pipeline_audit_events_and_record_grants",
+    "statement_count": 1,
+    "body_md5": "404651d07190ac3c2d54d64f5eb7dd4d"
+  },
+  {
+    "version": "20261009203916",
+    "name": "change_video_series_friday_dispatch_to_4pm_central",
+    "statement_count": 1,
+    "body_md5": "041ef0b3ab18582df976ffb720491ebf"
+  },
+  {
+    "version": "20261009214154",
+    "name": "fix_video_workflow_social_publications_required_description_reset",
+    "statement_count": 1,
+    "body_md5": "c3909316f47315a0901b2603187c3a3a"
+  },
+  {
+    "version": "20261009221348",
+    "name": "youtube_release_distributor",
+    "statement_count": 1,
+    "body_md5": "0c2e3ba65eb16113e6bccec765d0607d"
+  },
+  {
+    "version": "20261009221904",
+    "name": "distribution_media_leases",
+    "statement_count": 1,
+    "body_md5": "d5c67ae2462672e59cbfacc99c26a710"
+  },
+  {
+    "version": "20261009222135",
+    "name": "distribution_reconciliation_controls",
+    "statement_count": 1,
+    "body_md5": "82fe83394821261dbed00573d1ddc298"
+  },
+  {
+    "version": "20261009222507",
+    "name": "distribution_worker_policies",
+    "statement_count": 1,
+    "body_md5": "37ad6485864a723105d94e57e3c9b676"
+  },
+  {
+    "version": "20261009223608",
+    "name": "youtube_publish_prioritize_explicit_smoke_test_job",
+    "statement_count": 1,
+    "body_md5": "52f6bd80a3ef79735cc90625976774f9"
+  },
+  {
+    "version": "20261009223747",
+    "name": "video_series_friday_cutoff_to_6pm_central_for_test",
+    "statement_count": 1,
+    "body_md5": "c77d379af09097185021db6634e27d83"
+  },
+  {
+    "version": "20261009231905",
+    "name": "tenant_scope_therapist_outreach_prospects",
+    "statement_count": 1,
+    "body_md5": "4f89c9e9b97b9fac67b664aab9d9d74a"
+  },
+  {
+    "version": "20261009234553",
+    "name": "crm_therapist_prospect_review_workflow",
+    "statement_count": 1,
+    "body_md5": "48bc6d49b9797c4a50a94d45f3a05c22"
+  },
+  {
+    "version": "20261009235517",
+    "name": "order_recruitment_prospect_stages_before_applicant",
+    "statement_count": 1,
+    "body_md5": "32556a444cea85bb2e6e1e1e8fa4c1ca"
+  },
+  {
+    "version": "20261009235844",
+    "name": "preserve_therapist_prospect_suppression_during_dedup",
+    "statement_count": 1,
+    "body_md5": "6cec93e62d94d42b2bdec688e5458f1b"
+  },
+  {
+    "version": "20261010020219",
+    "name": "fix_therapist_prospect_state_search",
+    "statement_count": 1,
+    "body_md5": "d288e7a80ede41fd4e93a2892654ba32"
+  },
+  {
+    "version": "20261010023258",
+    "name": "recruitment_email_identity_review",
+    "statement_count": 1,
+    "body_md5": "5a8b738586900e907a29a8a51c2d2924"
+  },
+  {
+    "version": "20261010023426",
+    "name": "crm_recruitment_quality_queue_v2",
+    "statement_count": 1,
+    "body_md5": "0f46021eccd8cdf6e956f389ba0192c5"
+  },
+  {
+    "version": "20261010023551",
+    "name": "crm_recruitment_applicant_link_safety",
+    "statement_count": 1,
+    "body_md5": "79b55fb5efff6325d72b1d0a6f05c131"
+  },
+  {
+    "version": "20261010023621",
+    "name": "crm_recruitment_campaign_preview_read_only",
+    "statement_count": 1,
+    "body_md5": "9b30a3b0ca36618a6bdc1607847a5e54"
+  },
+  {
+    "version": "20261010131100",
+    "name": "fix_recruitment_review_queue_timeout",
+    "statement_count": 1,
+    "body_md5": "ee04c279e31a86f7b327992e6a419922"
+  },
+  {
+    "version": "20261010132647",
+    "name": "crm_recruitment_contact_activity_lifecycle",
+    "statement_count": 1,
+    "body_md5": "249511c88fc96f2517615dc97709f73d"
+  },
+  {
+    "version": "20261010132958",
+    "name": "crm_recruitment_timeline_applicant_handoff",
+    "statement_count": 1,
+    "body_md5": "60bf447012070a308073644a7e5c8b05"
+  },
+  {
+    "version": "20261010133335",
+    "name": "crm_recruitment_stages_for_activity_handoff",
+    "statement_count": 1,
+    "body_md5": "1f283b28b17fbc8a85a0833436ae9623"
+  },
+  {
+    "version": "20261010133608",
+    "name": "crm_recruitment_timeline_matched_message_excerpts",
+    "statement_count": 1,
+    "body_md5": "ddfebfffcce10e3c4535ec05fe738a03"
+  },
+  {
+    "version": "20261010134204",
+    "name": "crm_recruitment_lifecycle_directory_filter",
+    "statement_count": 1,
+    "body_md5": "f54b1b3fe840a488c7a09024add88921"
+  },
+  {
+    "version": "20261010134320",
+    "name": "crm_recruitment_exclude_prior_contact_from_initial_preview",
+    "statement_count": 1,
+    "body_md5": "384097be74eba58a955b77ef42c3dddc"
+  },
+  {
+    "version": "20261010134352",
+    "name": "crm_recruitment_not_interested_requires_closed",
+    "statement_count": 1,
+    "body_md5": "1cdd8c1c0f2be3d920ea350a3358b2a4"
+  },
+  {
+    "version": "20261010140140",
+    "name": "distribution_live_test_gate_and_metadata",
+    "statement_count": 1,
+    "body_md5": "08760b22138f0a83614e1379b3dc2303"
+  },
+  {
+    "version": "20261010144553",
+    "name": "crm_recruitment_draft_only_sequences",
+    "statement_count": 1,
+    "body_md5": "b3830d50abe4cd6b46c915a8260ac3d9"
+  },
+  {
+    "version": "20261010144724",
+    "name": "crm_recruitment_inbound_reply_triage",
+    "statement_count": 1,
+    "body_md5": "447de954efc360b7e7f2780f6b049bb7"
+  },
+  {
+    "version": "20261010144905",
+    "name": "crm_recruitment_inbound_uuid_match_compat",
+    "statement_count": 1,
+    "body_md5": "107422a087410d72e4ec44aa8e9c24fa"
+  },
+  {
+    "version": "20261010145206",
+    "name": "crm_recruitment_inbound_timeline_visibility",
+    "statement_count": 1,
+    "body_md5": "9a09c7c4649791296a1c985cf55abcd0"
+  },
+  {
+    "version": "20261010152323",
+    "name": "crm_recruitment_held_delivery_schema",
+    "statement_count": 1,
+    "body_md5": "faa499dd4ec8b8e13dc763fcf82909a7"
+  },
+  {
+    "version": "20261010152438",
+    "name": "crm_recruitment_eligibility_gate",
+    "statement_count": 1,
+    "body_md5": "a395338abac5ddeba9e280d3d5f5385c"
+  },
+  {
+    "version": "20261010152547",
+    "name": "crm_recruitment_held_plan_and_ledger",
+    "statement_count": 1,
+    "body_md5": "c0e804a4dcedc7bef7f14296cb5d4600"
+  },
+  {
+    "version": "20261010152641",
+    "name": "crm_recruitment_reply_bounce_stop_and_reconcile",
+    "statement_count": 1,
+    "body_md5": "d19125898b53b1f167445bea488f5b6e"
+  },
+  {
+    "version": "20261010152759",
+    "name": "crm_recruitment_plan_unambiguous_id",
+    "statement_count": 1,
+    "body_md5": "228075eae479e91257fa6cfe1322b3ef"
+  },
+  {
+    "version": "20261010153000",
+    "name": "crm_recruitment_reconcile_record_alias_fix",
+    "statement_count": 1,
+    "body_md5": "dc8cbf0bc706c27dcd90290965d619e3"
+  },
+  {
+    "version": "20261010153043",
+    "name": "crm_recruitment_reconcile_suppression_alias_fix",
+    "statement_count": 1,
+    "body_md5": "6b15f79b1348e14b0ef23ce089d5512a"
+  },
+  {
+    "version": "20261010153153",
+    "name": "crm_recruitment_permission_status_and_preview",
+    "statement_count": 1,
+    "body_md5": "cfdb3efdfee61ffe91478e057859e143"
+  },
+  {
+    "version": "20261010153511",
+    "name": "crm_recruitment_unverified_optout_and_known_bounce_guard",
+    "statement_count": 1,
+    "body_md5": "6e97c5cbf774fd4e8c72dd3c79495b71"
+  },
+  {
+    "version": "20261010153854",
+    "name": "crm_recruitment_prior_outreach_identity_preflight",
+    "statement_count": 1,
+    "body_md5": "65a48cd26e968eaf7da4da1f736389cc"
+  },
+  {
+    "version": "20261010154606",
+    "name": "crm_recruitment_cross_sequence_duplicate_guard",
+    "statement_count": 1,
+    "body_md5": "52a7ce64f23140aed1cb81904e70c8b2"
+  },
+  {
+    "version": "20261011125630",
+    "name": "crm_recruitment_placeholder_email_quality",
+    "statement_count": 1,
+    "body_md5": "337eabc88bde9317c885822d2a55792d"
+  },
+  {
+    "version": "20261011134545",
+    "name": "crm_recruitment_worker_claim_lease_reconcile",
+    "statement_count": 1,
+    "body_md5": "42edb9460f65bb3a20dd239a378dafe9"
+  },
+  {
+    "version": "20261011134801",
+    "name": "crm_recruitment_worker_unsubscribe_and_race_guards",
+    "statement_count": 1,
+    "body_md5": "4f0fb04e813e0e9234d04badb287dfe8"
+  },
+  {
+    "version": "20261011135118",
+    "name": "crm_recruitment_reviewed_email_enrichment",
+    "statement_count": 1,
+    "body_md5": "678235b85588c375fb17504469b827c9"
+  },
+  {
+    "version": "20261011135453",
+    "name": "crm_recruitment_original_recipient_optout",
+    "statement_count": 1,
+    "body_md5": "577c7454077c8beefa06f5d2c285d1e0"
+  },
+  {
+    "version": "20261011140019",
+    "name": "crm_recruitment_worker_full_suppression_preflight",
+    "statement_count": 1,
+    "body_md5": "d68e37422ed00ee3b089fc8b81e75ec7"
+  },
+  {
+    "version": "20261011145607",
+    "name": "f27ce1a6-8a41-4906-9967-c0e24c2c9057",
+    "statement_count": 1,
+    "body_md5": "34751883ba59c8e0f89ca8eac86756b1"
+  },
+  {
+    "version": "20261011150132",
+    "name": "a92e3ebd-280a-46db-8768-b92b9f4b6528",
+    "statement_count": 1,
+    "body_md5": "85f392944b875cc487a35c51273c5dfe"
+  },
+  {
+    "version": "20261011150215",
+    "name": "b9195183-6f47-4023-a33b-748283ef0f82",
+    "statement_count": 1,
+    "body_md5": "43df36001bb1952fd67a5fe63e970d66"
+  },
+  {
+    "version": "20261011150525",
+    "name": "3c5f78b6-7aa7-4d65-ad5b-b1329926f166",
+    "statement_count": 1,
+    "body_md5": "2a23d000ddd5220db1821c6716c07e51"
+  },
+  {
+    "version": "20261012152146",
+    "name": "retire_legacy_helpdesk_integration_20261012",
+    "statement_count": 1,
+    "body_md5": "bea19062b28d39d93e52827a4e5c0742"
+  },
+  {
+    "version": "20261013104124",
+    "name": "bty_scheduler_activity_funnel_20261013",
+    "statement_count": 1,
+    "body_md5": "287b9e1546eb243b04e67a6f1c775307"
+  },
+  {
+    "version": "20261013133706",
+    "name": "bty_scheduler_release_prerequisites",
+    "statement_count": 1,
+    "body_md5": "f49a016ac7f933339ab996759bd94fe7"
+  },
+  {
+    "version": "20261013133737",
+    "name": "bty_scheduler_release_transaction",
+    "statement_count": 1,
+    "body_md5": "ad946afe2641a3569dae01289af89ddd"
+  },
+  {
+    "version": "20261013143817",
+    "name": "bty_scheduler_reschedule_telemetry",
+    "statement_count": 1,
+    "body_md5": "f062d2a51b47b50dd2022ab6cdbf76d5"
+  },
+  {
+    "version": "20261013235701",
+    "name": "crm_manual_pipeline_global_search",
+    "statement_count": 1,
+    "body_md5": "c774501e23535c92b63a41789910186c"
+  },
+  {
+    "version": "20261014000317",
+    "name": "crm_pipeline_atomic_bulk_move",
+    "statement_count": 1,
+    "body_md5": "448ea1e69da802b4b7d4052bfb7255da"
+  },
+  {
+    "version": "20261014095729",
+    "name": "crm_pipeline_server_date_sort",
+    "statement_count": 1,
+    "body_md5": "79bd909c5d218c8e84a088121af470d6"
+  },
+  {
+    "version": "20261014190911",
+    "name": "crm_manual_pipeline_metrics",
+    "statement_count": 1,
+    "body_md5": "22fdc793f2b21e8b248794843268b2b6"
+  },
+  {
+    "version": "20261014195507",
+    "name": "add_video_transcript_speaker_label",
+    "statement_count": 1,
+    "body_md5": "16f51ca1a9190f7b98fcce30239cdb13"
+  },
+  {
+    "version": "20261015015000",
+    "name": "crm_identity_review_links_current_tenants",
+    "statement_count": null,
+    "body_md5": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "version": "20261015192833",
+    "name": "bty_short_ffmpeg_render_routing_20261015",
+    "statement_count": 1,
+    "body_md5": "b74cb54d4bdda796ccbee23b09f832e4"
+  },
+  {
+    "version": "20261015210737",
+    "name": "staff_exact_applicant_read",
+    "statement_count": 1,
+    "body_md5": "2c5fff0575fa641e87d77afed6e5965c"
+  },
+  {
+    "version": "20261015210747",
+    "name": "zeffy_verified_payment_ledger",
+    "statement_count": 1,
+    "body_md5": "8a59140fe15d37e8ff866fb8cee84c5c"
+  },
+  {
+    "version": "20261017160612",
+    "name": "relationship_gmail_backfill_leases",
+    "statement_count": 1,
+    "body_md5": "f7ef36c2a37df482871c54f5930b970d"
+  },
+  {
+    "version": "20261017161115",
+    "name": "relationship_gmail_backfill_scheduler",
+    "statement_count": 1,
+    "body_md5": "05c8b92fae802190417c8ff0323d5e94"
+  },
+  {
+    "version": "20261017172304",
+    "name": "relationship_email_evidence_review_queue",
+    "statement_count": 1,
+    "body_md5": "a559b07ef331926c215951122bfc74d0"
+  },
+  {
+    "version": "20261017172446",
+    "name": "relationship_email_review_authorized_tasks",
+    "statement_count": 1,
+    "body_md5": "4ef91871fb3ff9ff62a399fa7eaf45c7"
+  },
+  {
+    "version": "20261017172653",
+    "name": "relationship_email_review_authenticated_ui_rpcs",
+    "statement_count": 1,
+    "body_md5": "04dc3451bd546bb47ddde531d1fbf6d9"
+  },
+  {
+    "version": "20261017172934",
+    "name": "relationship_email_review_group_details_and_refresh",
+    "statement_count": 1,
+    "body_md5": "53204c3a65ff8d85e4d2d9fbad712340"
+  },
+  {
+    "version": "20261018004514",
+    "name": "relationship_email_anchored_structural_repair",
+    "statement_count": 1,
+    "body_md5": "63cdac1480b635831a9df6b2bff523f7"
+  },
+  {
+    "version": "20261018005631",
+    "name": "exact_bty_unanchored_capture_foundation",
+    "statement_count": 1,
+    "body_md5": "35d6583200820390ad7751750e76d95a"
+  },
+  {
+    "version": "20261018005703",
+    "name": "exact_bty_unanchored_ingest",
+    "statement_count": 1,
+    "body_md5": "b1aa7cbef40c4b1290447d31cc420a9f"
+  },
+  {
+    "version": "20261018011032",
+    "name": "gmail_thread_reply_anchor_direction",
+    "statement_count": 1,
+    "body_md5": "959db37fae162d53ed91cab835144b84"
+  },
+  {
+    "version": "20261018030152",
+    "name": "restrict_legacy_donor_transaction_view",
+    "statement_count": 1,
+    "body_md5": "09665a0fe30363ca75510ecc6c343ea7"
+  },
+  {
+    "version": "20261018030158",
+    "name": "zeffy_source_row_lock_privilege",
+    "statement_count": 1,
+    "body_md5": "75d59209106ffc0e1706f836c37d7e71"
+  },
+  {
+    "version": "20261018123031",
+    "name": "relationship_email_issue_operator_approval",
+    "statement_count": 1,
+    "body_md5": "d41dcc3686e57924118eba660b041d7b"
+  },
+  {
+    "version": "20261018165034",
+    "name": "relationship_centric_attention",
+    "statement_count": 1,
+    "body_md5": "d38553f2b24aa511ca67bb420432fab4"
+  },
+  {
+    "version": "20261018165807",
+    "name": "relationship_owner_and_action_consolidation",
+    "statement_count": 1,
+    "body_md5": "bfe6f9b90a05862cdcea2906c969ecd6"
+  },
+  {
+    "version": "20261018170531",
+    "name": "relationship_attention_queue",
+    "statement_count": 1,
+    "body_md5": "e0938641554579101425ce225d10bc58"
+  },
+  {
+    "version": "20261018171201",
+    "name": "relationship_attention_org_standalone_work",
+    "statement_count": 1,
+    "body_md5": "3b3b0d38cc8903704e1e1d99a0e8c427"
+  },
+  {
+    "version": "20261019232604",
+    "name": "stripe_checkout_payment_service_only",
+    "statement_count": 1,
+    "body_md5": "a2947cf21d9c461bf3e52e927d35fbab"
+  }
+]

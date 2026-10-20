@@ -6,7 +6,12 @@ import { buildTaskViewPlan } from '../taskViewSemantics';
 import { assertEntityTenant, requireOperatingTenant } from '../tenantScope';
 import { taskPageRange } from '@/domain/taskWorkspaceFilters';
 
-type Row = Tables<'crm_tasks'>;
+type Row = Pick<Tables<'crm_tasks'>,
+  'id' | 'tenant_id' | 'title' | 'description' | 'client_id' | 'staff_id' |
+  'campaign_id' | 'exception_id' | 'type' | 'priority' | 'status' | 'owner_id' |
+  'collaborator_ids' | 'relationship_contact_id' | 'relationship_organization_id' |
+  'created_by_profile_id' | 'start_at' | 'due_at' | 'completed_at' | 'recurrence' |
+  'checklist' | 'tags' | 'created_at' | 'updated_at'>;
 type TaskInsert = TablesInsert<'crm_tasks'>;
 type TaskUpdate = TablesUpdate<'crm_tasks'>;
 type TaskDbStatus = Row['status'];
