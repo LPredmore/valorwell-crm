@@ -1,0 +1,29 @@
+name: Isolated Supabase migration replay smoke
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/schema-recovery-supabase-smoke.yml'
+      - 'scripts/migration-recovery/ci-supabase-smoke.sh'
+      - 'scripts/migration-recovery/fixtures/20251201181524_first_replay_witness.sql'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  genuine-supabase-bootstrap:
+    name: Verify managed Auth/Storage roles and legacy first replay failure
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_DISABLE_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.58.5
+      - name: Confirm isolated Docker runtime
+        run: |
+          docker info --format '{{.ServerVersion}}'
+          supabase --version
+      - name: Start disposable Supabase and reproduce first migration failure
+        run: bash scripts/migration-recovery/ci-supabase-smoke.sh
