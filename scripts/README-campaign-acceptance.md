@@ -2,6 +2,10 @@
 
 `run-campaign-lifecycle-acceptance.py` extends the reviewed Billing Hub 5B/5C
 runner with actual campaign SQL and signed GoTrue/PostgREST security regressions.
+Corrected acceptance requires `--membership-correction /private/path/20261019165842_crm_campaign_membership_profile_contract.sql`
+from unchanged CRM draft PR #193. The runner verifies its SHA-256, applies it immediately
+after 00310 only in the isolated fixture, and never invents a `tenant_memberships.user_id`
+column. `--baseline` intentionally omits both corrections to reproduce failures.
 It requires local PostgreSQL tools, Docker, Node, and reviewed Billing Hub and
 Clients checkouts supplied with `--billing-repo` and `--clients-repo`.
 

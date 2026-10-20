@@ -8,6 +8,7 @@ parser.add_argument('--output-dir',type=Path)
 parser.add_argument('--check-migration-sequence-only',action='store_true')
 parser.add_argument('--extended-workers',action='store_true',help='Also execute actual CRM worker bodies against explicit minimal contracts; not full-schema proof')
 parser.add_argument('--baseline',action='store_true',help='Reproduce failures before the new corrective migration; never changes expected assertions')
+parser.add_argument('--membership-correction',type=Path,help='Unchanged review-gated PR #193 SQL; applied only inside the owned fixture, immediately after 00310')
 args=parser.parse_args()
 extended_workers=args.extended_workers
 crm=Path(__file__).resolve().parents[1]
@@ -32,6 +33,12 @@ for repository in [crm,clients,args.billing_repo.resolve()]:
    versions[version]=(migration,content)
 print('PASS shared acceptance migration versions are unique',flush=True)
 if args.check_migration_sequence_only: sys.exit(0)
+sys.path.insert(0,str(crm/'scripts/migration-recovery'))
+from recovery import reviewed_membership
+membership_correction = None
+if not args.baseline:
+ if args.membership_correction is None: parser.error('--membership-correction from reviewed PR #193 is required; fixture must not invent tenant_memberships.user_id')
+ membership_correction = reviewed_membership(args.membership_correction)
 original_bootstrap=security.bootstrap
 ENROLL1='30000000-0000-4000-8000-000000000001'
 ENROLL2='30000000-0000-4000-8000-000000000002'
@@ -48,6 +55,7 @@ create table public.crm_activity_events(id uuid default gen_random_uuid(),tenant
 create table public.crm_idempotency_keys(key text primary key,operation text,actor_id uuid,tenant_id uuid,target_id uuid,status text,expires_at timestamptz,result_json jsonb,updated_at timestamptz default now());
 '''+b.sql_file(m/'20260717171202_33c1c18e-b3cd-417a-b1d8-af7abe097eb5.sql')+b.sql_file(m/'20260719155541_repair_crm_manual_enrollment_rpc.sql')+b.sql_file(m/'20260719155555_harden_crm_campaign_rpc_grants.sql')+b.sql_file(m/'20261019000200_revoke_direct_crm_idempotency_helpers.sql'))
  for correction in ([] if args.baseline else sorted(m.glob('*campaign_lifecycle_authorization_and_idempotency.sql'))): s.execute(b.sql_file(correction))
+ if membership_correction is not None: s.execute(b.sql_file(membership_correction))
  for correction in ([] if args.baseline else sorted(m.glob('*campaign_lifecycle_forbidden_response.sql'))): s.execute(b.sql_file(correction))
  for enroll,tenant in [(ENROLL1,core.TENANT),(ENROLL2,core.TENANT),(ENROLL3,core.TENANT2)]:
   s.execute(f"insert into public.crm_campaign_enrollments(id,tenant_id,client_id,campaign_id,status) values({lit(enroll)},{lit(tenant)},gen_random_uuid(),gen_random_uuid(),'active');")
@@ -107,7 +115,7 @@ create table public.crm_idempotency_keys(key text primary key,operation text,act
   assert s.value('select count(*) from public.crm_activity_events')==1,'different keys duplicated one state transition'
  s.check(7,'different-key concurrent lifecycle calls recheck locked state and append one audit',different_keys)
  def manual():
-  s.execute("alter table public.tenant_memberships add column user_id uuid;update public.tenant_memberships set user_id=profile_id;create table public.crm_campaigns(id uuid primary key,tenant_id uuid,is_active boolean);")
+  s.execute("create table public.crm_campaigns(id uuid primary key,tenant_id uuid,is_active boolean);")
   campaign=str(uuid.uuid4());key=str(uuid.uuid4())
   s.execute(f"insert into public.crm_campaigns values({lit(campaign)},{lit(core.TENANT)},true);")
   expr=f"select public.crm_enroll_clients_in_campaign({lit(campaign)},array[]::uuid[],'synthetic compatibility',{lit(key)}::uuid,'isolated-contract')"
@@ -234,7 +242,7 @@ def extra_jwt(s):
      codes.append(code)
     claims=json.loads(__import__('base64').urlsafe_b64decode(state['tokens'][0].split('.')[1]+'=='))
     uid=claims['sub']
-    s.execute(f"insert into public.tenant_memberships(profile_id,tenant_id,tenant_role,user_id) values({lit(uid)},{lit(core.TENANT)},'member',{lit(uid)});")
+    s.execute(f"insert into public.tenant_memberships(profile_id,tenant_id,tenant_role) values({lit(uid)},{lit(core.TENANT)},'member');")
     campaign=s.value('select id from public.crm_campaigns limit 1')
     code,data=original_request(state['rest']+'/rpc/crm_enroll_clients_in_campaign',state['tokens'][0],dict(p_campaign_id=campaign,p_client_ids=[],p_reason='synthetic JWT test',p_idempotency_key=str(uuid.uuid4()),p_contract_version='isolated-contract'))
     assert code==403 and data.get('code')=='42501',(code,data)

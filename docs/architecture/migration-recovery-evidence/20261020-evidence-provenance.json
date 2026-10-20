@@ -1,0 +1,32 @@
+{
+  "captured_utc": "2026-10-20",
+  "production_ref": "ahqauomkgflopxgnlndd",
+  "repositories": {
+    "crm": {
+      "commit": "68412f50a16a8dd4471973d53342e521dd80e7f7",
+      "provenance": "GitHub main API verified"
+    },
+    "clients": {
+      "commit": "c40335303c6fa5eb24dde302b6e79370771c7d6f",
+      "provenance": "Lovable read-only checkout; private GitHub unavailable"
+    },
+    "staff": {
+      "commit": "9bf4717bd7ae21b45c81d58cec053de3909f29a2",
+      "provenance": "Lovable read-only checkout; private GitHub unavailable"
+    },
+    "billing": {
+      "commit": "ff33c920265b6bed6e4fe636e4440f67449f7c3a",
+      "provenance": "Lovable read-only checkout; private GitHub unavailable"
+    },
+    "onboarding": {
+      "commit": "15910787ddf48c36fba37f930b14df849a4a1c5f",
+      "provenance": "Lovable read-only checkout"
+    }
+  },
+  "evidence_files": {
+    "20261020-ledger-metadata.json": "2d159183535b9718b6de395da797cf3b12c56c468cb18133f30cc87bc5170033",
+    "20261020-cross-repo-inventory.json": "e1d4ff5c27e498fec89c860e59bbe151899970a247ada7ded4af08c4d018feac",
+    "20261020-ordered-security-release.json": "f54c9cb4b7fe6990ed4e53e2a914579293c7d528e61e49215c43ec3a156a0a0d"
+  },
+  "status": "SOURCE_ONLY_FULL_SCHEMA_BLOCKED"
+}

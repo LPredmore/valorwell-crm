@@ -114,7 +114,7 @@ function TherapistProspectWorkspace(){
   if(!currentTenantId)return <p className="p-4">Select a CRM tenant to review therapist prospects.</p>;
   return <div className="space-y-5 p-2 md:p-4">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div><h1 className="text-2xl font-bold">{id?'Therapist prospect':'Therapist recruitment prospects'}</h1>
+      <div><h1 className="text-2xl font-bold">{id?'Cold outreach therapist prospect':'Cold outreach therapist prospects'}</h1>
         <p className="text-sm text-muted-foreground">Prospects remain distinct from submitted clinician applications. Campaign email and SMS sending is paused.</p>
       </div>
       <div className="flex gap-2"><Button asChild variant="outline"><Link to={pipelineLink}>Clinician pipeline</Link></Button>
@@ -170,7 +170,7 @@ function TherapistProspectWorkspace(){
         {!query.isError&&<div className="overflow-x-auto"><table className="w-full min-w-[650px] text-sm">
           <thead><tr className="border-b text-left"><th className="p-2">Prospect</th><th className="p-2">State</th><th className="p-2">Licence</th><th className="p-2">Review stage</th><th className="p-2">Email quality</th><th className="p-2">Follow-up</th><th className="p-2">Owner</th></tr></thead>
           <tbody>{(query.data?.items??[]).map(p=><tr key={p.id} className="border-b">
-            <td className="p-2"><Link className="text-primary underline" to={'/crm/recruitment/prospects/'+p.id+queueSearch}>{displayName(p)}</Link></td>
+            <td className="p-2"><Link className="text-primary underline" to={'/crm/recruitment/prospects/'+p.id+queueSearch}>{displayName(p)}</Link><span className="ml-2 inline-flex rounded-full border px-2 py-0.5 text-xs">Cold</span></td>
             <td className="p-2">{p.state??'—'}</td><td className="p-2">{p.licenseType??'—'}</td>
             <td className="p-2">{p.status==='blocked'?'Blocked':p.status==='ready'?'Ready for review':'Needs review'}</td>
             <td className="p-2">{p.emailQuality}{p.suppressed?' · suppressed':''}</td>
@@ -184,6 +184,7 @@ function TherapistProspectWorkspace(){
     {id&&row&&<><Card><CardHeader><CardTitle>{displayName(row)}</CardTitle><CardDescription>
       Source record remains in protected therapist outreach staging. No automated communication is enabled.</CardDescription></CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2 text-sm">
+        <p><strong>Acquisition source:</strong> Cold outreach prospect</p>
         <p><strong>Email:</strong> {row.email??'Unavailable'}</p>
         <p><strong>Phone:</strong> {row.phone??'Unavailable'}</p>
         <p><strong>State:</strong> {row.state??'Unavailable'}</p>
