@@ -103,7 +103,7 @@ function ApplicantHandoffWorkspace() {
 function ApplicantReview({ tenantId, applicantId }: { tenantId: string; applicantId: string }) {
   const [open, setOpen] = useState(false);
   const review = useQuery({
-    queryKey: ['crm-applicant-resume-review', tenantId, applicantId],
+    queryKey: ['crm-applicant-professional-details', tenantId, applicantId],
     queryFn: () => getApplicantProfessionalDetails(tenantId, applicantId),
     enabled: open, retry: false,
   });
@@ -114,6 +114,12 @@ function ApplicantReview({ tenantId, applicantId }: { tenantId: string; applican
       {review.isError && <p role="alert" className="text-destructive">Review unavailable: {review.error.message}</p>}
       {review.isSuccess && !review.data && <p>No professional details have been recorded.</p>}
       {review.isSuccess && review.data && <>
+        <p><strong>Applicant recruiting contact:</strong> {review.data.recruitingCommunicationAllowed ? 'Allowed for direct application-related contact' : 'Not authorized / not recorded'}</p>
+        {review.data.recruitingCommunicationAllowed && <p className="text-xs text-muted-foreground">This is an employer recruiting permission, not evidence of applicant marketing opt-in. Check suppression before contacting.</p>}
+        <p><strong>Marketing opt-in:</strong> {review.data.marketingConsentStatus === 'not_obtained' ? 'Not collected' : review.data.marketingConsentStatus || 'Not recorded'}</p>
+        <p><strong>Most likely license (confirm at interview):</strong> {review.data.likelyLicenseType || 'Not assessed'}{review.data.likelyLicensedStates.length ? ` · ${review.data.likelyLicensedStates.join(', ')}` : ''}</p>
+        <p><strong>License state assessment:</strong> {review.data.likelyLicenseAssessment === 'likely_state_inferred_pending_interview' ? 'Inferred from professional history; not confirmed' : review.data.likelyLicenseAssessment === 'reported_on_resume_unverified' ? 'Stated on résumé; not independently verified' : 'Not assessed'}</p>
+        <p><strong>Interview confirmation:</strong> {review.data.licenseConfirmationStatus === 'pending_interview' ? 'Pending' : review.data.licenseConfirmationStatus || 'Not recorded'}</p>
         <p><strong>Reported license:</strong> {review.data.reportedLicenseType || 'Not recorded'}</p>
         <p><strong>States explicitly identified as licensed:</strong> {review.data.reportedLicensedStates.length ? review.data.reportedLicensedStates.join(', ') : 'Not clearly stated'}</p>
         {review.data.licenseStatesToVerify.length > 0 && <p><strong>Possible states to verify (not confirmed licensed):</strong> {review.data.licenseStatesToVerify.join(', ')}</p>}
