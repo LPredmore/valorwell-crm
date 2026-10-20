@@ -40,6 +40,12 @@ class RecoveryRules(unittest.TestCase):
         self.assertEqual(versions[versions.index('20261019000310')+1],'20261019165842')
         self.assertEqual(len(versions),10)
 
+    def test_legacy_hyphen_filename_is_inventoried(self):
+        root=self.repo('billing','20250715103447',b'-- legacy\n')
+        folder=root/'supabase/migrations'
+        (folder/'20250715103447_test.sql').rename(folder/'20250715103447-dabcfaf0.sql')
+        self.assertEqual(recovery.inventory({'billing':root})['sources'][0]['version'],'20250715103447')
+
     def test_stedi_and_already_applied_stripe_are_not_pending_ten(self):
         versions=[v for _,v in recovery.RELEASE_ORDER]
         self.assertNotIn('20261018235900',versions)

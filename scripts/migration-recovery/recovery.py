@@ -36,7 +36,7 @@ def inventory(repositories, ledger=None):
         if not folder.is_dir():
             raise ValueError(f'Missing migration directory: {name}')
         for path in sorted(folder.glob('*.sql')):
-            match = re.match(r'^(\d{14})(?:_|\.)', path.name)
+            match = re.match(r'^(\d{14})(?:_|-|\.)', path.name)
             if not match:
                 raise ValueError(f'Unrecognized migration filename: {name}/{path.name}')
             data = path.read_bytes()
