@@ -19,6 +19,8 @@ Further read-only ledger analysis showed that **the next migration, `20251201195
 
 The ledger contains **962 versions**, **152 without a name**, and **8 without stored SQL statements** (seven `20260813*` and one `20261015015000`). These are catalog facts, **not** proof all 962 versions are independently replayable, nor proof that versions without stored statements lack SQL in a repository.
 
+**Source recovery progress:** All eight missing-body version numbers now have matching main-branch SQL source files, with verified blob SHA-1 and file byte length (three Staff, four Clients, one CRM). See [source manifest](2026-10-20-bodyless-migration-source-manifest.md). This resolves source location but does not establish original applied bytes or restore the earlier missing baseline.
+
 The current four application repos' `supabase/migrations` directories do not include a file for `20251201181524`. The live migration ledger is **not a complete source-controlled baseline**.
 
 ## Reusable executable evidence
