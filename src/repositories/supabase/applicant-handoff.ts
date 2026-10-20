@@ -2,8 +2,10 @@ import { supabase } from '@/integrations/supabase/client';
 import type { ApplicantHandoff } from '@/domain/pipelines/applicant-handoff';
 
 export const applicantStatuses = ['new', 'contacted', 'screening', 'application', 'credentialing', 'ready', 'hired', 'declined', 'withdrawn', 'no_response', 'inactive'] as const;
-export type ApplicantHandoffRow = ApplicantHandoff & {
+type HandoffRow = ApplicantHandoff & {
   id: string; name: string; status: string; nextAction: string | null; nextActionDueAt: string | null;
+};
+export type ApplicantHandoffRow = HandoffRow & {
   applicantOrigin: string | null; source: string | null; referralSource: string | null;
   email: string | null; phone: string | null; primaryState: string | null; licenseType: string | null;
 };
@@ -20,7 +22,7 @@ export function parseApplicantHandoffPage(data: unknown, page: number) {
     || typeof data.total !== 'number' || !Number.isSafeInteger(data.total) || data.total < 0) {
     throw new Error('Applicant handoff data is unavailable: unsupported staff contract.');
   }
-  const items: ApplicantHandoffRow[] = data.items.map(value => {
+  const items: HandoffRow[] = data.items.map(value => {
     if (!object(value) || typeof value.id !== 'string' || typeof value.status !== 'string'
       || !applicantStatuses.includes(value.status as typeof applicantStatuses[number])) {
       throw new Error('Unsupported applicant handoff response.');
@@ -30,17 +32,31 @@ export function parseApplicantHandoffPage(data: unknown, page: number) {
       status: value.status, ownerName: nullableText(value.ownerName),
       convertedStaffId: nullableText(value.convertedStaffId),
       nextAction: nullableText(value.nextAction), nextActionDueAt: nullableText(value.nextActionDueAt),
+    };
+  });
+  return { items, total: Number(data.total) };
+}
+
+/** Explicit staff-directory projection; never widen the narrow handoff contract. */
+export function parseApplicantDirectoryPage(data: unknown, page: number) {
+  const handoff = parseApplicantHandoffPage(data, page);
+  // The narrow parser above validates the envelope and every row first.
+  const values = (data as { items: Record<string, unknown>[] }).items;
+  const items: ApplicantHandoffRow[] = handoff.items.map((row, index) => {
+    const value = values[index];
+    return {
+      ...row,
       applicantOrigin: nullableText(value.applicantOrigin), source: nullableText(value.source),
       referralSource: nullableText(value.referralSource),
       email: nullableText(value.email), phone: nullableText(value.phone),
       primaryState: nullableText(value.primaryState), licenseType: nullableText(value.licenseType),
     };
   });
-  return { items, total: Number(data.total) };
+  return { items, total: handoff.total };
 }
 
 /** No direct protected-table read and no applicant, staff, contact or message writes. */
-export async function listApplicantHandoffs(tenantId: string, page: number, status: string, search: string) {
+async function readAuthorizedApplicantPage(tenantId: string, page: number, status: string, search: string) {
   if (!tenantId || !Number.isSafeInteger(page) || page < 1 || page > 1000000
     || (status !== 'all' && !applicantStatuses.includes(status as typeof applicantStatuses[number]))) {
     throw new Error('Invalid applicant handoff filters.');
@@ -51,7 +67,11 @@ export async function listApplicantHandoffs(tenantId: string, page: number, stat
     p_status: status, p_search: search.trim().slice(0, 200), p_page: page, p_page_size: 50,
   });
   if (error) throw new Error(error.message);
-  return parseApplicantHandoffPage(data, page);
+  return data;
+}
+
+export async function listApplicantHandoffs(tenantId: string, page: number, status: string, search: string) {
+  return parseApplicantHandoffPage(await readAuthorizedApplicantPage(tenantId, page, status, search), page);
 }
 
 /** Traverse the authorized paged contract before applying a client-side origin filter. */
@@ -59,7 +79,7 @@ export async function listAllApplicantHandoffs(tenantId: string, status: string,
   const items: ApplicantHandoffRow[] = [];
   const seen = new Set<string>();
   for (let page = 1; page <= 1000; page++) {
-    const response = await listApplicantHandoffs(tenantId, page, status, search);
+    const response = parseApplicantDirectoryPage(await readAuthorizedApplicantPage(tenantId, page, status, search), page);
     for (const row of response.items) {
       if (!seen.has(row.id)) { items.push(row); seen.add(row.id); }
     }
