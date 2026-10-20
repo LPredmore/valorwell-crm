@@ -1,0 +1,40 @@
+name: Public Schema Grant Safety
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/validate-public-table-grants.mjs'
+      - '.github/workflows/public-schema-grants.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  public-table-grants:
+    name: Verify new public table grants and RLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout source and history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Node runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exercise migration guard fixtures
+        run: node scripts/validate-public-table-grants.mjs --self-test
+      - name: Check added and modified SQL migration files
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mapfile -d '' changed < <(
+            git diff --name-only -z --diff-filter=AM "${BASE_SHA}...HEAD" -- 'supabase/migrations/*.sql'
+          )
+          if (("${#changed[@]}" == 0)); then
+            echo "No added or modified SQL migrations in this PR."
+          else
+            node scripts/validate-public-table-grants.mjs "${changed[@]}"
+          fi
