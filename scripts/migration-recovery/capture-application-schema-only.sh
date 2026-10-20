@@ -4,6 +4,7 @@
 # This is not an automatic migration and does NOT repair migration history.
 set -euo pipefail
 umask 077
+export PGSSLMODE="${PGSSLMODE:-require}"
 
 if ! command -v pg_dump >/dev/null 2>&1; then
   echo 'pg_dump is required (use a version compatible with the remote Postgres server).' >&2
@@ -23,7 +24,9 @@ fi
 # Function definitions may embed credentials or proprietary information despite
 # --schema-only. Never commit/share this raw dump without a security review.
 private_dir="$(mktemp -d "${TMPDIR:-/tmp}/valorwell-schema-XXXXXX")"
-trap 'rm -rf -- "$private_dir"' ERR INT TERM
+trap 'rm -rf -- "$private_dir"' ERR
+trap 'rm -rf -- "$private_dir"; exit 130' INT
+trap 'rm -rf -- "$private_dir"; exit 143' TERM
 out="$private_dir/application-schema-only.sql"
 PGSSLMODE="${PGSSLMODE:-require}" pg_dump \
   --schema-only --no-password --format=plain \

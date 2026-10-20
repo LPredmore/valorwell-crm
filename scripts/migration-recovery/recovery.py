@@ -28,6 +28,15 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def evidence_digest(value):
+    return digest(json.dumps(value, sort_keys=True, separators=(',', ':')).encode())
+
+
+def validate_acl_rows(rows, signatures):
+    expected = {signature + '|ACL_PASS' for signature in signatures}
+    return len(signatures) == 14 and len(rows) == 14 and len(expected) == 14 and set(rows) == expected
+
+
 def inventory(repositories, ledger=None):
     """Preserve original bytes: same version/different hash is a blocking collision."""
     rows = []
@@ -106,9 +115,10 @@ def review_baseline(path):
         'jwt_literal': r'eyJ[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]{15,}',
         'credential_uri': r'postgres(?:ql)?://[^\s/]+:[^\s@]+@',
         'provider_key': r'\b(?:sk_live_|sk_test_|AKIA)[A-Za-z0-9]{12,}',
-        'data_copy': r'(?im)^COPY\s+.*\s+FROM\s+stdin',
+        'data_copy': r'(?im)^\s*COPY\b',
+        'data_mutation': r'(?im)^\s*(?:INSERT\s+INTO|UPDATE\s+|DELETE\s+FROM|MERGE\s+INTO)\b',
         'data_section': r'(?im)^-- Data for Name:',
-        'psql_include_or_shell': r'(?m)^\\(?:i|ir|!|copy|gexec)\b',
+        'psql_include_or_shell': r'(?m)^\s*\\(?!(?:restrict|unrestrict)\s)[^\s]+',
         'cron_activation': r'(?im)^\s*(?:SELECT|INSERT).*cron\.(?:schedule|job)',
     }
     for category, pattern in patterns.items():
@@ -146,10 +156,14 @@ def baseline_gate(manifest, baseline, ledger, catalog_diff):
     if not manifest.get('human_secret_reviewed'):
         blockers.append('human secret review missing')
     actual = sorted(r['version'] for r in ledger)
+    if manifest.get('ledger_sha256') != evidence_digest(ledger):
+        blockers.append('captured ledger hash differs or missing')
     if manifest.get('superseded_versions') != actual or len(actual)!=len(set(actual)):
         blockers.append('exact historical-version coverage missing')
     if not actual or manifest.get('cutover_version') != max(actual):
         blockers.append('cutover boundary differs from actual ledger')
+    if set(catalog_diff) != {'missing', 'extra', 'changed'} or not all(isinstance(v, list) for v in catalog_diff.values()):
+        blockers.append('exact parity evidence schema required')
     if any(catalog_diff.values()):
         blockers.append('object-level catalog parity failed')
     for key in ['managed_dependencies_reviewed', 'owners_and_grants_reviewed', 'storage_auth_integration_reviewed']:
@@ -183,6 +197,7 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2)+'\n')
     blocked = isinstance(result, dict) and (result.get('collisions') or result.get('invalid_names') or result.get('scan_findings')
+                                           or (args.ledger and (result.get('earliest_missing_bootstrap') or any(r['status'] != 'EXACT_MD5_MATCH' for r in result.get('ledger_mapping', []))))
                                            or any(result.get(k) for k in ['missing','extra','changed']))
     print('BLOCKED' if blocked else 'Source check passed; database acceptance NOT implied')
     raise SystemExit(2 if blocked else 0)

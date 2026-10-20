@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 import uuid
 from pathlib import Path
-from recovery import baseline_gate, compare_catalogs, digest, release_sources
+from recovery import baseline_gate, compare_catalogs, digest, evidence_digest, release_sources, validate_acl_rows
 
 
 def run(command, input_text=None):
@@ -35,6 +35,13 @@ def main():
     blockers=baseline_gate(manifest,args.baseline,ledger,json.loads(args.reviewed_parity_diff.read_text()))
     if blockers:
         parser.error('Baseline BLOCKED: '+ '; '.join(blockers))
+    source_catalog=json.loads(args.source_catalog.read_text())
+    if not source_catalog or manifest.get('source_catalog_sha256') != evidence_digest(source_catalog):
+        parser.error('Complete source catalog hash differs or missing')
+    catalog_path=Path(__file__).with_name('catalog-fingerprints.sql')
+    gate=Path(__file__).resolve().parents[2]/'docs/architecture/2026-10-19-security-acl-acceptance.sql'
+    for key,path in [('catalog_query_sha256',catalog_path),('acl_query_sha256',gate)]:
+        if manifest.get(key)!=digest(path.read_bytes()): parser.error('Reviewed verification query hash differs: '+key)
     releases=release_sources(dict(v.split('=',1) for v in args.repo),args.with_stedi)
     # Full release source must be explicitly reviewed, including draft opt-in.
     expected=[dict(version=r['version'],sha256=r['sha256']) for r in releases]
@@ -71,6 +78,7 @@ def main():
         text=config.read_text()
         import re
         text=re.sub(r'(?m)^project_id\s*=.*$',f'project_id = "{identifier}"',text,count=1)
+        text += '\n[experimental]\n' if '[experimental]' not in text else ''
         config.write_text(text)
         run(['docker','network','create','--internal',network]); network_created=True
         stage='Supabase startup'
@@ -80,8 +88,15 @@ def main():
              '--exclude','edge-runtime,logflare,vector,studio,postgres-meta,imgproxy,realtime,supavisor'])
         container='supabase_db_'+identifier
         inspect=json.loads(run(['docker','inspect',container]).stdout)[0]
-        if network not in inspect['NetworkSettings']['Networks']:
-            raise RuntimeError('Database not attached to owned internal network')
+        owned=run(['docker','ps','-q','--filter','name=supabase_']).stdout.splitlines()
+        owned_inspects=json.loads(run(['docker','inspect',*owned]).stdout) if owned else []
+        for item in owned_inspects:
+            if not item['Name'].endswith('_'+identifier): continue
+            if set(item['NetworkSettings']['Networks']) != {network}:
+                raise RuntimeError('Owned container has additional network access')
+            for bindings in item['NetworkSettings']['Ports'].values():
+                if any(b.get('HostIp') not in ('127.0.0.1','::1') for b in bindings or []):
+                    raise RuntimeError('Owned container exposes non-loopback ports; configure local-only binds before retry')
         inspected_network=json.loads(run(['docker','network','inspect',network]).stdout)[0]
         if not inspected_network.get('Internal'): raise RuntimeError('Provider egress must be disabled')
         report['database_image']=inspect['Config']['Image']
@@ -99,14 +114,16 @@ def main():
         for name,version in manifest.get('required_extensions',{}).items():
             if deps['extensions'].get(name)!=version: raise RuntimeError(f'Missing exact extension: {name}')
         # Scheduler execution is disabled before any application definitions/data.
-        sql("ALTER SYSTEM SET cron.launch_active_jobs = 'off'; SELECT pg_reload_conf();")
+        sql("ALTER SYSTEM SET cron.launch_active_jobs = 'off';")
+        sql("SELECT pg_reload_conf();")
+        if sql("SHOW cron.launch_active_jobs;") != 'off': raise RuntimeError('Cron scheduler not disabled')
         stage='baseline application'
         sql(args.baseline.read_text())
         # No synthetic migration ledger marking: coverage belongs to cutover artifact.
         stage='baseline catalog parity'
-        catalog_sql=Path(__file__).with_name('catalog-fingerprints.sql').read_text()
+        catalog_sql=catalog_path.read_text()
         restored=json.loads(sql(catalog_sql))
-        diff=compare_catalogs(json.loads(args.source_catalog.read_text()),restored)
+        diff=compare_catalogs(source_catalog,restored)
         (args.output_dir/'baseline-parity.json').write_text(json.dumps(diff,indent=2)+'\n')
         if any(diff.values()): raise RuntimeError('Restored baseline object parity differs')
         stage='ordered security release'
@@ -117,13 +134,14 @@ def main():
             sql(Path(entry['path']).read_text())
             row['status']='SQL_APPLIED_IN_ISOLATION';save()
         stage='14 RPC ACL gate'
-        gate=Path(__file__).resolve().parents[2]/'docs/architecture/2026-10-19-security-acl-acceptance.sql'
         acl=sql(gate.read_text()).splitlines()
         report['acl_rows']=acl
-        if len(acl)!=14 or any(not line.endswith('|ACL_PASS') for line in acl):
+        import re
+        signatures=re.findall(r"\('(public\.[^']+)',(?:false|true)\)",gate.read_text())
+        if not validate_acl_rows(acl,signatures):
             raise RuntimeError('14/14 ACL acceptance not satisfied')
         report['status']='SQL_CATALOG_PASS_SIGNED_ACCEPTANCE_PENDING'
-    except (subprocess.CalledProcessError,RuntimeError) as error:
+    except Exception as error:
         report['status']='BLOCKED'
         report['first_failure_stage']=stage
         # Raw diagnostics may contain function bodies, secrets or local keys.
@@ -138,8 +156,13 @@ def main():
         if network_created:
             try:run(['docker','network','rm',network])
             except subprocess.CalledProcessError:cleanup.append('owned internal network cleanup failed: '+network)
-        shutil.rmtree(root)
+        if cleanup:
+            report['status']='BLOCKED_CLEANUP'
+            report['retained_workdir']=str(root)
+        else:
+            shutil.rmtree(root)
         report['cleanup_blockers']=cleanup;save()
+        if cleanup: raise SystemExit('Owned resource cleanup blocked; private results include recovery identifiers')
     print(report['status'])
 
 

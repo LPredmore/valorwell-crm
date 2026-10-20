@@ -104,6 +104,26 @@ class RecoveryRules(unittest.TestCase):
         blockers=recovery.baseline_gate({},p,[dict(version='20261019232604')],dict(missing=[],extra=[],changed=[]))
         self.assertIn('human secret review missing',blockers)
 
+    def test_empty_parity_is_not_proof(self):
+        p=self.root/'schema.sql';p.write_text('-- schema-only\n')
+        self.assertIn('exact parity evidence schema required',recovery.baseline_gate({},p,[],{}))
+
+    def test_ledger_hash_is_bound(self):
+        p=self.root/'schema.sql';p.write_text('-- schema-only\n')
+        self.assertIn('captured ledger hash differs or missing',recovery.baseline_gate({},p,[],dict(missing=[],extra=[],changed=[])))
+
+    def test_alternate_copy_and_psql_commands_are_rejected(self):
+        p=self.root/'schema.sql'
+        for text,category in [('COPY clients TO PROGRAM \'command\';','data_copy'),('\\include other.sql','psql_include_or_shell'),('\\q','psql_include_or_shell'),('INSERT INTO clients VALUES (1);','data_mutation')]:
+            with self.subTest(text=text):
+                p.write_text(text)
+                self.assertIn(category,recovery.review_baseline(p)['scan_findings'])
+
+    def test_duplicate_acl_rows_cannot_fake_fourteen_passes(self):
+        signatures=[f'public.rpc{i}()' for i in range(14)]
+        self.assertFalse(recovery.validate_acl_rows(['public.rpc0()|ACL_PASS']*14,signatures))
+        self.assertTrue(recovery.validate_acl_rows([s+'|ACL_PASS' for s in signatures],signatures))
+
 
 if __name__ == '__main__':
     unittest.main()
