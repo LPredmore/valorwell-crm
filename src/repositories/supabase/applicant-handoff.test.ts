@@ -23,11 +23,17 @@ describe('staff-authorized applicant handoff reads', () => {
       p_status: 'hired', p_search: 'Candidate', p_page: 2, p_page_size: 50,
     });
   });
-  it('discards contact and communication payloads from the handoff projection', () => {
+  it('projects only authorized applicant fields and drops raw communication payloads', () => {
     const page = parseApplicantHandoffPage({ items: [{ id: 'applicant', firstName: 'A', lastName: 'B', status: 'ready',
       convertedStaffId: 'staff', ownerName: 'Recruiter', email: 'private@example.test', communications: [{ body: 'private' }] }],
     total: 1, page: 1, pageSize: 50 }, 1);
-    expect(page.items[0]).toEqual({ id: 'applicant', name: 'A B', status: 'ready', convertedStaffId: 'staff', ownerName: 'Recruiter', nextAction: null, nextActionDueAt: null });
+    expect(page.items[0]).toEqual({
+      id: 'applicant', name: 'A B', status: 'ready', convertedStaffId: 'staff', ownerName: 'Recruiter',
+      nextAction: null, nextActionDueAt: null,
+      applicantOrigin: null, source: null, referralSource: null,
+      email: 'private@example.test', phone: null, primaryState: null, licenseType: null,
+    });
+    expect(page.items[0]).not.toHaveProperty('communications');
   });
   it('rejects absent counts and unrecognized status contracts', () => {
     expect(() => parseApplicantHandoffPage({ items: [], page: 1, pageSize: 50 }, 1)).toThrow(/unsupported/);
