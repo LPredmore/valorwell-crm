@@ -51,6 +51,8 @@ This is a **new baseline cutover decision**, not an instruction to automatically
 
 The current Supabase connector does not provide a schema-only dump or remote CLI. Preparing and committing a baseline from it cannot be represented as complete until an authorized operator executes the supported export and catalog comparison.
 
+A prepared operator-only helper now exists at `scripts/migration-recovery/capture-application-schema-only.sh`. Run it in a trusted environment with `PGHOST`, `PGDATABASE`, `PGUSER` and a private password source: it invokes `pg_dump --schema-only` for public/private/credentialing, saves a private mode-0600 file outside the repository, and prints its SHA-256 without showing credentials or selecting table rows. It captures **only application schemas**, not all Supabase-built-in objects/roles, and function source could still embed secrets. Never upload its unreviewed output or treat it as a finished replayable baseline.
+
 ## Next verifiable milestones
 
 1. Export and verify the original first three ledger migration bodies and the **8 bodyless entries**, reconciling them with all four repos. Preserve source hashes; do not quietly rewrite original versions.
