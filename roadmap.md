@@ -1,5 +1,11 @@
 # Shared Supabase baseline recovery
 
+## Applicant source UI
+- [ ] Add read-only source badges, counted filters and review details to existing applicant surfaces.
+- [ ] Test parsing, complete applicant traversal and source filtering; verify available live evidence.
+- [ ] Surface origin/review fields from authorized API (blocked: existing RPC omits them; SQL changes forbidden).
+- [ ] Manual Cold/Indeed intake option (blocked: entry form is in separate Staff app).
+
 - [x] Inspect five application consumers, available GitHub provenance, and read-only live contracts; private Billing drafts unavailable.
 - [x] Generate collision-aware source/hash inventory and known dependency/release manifest; full history unresolved.
 - [x] Implement private schema capture review/parity tooling and explicit baseline cutover gate.
