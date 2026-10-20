@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { applicantHandoffMessage } from '@/domain/pipelines/applicant-handoff';
-import { applicantStatuses, listAllApplicantHandoffs, getApplicantResumeReview } from '@/repositories/supabase/applicant-handoff';
+import { applicantStatuses, listAllApplicantHandoffs, getApplicantProfessionalDetails } from '@/repositories/supabase/applicant-handoff';
 
 const originOptions = ['all', 'Cold', 'Indeed', 'Legacy', 'Website', 'Other'] as const;
 const originLabels: Record<string, string> = { all: 'All sources', Cold: 'Cold outreach', Indeed: 'Indeed', Legacy: 'Legacy (before July 2026)', Website: 'Website', Other: 'Other' };
@@ -81,6 +81,8 @@ function ApplicantHandoffWorkspace() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           {row.referralSource && <p>Original referral: {row.referralSource}</p>}
+          <p>Contact: {row.email || 'Email unavailable'} · {row.phone || 'Phone unavailable'}</p>
+          <p>Reported credential: {row.licenseType || 'Not recorded'} · Location: {row.primaryState || 'Not recorded'} (not proof of license state)</p>
           <p>Owner: {row.ownerName || 'Unassigned or unavailable'}</p>
           <p>Next action: {row.nextAction || 'Not recorded'} · {dateLabel(row.nextActionDueAt)}</p>
           <p>{applicantHandoffMessage(row.status, row)}</p>
@@ -102,18 +104,22 @@ function ApplicantReview({ tenantId, applicantId }: { tenantId: string; applican
   const [open, setOpen] = useState(false);
   const review = useQuery({
     queryKey: ['crm-applicant-resume-review', tenantId, applicantId],
-    queryFn: () => getApplicantResumeReview(tenantId, applicantId),
+    queryFn: () => getApplicantProfessionalDetails(tenantId, applicantId),
     enabled: open, retry: false,
   });
   return <div className="space-y-2">
-    <Button variant="outline" size="sm" onClick={() => setOpen(previous => !previous)}>{open ? 'Hide résumé review' : 'Show résumé review'}</Button>
+    <Button variant="outline" size="sm" onClick={() => setOpen(previous => !previous)}>{open ? 'Hide professional details' : 'Show professional details'}</Button>
     {open && <div className="space-y-2 rounded border p-3">
-      {review.isPending && <p>Loading staff-authorized résumé review…</p>}
+      {review.isPending && <p>Loading applicant professional details…</p>}
       {review.isError && <p role="alert" className="text-destructive">Review unavailable: {review.error.message}</p>}
-      {review.isSuccess && !review.data && <p>No résumé review has been recorded.</p>}
+      {review.isSuccess && !review.data && <p>No professional details have been recorded.</p>}
       {review.isSuccess && review.data && <>
-        <p>Résumé: {review.data.filename || 'Not recorded'} {review.data.storageStatus === 'not_uploaded_to_crm' ? '· original PDF not stored in CRM' : ''}</p>
-        <p>Résumé-reported information (not verified): {review.data.summary || 'Not recorded'}</p>
+        <p><strong>Reported license:</strong> {review.data.reportedLicenseType || 'Not recorded'}</p>
+        <p><strong>States explicitly identified as licensed:</strong> {review.data.reportedLicensedStates.length ? review.data.reportedLicensedStates.join(', ') : 'Not clearly stated'}</p>
+        {review.data.licenseStatesToVerify.length > 0 && <p><strong>Possible states to verify (not confirmed licensed):</strong> {review.data.licenseStatesToVerify.join(', ')}</p>}
+        {review.data.licenseStateEvidence && <p><strong>License-state evidence:</strong> {review.data.licenseStateEvidence}</p>}
+        <p><strong>Résumé-reported experience (unverified):</strong> {review.data.summary || 'Not recorded'}</p>
+        {review.data.clinicalHighlights.length > 0 && <ul className="list-disc space-y-1 pl-5">{review.data.clinicalHighlights.map((item, index) => <li key={index}>{item}</li>)}</ul>}
         <p>Credential verification: {review.data.credentialVerificationStatus || 'Not recorded'}</p>
         {review.data.verificationNeeded.length > 0 && <ul className="list-disc space-y-1 pl-5">
           {review.data.verificationNeeded.map((flag, i) => <li key={i}>{flag}</li>)}
