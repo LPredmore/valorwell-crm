@@ -16,7 +16,9 @@ WITH application_schema AS (
  UNION ALL
  SELECT 'column',format('%I.%I.%I',n.nspname,c.relname,a.attname),
         md5(jsonb_build_array(a.attnum,format_type(a.atttypid,a.atttypmod),a.attnotnull,
-             a.attidentity,a.attgenerated,a.attacl,pg_get_expr(d.adbin,d.adrelid))::text)
+             a.attidentity,a.attgenerated,a.attacl,
+             CASE WHEN a.attcollation<>0 THEN a.attcollation::regcollation::text END,
+             pg_get_expr(d.adbin,d.adrelid))::text)
  FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid
  JOIN application_schema n ON n.oid=c.relnamespace
  LEFT JOIN pg_attrdef d ON d.adrelid=c.oid AND d.adnum=a.attnum
@@ -52,6 +54,19 @@ WITH application_schema AS (
  FROM pg_type t JOIN application_schema n ON n.oid=t.typnamespace
  WHERE t.typtype IN ('e','d')
  UNION ALL
+ SELECT 'domain',format('%I.%I',n.nspname,t.typname),
+        md5(jsonb_build_array(format_type(t.typbasetype,t.typtypmod),t.typnotnull,t.typdefault,
+          CASE WHEN t.typcollation<>0 THEN t.typcollation::regcollation::text END,
+          (SELECT jsonb_agg(pg_get_constraintdef(k.oid,true) ORDER BY k.conname)
+             FROM pg_constraint k WHERE k.contypid=t.oid))::text)
+ FROM pg_type t JOIN application_schema n ON n.oid=t.typnamespace WHERE t.typtype='d'
+ UNION ALL
+ SELECT 'sequence',format('%I.%I',n.nspname,c.relname),
+        md5(jsonb_build_array(format_type(s.seqtypid,NULL),s.seqstart,s.seqincrement,
+                s.seqmax,s.seqmin,s.seqcache,s.seqcycle)::text)
+ FROM pg_sequence s JOIN pg_class c ON c.oid=s.seqrelid
+ JOIN application_schema n ON n.oid=c.relnamespace
+ UNION ALL
  SELECT 'default_acl',format('%s.%s.%s',pg_get_userbyid(d.defaclrole),coalesce(n.nspname,'GLOBAL'),d.defaclobjtype),
         md5(d.defaclacl::text)
  FROM pg_default_acl d LEFT JOIN pg_namespace n ON n.oid=d.defaclnamespace
@@ -64,8 +79,8 @@ WITH application_schema AS (
  FROM pg_roles WHERE rolname IN ('anon','authenticated','service_role','postgres','supabase_admin','supabase_auth_admin','supabase_storage_admin')
  UNION ALL
  SELECT 'role_membership',format('%s->%s',pg_get_userbyid(member),pg_get_userbyid(roleid)),
-        md5(jsonb_build_array(admin_option,inherit_option,set_option)::text)
- FROM pg_auth_members
+        md5(jsonb_build_array(admin_option,to_jsonb(m)->'inherit_option',to_jsonb(m)->'set_option')::text)
+ FROM pg_auth_members m
  UNION ALL
  SELECT 'publication',pubname,md5(jsonb_build_array(puballtables,pubinsert,pubupdate,pubdelete,pubtruncate)::text)
  FROM pg_publication

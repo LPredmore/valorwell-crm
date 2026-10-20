@@ -23,6 +23,7 @@ jobs:
       - name: Validate CRM inventory (not full-schema replay)
         run: python3 scripts/migration-recovery/recovery.py inventory --repo crm=. --output /tmp/crm-migration-inventory.json
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: crm-source-inventory-not-db-acceptance
           path: /tmp/crm-migration-inventory.json

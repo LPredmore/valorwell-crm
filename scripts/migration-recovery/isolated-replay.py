@@ -78,7 +78,6 @@ def main():
         text=config.read_text()
         import re
         text=re.sub(r'(?m)^project_id\s*=.*$',f'project_id = "{identifier}"',text,count=1)
-        text += '\n[experimental]\n' if '[experimental]' not in text else ''
         config.write_text(text)
         run(['docker','network','create','--internal',network]); network_created=True
         stage='Supabase startup'
