@@ -73,3 +73,5 @@ same message and no existence disclosure. The eight earlier security migration
 files remain unchanged and retain their order; this is a separate follow-on.
 The signed foreign-target regression requires HTTP 403 before and after the
 correction, failing on the previous implementation.
+
+The Stripe ACL source is resolved by Billing’s `release_migration_sources.py`: only current version `20261019232604` with the reviewed SHA-256 is accepted. Its reviewed historical version `20261019000100` remains a provenance reference; the runner does not recreate or pretend to apply the old ledger version. Missing, ambiguous or altered source fails before fixture creation.

@@ -20,6 +20,8 @@ import zeffy_acceptance_5c as core
 import zeffy_acceptance_5c_security as security
 import zeffy_acceptance_5c_jwt as jwt
 b=core.b
+from release_migration_sources import resolve_stripe_migration
+stripe_acl_source = resolve_stripe_migration(b.MIGRATIONS)
 # All three repositories address one shared Supabase migration history. Reject
 # newly authored version collisions before creating any disposable database.
 versions={}
@@ -158,7 +160,7 @@ def extra_jwt(s):
    state['done']=True
    # The Auth role now exists. Emulate the reviewed preexisting explicit service grant
    # before applying the ACL-only migration; do not change migration expectations.
-   s.execute("grant execute on function public.process_stripe_checkout_payment(text,text,integer,uuid[],uuid[]) to service_role;alter role postgres superuser;alter function public.process_stripe_checkout_payment(text,text,integer,uuid[],uuid[]) owner to postgres;"+b.sql_file(b.MIGRATIONS/'20261019000100_stripe_checkout_payment_service_only.sql')+b.sql_file(b.TESTS/'stripe_checkout_payment_rpc_acl.sql')+"notify pgrst,'reload schema';")
+   s.execute("grant execute on function public.process_stripe_checkout_payment(text,text,integer,uuid[],uuid[]) to service_role;alter role postgres superuser;alter function public.process_stripe_checkout_payment(text,text,integer,uuid[],uuid[]) owner to postgres;"+b.sql_file(stripe_acl_source)+b.sql_file(b.TESTS/'stripe_checkout_payment_rpc_acl.sql')+"notify pgrst,'reload schema';")
    import time;time.sleep(.5)
    outcomes=[]
    def run(name,action):
