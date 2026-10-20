@@ -28,7 +28,15 @@ const enrollmentArgs = (campaign = ids.campaign, client = ids.client) => ({ p_ca
 const syntheticEnv = { SUPABASE_URL: 'http://127.0.0.1:9', SUPABASE_SERVICE_ROLE_KEY: 'synthetic-service', CRON_SECRET: 'synthetic-cron', RESEND_API_KEY: 'synthetic-provider' };
 
 test('recovered authoritative CRM database acceptance', { skip: !enabled }, async (t) => {
+  const baseline = await admin.query(`SELECT jsonb_build_object('postgres_superuser',(SELECT rolsuper FROM pg_roles WHERE rolname='postgres'),'collation',(SELECT datcollate FROM pg_database WHERE datname=current_database()))`);
+  if (!process.env.VALORWELL_DB_SOCKET) {
+    assert.equal(baseline.postgres_superuser, false, 'Definitive acceptance requires the source NOSUPERUSER postgres role');
+    assert.equal(baseline.collation, 'en_US.UTF-8', 'Definitive acceptance requires the source database collation');
+  }
   await seed();
+  const gatewayTenant = await service.from('tenants').select('id').eq('id', ids.tenant).single();
+  assert.equal(gatewayTenant.error, null, gatewayTenant.error?.message);
+  assert.equal(gatewayTenant.data.id, ids.tenant, 'SQL fixture and native gateway must reach the same owned database');
   t.after(async()=>admin.query(`UPDATE public.crm_campaign_step_logs SET status='cancelled' WHERE tenant_id=${lit(ids.tenant)} AND status IN ('scheduled','processing'); UPDATE private.relationship_campaign_work_items SET status='cancelled' WHERE tenant_id=${lit(ids.tenant)} AND status IN ('planned','claimed','retry_wait'); SELECT 'true'::jsonb`));
   let enrollmentId;
   if (process.env.VALORWELL_EXPECT_MEMBERSHIP_FAILURE === 'true') {
@@ -160,8 +168,18 @@ test('recovered authoritative CRM database acceptance', { skip: !enabled }, asyn
     for(const key of ['readonly','foreign','clientProfile']) {
       const token=signedToken('authenticated',{sub:ids[key],app_metadata:{current_tenant_id:key==='foreign'?ids.foreignTenant:ids.tenant}});
       const response=await run({action:'queue_publish',id:publication,tenantId:ids.tenant},{authorization:'Bearer '+token});
-      assert.ok([403,500].includes(response.status),key+' '+response.status+' '+await response.text());
+      const denied = await response.json();
+      if (key === 'foreign') {
+        assert.equal(response.status,500,JSON.stringify(denied));
+        const missing = await run({action:'queue_publish',id:randomUUID()},{authorization:'Bearer '+token});
+        assert.equal(missing.status,response.status);
+        assert.equal((await missing.json()).error,denied.error,'Foreign and missing publication denial must remain indistinguishable');
+      } else assert.equal(response.status,403,JSON.stringify(denied));
+      assert.equal(await admin.query(`SELECT to_jsonb(count(*)) FROM public.ai_operations_video_jobs WHERE social_publication_id=${lit(publication)}`),0);
+      assert.equal(await admin.query(`SELECT to_jsonb(status) FROM public.ai_operations_social_publications WHERE id=${lit(publication)}`),'approved');
     }
+    const unauthenticated = await run({action:'queue_publish',id:publication});
+    assert.equal(unauthenticated.status,401);
     const direct=await identity('operator').rpc('social_queue_publish',{p_publication_id:publication});assert.ok(direct.error);assert.match(direct.error.message,/permission denied/);
     const token=signedToken('authenticated',{sub:ids.operator,app_metadata:{current_tenant_id:ids.tenant}});
     const response=await run({action:'queue_publish',id:publication},{authorization:'Bearer '+token});assert.equal(response.status,200,await response.text());

@@ -29,3 +29,13 @@ send a real message. The database fixtures do not relax triggers or constraints.
 Local acceptance does not prove hosted signed-in access, provider delivery, or
 production deployment approval. Production database migrations and Edge Function
 deployment remain pending explicit release review.
+
+Definitive exact-cluster acceptance passed 15/15 tests (14 scenario groups),
+with no skips. The restored database has production-equivalent postgres role
+flags and en_US.UTF-8 collation. Before seeding the runner verifies these and
+that the native gateway reaches the same owned database as fixture SQL. The
+membership defect reproduced before the separate correction; applying and
+replaying it preserved owner, ACL, security-definer flag and configuration.
+The complete baseline had zero reconciled differences in 21 catalog categories
+before the reviewed migration sequence. These are local signed-PostgREST and
+provider-mocked results; GoTrue-issued sessions and hosted UAT are distinct gates.

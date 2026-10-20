@@ -73,3 +73,25 @@ issuance. The existing offline worker regressions are also retained.
 `VALORWELL_DB_SOCKET=/workspace/schema-runtime/socket` selects the earlier
 bootstrap-superuser exploratory cluster for reproduction only; its results do
 not establish source-role parity and are superseded by the exact-socket run.
+
+## Final exact-cluster verification
+
+The definitive run completed **15/15 tests (14 scenario groups), zero skipped**
+after the original nine and the separately tested Billing claim correction.
+The separate CRM membership correction reproduced its undefined-column defect
+before applying, then passed; replay did not change its definition or security
+metadata. Function owner, execution ACL, security-definer flag and pinned
+configuration remained unchanged.
+
+The final database uses source-role-faithful `postgres NOSUPERUSER` and
+`en_US.UTF-8` collation. The runner verifies those properties before seeding and
+confirms the SQL fixture and native gateway see the same generated tenant.
+The restored baseline reconciled with zero differences across 21 normalized
+catalog categories before migrations, including ownership, grants/grantors,
+roles, RLS, dependencies and database metadata. The former exploratory cluster
+is not used as definitive acceptance evidence.
+
+Social denials now assert readonly/client HTTP 403, unsigned HTTP 401, identical
+foreign/missing publication errors, and no queued publication or state change.
+The successful operator path creates one local publication job; no publisher or
+real media transport runs.
