@@ -16,7 +16,7 @@ if git grep -n -I -i -E "$retired_identifier_pattern" -- . \
   exit 1
 fi
 
-# Applied migrations are immutable database history. These exact files document
+# Applied migrations and the two dated ledger inventories are immutable database history. These exact files document
 # the one-time import and retirement sequence and must not be rewritten after
 # application. All active source, generated types, fixtures, documentation,
 # configuration, and every future migration remain subject to this check.
@@ -28,18 +28,17 @@ legacy_migration_exclusions=(
   ':(exclude)supabase/migrations/20260803093000_archive_retired_project_and_migrate_donations.sql'
   ':(exclude)supabase/migrations/20260803121400_retire_legacy_auth_password_functions.sql'
   ':(exclude)supabase/migrations/20260803123500_remove_legacy_import_functions.sql'
+  # Historical object names are evidence, not active project configuration.
+  # Only the human-readable-name scan allows these exact metadata files; the
+  # identifier/credential and URL scans above and below still inspect them.
+  ':(exclude)docs/architecture/migration-recovery-evidence/20261020-cross-repo-inventory.json'
+  ':(exclude)docs/architecture/migration-recovery-evidence/20261020-ledger-metadata.json'
 )
 
-# The two exact read-only source/ledger forensic JSON evidence files record historic
-# names and are excluded ONLY from this human-readable retired-name check.
-# Retired endpoint/credential identifiers and foreign Supabase URLs remain checked
-# in those same evidence files by the two separate strict guards above/below.
 # Catch human-readable, slug, and database-source variants such as spaces,
 # hyphens, or underscores in the current operating tree.
 if git grep -n -I -i -E 'therapist[[:space:]_-]*crm' -- . \
   ":(exclude)$guard_path" \
-  ':(exclude)docs/architecture/migration-recovery-evidence/20261020-cross-repo-inventory.json' \
-  ':(exclude)docs/architecture/migration-recovery-evidence/20261020-ledger-metadata.json' \
   "${legacy_migration_exclusions[@]}"; then
   echo "Retired project name detected in the current CRM operating tree." >&2
   exit 1
