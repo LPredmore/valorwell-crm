@@ -1,0 +1,28 @@
+name: Shared schema recovery source gates
+on:
+  pull_request:
+    paths:
+      - 'scripts/migration-recovery/**'
+      - 'scripts/run-campaign-lifecycle-acceptance.py'
+      - '.github/workflows/schema-recovery-source-gates.yml'
+permissions:
+  contents: read
+jobs:
+  source-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Test collision, cutover, secret review and release-order rules
+        run: python3 -m unittest discover -s scripts/migration-recovery -p 'test_*.py' -v
+      - name: Check capture shell syntax
+        run: bash -n scripts/migration-recovery/capture-application-schema-only.sh
+      - name: Validate CRM inventory (not full-schema replay)
+        run: python3 scripts/migration-recovery/recovery.py inventory --repo crm=. --output /tmp/crm-migration-inventory.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crm-source-inventory-not-db-acceptance
+          path: /tmp/crm-migration-inventory.json
