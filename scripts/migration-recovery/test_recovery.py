@@ -56,6 +56,14 @@ class RecoveryRules(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Expected exactly one reviewed'):
             recovery.release_sources({})
 
+    def test_short_timestamp_is_retained_without_fabricated_version(self):
+        root=self.repo('billing','20261019000300',b'-- valid\n')
+        (root/'supabase/migrations/20261015_bty.sql').write_text('-- unresolved\n')
+        result=recovery.inventory({'billing':root})
+        self.assertEqual(result['source_files'],2)
+        self.assertEqual(result['invalid_names'][0]['path'],'supabase/migrations/20261015_bty.sql')
+        self.assertEqual(result['unique_versions'],1)
+
     def test_reviewed_membership_rejects_changed_bytes(self):
         p=self.root/'correction.sql';p.write_text('select 1;')
         with self.assertRaisesRegex(ValueError,'unchanged reviewed'):

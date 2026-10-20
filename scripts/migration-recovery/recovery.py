@@ -31,15 +31,19 @@ def digest(data):
 def inventory(repositories, ledger=None):
     """Preserve original bytes: same version/different hash is a blocking collision."""
     rows = []
+    invalid_names = []
     for name, root in sorted(repositories.items()):
         folder = Path(root) / 'supabase' / 'migrations'
         if not folder.is_dir():
             raise ValueError(f'Missing migration directory: {name}')
         for path in sorted(folder.glob('*.sql')):
             match = re.match(r'^(\d{14})(?:_|-|\.)', path.name)
-            if not match:
-                raise ValueError(f'Unrecognized migration filename: {name}/{path.name}')
             data = path.read_bytes()
+            if not match:
+                invalid_names.append(dict(repository=name,path=f'supabase/migrations/{path.name}',
+                                          sha256=digest(data),bytes=len(data),
+                                          status='UNRECONCILED_VERSION_DO_NOT_INVENT_TIMESTAMP'))
+                continue
             rows.append(dict(repository=name, path=f'supabase/migrations/{path.name}',
                              version=match[1], bytes=len(data), sha256=digest(data),
                              git_blob_sha1=hashlib.sha1(f'blob {len(data)}\0'.encode()+data).hexdigest(),
@@ -49,7 +53,8 @@ def inventory(repositories, ledger=None):
         groups.setdefault(row['version'], []).append(row)
     collisions = [dict(version=v, sources=entries) for v, entries in sorted(groups.items())
                   if len({r['sha256'] for r in entries}) > 1]
-    result = dict(format_version=1, source_files=len(rows), unique_versions=len(groups),
+    result = dict(format_version=1, source_files=len(rows)+len(invalid_names), unique_versions=len(groups),
+                  invalid_names=invalid_names,
                   sources=rows, collisions=collisions,
                   identical_duplicates=[v for v, entries in sorted(groups.items())
                                         if len(entries)>1 and len({r['sha256'] for r in entries})==1],
@@ -177,7 +182,7 @@ def main():
         result = compare_catalogs(json.loads(args.catalog.read_text()), json.loads(args.candidate_catalog.read_text()))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2)+'\n')
-    blocked = isinstance(result, dict) and (result.get('collisions') or result.get('scan_findings')
+    blocked = isinstance(result, dict) and (result.get('collisions') or result.get('invalid_names') or result.get('scan_findings')
                                            or any(result.get(k) for k in ['missing','extra','changed']))
     print('BLOCKED' if blocked else 'Source check passed; database acceptance NOT implied')
     raise SystemExit(2 if blocked else 0)
