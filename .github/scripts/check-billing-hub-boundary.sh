@@ -16,7 +16,7 @@ if git grep -n -I -i -E "$retired_identifier_pattern" -- . \
   exit 1
 fi
 
-# Applied migrations are immutable database history. These exact files document
+# Applied migrations and the two dated ledger inventories are immutable database history. These exact files document
 # the one-time import and retirement sequence and must not be rewritten after
 # application. All active source, generated types, fixtures, documentation,
 # configuration, and every future migration remain subject to this check.
@@ -28,6 +28,11 @@ legacy_migration_exclusions=(
   ':(exclude)supabase/migrations/20260803093000_archive_retired_project_and_migrate_donations.sql'
   ':(exclude)supabase/migrations/20260803121400_retire_legacy_auth_password_functions.sql'
   ':(exclude)supabase/migrations/20260803123500_remove_legacy_import_functions.sql'
+  # Historical object names are evidence, not active project configuration.
+  # Only the human-readable-name scan allows these exact metadata files; the
+  # identifier/credential and URL scans above and below still inspect them.
+  ':(exclude)docs/architecture/migration-recovery-evidence/20261020-cross-repo-inventory.json'
+  ':(exclude)docs/architecture/migration-recovery-evidence/20261020-ledger-metadata.json'
 )
 
 # Catch human-readable, slug, and database-source variants such as spaces,
