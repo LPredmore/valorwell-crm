@@ -5,6 +5,7 @@ export const applicantStatuses = ['new', 'contacted', 'screening', 'application'
 export type ApplicantHandoffRow = ApplicantHandoff & {
   id: string; name: string; status: string; nextAction: string | null; nextActionDueAt: string | null;
   applicantOrigin: string | null; source: string | null; referralSource: string | null;
+  email: string | null; phone: string | null; primaryState: string | null; licenseType: string | null;
 };
 function object(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -31,6 +32,8 @@ export function parseApplicantHandoffPage(data: unknown, page: number) {
       nextAction: nullableText(value.nextAction), nextActionDueAt: nullableText(value.nextActionDueAt),
       applicantOrigin: nullableText(value.applicantOrigin), source: nullableText(value.source),
       referralSource: nullableText(value.referralSource),
+      email: nullableText(value.email), phone: nullableText(value.phone),
+      primaryState: nullableText(value.primaryState), licenseType: nullableText(value.licenseType),
     };
   });
   return { items, total: Number(data.total) };
@@ -66,14 +69,16 @@ export async function listAllApplicantHandoffs(tenantId: string, status: string,
   throw new Error('Applicant directory exceeds the supported pagination limit.');
 }
 
-export type ApplicantResumeReview = {
-  filename: string | null; summary: string | null; verificationNeeded: string[];
+export type ApplicantProfessionalDetails = {
+  summary: string | null; verificationNeeded: string[];
   credentialVerificationStatus: string | null; indeedConversationEmail: string | null;
-  storageStatus: string | null;
+  reportedLicenseType: string | null; reportedLicensedStates: string[];
+  licenseStatesToVerify: string[]; licenseStateEvidence: string | null;
+  clinicalHighlights: string[];
 };
 
 /** Tenant-matched, staff-authorized applicant details; never query the protected table directly. */
-export async function getApplicantResumeReview(tenantId: string, applicantId: string): Promise<ApplicantResumeReview | null> {
+export async function getApplicantProfessionalDetails(tenantId: string, applicantId: string): Promise<ApplicantProfessionalDetails | null> {
   const { data, error } = await supabase.rpc('staff_get_provider_applicant', {
     p_tenant_id: tenantId, p_applicant_id: applicantId,
   });
@@ -82,12 +87,17 @@ export async function getApplicantResumeReview(tenantId: string, applicantId: st
   const review = data.applicant.resumeReview;
   if (!object(review)) return null;
   const flags = review.verificationNeeded;
+  const strings = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
   return {
-    filename: nullableText(review.filename),
     summary: nullableText(review.summary),
-    verificationNeeded: Array.isArray(flags) ? flags.filter((value): value is string => typeof value === 'string') : [],
+    verificationNeeded: strings(flags),
     credentialVerificationStatus: nullableText(review.credentialVerificationStatus),
     indeedConversationEmail: nullableText(review.indeedConversationEmail),
-    storageStatus: nullableText(review.storageStatus),
+    reportedLicenseType: nullableText(review.reportedLicenseType),
+    reportedLicensedStates: strings(review.reportedLicensedStates),
+    licenseStatesToVerify: strings(review.licenseStatesToVerify),
+    licenseStateEvidence: nullableText(review.licenseStateEvidence),
+    clinicalHighlights: strings(review.clinicalHighlights),
   };
 }
