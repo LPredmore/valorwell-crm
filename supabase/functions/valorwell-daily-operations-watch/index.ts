@@ -67,15 +67,19 @@ function buildSignals(now: Json, previous: Json | null): Signal[] {
     // Existing historical backlogs only alert if worsening, except critical
     // current failures (they should be reported even on an initial baseline).
     if (rule.delta && (was === null || current <= was)) continue;
-    if (!rule.delta && was !== null && current <= was && rule.severity === "medium") continue;
+    if (!rule.delta && was !== null && current <= was) continue;
     signals.push({ code: rule.code, metric: rule.metric, current, previous: was, severity: rule.severity });
   }
   const lastSync = timestamp(now, "gmail.last_sync");
-  if (lastSync === null || Date.now() - lastSync > 135 * 60_000) {
+  const priorSync = previous ? timestamp(previous, "gmail.last_sync") : null;
+  if ((lastSync === null || Date.now() - lastSync > 135 * 60_000) && (previous === null || priorSync !== lastSync)) {
     signals.push({code:"gmail_sync_stalled",metric:"gmail.last_sync",severity:"high",current: lastSync ? Math.round((Date.now()-lastSync)/60_000) : -1,previous:null});
   }
   const watch = timestamp(now, "gmail.watch_expires");
-  if (watch === null || watch - Date.now() < 2 * 86400_000) {
+  const priorWatch = previous ? timestamp(previous, "gmail.watch_expires") : null;
+  const priorObserved = previous && typeof previous.observed_at === "string" ? new Date(previous.observed_at).getTime() : null;
+  const newlyExpiring = priorObserved !== null && watch !== null && watch - priorObserved >= 2 * 86400_000;
+  if ((watch === null || watch - Date.now() < 2 * 86400_000) && (previous === null || priorWatch !== watch || newlyExpiring)) {
     signals.push({code:"gmail_watch_expiring",metric:"gmail.watch_expires",severity:"high",current:watch ? Math.round((watch-Date.now())/60_000): -1,previous:null});
   }
   return signals;
