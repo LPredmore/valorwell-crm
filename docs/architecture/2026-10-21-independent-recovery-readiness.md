@@ -1,5 +1,9 @@
 # Independent recovery verification — October 21, 2026
 
+Later user-requested [post-publication recheck](2026-10-21-post-publication-recheck.md):
+published CRM source and database findings are unchanged; a separate Billing Stripe
+deployment gap is now verified. Earlier observations below retain their original scope.
+
 **Release decision: NOT READY.** Hosted catalog verification and three narrowly scoped
 test-branch repairs executed in this session. Historical replay, complete signed-user
 acceptance, and provider acceptance remain separate, unfulfilled gates. Nothing was

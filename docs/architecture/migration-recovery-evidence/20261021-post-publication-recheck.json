@@ -1,0 +1,829 @@
+{
+  "format_version": 1,
+  "scope": "Post-publication recheck; no database mutations, production handler invocations or deployment",
+  "source": {
+    "crm_main": "4d3e9f34aee0d81c5657033f022662370fd4ae49",
+    "billing_main": "050625035fbc43dc3a48bc53653b685e14b7142b",
+    "crm_main_changed_since_initial_checks": false,
+    "billing_main_changed_since_initial_checks": false
+  },
+  "lovable": {
+    "project_id": "67d68fb5-d6d7-40fb-b409-203945e02edd",
+    "is_published": true,
+    "latest_commit_sha": "4d3e9f34aee0d81c5657033f022662370fd4ae49",
+    "last_edited_at": "2026-10-21T10:41:33.471Z",
+    "published_at": "Not exposed by get_project; user-reported publication timing not independently timestamped"
+  },
+  "databases": [
+    {
+      "project_id": "ahqauomkgflopxgnlndd",
+      "objects": 13416,
+      "added_since_prior_final_snapshot": 0,
+      "removed_since_prior_final_snapshot": 0,
+      "changed_since_prior_final_snapshot": 0,
+      "comparison": "Actual identity/fingerprint comparison against retained prior in-session catalog, not counts alone",
+      "catalog_md5": "5d2573c6268121b9ed3fd15b9f69c688",
+      "ledger_count": 966,
+      "ledger_latest": "20261020214527",
+      "settings": {
+        "engine": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 13.2.0, 64-bit",
+        "cron_jobs": 52,
+        "extensions": [
+          {
+            "name": "pg_cron",
+            "schema": "pg_catalog",
+            "version": "1.6.4"
+          },
+          {
+            "name": "pg_net",
+            "schema": "public",
+            "version": "0.19.5"
+          },
+          {
+            "name": "pg_stat_statements",
+            "schema": "extensions",
+            "version": "1.11"
+          },
+          {
+            "name": "pgcrypto",
+            "schema": "extensions",
+            "version": "1.3"
+          },
+          {
+            "name": "plpgsql",
+            "schema": "pg_catalog",
+            "version": "1.0"
+          },
+          {
+            "name": "supabase_vault",
+            "schema": "vault",
+            "version": "0.3.1"
+          },
+          {
+            "name": "uuid-ossp",
+            "schema": "extensions",
+            "version": "1.1"
+          }
+        ],
+        "database_owner": "postgres",
+        "server_version": "17.6",
+        "active_cron_jobs": 42,
+        "storage_policy_count": 19
+      },
+      "rpc_acl": [
+        {
+          "label": "campaign_concurrency",
+          "signature": "public.crm_evaluate_campaign_concurrency(uuid,uuid,text,uuid)",
+          "acl_result": "FAIL",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "campaign_trigger_enqueue",
+          "signature": "public.crm_enqueue_campaign_trigger_jobs(uuid)",
+          "acl_result": "FAIL",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "claim_submission_finalizer",
+          "signature": "public.finalize_claim_submission(uuid,text,jsonb)",
+          "acl_result": "FAIL",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "crm_automation_event",
+          "signature": "public.crm_emit_automation_event(uuid,text,text,uuid,text,jsonb,text,uuid,timestamptz)",
+          "acl_result": "FAIL",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "crm_donor_overview_api",
+          "signature": "public.crm_donor_overview()",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": true,
+          "expected_service": true
+        },
+        {
+          "label": "crm_idempotency_claim",
+          "signature": "public._crm_idempotency_claim(text,text,uuid,uuid)",
+          "acl_result": "FAIL",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "crm_idempotency_record",
+          "signature": "public._crm_idempotency_record(text,text,jsonb)",
+          "acl_result": "FAIL",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "crm_internal_tenant_check",
+          "signature": "public._crm_enrollment_tenant_check(uuid)",
+          "acl_result": "FAIL",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "crm_legacy_replay_api",
+          "signature": "public.crm_enqueue_donor_transactions(text,boolean,integer)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": true,
+          "expected_service": true
+        },
+        {
+          "label": "crm_manual_enrollment_api",
+          "signature": "public.crm_enroll_clients_in_campaign(uuid,uuid[],text,uuid,text)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": true,
+          "expected_service": true
+        },
+        {
+          "label": "email_reply_correlate",
+          "signature": "public.crm_correlate_client_email_reply(uuid)",
+          "acl_result": "FAIL",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "payroll_historical_gap",
+          "signature": "public.payroll_refresh_historical_gap_findings_v1()",
+          "acl_result": "FAIL",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "payroll_reconciliation",
+          "signature": "public.reconcile_payroll_line_items_from_attempts(uuid)",
+          "acl_result": "FAIL",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "social_publish_enqueue",
+          "signature": "public.social_queue_publish(uuid)",
+          "acl_result": "FAIL",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "stedi_submission_finalizer",
+          "signature": "public.finalize_stedi_submission_attempt_v2(uuid,text,text,jsonb,text,text,boolean)",
+          "acl_result": "FAIL",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "stripe_payment_post",
+          "signature": "public.process_stripe_checkout_payment(text,text,integer,uuid[],uuid[])",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        }
+      ]
+    },
+    {
+      "project_id": "dskqovrvogmwrlmxsdjd",
+      "objects": 13394,
+      "added_since_prior_final_snapshot": 0,
+      "removed_since_prior_final_snapshot": 0,
+      "changed_since_prior_final_snapshot": 0,
+      "comparison": "Actual identity/fingerprint comparison against retained prior in-session catalog, not counts alone",
+      "catalog_md5": "57393996075eb2a24f9d14a590c5492a",
+      "ledger_count": 28,
+      "ledger_latest": "20261021111438",
+      "settings": {
+        "engine": "PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+        "cron_jobs": 0,
+        "extensions": [
+          {
+            "name": "pg_cron",
+            "schema": "pg_catalog",
+            "version": "1.6.4"
+          },
+          {
+            "name": "pg_net",
+            "schema": "extensions",
+            "version": "0.20.4"
+          },
+          {
+            "name": "pg_stat_statements",
+            "schema": "extensions",
+            "version": "1.11"
+          },
+          {
+            "name": "pgcrypto",
+            "schema": "extensions",
+            "version": "1.3"
+          },
+          {
+            "name": "plpgsql",
+            "schema": "pg_catalog",
+            "version": "1.0"
+          },
+          {
+            "name": "supabase_vault",
+            "schema": "vault",
+            "version": "0.3.1"
+          },
+          {
+            "name": "uuid-ossp",
+            "schema": "extensions",
+            "version": "1.1"
+          }
+        ],
+        "database_owner": "postgres",
+        "server_version": "17.11",
+        "active_cron_jobs": 0,
+        "storage_policy_count": 0
+      },
+      "rpc_acl": [
+        {
+          "label": "campaign_concurrency",
+          "signature": "public.crm_evaluate_campaign_concurrency(uuid,uuid,text,uuid)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "campaign_trigger_enqueue",
+          "signature": "public.crm_enqueue_campaign_trigger_jobs(uuid)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "claim_submission_finalizer",
+          "signature": "public.finalize_claim_submission(uuid,text,jsonb)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "crm_automation_event",
+          "signature": "public.crm_emit_automation_event(uuid,text,text,uuid,text,jsonb,text,uuid,timestamptz)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "crm_donor_overview_api",
+          "signature": "public.crm_donor_overview()",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": true,
+          "expected_service": true
+        },
+        {
+          "label": "crm_idempotency_claim",
+          "signature": "public._crm_idempotency_claim(text,text,uuid,uuid)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "crm_idempotency_record",
+          "signature": "public._crm_idempotency_record(text,text,jsonb)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "crm_internal_tenant_check",
+          "signature": "public._crm_enrollment_tenant_check(uuid)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "crm_legacy_replay_api",
+          "signature": "public.crm_enqueue_donor_transactions(text,boolean,integer)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": true,
+          "expected_service": true
+        },
+        {
+          "label": "crm_manual_enrollment_api",
+          "signature": "public.crm_enroll_clients_in_campaign(uuid,uuid[],text,uuid,text)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": true,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": true,
+          "expected_service": true
+        },
+        {
+          "label": "email_reply_correlate",
+          "signature": "public.crm_correlate_client_email_reply(uuid)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "payroll_historical_gap",
+          "signature": "public.payroll_refresh_historical_gap_findings_v1()",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "payroll_reconciliation",
+          "signature": "public.reconcile_payroll_line_items_from_attempts(uuid)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "social_publish_enqueue",
+          "signature": "public.social_queue_publish(uuid)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "stedi_submission_finalizer",
+          "signature": "public.finalize_stedi_submission_attempt_v2(uuid,text,text,jsonb,text,text,boolean)",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        },
+        {
+          "label": "stripe_payment_post",
+          "signature": "public.process_stripe_checkout_payment(text,text,integer,uuid[],uuid[])",
+          "acl_result": "PASS",
+          "anon_execute": false,
+          "authenticated_execute": false,
+          "service_execute": true,
+          "expected_anon": false,
+          "expected_authenticated": false,
+          "expected_service": true
+        }
+      ]
+    }
+  ],
+  "branch_control_plane_status": "MIGRATIONS_FAILED",
+  "deployed_source_comparisons": [
+    {
+      "slug": "campaign-trigger-worker",
+      "project_id": "ahqauomkgflopxgnlndd",
+      "version": 128,
+      "updated_at": "2026-10-20T01:20:09.727Z",
+      "verify_jwt": false,
+      "files": [
+        {
+          "path": "supabase/functions/campaign-trigger-worker/index.ts",
+          "source_available": true,
+          "exact_match": true,
+          "line_endings_only": true,
+          "deployed_utf16_code_units": 2382,
+          "source_utf16_code_units": 2382
+        }
+      ]
+    },
+    {
+      "slug": "campaign-scheduler",
+      "project_id": "ahqauomkgflopxgnlndd",
+      "version": 195,
+      "updated_at": "2026-10-20T01:20:09.727Z",
+      "verify_jwt": false,
+      "files": [
+        {
+          "path": "supabase/functions/campaign-scheduler/index.ts",
+          "source_available": true,
+          "exact_match": true,
+          "line_endings_only": true,
+          "deployed_utf16_code_units": 22214,
+          "source_utf16_code_units": 22214
+        },
+        {
+          "path": "supabase/functions/_shared/suppression.ts",
+          "source_available": true,
+          "exact_match": true,
+          "line_endings_only": true,
+          "deployed_utf16_code_units": 3792,
+          "source_utf16_code_units": 3792
+        },
+        {
+          "path": "supabase/functions/_shared/communication-contracts.ts",
+          "source_available": true,
+          "exact_match": true,
+          "line_endings_only": true,
+          "deployed_utf16_code_units": 901,
+          "source_utf16_code_units": 901
+        },
+        {
+          "path": "supabase/functions/_shared/client-personalization.ts",
+          "source_available": true,
+          "exact_match": true,
+          "line_endings_only": true,
+          "deployed_utf16_code_units": 964,
+          "source_utf16_code_units": 964
+        },
+        {
+          "path": "supabase/functions/campaign-scheduler/email-content.ts",
+          "source_available": true,
+          "exact_match": true,
+          "line_endings_only": true,
+          "deployed_utf16_code_units": 9662,
+          "source_utf16_code_units": 9662
+        }
+      ]
+    },
+    {
+      "slug": "relationship-campaign-worker",
+      "project_id": "ahqauomkgflopxgnlndd",
+      "version": 147,
+      "updated_at": "2026-10-20T01:20:09.727Z",
+      "verify_jwt": false,
+      "files": [
+        {
+          "path": "supabase/functions/relationship-campaign-worker/index.ts",
+          "source_available": true,
+          "exact_match": true,
+          "line_endings_only": true,
+          "deployed_utf16_code_units": 12099,
+          "source_utf16_code_units": 12099
+        },
+        {
+          "path": "supabase/functions/relationship-campaign-worker/email-content.ts",
+          "source_available": true,
+          "exact_match": true,
+          "line_endings_only": true,
+          "deployed_utf16_code_units": 493,
+          "source_utf16_code_units": 493
+        }
+      ]
+    },
+    {
+      "slug": "stripe-webhook",
+      "project_id": "ahqauomkgflopxgnlndd",
+      "version": 73,
+      "updated_at": "2026-09-25T02:55:47.532Z",
+      "verify_jwt": false,
+      "files": [
+        {
+          "path": "supabase/functions/stripe-webhook/index.ts",
+          "source_available": true,
+          "exact_match": false,
+          "line_endings_only": false,
+          "deployed_utf16_code_units": 11974,
+          "source_utf16_code_units": 14804
+        },
+        {
+          "path": "supabase/functions/_shared/stripe-account.ts",
+          "source_available": true,
+          "exact_match": false,
+          "line_endings_only": false,
+          "deployed_utf16_code_units": 1534,
+          "source_utf16_code_units": 1535
+        }
+      ]
+    },
+    {
+      "slug": "submit-claims",
+      "project_id": "ahqauomkgflopxgnlndd",
+      "version": 136,
+      "updated_at": "2026-10-19T18:56:25.007Z",
+      "verify_jwt": false,
+      "files": [
+        {
+          "path": "supabase/functions/submit-claims/index.ts",
+          "source_available": true,
+          "exact_match": true,
+          "line_endings_only": true,
+          "deployed_utf16_code_units": 47403,
+          "source_utf16_code_units": 47403
+        },
+        {
+          "path": "supabase/functions/_shared/auth.ts",
+          "source_available": true,
+          "exact_match": true,
+          "line_endings_only": true,
+          "deployed_utf16_code_units": 6103,
+          "source_utf16_code_units": 6103
+        },
+        {
+          "path": "supabase/functions/_shared/cors.ts",
+          "source_available": true,
+          "exact_match": true,
+          "line_endings_only": true,
+          "deployed_utf16_code_units": 1065,
+          "source_utf16_code_units": 1065
+        }
+      ]
+    },
+    {
+      "slug": "fetch-remittances",
+      "project_id": "ahqauomkgflopxgnlndd",
+      "version": 152,
+      "updated_at": "2026-10-21T10:38:54.737Z",
+      "verify_jwt": false,
+      "files": [
+        {
+          "path": "supabase/functions/fetch-remittances/index.ts",
+          "source_available": true,
+          "exact_match": true,
+          "line_endings_only": true,
+          "deployed_utf16_code_units": 49382,
+          "source_utf16_code_units": 49382
+        },
+        {
+          "path": "supabase/functions/_shared/auth.ts",
+          "source_available": true,
+          "exact_match": false,
+          "line_endings_only": false,
+          "deployed_utf16_code_units": 6102,
+          "source_utf16_code_units": 6103
+        },
+        {
+          "path": "supabase/functions/_shared/cors.ts",
+          "source_available": true,
+          "exact_match": false,
+          "line_endings_only": false,
+          "deployed_utf16_code_units": 1064,
+          "source_utf16_code_units": 1065
+        },
+        {
+          "path": "supabase/functions/_shared/claimmd-evidence.ts",
+          "source_available": true,
+          "exact_match": false,
+          "line_endings_only": false,
+          "deployed_utf16_code_units": 5798,
+          "source_utf16_code_units": 5936
+        },
+        {
+          "path": "supabase/functions/_shared/integration-run.ts",
+          "source_available": true,
+          "exact_match": false,
+          "line_endings_only": false,
+          "deployed_utf16_code_units": 3327,
+          "source_utf16_code_units": 3465
+        }
+      ]
+    }
+  ],
+  "deployed_edge_listing_scope_caveat": "Both project selectors returned inherited/same function IDs. Branch deployment isolation is not inferred from those listings; production source comparisons used only the production selector.",
+  "assessment": "Earlier database and source conclusions remain current. CRM publication is confirmed at the previously checked source commit. Separate production Stripe deployment drift is confirmed by safe local copied-source regressions.",
+  "full_trusted_jwt_acceptance_executed": false,
+  "provider_acceptance_executed": false,
+  "production_mutated": false,
+  "production_integrations_invoked": false,
+  "captured_at_utc": "2026-10-21T11:39:45.925147+00:00",
+  "prior_receipt_sha256": "523c5b414903db6e690b14b7d9c73ba44662186cb81e843424a3aee907eee8e7",
+  "query_sha256": {
+    "catalog-dependencies-readonly.sql": "391f23aa40cbcedbf7eb2238ed009b9a911f35bf81abea53bba350e8a7451cb9",
+    "catalog-fingerprints.sql": "f206c88801af11a145621d2a71dd26eac9c307be2984ec48e7451f716c078f38",
+    "catalog-components-readonly.sql": "2ffc2af9793f4d70b502340ee52e7ef7ac20f119e78d22289b1d8ec889e1f0d9",
+    "catalog-relation-structure-readonly.sql": "0c0e86747e6ea062035e78c93b6e943421d1b0b5aac66b3b179a7c3b5c6487e7"
+  },
+  "frontend": {
+    "url": "https://crm.valorwell.org/",
+    "final_url": "https://crm.valorwell.org/",
+    "status": 200,
+    "html_sha256": "ef8c204737b22de53a16f367c2965df4ac988ee413c53315fda6fa055f8f14dd",
+    "scripts": [
+      "/assets/index-A58DD57H.js",
+      "/~flock.js",
+      "/__l5e/events.4d3abd1f6b7321c2.js"
+    ],
+    "etag": null,
+    "last_modified": null,
+    "cache_control": "no-cache, must-revalidate, max-age=0",
+    "published_commit_sha": "4d3e9f34aee0d81c5657033f022662370fd4ae49",
+    "published_artifact_id": "53ae1bcf2c25d855b86c89c70efcdbeb2cea449c68a9cc8360559084d2c041b8",
+    "asset": {
+      "url": "https://crm.valorwell.org/assets/index-A58DD57H.js",
+      "status": 200,
+      "bytes": 4482661,
+      "sha256": "5a45d3c563bfd51ceb65535131d9d53b4f770ce0806abc1500d21843304517d1",
+      "supabase_project_refs": [
+        "ahqauomkgflopxgnlndd"
+      ]
+    },
+    "local_main_build": "PASS; exact checked main commit, pinned existing dependencies; no hosting byte-reproducibility claim"
+  },
+  "deployed_executable_comparison": [
+    {
+      "slug": "stripe-webhook",
+      "path": "supabase/functions/stripe-webhook/index.ts",
+      "deployed_sha256": "7ba1adeeb9e2b6b8669befd46ecca2d7944131092d8466e39373a8f6bbfb59c8",
+      "source_sha256": "b76793099c58ffc32a8b4d806633010d84808f2e983d5ea4467556acb313235b",
+      "exact_match": false,
+      "executable_javascript_equal": false
+    },
+    {
+      "slug": "stripe-webhook",
+      "path": "supabase/functions/_shared/stripe-account.ts",
+      "deployed_sha256": "240f51603c5d2c82c18c76ca42f3e3f192ac3ef82c345154445733f0d41bdd5f",
+      "source_sha256": "0c503e8b2f067d6b9f653aa6ef4f99cbb135a7c3fd463e4bf4243137af8a4cf4",
+      "exact_match": false,
+      "executable_javascript_equal": true
+    },
+    {
+      "slug": "fetch-remittances",
+      "path": "supabase/functions/fetch-remittances/index.ts",
+      "deployed_sha256": "ff202ace260bb031031a074158be1c4bccc11acd52676f45ba5e9666851b429c",
+      "source_sha256": "ff202ace260bb031031a074158be1c4bccc11acd52676f45ba5e9666851b429c",
+      "exact_match": true,
+      "executable_javascript_equal": true
+    },
+    {
+      "slug": "fetch-remittances",
+      "path": "supabase/functions/_shared/auth.ts",
+      "deployed_sha256": "773835e5c8bfd796b8948aa511cd70e95ab4071f745d55c8395974b4d9fa4ded",
+      "source_sha256": "fbdcad0e959b0b3f9438ed462442b9b44cc256fa1fa6df88dde50aeafc9619d1",
+      "exact_match": false,
+      "executable_javascript_equal": true
+    },
+    {
+      "slug": "fetch-remittances",
+      "path": "supabase/functions/_shared/cors.ts",
+      "deployed_sha256": "31d96855455a5467f62cfa0e065fd45dd07760c1a683d29b02ff814c98502dc5",
+      "source_sha256": "c5ab48fc60c1f50df2d8319ee7715dac05ff71d4cd08a0b67cc4e1526540efe0",
+      "exact_match": false,
+      "executable_javascript_equal": true
+    },
+    {
+      "slug": "fetch-remittances",
+      "path": "supabase/functions/_shared/claimmd-evidence.ts",
+      "deployed_sha256": "bded20c1dae7fc03377580c2929628d228ba8fd25057fac3415d39e6866d385a",
+      "source_sha256": "0adbc796b991666cbfc06ad793c4cfbb1ecf4d3b5cc898c9ffecd9afe8e7800e",
+      "exact_match": false,
+      "executable_javascript_equal": true
+    },
+    {
+      "slug": "fetch-remittances",
+      "path": "supabase/functions/_shared/integration-run.ts",
+      "deployed_sha256": "d404ea5792beb949fce77c63778c151b169c51af84c6119eb9ce1103efd8bd29",
+      "source_sha256": "dc41c787a95b9d0d36fd9901d8ec697e118faec94908f8c198f1ed9b0cd69bdc",
+      "exact_match": false,
+      "executable_javascript_equal": true
+    }
+  ],
+  "checks": [
+    {
+      "name": "deployed-stripe-regression",
+      "exit": 1,
+      "counts": {
+        "tests": 20,
+        "pass": 15,
+        "fail": 5
+      },
+      "failed_cases": [
+        "missing currency fails before financial RPC",
+        "currency mismatch fails before financial RPC and retains retry evidence",
+        "delayed payment success is processed using the signed session and trusted service RPC",
+        "delayed payment failure is tenant-audited and never posts a payment",
+        "failed async payment audit remains retriable when tenant audit insert fails"
+      ],
+      "scope": "Existing unchanged Stripe signature/worker suite, copied deployed sources versus Billing main; fake database and provider adapters, unmocked egress denied; no hosted handler invoked",
+      "log_sha256": "c7dd75eb087e906bbe8583e1af6e9b54a016a4e4a32df538c0f8129daed5e324"
+    },
+    {
+      "name": "main-stripe-regression",
+      "exit": 0,
+      "counts": {
+        "tests": 20,
+        "pass": 20,
+        "fail": 0
+      },
+      "failed_cases": [],
+      "scope": "Existing unchanged Stripe signature/worker suite, copied deployed sources versus Billing main; fake database and provider adapters, unmocked egress denied; no hosted handler invoked",
+      "log_sha256": "a8719e88d5de8aa7cf0235de18d20d6bab4c613e6d39c05667ba0c3d392e89d8"
+    },
+    {
+      "name": "crm-published-main-build",
+      "exit": 0,
+      "log_sha256": "af587d75b069643e097408be6f8db81ebb19328c49c4d65bd73593da0e3e7e2c"
+    }
+  ],
+  "executed_query_sources": [
+    "catalog-fingerprints.sql",
+    "20261018_october_security_rollout_readonly.sql: first ACL statement",
+    "read-only ledger/extension/cron metadata SELECTs"
+  ],
+  "rpc_acl_source_sha256": "2b932817a8f03f68a30382d71c0f8afc133e6cb2a3fbecd482f0af6e59791052"
+}
