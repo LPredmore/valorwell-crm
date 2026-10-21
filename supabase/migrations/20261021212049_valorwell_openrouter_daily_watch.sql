@@ -152,3 +152,19 @@ BEGIN
 END;
 $dispatch$;
 REVOKE ALL ON FUNCTION private.invoke_valorwell_daily_watch_v1() FROM PUBLIC, anon, authenticated, service_role;
+
+-- Cron token verification happens server-side against existing protected Vault.
+-- Do not rotate the shared billing cron secret or expose it in Edge source/env.
+CREATE OR REPLACE FUNCTION public.valorwell_daily_watch_cron_token_valid_v1(p_token text)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
+AS $verify$
+  SELECT CASE WHEN p_token IS NULL OR length(p_token) NOT BETWEEN 24 AND 512
+    THEN false
+    ELSE EXISTS (
+      SELECT 1 FROM vault.decrypted_secrets s
+      WHERE s.name='cron_secret' AND s.decrypted_secret=p_token
+    )
+  END;
+$verify$;
+REVOKE ALL ON FUNCTION public.valorwell_daily_watch_cron_token_valid_v1(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.valorwell_daily_watch_cron_token_valid_v1(text) TO service_role;
