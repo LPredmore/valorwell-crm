@@ -1,6 +1,7 @@
 # Architecture rules
 
 - Shared-schema recovery tooling lives in scripts/migration-recovery and never changes production history; current-state baselines require exact version coverage, private secret review and object parity before isolated replay, because historical source is incomplete.
+- Private local restores use an operator-only evidence bundle with baseline-time/latest ledger delta, genuine managed reconciliation, no raw diagnostic persistence and explicit owned-stack retention for independent signed-JWT tests; source CI must never require private SQL, because restore inputs and approval remain outside Lovable/GitHub.
 - Campaign isolated acceptance must use the authoritative profile_id membership contract and explicitly supplied hash-verified draft correction, because adding user_id hides real production dependency failures.
 
 - Social Media Manager background work (e.g. Schedule Series dispatch) runs inside the `social-media-manager` Edge Function behind a cron-secret action, because Supabase does not bundle imports across function directories.

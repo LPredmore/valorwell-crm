@@ -60,6 +60,14 @@ def validate_catalog(rows):
     compare_catalogs(rows, rows)  # duplicate identities fail closed
 
 
+def validate_export_counts(actual):
+    if actual.get('rls_enabled_tables') != 408 or actual.get('security_definer_count') != 924:
+        raise ValueError('Restored RLS/SECURITY DEFINER counts differ from private export')
+    for schema, counts in COUNTS.items():
+        if any(actual.get('counts', {}).get(schema, {}).get(key) != value for key, value in counts.items()):
+            raise ValueError('Restored schema counts differ from reported export')
+
+
 def boundary_gate(manifest, baseline_ledger, latest_ledger, increments):
     old, latest = ledger_versions(baseline_ledger), ledger_versions(latest_ledger)
     if len(latest) != LATEST_COUNT or latest[-1] != CONTACT_VERSION:
@@ -136,6 +144,7 @@ def load_private_bundle(root, repository):
             raise ValueError('Incremental SQL bytes differ')
         resolved.append(dict(row, path=str(p)))
     for key, p in [('catalog_query_sha256', Path(__file__).with_name('catalog-fingerprints.sql')),
+                   ('counts_query_sha256', Path(__file__).with_name('export-counts.sql')),
                    ('acl_query_sha256', Path(repository) / 'docs/architecture/2026-10-19-security-acl-acceptance.sql')]:
         if manifest.get(key) != digest(p.read_bytes()):
             raise ValueError('Reviewed verification query bytes differ')

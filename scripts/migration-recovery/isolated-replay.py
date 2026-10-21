@@ -13,7 +13,7 @@ import tempfile
 import uuid
 from pathlib import Path
 from recovery import baseline_gate, compare_catalogs, digest, evidence_digest, release_sources, validate_acl_rows
-from private_restore import load_private_bundle, private_path
+from private_restore import load_private_bundle, validate_export_counts
 
 
 def run(command, input_text=None):
@@ -142,6 +142,7 @@ def main():
                               ('logging_collector','off'),('cron.launch_active_jobs','off')]:
             sql(f"ALTER SYSTEM SET {setting} = '{value}';")
         sql('SELECT pg_reload_conf();')
+        sql("SET pg_stat_statements.track = 'none';")
         if sql('SHOW cron.launch_active_jobs;')!='off':
             raise RuntimeError('Cron scheduler not disabled')
         stage='reviewed managed dependency reconciliation'
@@ -163,9 +164,13 @@ def main():
         sql("SELECT pg_reload_conf();")
         if sql("SHOW cron.launch_active_jobs;") != 'off': raise RuntimeError('Cron scheduler not disabled')
         stage='baseline application'
-        sql(args.baseline.read_text())
+        baseline_bytes=args.baseline.read_bytes()
+        if digest(baseline_bytes)!=manifest['schema_sha256']:
+            raise RuntimeError('Private baseline changed after review')
+        sql(baseline_bytes.decode('utf-8'))
         # No synthetic migration ledger marking: coverage belongs to cutover artifact.
         stage='baseline catalog parity'
+        validate_export_counts(json.loads(sql(Path(__file__).with_name('export-counts.sql').read_text())))
         catalog_sql=catalog_path.read_text()
         restored=json.loads(sql(catalog_sql))
         diff=compare_catalogs(source_catalog,restored)
@@ -217,6 +222,8 @@ def main():
             report['retained_workdir']=str(root)
             report['owned_identifier']=identifier
             report['owned_network']=network
+            report['stack_identity_sha256']=evidence_digest(dict(identifier=identifier,baseline_sha256=report['baseline_sha256'],
+                database_image=report['database_image'],migrations=report['migrations']))
             report['signed_jwt_acceptance']='NOT_RUN; operator must run independent suites on this exact stack'
             report['cleanup_commands']=[['supabase','stop','--workdir',str(root),'--no-backup'],
                                         ['docker','network','rm',network]]
@@ -231,4 +238,7 @@ def main():
 
 
 if __name__=='__main__':
-    main()
+    try:
+        main()
+    except Exception:
+        raise SystemExit('BLOCKED: private evidence or runtime validation failed; raw diagnostics suppressed') from None
