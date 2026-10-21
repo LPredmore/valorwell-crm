@@ -1,6 +1,7 @@
 """Apply hash-bound, redacted candidate stages only to an owned native development stack."""
 import hashlib
 import json
+import os
 from pathlib import Path
 
 
@@ -29,14 +30,34 @@ SELECT coalesce(jsonb_agg(jsonb_build_object('index',idx,'sqlstate',state,'catal
     return json.loads(stack.sql(command).splitlines()[-1])
 
 
-def restore_candidate(stack, root, diagnostic_start_at=None):
-    root = Path(root)
+def verify_candidate(root):
+    root = Path(root).resolve(strict=True)
+    if root.stat().st_uid != os.getuid() or root.stat().st_mode & 0o077 or any(
+            (p / '.git').exists() for p in [root, *root.parents]):
+        raise ValueError('Owner-only candidate outside source required')
     manifest = json.loads((root / 'candidate-manifest.json').read_text())
     if manifest.get('strategy') != 'current-state-development-candidate' or manifest.get('release_eligible') is not False:
         raise ValueError('Explicit development candidate required; never production approval')
     for name, expected in manifest['stage_sha256'].items():
-        if hashlib.sha256((root / 'stages' / name).read_bytes()).hexdigest() != expected:
+        path = root / 'stages' / name
+        if Path(name).name != name or not name.endswith('.json') or path.is_symlink():
+            raise ValueError('Private candidate stage identity changed')
+        if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
             raise ValueError('Private candidate stage changed')
+    if not manifest.get('catalog_sha256'):
+        raise ValueError('Private candidate catalog manifest absent')
+    for name, expected in manifest['catalog_sha256'].items():
+        path = root / 'catalog' / name
+        if Path(name).name != name or not name.endswith('.json') or path.is_symlink():
+            raise ValueError('Private candidate catalog identity changed')
+        if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            raise ValueError('Private candidate catalog changed')
+    return manifest
+
+
+def restore_candidate(stack, root, diagnostic_start_at=None):
+    root = Path(root)
+    manifest = verify_candidate(root)
     results = []
     if stack.report.get('candidate_restore'):
         stack.report.setdefault('prior_candidate_restore_attempts', []).append(stack.report['candidate_restore'])

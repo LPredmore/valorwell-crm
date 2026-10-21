@@ -1,5 +1,6 @@
 """Safety regressions for private captures and owned native runtime boundaries."""
 import json
+import hashlib
 from pathlib import Path
 import tempfile
 import unittest
@@ -64,6 +65,22 @@ class CaptureSafety(unittest.TestCase):
                 strategy='current-state-development-candidate', release_eligible=False,
                 stage_sha256={'00.json': '0'*64})))
             with patch('native_restore.apply_batch') as sql, self.assertRaisesRegex(ValueError, 'changed'):
+                restore_candidate(None, root)
+            sql.assert_not_called()
+
+    def test_changed_comparison_catalog_fails_before_database_mutation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'stages').mkdir()
+            (root / 'catalog').mkdir()
+            data = b'["SELECT 1"]'
+            (root / 'stages/00.json').write_bytes(data)
+            (root / 'catalog/roles.json').write_text('[]')
+            (root / 'candidate-manifest.json').write_text(json.dumps(dict(
+                strategy='current-state-development-candidate', release_eligible=False,
+                stage_sha256={'00.json': hashlib.sha256(data).hexdigest()},
+                catalog_sha256={'roles.json': '0'*64})))
+            with patch('native_restore.apply_batch') as sql, self.assertRaisesRegex(ValueError, 'catalog changed'):
                 restore_candidate(None, root)
             sql.assert_not_called()
 

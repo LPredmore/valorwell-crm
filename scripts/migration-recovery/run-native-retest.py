@@ -12,7 +12,7 @@ import sys
 
 from native_stack import NativeStack
 from native_acceptance import foundation_matrix, seed_application_roles, storage_matrix
-from native_restore import restore_candidate, reconcile_foundations, reconcile_application_publication
+from native_restore import restore_candidate, reconcile_foundations, reconcile_application_publication, verify_candidate
 from recovery import release_sources
 from native_suites import worker_suites
 from native_history import stedi_preservation
@@ -58,7 +58,7 @@ def checks(stack, repositories, candidate, with_security=True, resend_module=Non
     stack.save()
     storage_matrix(stack, identities, 'captured_current_policies')
     try:
-        payroll_matrix(stack, identities)
+        payroll_matrix(stack, identities, candidate)
     except Exception as error:
         stack.report['payroll_database_error'] = dict(status='BLOCKED', reason=type(error).__name__)
         stack.save()
@@ -97,10 +97,7 @@ def main():
         repositories = dict(value.split('=', 1) for value in args.repo)
         # Missing/drifting SQL or candidate hashes fail before any container setup.
         release_sources(repositories)
-        manifest = json.loads((args.candidate / 'candidate-manifest.json').read_text())
-        for name, expected in manifest['stage_sha256'].items():
-            if hashlib.sha256((args.candidate / 'stages' / name).read_bytes()).hexdigest() != expected:
-                raise ValueError('Candidate bytes drifted')
+        verify_candidate(args.candidate)
         stack = NativeStack(args.private_run)
         stack.report['candidate_manifest_sha256'] = hashlib.sha256((args.candidate / 'candidate-manifest.json').read_bytes()).hexdigest()
         stack.start()

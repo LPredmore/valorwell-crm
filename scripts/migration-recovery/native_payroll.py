@@ -7,9 +7,10 @@ import json
 from decimal import Decimal
 import uuid
 from native_acceptance import literal
+from native_payroll_denial import stage_denial_fix
 
 
-def payroll_matrix(stack, identities):
+def payroll_matrix(stack, identities, candidate):
     rows = []
     own = next(x for x in identities if x['persona'] == 'clinician')
     foreign = next(x for x in identities if x['persona'] == 'foreign_clinician')
@@ -32,8 +33,9 @@ def payroll_matrix(stack, identities):
                                    ('documented', '2026-02-01', '110.50'),
                                    ('documented', '2026-06-30', '110.50'),
                                    ('documented', '2026-07-01', '100.25'),
-                                   ('late_cancel', '2026-03-01', '30.25'),
-                                   ('noshow', '2026-03-01', '30.25')]:
+                                   ('late_cancel', '2026-03-01', '25.75'),
+                                   ('noshow', '2026-03-01', '25.00'),
+                                   ('late_cancel/noshow', '2026-03-01', '30.25')]:
         value = json.loads(stack.sql('SELECT private.resolve_service_payroll_rate_v1(' + ','.join(
             literal(x) for x in [tenant, sid, status, date]) + ');'))
         record(status + ' effective-date rate ' + date, Decimal(str(value['rate'])) == Decimal(expected))
@@ -49,12 +51,20 @@ def payroll_matrix(stack, identities):
     statement = json.loads(stack.sql('SELECT private.payroll_build_statement_v2(' + args + ');'))
     amounts = statement['amounts']
     for key, expected in [('statementAmount', '100.35'), ('documentedAmount', '80.15'), ('lateCancelNoShowAmount', '20.20')]:
-        record('statement exact decimal sum ' + key, Decimal(str(amounts[key])) == Decimal(expected))
+        record('statement exact decimal sum ' + key, Decimal(str(statement[key])) == Decimal(expected))
+    record('statement lifecycle totals retain exact cents without approval',
+           Decimal(str(amounts['pendingStaffAmount'])) == Decimal('100.35') and amounts['approvedForPaymentAmount'] == 0)
     request = {'p_period_start': '2026-01-01', 'p_period_end': '2026-01-07', 'p_staff_id': sid}
     code, value = stack.request('rest', '/rpc/staff_get_payroll_statement_v2', request, own['token'])
     record('signed clinician reads own statement', code == 200 and Decimal(str(value.get('amounts', {}).get('statementAmount', '-1'))) == Decimal('100.35'), http=code)
-    code, _ = stack.request('rest', '/rpc/staff_get_payroll_statement_v2', request, foreign['token'])
+    code, denial = stack.request('rest', '/rpc/staff_get_payroll_statement_v2', request, foreign['token'])
     record('signed foreign clinician cannot read statement', code in (401, 403), http=code)
+    if code == 500 and denial.get('code') == 'P0002' and denial.get('message') == 'STAFF_NOT_FOUND':
+        stage_denial_fix(stack, candidate)
+        code, denial = stack.request('rest', '/rpc/staff_get_payroll_statement_v2', request, foreign['token'])
+        record('staged candidate returns forbidden for foreign clinician', code == 403 and denial.get('code') == '42501', http=code)
+        code, value = stack.request('rest', '/rpc/staff_get_payroll_statement_v2', request, own['token'])
+        record('staged denial candidate preserves own statement arithmetic', code == 200 and Decimal(str(value.get('amounts', {}).get('statementAmount', '-1'))) == Decimal('100.35'), http=code)
     # No successful provider evidence: failed attempt has a NULL transaction ID.
     stack.sql('INSERT INTO public.payroll_payment_attempts(tenant_id,line_item_id,payroll_run_id,idempotency_key,proxy_http_status,error_class) VALUES (' +
               ','.join(literal(x) for x in [tenant, lines[0], runs[0], 'synthetic-failed-' + lines[0]]) + ",503,'network_error');")
