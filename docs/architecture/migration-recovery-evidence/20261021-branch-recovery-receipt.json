@@ -1,0 +1,82 @@
+{
+  "format_version": 1,
+  "reported_at_utc": "2026-10-21T02:02:00Z",
+  "provenance": "operator_report_not_independently_observed",
+  "branch": {
+    "project_ref": "dskqovrvogmwrlmxsdjd",
+    "parent_ref": "ahqauomkgflopxgnlndd",
+    "name": "valorwell-security-recovery-20261020",
+    "uuid": "cbf4bf6f-b2c9-4cd5-96cd-899fee2acc46",
+    "authorized_by_operator": true,
+    "hourly_usd": "0.01344",
+    "control_plane_status": "MIGRATIONS_FAILED",
+    "rebase_reset_merge_allowed": false
+  },
+  "native_replay": {
+    "failed_version": "20251201181524",
+    "missing_function": "public.set_updated_at()",
+    "applied_migrations": 0,
+    "application_tables": 0,
+    "restored_966_step_replay": false
+  },
+  "reconstruction": {
+    "schema_sha256": "4da55b28809507eaa9438a0cb27a7f4335a884ea92dea87551890c0e6ef8230f",
+    "schema_bytes": 5442397,
+    "ordered_branch_only_batches": 12,
+    "pg_cron_version": "1.6.4",
+    "counts": {"base_tables": 425, "functions": 1122, "views": 37, "policies": 551, "noninternal_triggers": 368, "enum_types": 67},
+    "omitted_default_acl_statements": 12,
+    "omitted_acl_owner": "supabase_admin",
+    "omission_reason": "postgres_role_membership",
+    "branch_ledger_versions": 24,
+    "production_historical_ledger_versions": 966,
+    "historical_ledger_fabricated": false,
+    "data_imported": {"tenants": false, "clients": false, "claims": false, "auth_users": false}
+  },
+  "branch_application": {
+    "post_snapshot_version": "20261020214527",
+    "ordered_security_claims_versions": ["20261019000200", "20261019000300", "20261019000310", "20261019165842", "20261019000400", "20261019000410", "20261019000500", "20261019000600", "20261019000800", "20261019085103"],
+    "all_ten_applied": true,
+    "already_applied_production_stripe_version": "20261019232604",
+    "stripe_reapplied": false,
+    "stedi_retirement_applied": false
+  },
+  "parity": {
+    "column_definitions_md5_matches": 6188,
+    "rls_policy_matches": 551,
+    "index_matches": 1578,
+    "table_constraint_matches": 2399,
+    "base_table_view_rls_schema_counts_match": true,
+    "view_difference": {"identity": "public.relationship_report_metrics_v", "pg_get_viewdef_fingerprint_differs": true, "type_and_invoker_match": true, "canonical_aliasing_hypothesis_only": true, "review_resolved": false},
+    "pg_net": {"branch_version": "0.20.4", "branch_schema": "extensions", "production_version": "0.19.5", "production_schema": "public", "review_resolved": false},
+    "full_object_parity_proven": false
+  },
+  "security_checks": {
+    "targeted_security_definer_count": 15,
+    "targeted_signatures_supplied": false,
+    "anon_blocked": 15,
+    "service_role_allowed": 15,
+    "authenticated_blocked": 14,
+    "authenticated_read_only_exception": "public.claim_is_externally_submitted_v1",
+    "membership_column": "tenant_memberships.profile_id",
+    "authorized_operator_guard_retained": true,
+    "claim_status_protection_triggers_attached_enabled": 3,
+    "runtime_method": "SET ROLE_not_signed_JWT_PostgREST",
+    "anon_billing_identity_context": "NULL",
+    "anon_crm_operating_context": "crm_none",
+    "anon_crm_capabilities": 0,
+    "authenticated_campaign_without_membership_sqlstate": "42501",
+    "authenticated_campaign_without_membership_result": "unauthorized"
+  },
+  "advisor": {"anon_executable_security_definer_flagged": 15, "authenticated_executable_security_definer_flagged": 306, "further_review_required": true, "new_breach_proven": false},
+  "acceptance": {
+    "independent_signed_jwt_postgrest_cross_tenant": false,
+    "real_stripe_workflow": false,
+    "real_claim_md_workflow": false,
+    "real_edge_workflow": false,
+    "production_deployed": false,
+    "production_release_authorized": false,
+    "source_follow_up_supabase_calls": false,
+    "private_sql_shared_with_lovable_or_github": false
+  }
+}
