@@ -1,0 +1,17 @@
+{
+  "repository": "https://github.com/supabase/supabase",
+  "commit": "4c4471d264ab95df2a676002f1d239d10b2fb36a",
+  "paths": [
+    "docker/volumes/db/roles.sql",
+    "docker/volumes/db/realtime.sql",
+    "docker/volumes/db/jwt.sql",
+    "docker/volumes/db/webhooks.sql"
+  ],
+  "purpose": "Genuine managed self-hosted bootstrap; only generated local passwords",
+  "sha256": {
+    "realtime.sql": "7e9e442e7fc4dae05544c07b67bede37a00d84644304dfce4d937134cb4c8f88",
+    "roles.sql": "3ad717b225daa38aa982da26750f35641eb404e1eb5e69a763c22236ab96c1b2",
+    "jwt.sql": "c1d3f5c01e44646c2e533c5a1c111821cc49cb5a4c2534e08cddad61d8fb0339",
+    "webhooks.sql": "05a61316b899374253891cbba66ce073d9273f33983c3f47961eda3aa26c2823"
+  }
+}

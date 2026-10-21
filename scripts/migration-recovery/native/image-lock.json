@@ -1,0 +1,179 @@
+{
+  "db": {
+    "tag": "valorwell-local/postgres:17.6.1.052",
+    "image_id": "sha256:447ccf947b9cbdabff7a1149c00865af4404b5f236f252d9bac6ba7b7d9edc30",
+    "repo_digests": [],
+    "rootfs_layers": [
+      "sha256:5b447ecb99300d8c6c546cfea34fe493ee96224abbbb3c586a219525c95f50f0"
+    ],
+    "runtime_config": {
+      "Env": [
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/nix/var/nix/profiles/default/bin",
+        "PGDATA=/var/lib/postgresql/data",
+        "POSTGRES_HOST=/var/run/postgresql",
+        "POSTGRES_USER=supabase_admin",
+        "POSTGRES_DB=postgres",
+        "POSTGRES_INITDB_ARGS=--allow-group-access",
+        "--locale-provider=icu",
+        "--encoding=UTF-8",
+        "--icu-locale=en_US.UTF-8",
+        "LANG=en_US.UTF-8",
+        "LANGUAGE=en_US:en",
+        "LC_ALL=en_US.UTF-8",
+        "LOCALE_ARCHIVE=/usr/lib/locale/locale-archive",
+        "GRN_PLUGINS_DIR=/usr/lib/groonga/plugins"
+      ],
+      "Entrypoint": [
+        "docker-entrypoint.sh"
+      ],
+      "Cmd": [
+        "postgres",
+        "-D",
+        "/etc/postgresql"
+      ],
+      "User": "",
+      "WorkingDir": "/"
+    }
+  },
+  "auth": {
+    "tag": "supabase/gotrue:v2.197.0",
+    "image_id": "sha256:1181bff5ba4ce440013a63cef9f4cf13024c432d705c9b1fbc9e5b949e852f48",
+    "repo_digests": [
+      "supabase/gotrue@sha256:1736a63078f5922b198c4cbe50f80ab9a2d3b54fe8b7b6cfb2e9dc5dbbc12c6b"
+    ],
+    "rootfs_layers": [
+      "sha256:34884abbe92863fce933ed7c39c0e045631af0ed86d5cc0dfbdf9fdca426ce3c",
+      "sha256:8370e7cf6735d16303bda920754d65945c1e424318a392da69a50148b36403e4",
+      "sha256:018f16b76b268374654847a5986c61a3c5e4fbb6351bd6957b0001b9a560c791",
+      "sha256:2702dd875913bbabd0e8d87c13ca4fe791eb0e5d505bf91841c4c2b27db79685",
+      "sha256:5bd184afc51ff1ba4c007ad9ae440623e505848bf2a986d17bd220fef2d8c49d",
+      "sha256:691149aaee259a37d7419c279e4c5e3d75b69a25acb2cd78cc0e7eed825f0efb"
+    ],
+    "runtime_config": {
+      "Env": [
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "GOTRUE_DB_MIGRATIONS_PATH=/usr/local/etc/auth/migrations"
+      ],
+      "Entrypoint": null,
+      "Cmd": [
+        "auth"
+      ],
+      "User": "supabase",
+      "WorkingDir": "/"
+    }
+  },
+  "rest": {
+    "tag": "postgrest/postgrest:v14.18",
+    "image_id": "sha256:455fe971661e8c8c2722aece9f1e40e15871fb350724ca5433d54e40f5ade3c8",
+    "repo_digests": [
+      "postgrest/postgrest@sha256:c7cd7e265a85b05248abf53f4473fcec7e327c282d0bd0cf60f1551996d09fcf"
+    ],
+    "rootfs_layers": [
+      "sha256:3692e3bd538033a451ea7aa935e613c4544891086debac2b96af060828b3873a"
+    ],
+    "runtime_config": {
+      "Env": null,
+      "Entrypoint": null,
+      "Cmd": [
+        "/bin/postgrest"
+      ],
+      "User": "1000",
+      "WorkingDir": ""
+    }
+  },
+  "storage": {
+    "tag": "valorwell-local/storage-api:v1.81.0",
+    "image_id": "sha256:70813f6d69eee8b06327c11f3a9f56b0ae3d0665275ccb679f32495cf4392b6d",
+    "repo_digests": [],
+    "rootfs_layers": [
+      "sha256:fc239553c124b27b72ee35cb81cd22d052da5e7730a8244ea2293d478cff6128"
+    ],
+    "runtime_config": {
+      "Env": [
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "NODE_VERSION=24.21.0",
+        "YARN_VERSION=1.22.22",
+        "VERSION=1.81.0"
+      ],
+      "Entrypoint": [
+        "docker-entrypoint.sh"
+      ],
+      "Cmd": [
+        "node",
+        "dist/start/server.js"
+      ],
+      "User": "",
+      "WorkingDir": "/app"
+    }
+  },
+  "realtime": {
+    "tag": "supabase/realtime:v2.143.3",
+    "image_id": "sha256:e01aa9d85dc543a64c427e15002c544bbe03467d14741de7b69787aaf2e40177",
+    "repo_digests": [
+      "supabase/realtime@sha256:768b559241dd234c4e8852c5c0f504e598b80f1df2ad4dd78d5486fbed2f17a2"
+    ],
+    "rootfs_layers": [
+      "sha256:f2ec4de84f559f5c7be4233b589cdbdbb5507807e05621b77320edd55a1f2a0f",
+      "sha256:0f6bc1c056df9fd573b944d314184d0ab656be714afaee50ce47b39e102d1da5",
+      "sha256:76bbfd4b4f4316d3c7df78f7ca2abdd0a863bacd977ffa97bfb83a80bbd2fc19",
+      "sha256:61ff09a18ec9f3992954f5f078079260f0d1698452e6cc46b041c2eed89414f7",
+      "sha256:6565f6f1f1c486170a9bd5ee60ba136c166b52ac6d1aceee146c928fc2a56322",
+      "sha256:5021248f78527bc66225e3879690d742dd56777e6f9600b366bdace1c8ffbe69",
+      "sha256:b49cb536088e2b73fc472e48f9cb286be038ec054efb63337ff2252f77a14957",
+      "sha256:18051191ffd732fdfc1eada8031afa278a3bb9fe662aab9d3bdc5d798868b8f5",
+      "sha256:5d7c242301d9cf969cbed7728200c075ab80e51cbfa8e5982dcb5bd928791f2c",
+      "sha256:a1b54fadad18c9faa2b189065ec9ac28cc07429765c86b4154483b995f4c42f5",
+      "sha256:ed25483f13479cba250c09b727313a06a756d639abacd10964f0c353016b82de",
+      "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
+    ],
+    "runtime_config": {
+      "Env": [
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "SLOT_NAME_SUFFIX=",
+        "LANG=en_US.UTF-8",
+        "LANGUAGE=en_US:en",
+        "LC_ALL=en_US.UTF-8",
+        "MIX_ENV=prod",
+        "ECTO_IPV6=true",
+        "ERL_AFLAGS=-proto_dist inet6_tcp"
+      ],
+      "Entrypoint": [
+        "/usr/bin/tini",
+        "-s",
+        "-g",
+        "--",
+        "/app/run.sh"
+      ],
+      "Cmd": [
+        "/app/bin/server"
+      ],
+      "User": "nobody",
+      "WorkingDir": "/app"
+    }
+  },
+  "transport": {
+    "tag": "valorwell-local/storage-api:v1.81.0",
+    "image_id": "sha256:70813f6d69eee8b06327c11f3a9f56b0ae3d0665275ccb679f32495cf4392b6d",
+    "repo_digests": [],
+    "rootfs_layers": [
+      "sha256:fc239553c124b27b72ee35cb81cd22d052da5e7730a8244ea2293d478cff6128"
+    ],
+    "runtime_config": {
+      "Env": [
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "NODE_VERSION=24.21.0",
+        "YARN_VERSION=1.22.22",
+        "VERSION=1.81.0"
+      ],
+      "Entrypoint": [
+        "docker-entrypoint.sh"
+      ],
+      "Cmd": [
+        "node",
+        "dist/start/server.js"
+      ],
+      "User": "",
+      "WorkingDir": "/app"
+    }
+  }
+}
