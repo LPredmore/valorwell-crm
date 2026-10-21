@@ -1,5 +1,11 @@
 # Shared Supabase baseline recovery
 
+## Storage write ACL hardening — issue #201 (October 21, source-only)
+- [x] Trace org-logos/training-covers/email-signatures call sites: only email-signatures is CRM-owned; the other two have no call sites or policies in this repo.
+- [x] Stage forward-only email-signatures hardening (capability-gated writes, public read preserved, flat paths kept) plus 9 offline regressions and a 6-check operator catalog contract; all pass, build OK.
+- [ ] org-logos/training-covers fix (blocked: owning app and path conventions are outside this repo; blind policy would break unknown uploaders).
+- [ ] Apply staged SQL and run signed-user allow/deny reproduction (blocked: explicit production release approval per issue #201).
+
 ## Updated branch receipt and acceptance preparation (October 21, 03:41 UTC)
 - [x] Preserve the earlier receipt; add versioned updated operator metadata, pinned available source/cutover checks and 33 new regressions.
 - [x] Document native bootstrap recovery and synthetic signed-JWT/provider acceptance with mandatory server-side egress prerequisites; no live runner or execution.
