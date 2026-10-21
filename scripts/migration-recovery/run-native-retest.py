@@ -17,6 +17,7 @@ from recovery import release_sources
 from native_suites import worker_suites
 from native_history import stedi_preservation
 from native_catalog import compare_native
+from native_behavior import signup_probe, realtime_probe
 
 
 def checks(stack, repositories, candidate, with_security=True, resend_module=None):
@@ -43,6 +44,11 @@ def checks(stack, repositories, candidate, with_security=True, resend_module=Non
                 dict(version=entry['version'], sha256=entry['sha256'], status='APPLIED_ONLY_TO_DEVELOPMENT_STACK'))
             stack.save()
     seed_application_roles(stack, identities)
+    for probe in [lambda: signup_probe(stack), lambda: realtime_probe(stack, identities[0])]:
+        try:
+            probe()
+        except Exception as error:
+            stack.report.setdefault('independent_probe_errors', []).append(type(error).__name__)
     try:
         stack.sql((Path(repositories['billing']) / 'supabase/tests/claim_payroll_internal_rpc_acl.sql').read_text())
         stack.report['claim_payroll_rpc_acl'] = 'PASS: actual native catalog, four internal RPCs; not provider acceptance'

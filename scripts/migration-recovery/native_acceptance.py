@@ -35,6 +35,7 @@ def foundation_matrix(stack):
         rows.append(dict(name=name, status='PASS' if condition else 'FAIL'))
     stack.sql("""CREATE TABLE public.retest_native_probe(id uuid PRIMARY KEY,tenant_id uuid NOT NULL);
 ALTER TABLE public.retest_native_probe ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.retest_native_probe FROM PUBLIC,anon;
 GRANT SELECT,INSERT,UPDATE,DELETE ON public.retest_native_probe TO authenticated,service_role;
 CREATE POLICY retest_native_own_read ON public.retest_native_probe FOR SELECT TO authenticated
 USING(tenant_id = (auth.jwt()->'app_metadata'->>'current_tenant_id')::uuid);

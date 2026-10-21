@@ -18,7 +18,8 @@ Use Linux/amd64, Python 3.11+, Node 22+, Docker, crane 0.22.1 and sufficient dis
 space (the vfs engine needs approximately 25 GB including image preparation).
 Install Python psycopg for the existing Billing catalog reconciler. Preserve the
 existing CRM #193/#200 and Billing source checkouts; use their frozen commits in
-the completion report. Install each repository's locked npm dependencies and the
+the completion report. Install each repository's locked npm dependencies (CRM requires
+`npm ci --legacy-peer-deps --ignore-scripts` with this existing lockfile) and the
 Billing `scripts/worker-integration` dependencies.
 
 1. Install images with `python scripts/migration-recovery/prepare-native-images.py
@@ -102,3 +103,20 @@ External provider transactions remain outside this authorization. Once sandbox
 bindings are available, obtain explicit authorization for the exact test operations
 and preserve provider-returned evidence. Never synthesize accepted claims or
 provider acknowledgments to close those gates.
+
+## Tenant-bound asset candidate
+
+`supabase/verification/crm_public_asset_tenant_metadata_candidate.sql` is a
+separate development candidate. It closes the native cross-tenant replacement
+and deletion cases by binding `storage.objects.user_metadata.tenant_id` to the
+trusted current tenant and requiring membership plus CRM write capability. Public
+reads and flat paths remain. The email-signature uploader supplies this metadata.
+Other upload clients and legacy-object attribution require owner review before
+rollout. Untagged objects fail closed for writes; no production backfill is made.
+The runner keeps original-policy failures and tests the candidate afterward.
+
+Supplemental read-only source queries in `source-metadata-queries.json` capture
+Auth/Storage/Realtime migration versions and configuration fingerprints. Only an
+explicit allowlist of required configuration values is exported. Other settings
+retain hashes, avoiding possible credentials in custom configuration. Service
+image versions cannot be inferred as exact facts from migration ledgers alone.
