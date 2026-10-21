@@ -16,7 +16,8 @@ def foundation_matrix(stack):
     password = 'Synthetic-' + secrets.token_urlsafe(24)
     for persona, tenant in [('client', 0), ('clinician', 0), ('administrator', 0), ('billing', 0),
                             ('crm_operator', 0), ('readonly', 0), ('crm_only', 0),
-                            ('multi_role', 0), ('foreign_client', 1), ('foreign_operator', 1)]:
+                            ('multi_role', 0), ('foreign_client', 1), ('foreign_operator', 1),
+                            ('foreign_billing', 1), ('foreign_clinician', 1), ('foreign_administrator', 1)]:
         email = 'retest-' + str(uuid.uuid4()) + '@example.invalid'
         status, user = stack.request('auth', '/admin/users', dict(email=email, password=password,
             email_confirm=True, app_metadata=dict(current_tenant_id=tenants[tenant], retest_persona=persona)),
@@ -81,22 +82,49 @@ def seed_application_roles(stack, identities):
     sql += 'INSERT INTO public.tenant_memberships(tenant_id,profile_id) VALUES ' + ','.join(
         '(' + literal(x['tenant']) + ',' + literal(x['id']) + ')' for x in identities) + ';'
     roles = {'administrator': 'crm_admin', 'crm_operator': 'crm_operator', 'readonly': 'crm_readonly',
-             'crm_only': 'crm_operator', 'multi_role': 'crm_admin', 'foreign_operator': 'crm_operator'}
+             'crm_only': 'crm_operator', 'multi_role': 'crm_admin', 'foreign_operator': 'crm_operator', 'foreign_administrator': 'crm_admin'}
     sql += 'INSERT INTO public.crm_user_capabilities(tenant_id,profile_id,crm_role) VALUES ' + ','.join(
         '(' + literal(x['tenant']) + ',' + literal(x['id']) + ',' + literal(roles[x['persona']]) + ')'
         for x in identities if x['persona'] in roles) + ';'
     sql += 'INSERT INTO public.user_roles(user_id,role) VALUES ' + ','.join(
-        '(' + literal(x['id']) + ',' + literal('admin' if x['persona'] in ['administrator', 'multi_role'] else 'staff' if x['persona'] in ['clinician', 'billing'] else 'client') + ')'
+        '(' + literal(x['id']) + ',' + literal('admin' if x['persona'] in ['administrator', 'multi_role', 'foreign_administrator'] else 'staff' if x['persona'] in ['clinician', 'billing', 'foreign_clinician', 'foreign_billing'] else 'client') + ')'
         for x in identities) + ';'
     stack.sql(sql)
+    role_rows = [('CLINICIAN', True), ('BILLING', False), ('ADMIN', False)]
+    stack.sql('INSERT INTO public.staff_roles(code,name,description,is_clinical) VALUES ' + ','.join(
+        '(' + literal(code) + ',' + literal('Synthetic ' + code) + ",'Synthetic acceptance role'," + str(clinical).lower() + ')'
+        for code, clinical in role_rows) + ';')
+    for identity in identities:
+        assignments = {'clinician': ['CLINICIAN'], 'billing': ['BILLING'],
+                       'administrator': ['ADMIN'], 'multi_role': ['CLINICIAN', 'BILLING'],
+                       'foreign_billing': ['BILLING'], 'foreign_clinician': ['CLINICIAN'], 'foreign_administrator': ['ADMIN']}.get(identity['persona'], [])
+        if not assignments:
+            continue
+        staff_id = str(uuid.uuid4())
+        stack.sql('INSERT INTO public.staff(id,tenant_id,profile_id) VALUES (' + literal(staff_id) + ',' + literal(identity['tenant']) + ',' + literal(identity['id']) + ');' +
+                  'INSERT INTO public.staff_role_assignments(tenant_id,staff_id,staff_role_id) SELECT ' + literal(identity['tenant']) + ',' + literal(staff_id) +
+                  ' ,id FROM public.staff_roles WHERE code IN (' + ','.join(literal(x) for x in assignments) + ');')
+    rows = []
+    for identity in identities:
+        for target in tenants:
+            expected = target == identity['tenant'] and identity['persona'] in ['billing', 'administrator', 'multi_role', 'foreign_billing', 'foreign_administrator']
+            code, value = stack.request('rest', '/rpc/has_billing_role',
+                                       {'_user_id': identity['id'], '_tenant_id': target}, identity['token'])
+            rows.append(dict(persona=identity['persona'], own_tenant=target == identity['tenant'],
+                             status='PASS' if code == 200 and value is expected else 'FAIL', http=code))
+    stack.report['application_billing_role_assertions'] = rows
+    stack.save()
 
 
-def storage_matrix(stack, identities, label):
+def storage_matrix(stack, identities, label, tenant_bound=False):
     rows = []
     own = next(x for x in identities if x['persona'] == 'crm_operator')
     foreign = next(x for x in identities if x['persona'] == 'foreign_client')
     foreign_operator = next(x for x in identities if x['persona'] == 'foreign_operator')
     png = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=')
+    headers = {'Content-Type': 'image/png'}
+    if tenant_bound:
+        headers['x-metadata'] = base64.b64encode(json.dumps({'tenant_id': own['tenant']}).encode()).decode()
     for bucket in ['org-logos', 'training-covers', 'email-signatures']:
         code, _ = stack.request('storage', '/bucket', dict(id=bucket, name=bucket, public=True), stack.service_key)
         if code not in (200, 201, 400, 409):
@@ -104,18 +132,24 @@ def storage_matrix(stack, identities, label):
             continue
         path = 'retest-' + str(uuid.uuid4()) + '.png'  # Flat-path contract is preserved.
         endpoint = '/object/' + bucket + '/' + path
-        code, _ = stack.request('storage', endpoint, png, own['token'], headers={'Content-Type': 'image/png'})
+        code, _ = stack.request('storage', endpoint, png, own['token'], headers=headers)
         rows.append(dict(name=bucket + ': own CRM operator upload', status='PASS' if code in (200, 201) else 'FAIL', http=code))
+        if code not in (200, 201):
+            rows.append(dict(name=bucket + ': negative checks require successful synthetic upload', status='BLOCKED'))
+            continue
+        if tenant_bound:
+            code, _ = stack.request('storage', endpoint, png, own['token'], method='PUT', headers=headers)
+            rows.append(dict(name=bucket + ': own tenant replacement succeeds', status='PASS' if code == 200 else 'FAIL', http=code))
         for actor, operation, method in [(foreign, 'foreign client replacement', 'PUT'),
                                           (foreign_operator, 'foreign CRM operator replacement', 'PUT')]:
             code, response = stack.request('storage', endpoint, png, actor['token'], method=method,
-                                    headers={'Content-Type': 'image/png'})
+                                    headers=headers)
             # A successful cross-tenant replacement is a failed security assertion,
             # even if it reproduces the captured production policy exactly.
             denied = code in (401, 403) or (isinstance(response, dict) and str(response.get('statusCode')) in ('401', '403'))
             rows.append(dict(name=bucket + ': deny ' + operation, status='PASS' if denied else 'FAIL', http=code,
                              storage_status=response.get('statusCode') if isinstance(response, dict) else None))
-        code, response = stack.request('storage', endpoint, png, method='PUT', headers={'Content-Type': 'image/png'})
+        code, response = stack.request('storage', endpoint, png, method='PUT', headers=headers)
         denied = code in (401, 403) or (isinstance(response, dict) and str(response.get('statusCode')) in ('401', '403'))
         denied = denied or (code == 400 and isinstance(response, dict) and response.get('code') == 'InvalidRequest' and response.get('message') == "headers must have required property 'authorization'")
         rows.append(dict(name=bucket + ': anonymous replacement denied', status='PASS' if denied else 'FAIL', http=code))
@@ -128,7 +162,7 @@ def storage_matrix(stack, identities, label):
             rows.append(dict(name=bucket + ': deny ' + actor['persona'] + ' deletion',
                              status='PASS' if before == 200 and after == 200 else 'FAIL', http=code))
             if after != 200:
-                stack.request('storage', endpoint, png, own['token'], headers={'Content-Type': 'image/png'})
+                stack.request('storage', endpoint, png, own['token'], headers=headers)
         stack.request('storage', '/object/' + bucket, dict(prefixes=[path]), stack.service_key, method='DELETE')
     stack.report.setdefault('storage_assertions', {})[label] = rows
     stack.save()

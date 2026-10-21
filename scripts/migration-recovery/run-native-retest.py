@@ -43,6 +43,12 @@ def checks(stack, repositories, candidate, with_security=True, resend_module=Non
                 dict(version=entry['version'], sha256=entry['sha256'], status='APPLIED_ONLY_TO_DEVELOPMENT_STACK'))
             stack.save()
     seed_application_roles(stack, identities)
+    try:
+        stack.sql((Path(repositories['billing']) / 'supabase/tests/claim_payroll_internal_rpc_acl.sql').read_text())
+        stack.report['claim_payroll_rpc_acl'] = 'PASS: actual native catalog, four internal RPCs; not provider acceptance'
+    except Exception as error:
+        stack.report['claim_payroll_rpc_acl'] = 'FAIL: ' + type(error).__name__
+    stack.save()
     storage_matrix(stack, identities, 'captured_current_policies')
     if resend_module:
         worker_suites(stack, repositories, resend_module)
@@ -54,6 +60,12 @@ def checks(stack, repositories, candidate, with_security=True, resend_module=Non
             stedi_preservation(stack, sources[0]['path'])
         except Exception as error:
             stack.report['stedi_preservation'] = dict(status='BLOCKED', reason=type(error).__name__)
+    try:
+        policy = Path(__file__).resolve().parents[2] / 'supabase/verification/crm_public_asset_tenant_metadata_candidate.sql'
+        stack.sql(policy.read_text())
+        storage_matrix(stack, identities, 'tenant_metadata_development_candidate', tenant_bound=True)
+    except Exception as error:
+        stack.report['tenant_storage_candidate'] = dict(status='BLOCKED', reason=type(error).__name__)
     stack.report['gates']['provider'] = 'BLOCKED: genuine designated sandbox credentials/acknowledgement absent; no provider request made'
     stack.report['gates']['release'] = 'BLOCKED: P6 excluded; candidate review, complete parity and full acceptance remain required'
     stack.save()
