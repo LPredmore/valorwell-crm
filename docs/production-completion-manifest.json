@@ -1,0 +1,35 @@
+{
+  "status": "SOURCE_READY_NOT_DEPLOYED",
+  "production_project": "ahqauomkgflopxgnlndd",
+  "production_observed_ledger_head": "20261020214527",
+  "production_observed_ledger_count": 966,
+  "migrations": [
+    {
+      "repository": "valorwell-crm",
+      "file": "supabase/migrations/20261021184712_production_crm_security_rollforward.sql",
+      "sha256": "1c0dc7c8a0a40fe6a0c7d74d961a9ddf65b1cdf430adde607f6fc3dd7b21dc55"
+    },
+    {
+      "repository": "valorwell-billing-hub",
+      "file": "supabase/migrations/20261021184713_production_stedi_retirement.sql",
+      "sha256": "089656013a616f7d4634b00edae15d16a2ea1b2cb82756f13ce67ce31f697657"
+    },
+    {
+      "repository": "valorwell-crm",
+      "file": "supabase/migrations/20261021184721_production_storage_tenant_boundary.sql",
+      "sha256": "db4d2d63259bdd14bf9b778854fcc968470f8d0eaa6acdcf5f2d87e094511453"
+    },
+    {
+      "repository": "valorwell-billing-hub",
+      "file": "supabase/migrations/20261021184735_production_billing_security_and_payroll.sql",
+      "sha256": "16d34cf1b454c53774483420fc460a3e0aa078b8760f85902d3847053c2d71d4"
+    },
+    {
+      "repository": "valorwell-crm",
+      "file": "supabase/migrations/20261021184956_production_gmail_reply_anchor.sql",
+      "sha256": "3af3314f34f7764525f82baf23c5f44ff4bca4ecabff67f6b298b64b826856f6"
+    }
+  ],
+  "production_execution_receipts": [],
+  "private_function_bodies_included": false
+}

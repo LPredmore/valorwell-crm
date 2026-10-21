@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +50,7 @@ const emptyForm: SignatureFormState = {
 };
 
 export function EmailSignaturesPanel() {
+  const { tenantId } = useCrmAuth();
   const { data: signatures, isLoading } = useEmailSignatures();
   const createMutation = useCreateSignature();
   const updateMutation = useUpdateSignature();
@@ -104,7 +106,7 @@ export function EmailSignaturesPanel() {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !tenantId) return;
 
     setUploading(true);
     try {
@@ -113,7 +115,7 @@ export function EmailSignaturesPanel() {
 
       const { error: uploadError } = await supabase.storage
         .from('email-signatures')
-        .upload(path, file);
+        .upload(path, file, { metadata: { tenant_id: tenantId } });
 
       if (uploadError) throw uploadError;
 
