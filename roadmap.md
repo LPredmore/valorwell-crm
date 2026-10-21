@@ -1,5 +1,10 @@
 # Shared Supabase baseline recovery
 
+## Updated branch receipt and acceptance preparation (October 21, 03:41 UTC)
+- [ ] Preserve the earlier receipt; add versioned updated operator metadata, source/cutover checks and regressions.
+- [ ] Document native bootstrap recovery and synthetic signed-JWT/provider acceptance with enforced egress prerequisites.
+- [ ] Run local source checks; report hosted PR/CI and independent acceptance blockers without Supabase calls.
+
 ## Branch recovery follow-up (October 21)
 - [x] Record operator-reported branch reconstruction, parity, ACL checks and unresolved drift as sanitized evidence, not production acceptance.
 - [x] Add offline receipt validation/regressions: 80 recovery tests pass (30 new); receipt CLI, shell syntax, CLI help, source inventory and real boundary gate pass; preserve #198/#199.
