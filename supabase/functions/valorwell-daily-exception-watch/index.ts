@@ -61,6 +61,13 @@ Deno.serve(async (request: Request) => {
   const input = await request.json().catch(() => ({})) as { mode?: string };
   const apiKey = Deno.env.get("OPENROUTER_API_KEY") || "";
   const resendKey = Deno.env.get("RESEND_API_KEY") || "";
+  if (input.mode === "diagnose") {
+    const { data, error } = await db.rpc("valorwell_daily_watch_snapshot_v1");
+    return json({ snapshot_ok: !error && !!data,
+      error_code: error?.code || null,
+      error_message: error?.message?.slice(0, 260) || null,
+      snapshot_has_groups: data && typeof data === "object" ? Object.keys(data).length : null });
+  }
   if (input.mode === "preflight") return json({
     component: "valorwell-daily-exception-watch", model: MODEL,
     openrouter_key_configured: Boolean(apiKey), resend_key_configured: Boolean(resendKey),
