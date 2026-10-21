@@ -98,13 +98,16 @@ async function processGmailMessage(
     });
   if (!full) return { messageId, matched: false, skipped: "message_not_found" };
   const fullPayload = (full.payload ?? {}) as Record<string, unknown>;
+  const fullHeaders = headerMap(fullPayload);
+  const fullFrom = firstEmail(fullHeaders.from ?? "") || from;
+  const fullTo = emailList(`${fullHeaders.to ?? ""},${fullHeaders.cc ?? ""}`);
   const { data, error } = await admin.rpc("ingest_relationship_gmail_message", {
     p_tenant_id: TENANT_ID,
     p_gmail_message_id: messageId,
     p_gmail_thread_id: String(full.threadId ?? metadata.threadId ?? ""),
-    p_headers: headerMap(fullPayload),
-    p_from_email: from,
-    p_to_emails: to,
+    p_headers: fullHeaders,
+    p_from_email: fullFrom,
+    p_to_emails: fullTo.length ? fullTo : to,
     p_subject: subject,
     p_body: gmailBody(fullPayload),
     p_occurred_at: new Date(Number(full.internalDate ?? metadata.internalDate ?? Date.now())).toISOString(),
