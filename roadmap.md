@@ -1,5 +1,12 @@
 # Shared Supabase baseline recovery
 
+## Updated branch receipt and acceptance preparation (October 21, 03:41 UTC)
+- [x] Preserve the earlier receipt; add versioned updated operator metadata, pinned available source/cutover checks and 33 new regressions.
+- [x] Document native bootstrap recovery and synthetic signed-JWT/provider acceptance with mandatory server-side egress prerequisites; no live runner or execution.
+- [x] Run local source checks: 113 recovery tests and 44 existing network-denied worker tests PASS; source gates pass, no Supabase calls.
+- [ ] Open review PR and verify hosted CI (blocked: no repository write/PR integration exposed; no merge authorized).
+- [ ] Execute independent actual-schema signed-JWT and Stedi synthetic history acceptance (blocked: private reviewed boundary/catalog/dependencies, external Billing suites, genuine isolated Docker stack and proven server-side egress denial).
+
 ## Branch recovery follow-up (October 21)
 - [x] Record operator-reported branch reconstruction, parity, ACL checks and unresolved drift as sanitized evidence, not production acceptance.
 - [x] Add offline receipt validation/regressions: 80 recovery tests pass (30 new); receipt CLI, shell syntax, CLI help, source inventory and real boundary gate pass; preserve #198/#199.
@@ -23,7 +30,7 @@
 - [x] Implement private schema capture review/parity tooling and explicit baseline cutover gate.
 - [x] Implement fail-closed isolated replay CLI and source CI; 967 CRM and 18 recovery tests pass.
 - [ ] Produce reviewed canonical baseline/parity artifact (blocked: operator-only raw export, authoritative export-time ledger/catalog, complete managed reconciliation and human review; do not request raw SQL).
-- [x] Record operator-reported successful ten-file branch SQL application; independent workflow acceptance still pending. Separate Stedi retirement is excluded, not applied.
+- [x] Record earlier operator-reported ten-file branch SQL application; later 03:41 receipt separately reports branch-only Stedi retirement, with independent workflow/history-fixture acceptance still pending.
 - [x] Document ordered release and independent signed-worker acceptance path; executable production rollback awaits private originals/full-schema tests.
 - [x] Report evidence and blockers; existing Todoist task remains OPEN (no available connection; not updated or duplicated).
 - [ ] Production rollout/history changes remain blocked by separate explicit approval; existing operator-authorized paid branch is not managed here.

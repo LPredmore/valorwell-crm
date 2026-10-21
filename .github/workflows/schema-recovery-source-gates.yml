@@ -6,6 +6,10 @@ on:
       - 'scripts/run-campaign-lifecycle-acceptance.py'
       - 'docs/architecture/2026-10-21-branch-recovery-source-receipt.md'
       - 'docs/architecture/migration-recovery-evidence/20261021-branch-recovery-receipt.json'
+      - 'docs/architecture/2026-10-21-0341-preview-verification-and-acceptance.md'
+      - 'docs/architecture/migration-recovery-evidence/20261021-0341-branch-followup.json'
+      - 'supabase/tests/20261018_october_security_rollout_readonly.sql'
+      - 'supabase/migrations/20261020214527_*.sql'
       - '.github/workflows/schema-recovery-source-gates.yml'
 permissions:
   contents: read
@@ -22,6 +26,8 @@ jobs:
         run: python3 -m unittest discover -s scripts/migration-recovery -p 'test_*.py' -v
       - name: Validate sanitized operator branch receipt (offline, not DB acceptance)
         run: python3 scripts/migration-recovery/branch_receipt.py
+      - name: Validate updated preview receipt and pinned source contracts (offline)
+        run: python3 scripts/migration-recovery/branch_followup.py
       - name: Check capture shell syntax
         run: bash -n scripts/migration-recovery/capture-application-schema-only.sh
       - name: Check private operator entry points (no private inputs)

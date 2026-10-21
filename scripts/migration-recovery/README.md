@@ -17,6 +17,15 @@ Run `python3 scripts/migration-recovery/branch_receipt.py` for **offline metadat
 consistency only**; no secrets, private SQL, branch connection or production calls.
 This receipt does not relax the private local runner's exact parity gates.
 
+**03:41 UTC versioned follow-up:** [Preview verification and acceptance plan](../../docs/architecture/2026-10-21-0341-preview-verification-and-acceptance.md).
+Later operator metadata reports 25 preview ledger entries, 1123 functions, separate
+Stedi retirement and catalog 16/16; the earlier receipt remains historical evidence.
+Run `python3 scripts/migration-recovery/branch_followup.py` offline to validate the
+closed updated receipt and pin available applicant increment / sixteen-function
+query bytes. `preview-drift-readonly.sql` is operator-only; CI never executes it.
+Signed-JWT and synthetic history acceptance remain pending; hosted preview mutation
+is blocked without proven server-side egress denial. No provider acceptance implied.
+
 ## Inventory and source checks
 
 ```bash

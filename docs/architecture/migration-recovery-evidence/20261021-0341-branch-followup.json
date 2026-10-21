@@ -1,0 +1,151 @@
+{
+  "format_version": 2,
+  "reported_at_utc": "2026-10-21T03:41:00Z",
+  "provenance": "user_report_of_ChatGPT_Supabase_checks_not_observed_here",
+  "previous_receipt": "20261021-branch-recovery-receipt.json",
+  "branch": {
+    "project_ref": "dskqovrvogmwrlmxsdjd",
+    "parent_ref": "ahqauomkgflopxgnlndd",
+    "name": "valorwell-security-recovery-20261020",
+    "hourly_usd": "0.01344",
+    "status": "MIGRATIONS_FAILED",
+    "branch_ledger_count": 25,
+    "production_ledger_count": 966,
+    "shadow_test_versions_canonical": false,
+    "merge_reset_rebase_allowed": false,
+    "current_existence_or_total_cost_observed_here": false
+  },
+  "restore": {
+    "native_first_failure": "20251201181524",
+    "missing_dependency": "public.set_updated_at()",
+    "native_history_reproducible": false,
+    "schema_sha256": "4da55b28809507eaa9438a0cb27a7f4335a884ea92dea87551890c0e6ef8230f",
+    "schema_bytes": 5442397,
+    "schema_batches": 12,
+    "pg_cron_branch_install": "1.6.4",
+    "clinical_rows_copied": false,
+    "branch_cron_jobs": 0,
+    "post_export": {
+      "version": "20261020214527",
+      "sha256": "a87ad8a61a2e78674df7b757e499d24097b34f6181c167325d4b0df47d9af01f",
+      "bytes": 4771,
+      "exact_export_time_ledger_supplied_here": false
+    },
+    "ordered_ten_source_versions": [
+      "20261019000200",
+      "20261019000300",
+      "20261019000310",
+      "20261019165842",
+      "20261019000400",
+      "20261019000410",
+      "20261019000500",
+      "20261019000600",
+      "20261019000800",
+      "20261019085103"
+    ],
+    "separate_stedi_version": "20261018235900",
+    "stedi_applied_branch_only": true,
+    "ten_plus_stedi_stored_bodies_textually_equal_reported": true,
+    "per_source_hashes_or_bodies_supplied_here": false,
+    "stripe_source_version_do_not_reapply": "20261019000100",
+    "stripe_production_applied_version": "20261019232604",
+    "stripe_reapplied": false
+  },
+  "catalog": {
+    "tables_by_schema": {
+      "public": 361,
+      "private": 51,
+      "credentialing": 13
+    },
+    "tables": 425,
+    "rls_enabled": 408,
+    "views": 37,
+    "enum_types": 67,
+    "indexes_by_schema": {
+      "public": 1385,
+      "private": 156,
+      "credentialing": 37
+    },
+    "indexes": 1578,
+    "production_functions": 1122,
+    "branch_functions": 1123,
+    "expected_extra_helper": "private.claim_is_externally_submitted_internal_v1",
+    "policies": 551,
+    "triggers": 368,
+    "all_tables_indexes_fingerprints_match_reported": true,
+    "all_credentialing_fingerprints_match_reported": true,
+    "expected_change_categories": [
+      "claim_functions",
+      "crm_functions",
+      "title_trigger",
+      "claim_lines_trigger"
+    ],
+    "complete_per_object_diff_supplied_here": false,
+    "full_parity_proven_here": false,
+    "unresolved_view": "public.relationship_report_metrics_v",
+    "omitted_managed_default_acls": 12,
+    "omitted_owner": "supabase_admin",
+    "managed_privileges_resolved": false,
+    "pg_net_production": "0.19.5",
+    "pg_net_branch": "0.20.4",
+    "pg_net_mismatch_resolved": false
+  },
+  "checks": {
+    "october_acl_sql_sha256": "2b932817a8f03f68a30382d71c0f8afc133e6cb2a3fbecd482f0af6e59791052",
+    "gate_size": 16,
+    "production_pass": 4,
+    "production_fail": 12,
+    "branch_pass": 16,
+    "branch_fail": 0,
+    "per_rpc_results_supplied_here": false,
+    "method": "read_only_SQL_catalog_not_signed_JWT",
+    "repository_do_contracts_reported_pass": [
+      "claim_payroll_internal_rpc_acl",
+      "crm_idempotency_internal_acl_contract",
+      "crm_automation_event_emitter_acl",
+      "internal_campaign_social_worker_acl",
+      "legacy_donor_attribution_acl_contract"
+    ],
+    "catalog_assertions_reported_pass": [
+      "campaign_missing_foreign_403_marker",
+      "claim_line_tenant_trigger",
+      "donor_transaction_view_browser_denial",
+      "title_trigger_search_path"
+    ],
+    "stedi": {
+      "passed": 4,
+      "total": 6,
+      "enabled_or_unclosed_routes": 0,
+      "active_cron": 0,
+      "retirement_constraint_present": true,
+      "historical_attempts_events_checks_failed": 2,
+      "branch_history_rows": 0,
+      "production_data_loss_proven": false,
+      "synthetic_fixture_acceptance_run_here": false
+    }
+  },
+  "advisors": {
+    "production_total": 480,
+    "branch_total": 464,
+    "production_auth_executable_definers": 318,
+    "branch_auth_executable_definers": 306,
+    "production_anon_executable_definers": 15,
+    "branch_anon_executable_definers": 15,
+    "production_rls_no_policy_info": 144,
+    "branch_rls_no_policy_info": 143,
+    "all_findings_resolved": false,
+    "branch_auth_settings_prove_production_settings": false,
+    "blanket_revocations_authorized": false
+  },
+  "release_gate": {
+    "source_only": true,
+    "supabase_calls_here": false,
+    "branch_deleted_here": false,
+    "raw_export_or_credentials_shared": false,
+    "signed_jwt_acceptance_pass": false,
+    "real_provider_actions": false,
+    "production_released": false,
+    "production_authorized": false,
+    "source_merge_requires_review_and_hosted_green": true
+  }
+}
