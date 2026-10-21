@@ -1,5 +1,11 @@
 # Shared Supabase baseline recovery
 
+## Branch recovery follow-up (October 21)
+- [ ] Record operator-reported branch reconstruction, parity, ACL checks and unresolved drift as sanitized evidence, not production acceptance.
+- [ ] Add offline receipt validation/regressions and run source CI-equivalent recovery checks; preserve #198/#199.
+- [ ] Create reviewable source PR (blocked: no repository write/PR integration available here); no merge until hosted checks are green.
+- [ ] Independent signed-JWT cross-tenant and real provider/worker acceptance remain blocked on operator-run suites; no production release authorized.
+
 ## Private local restore phase (October 21)
 - [x] Implement Windows/WSL2 operator wrapper and hash-bound private cutover/catalog checks.
 - [x] Run 50 source regression tests and preserve merged #198/#199 CI safeguards; boundary fixture test is sandbox-blocked, real gate passes.
@@ -17,7 +23,7 @@
 - [x] Implement private schema capture review/parity tooling and explicit baseline cutover gate.
 - [x] Implement fail-closed isolated replay CLI and source CI; 967 CRM and 18 recovery tests pass.
 - [ ] Produce reviewed canonical baseline/parity artifact (blocked: operator-only raw export, authoritative export-time ledger/catalog, complete managed reconciliation and human review; do not request raw SQL).
-- [ ] Exercise ten staged SQL files and separate Stedi draft on verified full-schema Supabase (blocked until complete reviewed baseline and real local stack available).
+- [x] Record operator-reported successful ten-file branch SQL application; independent workflow acceptance still pending. Separate Stedi retirement is excluded, not applied.
 - [x] Document ordered release and independent signed-worker acceptance path; executable production rollback awaits private originals/full-schema tests.
 - [x] Report evidence and blockers; existing Todoist task remains OPEN (no available connection; not updated or duplicated).
-- [ ] Production rollout/history changes and paid branch remain blocked by separate explicit approval.
+- [ ] Production rollout/history changes remain blocked by separate explicit approval; existing operator-authorized paid branch is not managed here.
