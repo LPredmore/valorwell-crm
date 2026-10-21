@@ -13,7 +13,10 @@ import re
 import subprocess
 import sys
 
-APP_SCHEMAS = {'public', 'private', 'credentialing'}
+APP_SCHEMAS = {'public', 'private', 'credentialing', 'import',
+               'backup_20260710_pre_ehr_work', 'backup_20260712_pre_overhaul_table_changes_v1'}
+MANAGED_SCHEMAS = {'auth', 'cron', 'extensions', 'graphql', 'graphql_public', 'net',
+                   'realtime', '_realtime', 'storage', 'supabase_functions', 'supabase_migrations', 'vault'}
 REDACTIONS = [
     (r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+', 'REDACTED_JWT'),
     (r'''https?://[^[:space:]"'\\]+''', 'http://127.0.0.1:9/REDACTED_TRANSPORT'),
@@ -90,6 +93,9 @@ def load_captures(root, expected):
 
 def application_subset(data):
     """Real app DDL plus captured app-owned managed hooks/policies, no fake foundations."""
+    unknown = {row['nspname'] for row in data.get('schemas', [])} - APP_SCHEMAS - MANAGED_SCHEMAS
+    if unknown:
+        raise ValueError('Unclassified source schema requires explicit scope review')
     result = {}
     for category, rows in data.items():
         if category == 'triggers':
@@ -134,7 +140,7 @@ def finalize(captures, billing, output):
                     categories=provenance, redaction_rules=REDACTIONS,
                     managed_schema_inventory_complete=True, managed_runtime_parity='NOT_VERIFIED',
                     source_rows_with_redactions=sum(p['redacted_rows'] for p in provenance.values()),
-                    restore_scope='application schemas plus captured Auth hook, Storage policies and application publication; genuine services supply managed foundations',
+                    restore_scope='all six inventoried application/import/legacy backup schemas plus captured Auth hook, Storage policies and application publication; genuine services supply managed foundations',
                     release_eligible=False)
     manifest['catalog_sha256'] = {p.name: sha(p.read_bytes()) for p in sorted(canonical.glob('*.json'))}
     manifest['query_sha256'] = {name: sha(capture_sql(name, q).encode()) for name, q in queries.items()}

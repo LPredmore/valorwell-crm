@@ -2,6 +2,7 @@
 import argparse
 import json
 from pathlib import Path
+from catalog_candidate import APP_SCHEMAS
 
 
 def review(root):
@@ -17,7 +18,7 @@ def review(root):
         invalid_indexes=[dict(schema=r['nspname'], name=r['indexname'])
             for r in read('indexes') if r.get('indisvalid') is False],
         application_tables_without_rls=[dict(schema=r['nspname'], name=r['relname'])
-            for r in read('relations') if r['nspname'] in ['public', 'private', 'credentialing']
+            for r in read('relations') if r['nspname'] in APP_SCHEMAS
             and r.get('relkind') in ['r', 'p'] and not r.get('relrowsecurity')],
         extension_requirements=read('extensions'),
         note='Catalog flags identify review work, not exploitability. Inspect the private ACL, dependency and strict parity records; no blanket approvals.')

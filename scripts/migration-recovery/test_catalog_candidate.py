@@ -5,12 +5,26 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from catalog_candidate import capture_sql, load_captures, application_subset
+from catalog_candidate import capture_sql, load_captures, application_subset, read_queries
 from native_stack import assert_owned, LABEL
 from native_restore import restore_candidate
 
 
 class CaptureSafety(unittest.TestCase):
+    def test_unknown_application_namespace_cannot_be_silently_omitted(self):
+        with self.assertRaisesRegex(ValueError, 'Unclassified source schema'):
+            application_subset({'schemas': [{'nspname': 'new_application_module'}]})
+
+    def test_postgres_int64_sequence_values_cross_connector_as_text(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'scripts/schema-baseline').mkdir(parents=True)
+            (root / 'scripts/schema-baseline/catalog-queries.json').write_text(json.dumps({
+                'sequences': 'SELECT s.seqstart,s.seqincrement,s.seqmax,s.seqmin,s.seqcache FROM pg_sequence s'}))
+            query = read_queries(root)['sequences']
+            for field in ['seqstart', 'seqincrement', 'seqmax', 'seqmin', 'seqcache']:
+                self.assertIn('s.' + field + '::text AS ' + field, query)
+
     def test_redaction_occurs_on_server_before_transfer(self):
         query = capture_sql('functions', 'SELECT 1 AS oid')
         self.assertIn('READ ONLY', query)
