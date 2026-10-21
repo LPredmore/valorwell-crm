@@ -5,6 +5,7 @@ DECLARE v_owner uuid; v_org uuid;
 BEGIN
   IF NEW.opportunity_id IS NULL THEN
     NEW.owner_profile_id := NULL;
+    NEW.metadata := coalesce(NEW.metadata,'{}'::jsonb) || jsonb_build_object('owner_review_required',true,'owner_review_reason','no_opportunity');
     RETURN NEW;
   END IF;
   SELECT owner_profile_id, organization_id INTO v_owner,v_org
@@ -13,8 +14,10 @@ BEGIN
   IF FOUND AND v_owner IS NOT NULL
     AND (NEW.organization_id IS NULL OR NEW.organization_id=v_org) THEN
     NEW.owner_profile_id := v_owner;
+    NEW.metadata := coalesce(NEW.metadata,'{}'::jsonb) - 'owner_review_required' - 'owner_review_reason';
   ELSE
     NEW.owner_profile_id := NULL;
+    NEW.metadata := coalesce(NEW.metadata,'{}'::jsonb) || jsonb_build_object('owner_review_required',true,'owner_review_reason','unverified_opportunity_owner');
   END IF;
   RETURN NEW;
 END;
