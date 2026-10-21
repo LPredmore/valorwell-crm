@@ -1,0 +1,396 @@
+{
+  "format_version": 1,
+  "scope": "P0 pinned input inventory and source verification; P1-P5 native acceptance not executed",
+  "source": {
+    "billing": {
+      "sha": "050625035fbc43dc3a48bc53653b685e14b7142b",
+      "dirty": false
+    },
+    "billing-draft34": {
+      "sha": "62489306d202f4cb46f86936506f39d367f9cab2",
+      "dirty": false
+    },
+    "crm": {
+      "sha": "222d65b22178d0fa5cd13e903f4242fd937cfc90",
+      "dirty": false
+    },
+    "crm-draft193": {
+      "sha": "83ec13d96f3936d6be5d7a018613fa038b60cfd1",
+      "dirty": false
+    }
+  },
+  "tool_sha256": "d0f9a60112f46c78e98c182899db3165fcfe5ffce19eca29c5af8f63cc9efac5",
+  "baseline_sha256": null,
+  "gates": {
+    "source": {
+      "status": "PASS",
+      "assertion_count": 1123,
+      "counts": {
+        "passed": 1123,
+        "failed": 0,
+        "blocked": 0,
+        "skipped": 0
+      },
+      "evidence_uri": "docs/architecture/migration-recovery-evidence/20261021-retest-gates.json",
+      "environment_selector": "local source checkout at 222d65b22178d0fa5cd13e903f4242fd937cfc90",
+      "schema_fingerprint": null,
+      "dependencies": [],
+      "blocker": null,
+      "owner_action": null,
+      "assertion_count_basis": "One verdict per source test case; individual assertion calls are not instrumented."
+    },
+    "baseline": {
+      "status": "BLOCKED",
+      "assertion_count": 0,
+      "counts": {
+        "passed": 0,
+        "failed": 0,
+        "blocked": 0,
+        "skipped": 0
+      },
+      "evidence_uri": null,
+      "environment_selector": "none: no acceptance environment provisioned",
+      "schema_fingerprint": null,
+      "dependencies": [
+        "source"
+      ],
+      "blocker": "DB-01/02",
+      "owner_action": "Schema owner: supply approved complete private baseline, review receipt, export-time ledger and fresh inventory."
+    },
+    "catalog": {
+      "status": "BLOCKED",
+      "assertion_count": 0,
+      "counts": {
+        "passed": 0,
+        "failed": 0,
+        "blocked": 0,
+        "skipped": 0
+      },
+      "evidence_uri": null,
+      "environment_selector": "none: no acceptance environment provisioned",
+      "schema_fingerprint": null,
+      "dependencies": [
+        "baseline"
+      ],
+      "blocker": "DB-03/04",
+      "owner_action": "Platform owner: reconcile all ACLs, Auth hook, 19 Storage policies, both publication classes and engine/extensions on a new owned stack."
+    },
+    "jwt": {
+      "status": "BLOCKED",
+      "assertion_count": 0,
+      "counts": {
+        "passed": 0,
+        "failed": 0,
+        "blocked": 0,
+        "skipped": 0
+      },
+      "evidence_uri": null,
+      "environment_selector": "none: no acceptance environment provisioned",
+      "schema_fingerprint": null,
+      "dependencies": [
+        "catalog"
+      ],
+      "blocker": "SEC-01",
+      "owner_action": "Test owner: run genuine GoTrue/PostgREST signed-role and two-tenant matrix on the isolated stack."
+    },
+    "worker": {
+      "status": "BLOCKED",
+      "assertion_count": 0,
+      "counts": {
+        "passed": 0,
+        "failed": 0,
+        "blocked": 0,
+        "skipped": 0
+      },
+      "evidence_uri": null,
+      "environment_selector": "none: no acceptance environment provisioned",
+      "schema_fingerprint": null,
+      "dependencies": [
+        "jwt"
+      ],
+      "blocker": "CRM-01/INT-01",
+      "owner_action": "CRM owner: review #193 and run DB-backed worker and recovery scenarios; no hosted dispatch."
+    },
+    "stripe": {
+      "status": "BLOCKED",
+      "assertion_count": 0,
+      "counts": {
+        "passed": 0,
+        "failed": 0,
+        "blocked": 0,
+        "skipped": 0
+      },
+      "evidence_uri": null,
+      "environment_selector": "none: no acceptance environment provisioned",
+      "schema_fingerprint": null,
+      "dependencies": [
+        "worker"
+      ],
+      "blocker": "BILL-01",
+      "owner_action": "Billing owner: run native financial RPC/reconciliation and signed sandbox webhook suite; deployed v73 remains separate."
+    },
+    "claims": {
+      "status": "BLOCKED",
+      "assertion_count": 0,
+      "counts": {
+        "passed": 0,
+        "failed": 0,
+        "blocked": 0,
+        "skipped": 0
+      },
+      "evidence_uri": null,
+      "environment_selector": "none: no acceptance environment provisioned",
+      "schema_fingerprint": null,
+      "dependencies": [
+        "worker"
+      ],
+      "blocker": "BILL-02",
+      "owner_action": "Billing owner: run signed claims/payroll, uncertainty, deduplication and immutable-line DB scenarios."
+    },
+    "stedi": {
+      "status": "BLOCKED",
+      "assertion_count": 0,
+      "counts": {
+        "passed": 0,
+        "failed": 0,
+        "blocked": 0,
+        "skipped": 0
+      },
+      "evidence_uri": null,
+      "environment_selector": "none: no acceptance environment provisioned",
+      "schema_fingerprint": null,
+      "dependencies": [
+        "catalog"
+      ],
+      "blocker": "STEDI-01",
+      "owner_action": "Billing owner: synthetic 4-attempt/6-event preservation fixtures plus separate read-only historic retention and uncertain-route review."
+    },
+    "provider": {
+      "status": "BLOCKED",
+      "assertion_count": 0,
+      "counts": {
+        "passed": 0,
+        "failed": 0,
+        "blocked": 0,
+        "skipped": 0
+      },
+      "evidence_uri": null,
+      "environment_selector": "none: no acceptance environment provisioned",
+      "schema_fingerprint": null,
+      "dependencies": [
+        "claims",
+        "stripe"
+      ],
+      "blocker": "INT-01",
+      "owner_action": "Provider owner: designate approved sandbox and obtain genuine acknowledgement/settlement evidence."
+    },
+    "hosted-ui": {
+      "status": "BLOCKED",
+      "assertion_count": 0,
+      "counts": {
+        "passed": 0,
+        "failed": 0,
+        "blocked": 0,
+        "skipped": 0
+      },
+      "evidence_uri": null,
+      "environment_selector": "none: no acceptance environment provisioned",
+      "schema_fingerprint": null,
+      "dependencies": [
+        "worker"
+      ],
+      "blocker": "INT-01",
+      "owner_action": "UAT owner: run CRM-only and multi-role UI scenarios against the verified isolated API."
+    },
+    "release": {
+      "status": "BLOCKED",
+      "assertion_count": 0,
+      "counts": {
+        "passed": 0,
+        "failed": 0,
+        "blocked": 0,
+        "skipped": 0
+      },
+      "evidence_uri": null,
+      "environment_selector": "none: no acceptance environment provisioned",
+      "schema_fingerprint": null,
+      "dependencies": [
+        "source",
+        "baseline",
+        "catalog",
+        "jwt",
+        "worker",
+        "stripe",
+        "claims",
+        "stedi",
+        "provider",
+        "hosted-ui"
+      ],
+      "blocker": "RELEASE",
+      "owner_action": "Release owner: all acceptance gates plus separate production rollout authorizations; P6 is excluded."
+    }
+  },
+  "release_decision": "NOT_READY",
+  "production_mutated": false,
+  "proposed_release": {
+    "status": "BLOCKED_NOT_DEPLOYABLE",
+    "refresh_production_ledger_before_packaging": true,
+    "deployment_versions": null,
+    "version_rule": "CLI-generated versions strictly above freshly observed production maximum; preserve this input order.",
+    "excluded_already_applied": [
+      "20261019232604",
+      "20261020214527"
+    ],
+    "excluded_alias": [
+      "20261019000100"
+    ],
+    "optional_stedi_requires_separate_owner_approval": true,
+    "reviewed_input_order": [
+      {
+        "repository": "billing-draft34",
+        "version": "20261018235900",
+        "sha256": "1fd5bd3fd11b3003441181cdc18729846d7af0395e4091b3489c26ddb2fe0881",
+        "path": "supabase/migrations/20261018235900_retire_stedi_operational_routing.sql"
+      },
+      {
+        "repository": "crm",
+        "version": "20261019000200",
+        "sha256": "4ede96d545264ee0e3d7c06ad409393962e29915434736c9061afa88cf0e3314",
+        "path": "supabase/migrations/20261019000200_revoke_direct_crm_idempotency_helpers.sql"
+      },
+      {
+        "repository": "billing",
+        "version": "20261019000300",
+        "sha256": "a27d6e22a409d75772bf45d3c63d3c1784dd7e551a2c79ba5da1cefba8e3b3e9",
+        "path": "supabase/migrations/20261019000300_claim_payroll_internal_rpc_acl.sql"
+      },
+      {
+        "repository": "crm",
+        "version": "20261019000310",
+        "sha256": "b2db8632a53b28ede9aa79d2118294440918195351cf7273841fcab543c32ad7",
+        "path": "supabase/migrations/20261019000310_campaign_lifecycle_authorization_and_idempotency.sql"
+      },
+      {
+        "repository": "crm-draft193",
+        "version": "20261019165842",
+        "sha256": "89404791b3d91e1d9585c82e4b2ef4bd329f92c67b9da9102322bbc46dab08da",
+        "path": "supabase/migrations/20261019165842_crm_campaign_membership_profile_contract.sql"
+      },
+      {
+        "repository": "crm",
+        "version": "20261019000400",
+        "sha256": "20ad3f8e35de44160811bd2848dcaa81ca1c679330c4479a6e6f88cb60b242b1",
+        "path": "supabase/migrations/20261019000400_internal_campaign_social_worker_acl.sql"
+      },
+      {
+        "repository": "crm",
+        "version": "20261019000410",
+        "sha256": "ee3588dc3205b86d724d15509c8d1881b9b1456bdee8f1ed62cb33d84305abd3",
+        "path": "supabase/migrations/20261019000410_ai_ops_title_trigger_search_path.sql"
+      },
+      {
+        "repository": "crm",
+        "version": "20261019000500",
+        "sha256": "959046ab269918c7a4c1faf0279d39cfae9e1f733dd4270aec7be95e844f80a1",
+        "path": "supabase/migrations/20261019000500_fail_closed_legacy_donor_attribution.sql"
+      },
+      {
+        "repository": "crm",
+        "version": "20261019000600",
+        "sha256": "0cb2d52694155152ffe4d50751927efd23c16fd63e7651ae9ab26a2a5ef20820",
+        "path": "supabase/migrations/20261019000600_restrict_crm_automation_event_emitter.sql"
+      },
+      {
+        "repository": "crm",
+        "version": "20261019000800",
+        "sha256": "23ec40992fce188b59dbb3b51d641b4ed50cd83155c72f17ef2149fdf8501335",
+        "path": "supabase/migrations/20261019000800_campaign_lifecycle_forbidden_response.sql"
+      },
+      {
+        "repository": "billing",
+        "version": "20261019085103",
+        "sha256": "3da8a52d63096979a9e111ade49eb73d6f11b343e0e433ae5ac34f2357aef827",
+        "path": "supabase/migrations/20261019085103_claim_status_authorization_boundary.sql"
+      }
+    ]
+  },
+  "source_verification": {
+    "counting_basis": "Test case verdicts, not the number of individual expect/assert calls. Source tests include synthetic and embedded adapters; no native acceptance is implied.",
+    "suites": [
+      {
+        "name": "CRM full Vitest",
+        "passed": 979,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "CRM recovery safety",
+        "passed": 118,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "Billing schema baseline tooling",
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "Billing Stripe source webhook",
+        "passed": 20,
+        "failed": 0,
+        "skipped": 0
+      }
+    ],
+    "checks": {
+      "lint": "PASS",
+      "application_types": "PASS",
+      "tooling_types": "PASS",
+      "build": "PASS"
+    },
+    "historical_failed_results_preserved": true,
+    "newsletter_timeout_reproduced": false,
+    "assertions_or_timeouts_weakened": false,
+    "offline_clean_reproduction": {
+      "same_bytes": true,
+      "sha256": "3ea0193e91a3ba73a346f4ca88cd8dafe07b349071ec4e6b11717be03096afdd",
+      "scope": "P0 only; native P5 clean run BLOCKED"
+    }
+  },
+  "retained_command_failures": [
+    {
+      "command": "CRM npm ci without CI peer flags (npm 11 and npm 10)",
+      "result": "FAIL",
+      "resolution": "Existing CI --legacy-peer-deps flag installs successfully; no lockfile edits."
+    },
+    {
+      "command": "Billing baseline unittest initially invoked from CRM",
+      "result": "FAIL",
+      "resolution": "Corrected repository cwd."
+    },
+    {
+      "command": "Billing baseline unittest without psycopg",
+      "result": "FAIL",
+      "resolution": "Installed documented psycopg[binary]==3.3.6; unchanged suite then passed 6/6."
+    },
+    {
+      "command": "Private baseline preflight",
+      "result": "BLOCKED",
+      "exit_code": 2,
+      "resolution": "Requires approved private bundle; not bypassed."
+    }
+  ],
+  "log_hashes": {
+    "crm-full-test.log": "5b3f0fd19395fd69284d62be20c460b120e6f444c4d03923c2c4abdadc745d72",
+    "crm-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "crm-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "crm-tooling-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "crm-build.log": "2f25edcd175d2fcdc521174fc09a0edbc14e2a7ccd9c7fe6146eb31909d6f225",
+    "stripe-source.log": "737c3f71cad550b47c5719854843e68f5432631e355f68749f9618307899b10f",
+    "crm-install.log": "bf28efa568e0311d21daedae7d60aa5fb17150e68c26b8e74ef34059aaaf8831",
+    "crm-install-npm10.log": "c2039361939a417585a73885bad30377e73360d196461ce46b0cda2afeeb8167",
+    "crm-install-ci-flags.log": "dcaa7125b18f6b6bd4bf3dfa27151758ba7f7b19f110ae1453b4240ce824895a",
+    "private-baseline-preflight.log": "b1bb27addf7408239b8f80814a8fc6b9cafbafed7a03d57ba21ed7b560909344"
+  },
+  "generated_at": "2026-10-21T12:56:26.633400+00:00"
+}

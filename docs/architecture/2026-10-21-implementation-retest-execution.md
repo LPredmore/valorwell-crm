@@ -5,6 +5,29 @@ This is a partial execution receipt, not completion of the implementation plan.
 No production writes, deployments, provider calls, email, cron activation, branch
 reset/rebase/merge or diagnostic-preview deletion occurred.
 
+## Fresh validation
+
+[Machine-readable gate receipt](migration-recovery-evidence/20261021-retest-gates.json)
+binds execution to implementation commit `222d65b2`, SQL hashes, source identities,
+partial catalog observation, blocked prerequisites and private-log hashes.
+Counts below are test-case verdicts, not individual assertion calls.
+
+| Check | Result | Boundary |
+| --- | --- | --- |
+| CRM full Vitest | 979/979 PASS, 173 files | Source/embedded/synthetic adapters; no native DB acceptance |
+| CRM recovery safety | 118/118 PASS | Offline source safeguards, including five new gate tests |
+| Billing baseline tooling | 6/6 PASS | Offline renderer/reconciler tests |
+| Stripe webhook source | 20/20 PASS | Real SDK signatures, synthetic DB/provider adapter, unmocked egress denied |
+| CRM strict lint, both TypeScript projects, build | PASS | Current source only |
+| P0 preflight from second clean checkout | Identical bytes, exit 2/BLOCKED | P0 reproducibility only; not P5 stack reproduction |
+| Baseline, catalog parity, JWT, worker, Stripe DB, claims, Stedi, provider, hosted UI, release | BLOCKED | No native/provider scenario counted as passed |
+
+The newsletter timeout did not reproduce in the complete suite. No test,
+assertion or timeout was changed. This single passing run does not establish the
+root cause of the earlier timing failure. Initial install/preflight command
+failures are retained separately in the receipt. CRM installation uses the
+repository's existing CI `--legacy-peer-deps` flag; package locks are unchanged.
+
 ## Inputs and fresh observations
 
 [Pinned references and read-only observations](migration-recovery-evidence/20261021-retest-inputs.json)
