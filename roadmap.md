@@ -1,5 +1,11 @@
 # Shared Supabase baseline recovery
 
+## Private local restore phase (October 21)
+- [ ] Implement Windows/WSL2 operator wrapper and hash-bound private cutover/catalog checks.
+- [ ] Run source regression tests and preserve merged #198/#199 CI safeguards.
+- [ ] Run complete isolated restore and independent signed-JWT suites (blocked: operator-only SQL, reviewed dependency/boundary evidence, local Docker and private suites).
+- [ ] Verify integration-generated commit/PR proof; never manufacture or auto-merge a PR.
+
 ## Applicant source UI
 - [ ] Add read-only source badges, counted filters and review details to existing applicant surfaces.
 - [ ] Test parsing, complete applicant traversal and source filtering; verify available live evidence.
