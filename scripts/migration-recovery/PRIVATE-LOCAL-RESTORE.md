@@ -78,6 +78,12 @@ origin or confer production approval. All existing human review booleans remain
 required. The restrictive scan can reject legitimate function DML; privately review
 that blocker rather than disabling the scan.
 
+The receipt must also explicitly set each of the four human-review flags to JSON
+`true` and bind `ledger_sha256`, `latest_ledger_sha256`, `source_catalog_sha256`
+and `managed_dependencies_sha256` to the manifest. String values such as `"false"`
+cannot count as approval. No reviewer, approval or export-time boundary is supplied
+by this tool.
+
 **Boundary is not inferred.** Do not assume 965 versions at export because today's
 ledger has 966. Obtain authoritative export-time metadata and the full delta. The
 known incremental source is 20261020214527,

@@ -118,6 +118,13 @@ def load_private_bundle(root, repository):
     review = read_json(review_path)
     if not review.get('reviewer') or not review.get('reviewed_at') or review.get('schema_sha256') != EXPORT_SHA256:
         raise ValueError('Named and dated private human review required')
+    for key in ['human_secret_reviewed', 'managed_dependencies_reviewed', 'owners_and_grants_reviewed',
+                'storage_auth_integration_reviewed']:
+        if review.get(key) is not True:
+            raise ValueError('Private receipt must explicitly approve each human review scope')
+    for key in ['ledger_sha256', 'latest_ledger_sha256', 'source_catalog_sha256', 'managed_dependencies_sha256']:
+        if review.get(key) != manifest.get(key):
+            raise ValueError('Private review receipt must bind ledger, catalog and managed reconciliation hashes')
     catalog_path = path(manifest['source_catalog_file'])
     catalog = read_json(catalog_path)
     validate_catalog(catalog)

@@ -36,6 +36,21 @@ class PrivateRestoreRules(unittest.TestCase):
         self.assertEqual(private.COUNTS['private'], dict(tables=51, functions=307, views=4, policies=1, triggers=13))
         self.assertEqual(private.COUNTS['credentialing'], dict(tables=13, functions=21, triggers=2))
 
+    def test_actual_restored_rls_counts_cannot_be_manifest_assertions_only(self):
+        actual=dict(counts=private.COUNTS,rls_enabled_tables=408,security_definer_count=924)
+        private.validate_export_counts(actual)
+        with self.assertRaisesRegex(ValueError,'RLS'):
+            private.validate_export_counts(dict(actual,rls_enabled_tables=407))
+
+    def test_actual_restored_security_definer_count_required(self):
+        with self.assertRaisesRegex(ValueError,'SECURITY DEFINER'):
+            private.validate_export_counts(dict(counts=private.COUNTS,rls_enabled_tables=408,security_definer_count=923))
+
+    def test_actual_restored_table_count_required(self):
+        counts=json.loads(json.dumps(private.COUNTS));counts['public']['tables']=360
+        with self.assertRaisesRegex(ValueError,'schema counts'):
+            private.validate_export_counts(dict(counts=counts,rls_enabled_tables=408,security_definer_count=924))
+
     def test_exact_post_export_delta_passes_without_ledger_writes(self):
         before = json.dumps(self.latest)
         private.boundary_gate(self.manifest, self.old, self.latest, [self.increment])
@@ -110,6 +125,13 @@ class PrivateRestoreRules(unittest.TestCase):
         self.assertIn('human secret review missing',blockers)
         self.assertIn('managed_dependencies_reviewed missing',blockers)
 
+    def test_string_false_cannot_fake_human_review(self):
+        p=self.root/'input.sql';p.write_text('-- synthetic')
+        blockers=baseline_gate(dict(human_secret_reviewed='false',managed_dependencies_reviewed='false'),
+                               p,self.old,dict(missing=[],extra=[],changed=[]))
+        self.assertIn('human secret review missing',blockers)
+        self.assertIn('managed_dependencies_reviewed missing',blockers)
+
     def test_operator_failure_does_not_echo_private_json(self):
         p=self.root/'reviewed-cutover.json';p.write_text('{"PRIVATE_CANARY_1": broken}')
         p.chmod(0o600)
@@ -139,6 +161,10 @@ class PrivateRestoreRules(unittest.TestCase):
             supabase_database_image='synthetic-never-run',postgres_version='17.6',managed_dependencies_file='managed.sql',
             managed_dependencies_sha256=digest(managed),incremental_sources=[dict(self.increment,file='increment.sql',
                 sha256=digest(increment_bytes),bytes=len(increment_bytes))])
+        for key in ['human_secret_reviewed','managed_dependencies_reviewed','owners_and_grants_reviewed',
+                    'storage_auth_integration_reviewed','ledger_sha256','latest_ledger_sha256',
+                    'source_catalog_sha256','managed_dependencies_sha256']:
+            receipt[key]=manifest[key]
         manifest['human_review_receipt_sha256']=digest(json.dumps(receipt).encode())
         for key,file in [('catalog_query_sha256','catalog-fingerprints.sql'),('counts_query_sha256','export-counts.sql')]:
             manifest[key]=digest(Path(__file__).with_name(file).read_bytes())
