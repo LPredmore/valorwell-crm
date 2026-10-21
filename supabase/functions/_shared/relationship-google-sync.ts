@@ -78,23 +78,18 @@ async function processGmailMessage(
   });
   if (matchError) throw new Error(matchError.message);
   const decision = (match ?? {}) as Record<string, unknown>;
-  if (decision.observationEnabled !== true || (decision.matched !== true && decision.unanchoredCandidate !== true)) {
-    if (decision.ambiguous === true || decision.likelyRelationship === true) {
-      const { error } = await admin.rpc("ingest_relationship_gmail_message", {
-        p_tenant_id: TENANT_ID,
-        p_gmail_message_id: messageId,
-        p_gmail_thread_id: String(metadata.threadId ?? ""),
-        p_headers: headers,
-        p_from_email: from,
-        p_to_emails: to,
-        p_subject: subject,
-        p_body: "",
-        p_occurred_at: new Date(Number(metadata.internalDate ?? Date.now())).toISOString(),
-        p_label_ids: Array.isArray(metadata.labelIds) ? metadata.labelIds : [],
-      });
-      if (error) throw new Error(error.message);
-    }
-    return { messageId, matched: false, ambiguous: decision.ambiguous === true };
+  // Ambiguous/relevant messages need full RFC headers and body for the
+  // authoritative ingestion path; metadata-only placeholders can lose evidence.
+  // Do not fetch unrelated messages or advance their lifecycle.
+  if (decision.observationEnabled !== true) {
+    return { messageId, matched: false, skipped: "observation_disabled" };
+  }
+  const shouldFetchFull = decision.matched === true ||
+    decision.unanchoredCandidate === true ||
+    decision.ambiguous === true ||
+    decision.likelyRelationship === true;
+  if (!shouldFetchFull) {
+    return { messageId, matched: false, skipped: "unrelated_message" };
   }
   const full = await googleJson(metadataUrl(messageId, "full"), accessToken)
     .catch((error: Error & { status?: number }) => {
@@ -103,13 +98,16 @@ async function processGmailMessage(
     });
   if (!full) return { messageId, matched: false, skipped: "message_not_found" };
   const fullPayload = (full.payload ?? {}) as Record<string, unknown>;
+  const fullHeaders = headerMap(fullPayload);
+  const fullFrom = firstEmail(fullHeaders.from ?? "") || from;
+  const fullTo = emailList(`${fullHeaders.to ?? ""},${fullHeaders.cc ?? ""}`);
   const { data, error } = await admin.rpc("ingest_relationship_gmail_message", {
     p_tenant_id: TENANT_ID,
     p_gmail_message_id: messageId,
     p_gmail_thread_id: String(full.threadId ?? metadata.threadId ?? ""),
-    p_headers: headerMap(fullPayload),
-    p_from_email: from,
-    p_to_emails: to,
+    p_headers: fullHeaders,
+    p_from_email: fullFrom,
+    p_to_emails: fullTo.length ? fullTo : to,
     p_subject: subject,
     p_body: gmailBody(fullPayload),
     p_occurred_at: new Date(Number(full.internalDate ?? metadata.internalDate ?? Date.now())).toISOString(),
