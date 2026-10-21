@@ -1,5 +1,4 @@
 """Offline versioned branch evidence and source gates; no database/network access."""
-import copy
 import json
 from pathlib import Path
 
