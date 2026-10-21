@@ -1,5 +1,4 @@
 """Offline versioned branch evidence and source gates; no database/network access."""
-import json
 from pathlib import Path
 
 from branch_receipt import load_receipt, matches_contract

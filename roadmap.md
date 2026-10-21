@@ -1,9 +1,11 @@
 # Shared Supabase baseline recovery
 
 ## Updated branch receipt and acceptance preparation (October 21, 03:41 UTC)
-- [ ] Preserve the earlier receipt; add versioned updated operator metadata, source/cutover checks and regressions.
-- [ ] Document native bootstrap recovery and synthetic signed-JWT/provider acceptance with enforced egress prerequisites.
-- [ ] Run local source checks; report hosted PR/CI and independent acceptance blockers without Supabase calls.
+- [x] Preserve the earlier receipt; add versioned updated operator metadata, pinned available source/cutover checks and 33 new regressions.
+- [x] Document native bootstrap recovery and synthetic signed-JWT/provider acceptance with mandatory server-side egress prerequisites; no live runner or execution.
+- [x] Run local source checks: 113 recovery tests and 44 existing network-denied worker tests PASS; source gates pass, no Supabase calls.
+- [ ] Open review PR and verify hosted CI (blocked: no repository write/PR integration exposed; no merge authorized).
+- [ ] Execute independent actual-schema signed-JWT and Stedi synthetic history acceptance (blocked: private reviewed boundary/catalog/dependencies, external Billing suites, genuine isolated Docker stack and proven server-side egress denial).
 
 ## Branch recovery follow-up (October 21)
 - [x] Record operator-reported branch reconstruction, parity, ACL checks and unresolved drift as sanitized evidence, not production acceptance.

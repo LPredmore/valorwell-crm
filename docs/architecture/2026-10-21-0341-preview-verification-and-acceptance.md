@@ -87,4 +87,17 @@ Record only suite IDs, source hashes, exact stack identity, synthetic case count
 
 ## Source follow-up evidence and blockers
 
-Local verification results are recorded after the checks below complete. No Supabase/production/provider calls, migrations, paid resources, Auth setting changes or branch deletion occur. Review PR/hosted-green proof cannot be produced with available tools: there is no repository write/PR integration exposed; do not run manual git commit/push/merge. Docker executable/daemon is unavailable here; no full restore, native replay, Stedi fixture or signed-JWT run is claimed. Operator-only SQL, exact boundary/catalog and managed review, missing external Billing suites, server-side egress proof and independent authorization remain prerequisites, not requests to upload secrets or private SQL.
+No Supabase/production/provider calls, migrations, paid resources, Auth setting changes or branch deletion occurred. Review PR/hosted-green proof cannot be produced with available tools: there is no repository write/PR integration exposed; no manual git commit/push/merge was run. Docker executable/daemon is unavailable here; no full restore, native replay, Stedi fixture or signed-JWT run is claimed. Operator-only SQL, exact boundary/catalog and managed review, missing external Billing suites, server-side egress proof and independent authorization remain prerequisites, not requests to upload secrets or private SQL.
+
+| Local verification actually run | Result |
+| --- | --- |
+| Complete recovery Python suite | **113 PASS**, including 33 new follow-up regressions and all 80 earlier tests |
+| Earlier receipt CLI / updated receipt-source CLI | PASS / PASS; offline consistency only |
+| Existing network-denied worker runtime suites | **44 PASS** across campaign worker, scheduler and Social HTTP entrypoint; synthetic DB adapters, not full-schema acceptance |
+| Capture / preserved #198 smoke shell syntax | PASS; Docker smoke not executed |
+| Private restore / isolated replay help | PASS; no execution |
+| CRM source inventory / real Billing boundary gate | PASS / PASS; no replay implied; #199 stateful-git fixture not executed |
+| Whitespace / latest preview diagnostic | `git diff --check` PASS; `build OK` at 2026-10-21T03:44:26Z |
+| Hosted CI / review PR / code commit proof | Unavailable; local checks are not hosted green or a commit/PR receipt |
+
+Touched source: new `branch_followup.py`, `test_branch_followup.py`, `preview-drift-readonly.sql`, versioned metadata and this report; updated source-gates workflow, recovery README, AGENTS and roadmap. No existing SQL migration, original branch receipt, #198 smoke or #199 boundary implementation was changed. No application UI changes or manual application build/typecheck.
