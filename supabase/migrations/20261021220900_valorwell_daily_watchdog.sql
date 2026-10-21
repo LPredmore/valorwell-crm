@@ -25,9 +25,9 @@ BEGIN
     RAISE EXCEPTION 'watchdog cron secret missing';
   END IF;
   SELECT net.http_post(
-    url := 'https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/valorwell-daily-exception-watch',
+    url := 'https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/valorwell-daily-watchdog',
     headers := jsonb_build_object('Content-Type','application/json','X-Cron-Secret',v_token),
-    body := '{"mode":"watchdog"}'::jsonb,
+    body := '{}'::jsonb,
     timeout_milliseconds := 25000
   ) INTO v_request;
   RETURN v_request;
