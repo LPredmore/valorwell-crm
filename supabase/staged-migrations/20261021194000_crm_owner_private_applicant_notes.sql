@@ -15,7 +15,7 @@ create table private.crm_owner_note_allowlist (
 alter table private.crm_owner_note_allowlist enable row level security;
 revoke all on table private.crm_owner_note_allowlist from public, anon, authenticated, service_role;
 
--- Exactly one approved identity. Not derived from tenant_role or crm_admin.
+-- Exactly one approved identity. Not derived from any membership or CRM role.
 insert into private.crm_owner_note_allowlist (tenant_id, profile_id)
 values ('00000000-0000-0000-0000-000000000001', 'd2dc0624-1e71-49d6-8b04-76cf1e822074');
 
