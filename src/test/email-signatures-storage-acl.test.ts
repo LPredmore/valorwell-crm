@@ -75,7 +75,8 @@ describe('email-signatures storage ACL hardening (issue #201)', () => {
   });
 
   it('grants no write policy TO PUBLIC or anon', () => {
-    const writePolicies = executable.match(/CREATE POLICY \w+[\s\S]*?FOR (INSERT|UPDATE|DELETE)[\s\S]*?\);/g) ?? [];
+    const statements = executable.match(/CREATE POLICY \w+[\s\S]*?\);/g) ?? [];
+    const writePolicies = statements.filter((s) => /FOR (INSERT|UPDATE|DELETE)/.test(s));
     expect(writePolicies.length).toBeGreaterThan(0);
     for (const policy of writePolicies) {
       expect(policy).not.toMatch(/TO PUBLIC/i);
