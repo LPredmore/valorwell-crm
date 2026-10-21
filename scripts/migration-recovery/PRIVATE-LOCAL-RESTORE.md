@@ -151,6 +151,15 @@ production users, provider calls or fabricated accepted Claim.MD results.
 These suites are operator-supplied; this wrapper cannot claim they ran. No worker
 deployment or production release is authorized by a restored database.
 
+Security boundary: run only on an operator-controlled machine with no other process
+modifying the private bundle. SQL byte hashes are rechecked at execution, but this
+is not a defense against a compromised local account. Genuine image/object/version
+checks are prerequisites, not proof of all grants or privileged code safety;
+full catalog parity and independent human review remain mandatory. Managed
+reconciliation SQL is executable privileged code, not automatically proven safe
+by a receipt. Source tests exercise synthetic network/logging/cleanup refusals,
+not actual Docker startup, Windows PowerShell execution or full SQL restore.
+
 After those suites, execute the exact owned `cleanup_commands` in private results
 (Supabase stop with `--no-backup`, then remove only the recorded internal network).
 Remove the recorded owned workdir after successful cleanup. Do not use global

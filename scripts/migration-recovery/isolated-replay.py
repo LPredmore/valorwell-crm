@@ -13,7 +13,7 @@ import tempfile
 import uuid
 from pathlib import Path
 from recovery import baseline_gate, compare_catalogs, digest, evidence_digest, release_sources, validate_acl_rows
-from private_restore import load_private_bundle, validate_export_counts
+from private_restore import cleanup_owned, load_private_bundle, owned_container_gate, validate_export_counts
 
 
 def run(command, input_text=None):
@@ -49,14 +49,8 @@ def main():
         parser.error('Manifest differs from private bundle')
     if args.output_dir.resolve()!=bundle['root']/'isolated-results' or args.output_dir.exists():
         parser.error('Use a fresh isolated-results directory inside the private root')
-    manifest=json.loads(args.cutover_manifest.read_text())
-    ledger=json.loads(args.ledger.read_text())
-    blockers=baseline_gate(manifest,args.baseline,ledger,json.loads(args.reviewed_parity_diff.read_text()))
-    if blockers:
-        parser.error('Baseline BLOCKED: '+ '; '.join(blockers))
-    source_catalog=json.loads(args.source_catalog.read_text())
-    if not source_catalog or manifest.get('source_catalog_sha256') != evidence_digest(source_catalog):
-        parser.error('Complete source catalog hash differs or missing')
+    manifest=bundle['manifest']
+    source_catalog=bundle['catalog_rows']
     catalog_path=Path(__file__).with_name('catalog-fingerprints.sql')
     gate=Path(__file__).resolve().parents[2]/'docs/architecture/2026-10-19-security-acl-acceptance.sql'
     for key,path in [('catalog_query_sha256',catalog_path),('acl_query_sha256',gate)]:
@@ -119,15 +113,7 @@ def main():
         inspect=json.loads(run(['docker','inspect',container]).stdout)[0]
         owned=run(['docker','ps','-q','--filter','name=supabase_']).stdout.splitlines()
         owned_inspects=json.loads(run(['docker','inspect',*owned]).stdout) if owned else []
-        for item in owned_inspects:
-            if not item['Name'].endswith('_'+identifier): continue
-            if set(item['NetworkSettings']['Networks']) != {network}:
-                raise RuntimeError('Owned container has additional network access')
-            if item['HostConfig']['LogConfig']['Type']!='none':
-                raise RuntimeError('All owned containers must disable Docker logging before private SQL')
-            for bindings in item['NetworkSettings']['Ports'].values():
-                if any(b.get('HostIp') not in ('127.0.0.1','::1') for b in bindings or []):
-                    raise RuntimeError('Owned container exposes non-loopback ports; configure local-only binds before retry')
+        owned_container_gate(owned_inspects,identifier,network)
         inspected_network=json.loads(run(['docker','network','inspect',network]).stdout)[0]
         if not inspected_network.get('Internal'): raise RuntimeError('Provider egress must be disabled')
         report['database_image']=inspect['Config']['Image']
@@ -222,14 +208,8 @@ def main():
         # Stage is also not printed because migration identifiers originate in inputs.
         raise SystemExit('Replay blocked; metadata-only private results retained') from None
     finally:
-        cleanup=[]
         retain=sql_complete and args.keep_stack_for_signed_tests
-        if started and not retain:
-            try:run(['supabase','stop','--workdir',str(root),'--no-backup'])
-            except subprocess.CalledProcessError:cleanup.append('owned Supabase cleanup failed; operator must inspect '+identifier)
-        if network_created and not retain:
-            try:run(['docker','network','rm',network])
-            except subprocess.CalledProcessError:cleanup.append('owned internal network cleanup failed: '+network)
+        cleanup=[] if retain else cleanup_owned(run,root,network,started,network_created)
         if retain:
             report['retained_workdir']=str(root)
             report['owned_identifier']=identifier
@@ -242,8 +222,14 @@ def main():
         elif cleanup:
             report['status']='BLOCKED_CLEANUP'
             report['retained_workdir']=str(root)
+            report['owned_identifier']=identifier
+            report['owned_network']=network
         else:
-            shutil.rmtree(root)
+            try:shutil.rmtree(root)
+            except Exception:
+                cleanup.append('owned private workdir cleanup failed')
+                report['status']='BLOCKED_CLEANUP'
+                report['retained_workdir']=str(root)
         report['cleanup_blockers']=cleanup;save()
         if cleanup: raise SystemExit('Owned resource cleanup blocked; private results include recovery identifiers')
     print(report['status'])

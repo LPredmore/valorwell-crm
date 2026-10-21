@@ -155,6 +155,36 @@ def load_private_bundle(root, repository):
                    ('acl_query_sha256', Path(repository) / 'docs/architecture/2026-10-19-security-acl-acceptance.sql')]:
         if manifest.get(key) != digest(p.read_bytes()):
             raise ValueError('Reviewed verification query bytes differ')
-    return dict(root=root, manifest=manifest, baseline=baseline, ledger=baseline_ledger_path,
+    return dict(root=root, manifest=manifest, baseline=baseline, ledger=baseline_ledger_path, catalog_rows=catalog,
                 latest_versions=ledger_versions(latest_ledger), catalog=catalog_path, parity=parity_path,
                 managed=managed, increments=resolved)
+
+
+def owned_container_gate(items, identifier, network):
+    owned = [item for item in items if item['Name'].endswith('_' + identifier)]
+    if not owned or not any(item['Name'] == '/supabase_db_' + identifier for item in owned):
+        raise ValueError('Owned database container missing')
+    for item in owned:
+        if set(item['NetworkSettings']['Networks']) != {network}:
+            raise ValueError('Owned container has additional network access')
+        if item['HostConfig']['LogConfig']['Type'] != 'none':
+            raise ValueError('Owned container logging must be disabled')
+        for bindings in item['NetworkSettings']['Ports'].values():
+            if any(b.get('HostIp') not in ('127.0.0.1', '::1') for b in bindings or []):
+                raise ValueError('Owned container exposes non-loopback ports')
+
+
+def cleanup_owned(run, root, network, started, network_created):
+    """Attempt both resources even when one command fails; never persist errors."""
+    blockers = []
+    if started:
+        try:
+            run(['supabase', 'stop', '--workdir', str(root), '--no-backup'])
+        except Exception:
+            blockers.append('owned Supabase cleanup failed')
+    if network_created:
+        try:
+            run(['docker', 'network', 'rm', network])
+        except Exception:
+            blockers.append('owned network cleanup failed')
+    return blockers

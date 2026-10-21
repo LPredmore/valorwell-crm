@@ -101,6 +101,50 @@ class PrivateRestoreRules(unittest.TestCase):
     def test_catalog_valid_fingerprint(self):
         private.validate_catalog([dict(kind='function',identity='rpc()',fingerprint='a'*32)])
 
+    def container(self):
+        return dict(Name='/supabase_db_fixture',HostConfig=dict(LogConfig=dict(Type='none')),
+                    NetworkSettings=dict(Networks={'fixture-internal':{}},Ports={'5432/tcp':[dict(HostIp='127.0.0.1')]}))
+
+    def test_owned_loopback_internal_no_logging_gate(self):
+        private.owned_container_gate([self.container()],'fixture','fixture-internal')
+
+    def test_owned_external_network_rejected(self):
+        item=self.container();item['NetworkSettings']['Networks']['bridge']={}
+        with self.assertRaisesRegex(ValueError,'network'):
+            private.owned_container_gate([item],'fixture','fixture-internal')
+
+    def test_owned_external_ports_rejected(self):
+        item=self.container();item['NetworkSettings']['Ports']['5432/tcp'][0]['HostIp']='0.0.0.0'
+        with self.assertRaisesRegex(ValueError,'non-loopback'):
+            private.owned_container_gate([item],'fixture','fixture-internal')
+
+    def test_owned_logging_rejected(self):
+        item=self.container();item['HostConfig']['LogConfig']['Type']='json-file'
+        with self.assertRaisesRegex(ValueError,'logging'):
+            private.owned_container_gate([item],'fixture','fixture-internal')
+
+    def test_unowned_containers_ignored_but_owned_database_required(self):
+        item=self.container();item['Name']='/supabase_db_other'
+        with self.assertRaisesRegex(ValueError,'missing'):
+            private.owned_container_gate([item],'fixture','fixture-internal')
+
+    def test_partial_start_cleanup_attempts_both_after_any_exception(self):
+        calls=[]
+        def run(command):
+            calls.append(command)
+            raise OSError('PRIVATE_CANARY_CLEANUP')
+        blockers=private.cleanup_owned(run,self.root,'fixture-internal',True,True)
+        self.assertEqual(len(calls),2)
+        self.assertEqual(calls[0][0:2],['supabase','stop'])
+        self.assertEqual(calls[1],['docker','network','rm','fixture-internal'])
+        self.assertNotIn('PRIVATE_CANARY_CLEANUP',json.dumps(blockers))
+        self.assertEqual(len(blockers),2)
+
+    def test_cleanup_never_stops_unstarted_stack(self):
+        calls=[]
+        self.assertEqual(private.cleanup_owned(calls.append,self.root,'fixture-internal',False,True),[])
+        self.assertEqual(calls,[['docker','network','rm','fixture-internal']])
+
     def test_repository_inputs_rejected(self):
         p=self.root/'input.sql';p.write_text('-- synthetic');p.chmod(0o600)
         with self.assertRaisesRegex(ValueError,'outside'):
