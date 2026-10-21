@@ -31,6 +31,7 @@ import OpportunityDirectoryPage from "./pages/crm/business-development/Opportuni
 import PipelineHubPage from "./pages/crm/pipelines/PipelineHubPage";
 import TherapistProspectsPage from "./pages/crm/recruitment/TherapistProspectsPage";
 import ApplicantHandoffPage from "./pages/crm/recruitment/ApplicantHandoffPage";
+import OwnerPrivateNotePage from "./pages/crm/recruitment/OwnerPrivateNotePage";
 import RecruitmentCampaignPrepPage from "./pages/crm/recruitment/RecruitmentCampaignPrepPage";
 import OpportunityDetailPage from "./pages/crm/business-development/OpportunityDetailPage";
 import RelationshipImportPage from "./pages/crm/business-development/RelationshipImportPage";
@@ -131,6 +132,7 @@ const App = () => (
             <Route path="pipelines" element={<PipelineHubPage />} />
              <Route path="recruitment/prospects" element={<TherapistProspectsPage />} />
              <Route path="recruitment/applicants" element={<ApplicantHandoffPage />} />
+             <Route path="recruitment/website-interest/:submissionId/owner-note" element={<OwnerPrivateNotePage />} />
              <Route path="recruitment/sequences" element={<RecruitmentCampaignPrepPage />} />
              <Route path="recruitment/prospects/:id" element={<TherapistProspectsPage />} />
             <Route path="business-development/opportunities/:id" element={<OpportunityDetailPage />} />

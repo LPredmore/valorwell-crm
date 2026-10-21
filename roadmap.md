@@ -40,3 +40,7 @@
 - [x] Document ordered release and independent signed-worker acceptance path; executable production rollback awaits private originals/full-schema tests.
 - [x] Report evidence and blockers; existing Todoist task remains OPEN (no available connection; not updated or duplicated).
 - [ ] Production rollout/history changes remain blocked by separate explicit approval; existing operator-authorized paid branch is not managed here.
+## Owner-only private applicant note
+- [x] Staged migration source (single-profile allowlist, private tables, definer RPCs), default-OFF UI route, 12 static/unit privacy tests.
+- [ ] Isolated signed-JWT owner/non-owner/anon/cross-tenant acceptance (blocked: no isolated stack; release gates).
+- [ ] Production apply + enable flag (blocked: explicit release approval).
