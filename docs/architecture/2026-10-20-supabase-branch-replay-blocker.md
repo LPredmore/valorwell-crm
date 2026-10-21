@@ -1,6 +1,20 @@
 # Supabase preview-branch migration replay blocker — October 20, 2026
 
-**Release gate: BLOCKED before new security migrations.** This is evidence from an actual temporary branch creation, not a hypothetical risk. No production DDL or clinical/provider records were changed.
+## CURRENT VERIFIED STATUS — 2026-10-21 (supersedes the old release-state line)
+
+**Operational test database: RESTORED AND IN USE, not blocked by the old replay failure.** A new user-approved Supabase test branch `valorwell-security-recovery-20261020` (project ref `dskqovrvogmwrlmxsdjd`) initially failed automatic historical replay. Its empty application schema was subsequently populated from the reviewed private schema-only PostgreSQL 17 export, without importing patient records. Catalog comparisons then matched production across **425 application tables, 37 views, 1,122 functions, 551 policies, 368 triggers, 67 enums and the same RLS-enabled table counts**. Twelve system-managed `supabase_admin` default-privilege statements were omitted because the hosted branch role could not alter them; do not claim perfect ACL parity.
+
+At the last inspection the working branch had **25 applied recovery/test migration records**, including the reviewed October security SQL, the member `profile_id` follow-on, the subsequent therapist-applicant delta, and a separate Stedi retirement *test*. These are branch-specific test records and are **NOT** the canonical production ledger. Production Oct 19 hardening versions remain unapplied (0/10 checked). Signed-user/tenant and complete provider-workflow acceptance remain pending. Do not merge or reset the test branch without a fresh review. The branch is still billed until deleted.
+
+**Native Supabase branch provisioning label: `MIGRATIONS_FAILED` is retained as historical metadata for its initial creation workflow.** That label has not been cleared by Supabase, and repairing the manually restored schema does not rewrite the original action result. It is neither a current database-health failure nor a reliable measure of the completed branch migration tests. Fixing future automatic branch creation remains a **separate historical-migration repair** work item and should not be represented as a blocker to using this reconstructed test environment.
+
+**Status-reporting rule:** Always distinguish `native_provisioning_status = MIGRATIONS_FAILED (historical)` from `application_schema_state = RESTORED` and `signed_JWT_acceptance = PENDING`. Do not reuse the prior 0-tables/0-applied-tests statement as a description of the current branch. Preserve the section below exclusively as historical forensic evidence.
+
+---
+
+## Historical October 20 failed-branch experiment (no longer current test state)
+
+**Historical release gate at that time: BLOCKED before new security migrations.** This is evidence from an actual temporary branch creation, not a hypothetical risk. No production DDL or clinical/provider records were changed.
 
 ## Controlled temporary-branch experiment
 
