@@ -20,6 +20,10 @@ jobs:
         run: python3 -m unittest discover -s scripts/migration-recovery -p 'test_*.py' -v
       - name: Check capture shell syntax
         run: bash -n scripts/migration-recovery/capture-application-schema-only.sh
+      - name: Check private operator entry points (no private inputs)
+        run: |
+          python3 scripts/migration-recovery/private-local-restore.py --help
+          python3 scripts/migration-recovery/isolated-replay.py --help
       - name: Validate CRM inventory (not full-schema replay)
         run: python3 scripts/migration-recovery/recovery.py inventory --repo crm=. --output /tmp/crm-migration-inventory.json
       - uses: actions/upload-artifact@v4

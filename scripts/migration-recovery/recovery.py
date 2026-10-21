@@ -153,7 +153,7 @@ def baseline_gate(manifest, baseline, ledger, catalog_diff):
         blockers.append('secret/data scan failed')
     if manifest.get('schema_sha256') != scan['sha256']:
         blockers.append('baseline bytes differ')
-    if not manifest.get('human_secret_reviewed'):
+    if manifest.get('human_secret_reviewed') is not True:
         blockers.append('human secret review missing')
     actual = sorted(r['version'] for r in ledger)
     if manifest.get('ledger_sha256') != evidence_digest(ledger):
@@ -167,7 +167,7 @@ def baseline_gate(manifest, baseline, ledger, catalog_diff):
     if any(catalog_diff.values()):
         blockers.append('object-level catalog parity failed')
     for key in ['managed_dependencies_reviewed', 'owners_and_grants_reviewed', 'storage_auth_integration_reviewed']:
-        if not manifest.get(key):
+        if manifest.get(key) is not True:
             blockers.append(f'{key} missing')
     return blockers
 
