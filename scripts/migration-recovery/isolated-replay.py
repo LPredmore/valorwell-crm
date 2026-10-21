@@ -146,7 +146,10 @@ def main():
         if sql('SHOW cron.launch_active_jobs;')!='off':
             raise RuntimeError('Cron scheduler not disabled')
         stage='reviewed managed dependency reconciliation'
-        sql(bundle['managed'].read_text())
+        managed_bytes=bundle['managed'].read_bytes()
+        if digest(managed_bytes)!=manifest['managed_dependencies_sha256']:
+            raise RuntimeError('Managed dependency source changed after review')
+        sql(managed_bytes.decode('utf-8'))
         dependency_sql="""SELECT jsonb_build_object(
           'auth_uid',to_regprocedure('auth.uid()') IS NOT NULL,
           'auth_users',to_regclass('auth.users') IS NOT NULL,
@@ -159,6 +162,12 @@ def main():
             raise RuntimeError('Genuine managed dependency missing')
         for name,version in manifest.get('required_extensions',{}).items():
             if deps['extensions'].get(name)!=version: raise RuntimeError(f'Missing exact extension: {name}')
+        sql("ALTER SYSTEM SET pg_stat_statements.track = 'none';")
+        sql('SELECT pg_reload_conf();')
+        for setting,value in [('logging_collector','off'),('log_statement','none'),
+                              ('log_min_error_statement','panic'),('pg_stat_statements.track','none')]:
+            if sql('SHOW '+setting+';')!=value:
+                raise RuntimeError('Private statement persistence must be disabled before application SQL')
         # Scheduler execution is disabled before any application definitions/data.
         sql("ALTER SYSTEM SET cron.launch_active_jobs = 'off';")
         sql("SELECT pg_reload_conf();")
@@ -189,7 +198,10 @@ def main():
             stage=entry['version']
             row=dict(version=entry['version'],sha256=entry['sha256'],status='RUNNING')
             report['migrations'].append(row);save()
-            sql(Path(entry['path']).read_text())
+            release_bytes=Path(entry['path']).read_bytes()
+            if digest(release_bytes)!=entry['sha256']:
+                raise RuntimeError('Reviewed release source changed')
+            sql(release_bytes.decode('utf-8'))
             row['status']='SQL_APPLIED_IN_ISOLATION';save()
         if not args.restore_only:
             stage='14 RPC ACL gate'

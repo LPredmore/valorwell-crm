@@ -2,6 +2,12 @@
 
 These are source/isolated-only tools, not permission to change production or repair its migration ledger. Evidence and execution status: `docs/architecture/2026-10-20-baseline-recovery-execution-receipt.md`.
 
+**October 21 operator route:** [Private Windows/WSL2 restore instructions](PRIVATE-LOCAL-RESTORE.md).
+The runner now requires that private evidence bundle; the older standalone command
+below is historical documentation, not a bypass. No private export is available
+to Lovable; no complete restore is claimed. Export-time ledger coverage and all
+post-export increments are distinct from the ten-file security-release order.
+
 ## Inventory and source checks
 
 ```bash
@@ -47,6 +53,7 @@ python3 scripts/migration-recovery/isolated-replay.py \
   --ledger /private/ledger-metadata.json \
   --source-catalog /private/catalog.json \
   --reviewed-parity-diff /private/parity.json \
+  --private-bundle /private/reviewed-bundle \
   --repo crm=. --repo billing=/trusted/billing --repo crm-draft193=/trusted/crm-draft193 \
   --output-dir /private/new-isolated-results
 ```
