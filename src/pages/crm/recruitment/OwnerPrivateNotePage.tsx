@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import NotFound from '@/pages/NotFound';
 import {
-  ownerPrivateNotesEnabled, getOwnerPrivateNote, saveOwnerPrivateNote, deleteOwnerPrivateNote, ownerNoteQueryKey,
+  ownerPrivateNotesEnabled, getOwnerPrivateNote, hasOwnerPrivateNoteAccess, saveOwnerPrivateNote, deleteOwnerPrivateNote, ownerNoteQueryKey,
 } from '@/repositories/supabase/ownerPrivateNotes';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -23,25 +23,26 @@ export default function OwnerPrivateNotePage() {
   const key = ownerNoteQueryKey(userId, currentTenantId ?? '', submissionId);
   const query = useQuery({
     queryKey: key, enabled, gcTime: 0, staleTime: 0, retry: false,
-    queryFn: () => getOwnerPrivateNote(currentTenantId!, submissionId),
+    queryFn: async () => {
+      if (!(await hasOwnerPrivateNoteAccess(currentTenantId!, submissionId))) return { access: false as const, note: null };
+      return { access: true as const, note: await getOwnerPrivateNote(currentTenantId!, submissionId) };
+    },
   });
   const [draft, setDraft] = useState<string | null>(null);
   const save = useMutation({
-    mutationFn: (body: string) => saveOwnerPrivateNote(currentTenantId!, submissionId, body, query.data?.version ?? null),
+    mutationFn: (body: string) => saveOwnerPrivateNote(currentTenantId!, submissionId, body, query.data?.note?.version ?? null),
     onSuccess: () => { setDraft(null); qc.invalidateQueries({ queryKey: key }); },
   });
   const remove = useMutation({
-    mutationFn: () => deleteOwnerPrivateNote(currentTenantId!, submissionId, query.data!.version),
+    mutationFn: () => deleteOwnerPrivateNote(currentTenantId!, submissionId, query.data!.note!.version),
     onSuccess: () => qc.removeQueries({ queryKey: key }),
   });
 
   if (!enabled) return <NotFound />;
   if (query.isLoading) return null;
-  // Creation is only offered when a note already exists (owner sees it). A
-  // first note requires an existing authorized record; absence looks like 404.
-  if (!query.data) return <NotFound />;
-
-  const value = draft ?? query.data.body;
+  if (!query.data?.access) return <NotFound />;
+  const note = query.data.note;
+  const value = draft ?? note?.body ?? '';
   return (
     <Card className="m-6 max-w-3xl">
       <CardHeader><CardTitle>Owner private note</CardTitle></CardHeader>
@@ -50,7 +51,7 @@ export default function OwnerPrivateNotePage() {
         {(save.isError || remove.isError) && <p className="text-sm text-destructive">The change could not be saved. Refresh and try again.</p>}
         <div className="flex gap-2">
           <Button disabled={!value.trim() || save.isPending} onClick={() => save.mutate(value)}>Save</Button>
-          <Button variant="outline" disabled={remove.isPending} onClick={() => remove.mutate()}>Delete</Button>
+          {note && <Button variant="outline" disabled={remove.isPending} onClick={() => remove.mutate()}>Delete</Button>}
         </div>
       </CardContent>
     </Card>

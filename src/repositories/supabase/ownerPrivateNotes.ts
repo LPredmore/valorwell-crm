@@ -12,6 +12,11 @@ export type OwnerPrivateNote = { id: string; body: string; version: number; upda
 const rpc = (name: string, args: Record<string, unknown>) =>
   (supabase.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)(name, args);
 
+export async function hasOwnerPrivateNoteAccess(tenantId: string, submissionId: string): Promise<boolean> {
+  const { data, error } = await rpc('crm_owner_note_access', { p_tenant: tenantId, p_submission: submissionId });
+  return !error && data === true;
+}
+
 /** Returns null for no note AND for any denial/error, so callers cannot
  * distinguish existence from lack of permission. */
 export async function getOwnerPrivateNote(tenantId: string, submissionId: string): Promise<OwnerPrivateNote | null> {

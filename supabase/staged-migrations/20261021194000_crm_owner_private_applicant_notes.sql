@@ -58,6 +58,15 @@ returns boolean language sql stable security definer set search_path = '' as $$
 $$;
 revoke all on function private.crm_owner_note_authorized(uuid, uuid) from public, anon, authenticated, service_role;
 
+-- Caller-scoped probe: reveals only whether THIS caller is allowlisted for
+-- this tenant/submission, never whether a note exists.
+create function public.crm_owner_note_access(p_tenant uuid, p_submission uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select private.crm_owner_note_authorized(p_tenant, p_submission);
+$$;
+revoke all on function public.crm_owner_note_access(uuid, uuid) from public, anon, service_role;
+grant execute on function public.crm_owner_note_access(uuid, uuid) to authenticated;
+
 -- Non-authorized callers get an empty set: identical to "no note".
 create function public.crm_owner_note_get(p_tenant uuid, p_submission uuid)
 returns table (id uuid, body text, version integer, updated_at timestamptz)
