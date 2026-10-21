@@ -23,13 +23,9 @@
       "repository": "valorwell-billing-hub",
       "file": "supabase/migrations/20261021184735_production_billing_security_and_payroll.sql",
       "sha256": "16d34cf1b454c53774483420fc460a3e0aa078b8760f85902d3847053c2d71d4"
-    },
-    {
-      "repository": "valorwell-crm",
-      "file": "supabase/migrations/20261021184956_production_gmail_reply_anchor.sql",
-      "sha256": "3af3314f34f7764525f82baf23c5f44ff4bca4ecabff67f6b298b64b826856f6"
     }
   ],
   "production_execution_receipts": [],
-  "private_function_bodies_included": false
+  "private_function_bodies_included": false,
+  "already_deployed_gmail_body_sha256": "68f88f02c612fa916ef72ed9187982c0663df13f0e4cb095e54eb0d4d714c6f7"
 }
