@@ -1,8 +1,8 @@
 # Shared Supabase baseline recovery
 
 ## Branch recovery follow-up (October 21)
-- [ ] Record operator-reported branch reconstruction, parity, ACL checks and unresolved drift as sanitized evidence, not production acceptance.
-- [ ] Add offline receipt validation/regressions and run source CI-equivalent recovery checks; preserve #198/#199.
+- [x] Record operator-reported branch reconstruction, parity, ACL checks and unresolved drift as sanitized evidence, not production acceptance.
+- [x] Add offline receipt validation/regressions: 80 recovery tests pass (30 new); receipt CLI, shell syntax, CLI help, source inventory and real boundary gate pass; preserve #198/#199.
 - [ ] Create reviewable source PR (blocked: no repository write/PR integration available here); no merge until hosted checks are green.
 - [ ] Independent signed-JWT cross-tenant and real provider/worker acceptance remain blocked on operator-run suites; no production release authorized.
 

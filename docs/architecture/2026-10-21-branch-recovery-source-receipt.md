@@ -74,3 +74,21 @@ No live acceptance connector is added in this phase: exact 15 signatures, approv
 ## Source follow-up boundary
 
 Only recovery documentation, sanitized JSON, offline Python validation/tests, source CI, architecture rules and roadmap are changed. No Supabase calls, migrations applied, new paid resources, production writes, provider calls, workers or UI changes. Original #198 smoke and #199 boundary safeguards are preserved. Source PR/hosted CI/merge evidence must be reported separately; local tests cannot substitute for them. **No merge until required hosted checks are green; no production authorization follows from a source merge.**
+
+## Verification actually run in this follow-up
+
+| Source check | Result |
+| --- | --- |
+| Python recovery suite | **80 tests PASS**: 50 preserved + 30 new receipt regressions |
+| Offline receipt CLI | PASS; operator-reported consistency only |
+| Capture and preserved #198 smoke shell syntax | PASS; Docker smoke not executed |
+| Private restore and isolated replay CLI help | PASS; restore not executed |
+| CRM-only source inventory | PASS; no database acceptance implied |
+| Real Billing Hub repository boundary gate | PASS; #199 fixture requiring stateful git was not run |
+| Preserved #198 smoke / #199 boundary source | No diff to workflow, smoke script, boundary fixture or boundary gate |
+| Source whitespace | `git diff --check` PASS |
+| Latest preview diagnostic | `build OK` at 2026-10-21T02:04:30Z |
+| Hosted CI / reviewable PR | **Unavailable**: no repository write/PR tool available; no commit, push, merge or hosted-green result claimed |
+| Branch / signed-JWT / provider checks | **Not run here**, per source-only scope |
+
+The source-gates workflow now triggers on this receipt and its JSON, and validates the receipt offline. Full application CI remains for hosted review; no manual application build/typecheck was run. The reviewable diff is ready for the existing repository integration, but an actual source PR and green hosted checks remain outstanding.
