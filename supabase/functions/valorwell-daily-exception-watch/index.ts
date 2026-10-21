@@ -44,7 +44,7 @@ function incidents(current: Metric, previous: Metric | null): Incident[] {
   item("integration_stuck_ready", "outbox", "stuck_ready", 1, true);
   item("stripe_webhook_failures", "stripe", "failed_24h", 1);
   item("stripe_webhook_unprocessed", "stripe", "unprocessed_older_than_hour", 1);
-  item("gmail_maintenance_cron_failures", "cron", "failed_runs_24h", 1);
+  item("gmail_maintenance_jobs_disabled", "cron", "maintenance_jobs_disabled", 1);
   return out;
 }
 const htmlSafe = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
