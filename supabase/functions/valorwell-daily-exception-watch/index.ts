@@ -42,6 +42,10 @@ function incidents(current: Metric, previous: Metric | null): Incident[] {
   item("stuck_campaign_triggers", "campaign_trigger_jobs", "overdue_unprocessed", 1, true);
   item("integration_dead_letters", "outbox", "dead_lettered_24h", 1);
   item("integration_stuck_ready", "outbox", "stuck_ready", 1, true);
+  item("claimmd_uncertain_submission", "claimmd", "uncertain_submission_requests", 1);
+  item("claimmd_automation_failures", "claimmd", "failed_automation_24h", 1);
+  item("claimmd_recent_sync_errors", "claimmd", "recent_lifecycle_sync_errors", 1);
+  item("era_import_failures", "claimmd", "incomplete_era_imports_24h", 1);
   item("stripe_webhook_failures", "stripe", "failed_24h", 1);
   item("stripe_webhook_unprocessed", "stripe", "unprocessed_older_than_hour", 1);
   item("gmail_maintenance_jobs_disabled", "cron", "maintenance_jobs_disabled", 1);
