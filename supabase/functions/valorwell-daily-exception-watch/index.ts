@@ -74,7 +74,7 @@ Deno.serve(async (request: Request) => {
   const day = chicagoDay();
   const { data: existing, error: existingErr } = await db.from("valorwell_daily_watch_runs").select("status,notified").eq("run_day", day).maybeSingle();
   if (existingErr) return json({ error: "history_query_failed" }, 500);
-  if (existing?.status === "ok" && (existing?.notified || !existing?.notified)) return json({ status: "already_ran", day });
+  if (existing?.status === "ok") return json({ status: "already_ran", day });
   const { data: snapshot, error: snapErr } = await db.rpc("valorwell_daily_watch_snapshot_v1");
   if (snapErr || !snapshot || typeof snapshot !== "object") return json({ error: "snapshot_unavailable" }, 503);
   const { data: history, error: histErr } = await db.from("valorwell_daily_watch_runs")
