@@ -30,7 +30,7 @@
 - [x] Implement private schema capture review/parity tooling and explicit baseline cutover gate.
 - [x] Implement fail-closed isolated replay CLI and source CI; 967 CRM and 18 recovery tests pass.
 - [ ] Produce reviewed canonical baseline/parity artifact (blocked: operator-only raw export, authoritative export-time ledger/catalog, complete managed reconciliation and human review; do not request raw SQL).
-- [x] Record operator-reported successful ten-file branch SQL application; independent workflow acceptance still pending. Separate Stedi retirement is excluded, not applied.
+- [x] Record earlier operator-reported ten-file branch SQL application; later 03:41 receipt separately reports branch-only Stedi retirement, with independent workflow/history-fixture acceptance still pending.
 - [x] Document ordered release and independent signed-worker acceptance path; executable production rollback awaits private originals/full-schema tests.
 - [x] Report evidence and blockers; existing Todoist task remains OPEN (no available connection; not updated or duplicated).
 - [ ] Production rollout/history changes remain blocked by separate explicit approval; existing operator-authorized paid branch is not managed here.
