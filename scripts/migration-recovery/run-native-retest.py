@@ -18,6 +18,7 @@ from native_suites import worker_suites
 from native_history import stedi_preservation
 from native_catalog import compare_native
 from native_behavior import signup_probe, realtime_probe
+from native_payroll import payroll_matrix
 
 
 def checks(stack, repositories, candidate, with_security=True, resend_module=None):
@@ -56,6 +57,11 @@ def checks(stack, repositories, candidate, with_security=True, resend_module=Non
         stack.report['claim_payroll_rpc_acl'] = 'FAIL: ' + type(error).__name__
     stack.save()
     storage_matrix(stack, identities, 'captured_current_policies')
+    try:
+        payroll_matrix(stack, identities)
+    except Exception as error:
+        stack.report['payroll_database_error'] = dict(status='BLOCKED', reason=type(error).__name__)
+        stack.save()
     if resend_module:
         worker_suites(stack, repositories, resend_module)
     else:
