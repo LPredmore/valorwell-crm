@@ -6,6 +6,8 @@ Source implementation and deployment are separate. This package does not authori
 
 Read-only inspection on October 21: production `ahqauomkgflopxgnlndd` has 966 migration entries, latest `20261020214527`. October 19 CRM authorization files and Billing `20261019000300` / `20261019085103` remain absent. Stripe ACL `20261019232604` is already recorded. Historical versions `20260924221039`, `20261007140519`, `20261009190819` are recorded: their PRs reconcile source and must not be replayed.
 
+A targeted production ACL check still finds all 12 reviewed internal RPCs callable by authenticated users; the prepared revocations are not deployed.
+
 Stedi now has zero enabled routes and zero active cron jobs whose name/command mentions Stedi. The no-reactivation constraint is absent. Twelve Stedi Edge endpoints remain ACTIVE; source tombstones below still require deployment. This supersedes older evidence of two active routes/four jobs. No historical claim records were retrieved or modified for this package.
 
 Stripe endpoint `we_1U0QK1K6NXPL7VzoDT0KzcRA`, canonical live account `acct_1OprKCK6NXPL7Vzo`, is enabled at the production `stripe-webhook` URL. Subscriptions remain `checkout.session.completed`, `checkout.session.expired`, `payment_intent.payment_failed`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`. Both `checkout.session.async_payment_succeeded` and `checkout.session.async_payment_failed` are missing. Deployed webhook remains v73; corrected source is already in Billing main via #44.
@@ -70,3 +72,5 @@ Use existing Wednesday review `Weekly — review ValorWell CRM/Billing productio
 CRM #193, #170 and #114 and Billing #49 and #14 are merged. CRM #97's already-deployed activity fix is retained as source in the completion PR. Selective implementation from #203 includes tenant-bound Storage metadata/policies; its private payroll preparation is replaced by the body-free migration above. #200's preview timeout regression is retained; current main already has the safer timeout implementation. CRM #200/#202/#203 and Billing #34/#50 are superseded by the completion package; no new native/reconstruction stack is adopted. CRM #100's historical audit is superseded by the current security release assessment. Unrelated CRM #84 thumbnails and #67 newsletter redesign remain separate feature proposals and are not prerequisites to this CRM/Billing security release; their broad changes must not overwrite newer production functionality.
 
 Exact payload checksums and global ordering: [production-completion-manifest.json](production-completion-manifest.json). Empty execution receipts mean no production deployment has occurred.
+
+After release run `supabase/tests/production_completion_readonly.sql` with an authorized read-only SQL client. It reports catalog gates without returning clinical or financial records. Expected counters and booleans are documented inline; runtime/provider verification remains separate.
