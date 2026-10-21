@@ -78,7 +78,16 @@ describe('staged SQL contract', () => {
 
 describe('source isolation', () => {
   const files: string[] = [];
-  const walk = (d: string) => { for (const f of readdirSync(d)) { const p = join(d, f); statSync(p).isDirectory() ? walk(p) : files.push(p); } };
+  const walk = (d: string) => {
+    for (const f of readdirSync(d)) {
+      const p = join(d, f);
+      if (statSync(p).isDirectory()) {
+        walk(p);
+      } else {
+        files.push(p);
+      }
+    }
+  };
   walk('src'); walk('supabase/functions');
   it('note RPCs are referenced only by the owner repository', () => {
     const users = files.filter(f => !f.endsWith('owner-private-notes.test.ts') && /crm_owner_note_/.test(readFileSync(f, 'utf8')));
