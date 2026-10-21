@@ -124,3 +124,31 @@ REVOKE ALL ON FUNCTION public.valorwell_daily_watch_snapshot_v1() FROM PUBLIC, a
 GRANT EXECUTE ON FUNCTION public.valorwell_daily_watch_snapshot_v1() TO service_role;
 COMMENT ON FUNCTION public.valorwell_daily_watch_snapshot_v1() IS
 'Operational aggregate-only health snapshot for server-side OpenRouter watch; no names, PHI, message content, or tokens.';
+
+-- Deliberately unscheduled until the API-key preflight and delivery checks succeed.
+-- Schedule this function with: SELECT cron.schedule('valorwell-daily-openrouter-watch', '0 13,14 * * *',
+--   'select private.invoke_valorwell_daily_watch_v1()');
+-- The America/Chicago local-hour guard chooses 13:00 UTC during DST or 14:00 UTC in winter.
+CREATE OR REPLACE FUNCTION private.invoke_valorwell_daily_watch_v1()
+RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $dispatch$
+DECLARE v_cron_secret text; v_request bigint;
+BEGIN
+  IF extract(hour from now() AT TIME ZONE 'America/Chicago') <> 8 THEN
+    RETURN NULL;
+  END IF;
+  SELECT decrypted_secret INTO v_cron_secret
+  FROM vault.decrypted_secrets WHERE name='cron_secret' LIMIT 1;
+  IF nullif(v_cron_secret,'') IS NULL THEN
+    RAISE EXCEPTION 'Daily watch cron authorization secret is missing';
+  END IF;
+  SELECT net.http_post(
+    url := 'https://ahqauomkgflopxgnlndd.supabase.co/functions/v1/valorwell-daily-exception-watch',
+    headers := jsonb_build_object('Content-Type','application/json','X-Cron-Secret',v_cron_secret),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
+  ) INTO v_request;
+  RETURN v_request;
+END;
+$dispatch$;
+REVOKE ALL ON FUNCTION private.invoke_valorwell_daily_watch_v1() FROM PUBLIC, anon, authenticated, service_role;
