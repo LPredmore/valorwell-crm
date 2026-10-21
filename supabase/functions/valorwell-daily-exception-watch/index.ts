@@ -50,17 +50,17 @@ function incidents(current: Metric, previous: Metric | null): Incident[] {
 const htmlSafe = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-  const secret = Deno.env.get("CRON_SHARED_SECRET") || "";
   const provided = request.headers.get("x-cron-secret") || "";
-  if (!secret || !provided || provided.length !== secret.length) return json({ error: "forbidden" }, 403);
-  let diff = 0;
-  for (let i = 0; i < secret.length; i++) diff |= secret.charCodeAt(i) ^ provided.charCodeAt(i);
-  if (diff !== 0) return json({ error: "forbidden" }, 403);
+  if (provided.length < 24 || provided.length > 512) return json({ error: "forbidden" }, 403);
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  if (!serviceKey || !supabaseUrl) return json({ error: "server_configuration_missing" }, 503);
+  const db = createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const { data: tokenValid, error: tokenError } = await db.rpc("valorwell_daily_watch_cron_token_valid_v1", { p_token: provided });
+  if (tokenError || tokenValid !== true) return json({ error: "forbidden" }, 403);
   const input = await request.json().catch(() => ({})) as { mode?: string };
   const apiKey = Deno.env.get("OPENROUTER_API_KEY") || "";
   const resendKey = Deno.env.get("RESEND_API_KEY") || "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
   if (input.mode === "preflight") return json({
     component: "valorwell-daily-exception-watch", model: MODEL,
     openrouter_key_configured: Boolean(apiKey), resend_key_configured: Boolean(resendKey),
@@ -70,7 +70,6 @@ Deno.serve(async (request: Request) => {
   if (!apiKey || !resendKey || !serviceKey || !supabaseUrl) return json({ error: "credentials_not_configured", missing: [
     !apiKey && "OPENROUTER_API_KEY", !resendKey && "RESEND_API_KEY", (!serviceKey || !supabaseUrl) && "SUPABASE_SERVER_ENV",
   ].filter(Boolean) }, 503);
-  const db = createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
   const day = chicagoDay();
   const { data: existing, error: existingErr } = await db.from("valorwell_daily_watch_runs").select("status,notified").eq("run_day", day).maybeSingle();
   if (existingErr) return json({ error: "history_query_failed" }, 500);
