@@ -1,0 +1,264 @@
+{
+  "date_utc": "2026-10-21",
+  "method": "Fresh local command executions; log hashes bind retained local logs, not an external provenance authority",
+  "results": [
+    {
+      "name": "crm-recovery-final",
+      "status": "PASS",
+      "tests": 124,
+      "command": "python3 -m unittest discover -s scripts/migration-recovery -p 'test_*.py' -v",
+      "log_sha256": "08a91bc9ad2eeeed68178c0691c4033d671e4a9ad767880d9edbde9a463f9c0e"
+    },
+    {
+      "name": "billing-baseline",
+      "status": "PASS",
+      "tests": 6,
+      "command": "python3 -m unittest discover -s scripts/tests -p test_schema_baseline.py -v",
+      "log_sha256": "a0f9f973834ede178ddbb9aa9efd0dd43cdb1c94885341653014bb483edcf303"
+    },
+    {
+      "name": "billing-migration-sources",
+      "status": "PASS",
+      "tests": 7,
+      "command": "python3 -m unittest discover -s scripts -p test_release_migration_sources.py -v",
+      "log_sha256": "a6b917f1ce9fe82f193d65a6a290531ec94ace955a3109fffc6ab011edfc3e2b"
+    },
+    {
+      "name": "stripe-worker",
+      "status": "PASS",
+      "tests": 20,
+      "command": "npm test --prefix scripts/worker-integration",
+      "log_sha256": "c2098ed758e12bee2d54123326aa54988b3d2483fab4422620c57037fbdbe6b3"
+    },
+    {
+      "name": "crm-auth-timer",
+      "status": "PASS",
+      "tests": 1,
+      "command": "npx vitest run src/test/preview-auth-storage.test.ts",
+      "log_sha256": "2566ac69248cd51b0da6d6de851ad27e0965d8eb2c5e8d6fd235ab9e358ce150"
+    },
+    {
+      "name": "crm-footer-rerun",
+      "status": "PASS",
+      "tests": 5,
+      "command": "npx vitest run src/test/newsletter-compliance-footer-normalization.test.tsx",
+      "log_sha256": "24130bca2985aec6b80b6ed1ea7533df56cd1235bb4bf2759c77b1e155b48620"
+    },
+    {
+      "name": "claims-worker",
+      "status": "PASS",
+      "scope": "actual Claim.MD handler and retired clearinghouse tombstone; database/provider transports mocked and network denied",
+      "database_authoritative": false,
+      "tests": 5,
+      "log_sha256": "68496131a03ec134e9cf9b71e64a98e9744aae846ae8d8f8dc2151c439e6ed31"
+    },
+    {
+      "name": "claimmd-worker",
+      "status": "PASS",
+      "scope": "Actual maintained submit-claims worker and auth source with synthetic ClaimMD upload and mocked Supabase adapter; real payload creation and source orchestration; no live submissions",
+      "database_authoritative": false,
+      "tests": 7,
+      "log_sha256": "e9d02d97d17e8cc5208eb30b4f374c6fe8938fb5c0bf9b889df81fadf52be9fb"
+    },
+    {
+      "name": "payroll-worker",
+      "status": "PASS",
+      "scope": "Exact recovered execute-payroll-payments v119 source and auth helpers; mocked Supabase adapter and synthetic deny-by-default Mercury proxy transport; no transactions initiated",
+      "database_authoritative": false,
+      "tests": 13,
+      "log_sha256": "bcb64f8712aad7230643bd78353d47949612a1e90b0e480c872004e89f7c8fad"
+    },
+    {
+      "name": "crm-boundary",
+      "command": [
+        "bash",
+        ".github/scripts/check-billing-hub-boundary.sh"
+      ],
+      "exit": 0,
+      "seconds": 1.49,
+      "status": "PASS",
+      "log_sha256": "9cccd81b40516a7aa0459aa966404535ddbb1dd7a626e85efea33d173e579554"
+    },
+    {
+      "name": "crm-lint",
+      "command": [
+        "npx",
+        "eslint",
+        "src",
+        "--max-warnings=0"
+      ],
+      "exit": 1,
+      "seconds": 120.47,
+      "status": "FAIL",
+      "log_sha256": "98cea3d5a0e98ba7d69c1602247e4b979ffa183d4acb58100426573758858171"
+    },
+    {
+      "name": "crm-typecheck",
+      "command": [
+        "npx",
+        "tsc",
+        "--noEmit",
+        "--project",
+        "tsconfig.app.json"
+      ],
+      "exit": 0,
+      "seconds": 245.05,
+      "status": "PASS",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "crm-tooling-typecheck",
+      "command": [
+        "npx",
+        "tsc",
+        "--noEmit",
+        "--project",
+        "tsconfig.node.json"
+      ],
+      "exit": 0,
+      "seconds": 3.75,
+      "status": "PASS",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "crm-unit",
+      "command": [
+        "npm",
+        "test"
+      ],
+      "exit": 1,
+      "seconds": 869.98,
+      "status": "FAIL",
+      "log_sha256": "32ab6f17a473eca203f26c0ff8a4226385e670c7fdea4f3ba861cadc59642d3f"
+    },
+    {
+      "name": "crm-build",
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "exit": 0,
+      "seconds": 57.97,
+      "status": "PASS",
+      "log_sha256": "1c918ad8bbc71d6d725af23331d4ce594fde7fc322f65e47a664847fe14b5091"
+    },
+    {
+      "name": "billing-lint",
+      "command": [
+        "npm",
+        "run",
+        "lint"
+      ],
+      "exit": 0,
+      "seconds": 82.46,
+      "status": "PASS",
+      "log_sha256": "724a856192395a2dde3b372bd033300f74694303af5ca1bb6a1a5c93d15211a0"
+    },
+    {
+      "name": "billing-typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exit": 0,
+      "seconds": 62.22,
+      "status": "PASS",
+      "log_sha256": "9bf4a0307d01ec987b24f80271364b57774ef086bd2be33e09688e4232fd7132"
+    },
+    {
+      "name": "billing-unit",
+      "command": [
+        "npm",
+        "test"
+      ],
+      "exit": 0,
+      "seconds": 36.9,
+      "status": "PASS",
+      "log_sha256": "2dd282fe745c9c39c9e7c8e5e1f7b2919a387071e909fce98d9dc665a7df0170"
+    },
+    {
+      "name": "billing-build",
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "exit": 0,
+      "seconds": 146.99,
+      "status": "PASS",
+      "log_sha256": "c54723566d5b0782933e70247d72734ee83a51cc8b54faf020e362d5b0f3546f"
+    },
+    {
+      "name": "claims-worker",
+      "command": [
+        "node",
+        "scripts/claims-worker-orchestration.mjs"
+      ],
+      "exit": 0,
+      "seconds": 4.3,
+      "status": "PASS",
+      "log_sha256": "68496131a03ec134e9cf9b71e64a98e9744aae846ae8d8f8dc2151c439e6ed31"
+    },
+    {
+      "name": "claimmd-worker",
+      "command": [
+        "node",
+        "scripts/claimmd-worker-orchestration.mjs"
+      ],
+      "exit": 0,
+      "seconds": 7.59,
+      "status": "PASS",
+      "log_sha256": "e9d02d97d17e8cc5208eb30b4f374c6fe8938fb5c0bf9b889df81fadf52be9fb"
+    },
+    {
+      "name": "payroll-worker",
+      "command": [
+        "node",
+        "scripts/payroll-worker-orchestration.mjs"
+      ],
+      "exit": 0,
+      "seconds": 7.26,
+      "status": "PASS",
+      "log_sha256": "bcb64f8712aad7230643bd78353d47949612a1e90b0e480c872004e89f7c8fad"
+    },
+    {
+      "name": "crm-lint-final",
+      "status": "PASS",
+      "command": "npx eslint src --max-warnings=0",
+      "exit": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "crm-typecheck-final",
+      "status": "PASS",
+      "command": "npx tsc --noEmit --project tsconfig.app.json",
+      "exit": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "full_local_crm_suite": {
+    "status": "FAIL",
+    "passed": 970,
+    "failed": 1,
+    "total": 971,
+    "failure": "newsletter-compliance-footer-normalization render test exceeded 5000ms",
+    "focused_rerun": "PASS 5/5; unchanged case 1254ms",
+    "timing_root_cause": "Not conclusively established; resource contention plausible; full CI rerun required"
+  },
+  "blocked_suites": [
+    {
+      "name": "crm-pr193-authoritative-db",
+      "reason": "Missing private local synthetic signing secret; no cases executed"
+    },
+    {
+      "name": "billing-pr40-authoritative-db",
+      "reason": "Owned valorwell-schema-exact container absent; no cases executed"
+    },
+    {
+      "name": "stripe-authoritative-db",
+      "reason": "Owned recovered native DB/PostgREST stack absent; no cases executed"
+    }
+  ]
+}

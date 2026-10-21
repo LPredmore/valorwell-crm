@@ -1,5 +1,22 @@
 # Shared schema recovery tools
 
+**Independent October 21 follow-up:**
+[Observed parity, executed branch repairs and release gates](../../docs/architecture/2026-10-21-independent-recovery-readiness.md).
+The branch now has 28 entries after exact relation-ACL, Auth-hook and application-publication reconstruction
+repairs; earlier receipts retain their original counts. This does not authorize a
+production deployment or establish native historical replay / signed-user acceptance.
+
+`catalog-components-readonly.sql`, `catalog-relation-structure-readonly.sql` and
+`catalog-dependencies-readonly.sql` separate raw fingerprint drift from canonical ACL
+ordering, live column order and dependency multiplicity. Execute privately with the
+control-plane project identity independently verified; CI only pins their bytes.
+`relation_acl_repair.py --help` describes the offline branch-only repair renderer.
+Feed it equally scoped identity/kind/owner/ACL captures from production and branch;
+it emits atomic, exact-preimage/postimage SQL, never connects or uploads anything.
+Keep captures and generated SQL outside the repository. Do not feed function ACLs
+into this tool: reviewed October function restrictions intentionally differ.
+Reusing stale preimages aborts; recapture rather than replaying a recovery migration.
+
 These are source/isolated-only tools, not permission to change production or repair its migration ledger. Evidence and execution status: `docs/architecture/2026-10-20-baseline-recovery-execution-receipt.md`.
 
 **October 21 operator route:** [Private Windows/WSL2 restore instructions](PRIVATE-LOCAL-RESTORE.md).

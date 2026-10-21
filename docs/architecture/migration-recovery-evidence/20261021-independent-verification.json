@@ -1,0 +1,3521 @@
+{
+  "captured_date_utc": "2026-10-21",
+  "method": "Independent Supabase MCP READ ONLY catalog inspection; separate statement snapshots, no application records exported",
+  "production_project": "ahqauomkgflopxgnlndd",
+  "test_project": "dskqovrvogmwrlmxsdjd",
+  "historical_replay_success": false,
+  "control_plane_status": "MIGRATIONS_FAILED",
+  "production_ledger_count": 966,
+  "test_ledger_count_before": 25,
+  "test_ledger_count_after": 28,
+  "production_database": {
+    "ctype": "en_US.UTF-8",
+    "owner": "postgres",
+    "version": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 13.2.0, 64-bit",
+    "collation": "en_US.UTF-8"
+  },
+  "test_database": {
+    "ctype": "en_US.UTF-8",
+    "owner": "postgres",
+    "version": "PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+    "collation": "en_US.UTF-8"
+  },
+  "initial_fingerprint_counts": {
+    "missing": {
+      "policy": 19,
+      "publication": 1,
+      "publication_table": 9,
+      "trigger": 1
+    },
+    "extra": {
+      "constraint": 1,
+      "function": 1,
+      "role_membership": 3
+    },
+    "changed": {
+      "column": 162,
+      "extension": 1,
+      "function": 22,
+      "relation": 289,
+      "trigger": 1
+    }
+  },
+  "postrepair_raw_diff": {
+    "missing": [
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Anyone can view logos\"",
+        "fingerprint": "cb58069338020c61dc9a5686607d0e1d"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Anyone can view signature images\"",
+        "fingerprint": "743b00c343f2ac83b79d664c49d13abc"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Authenticated users can delete logos\"",
+        "fingerprint": "461ee34b16834e47c8d4a5e9b7371c74"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Authenticated users can delete signature images\"",
+        "fingerprint": "5208e86d6b4dcf74dc5e82161c041ea7"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Authenticated users can delete training covers\"",
+        "fingerprint": "96342c7fce8e543607fd051cf8ce50e2"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Authenticated users can update logos\"",
+        "fingerprint": "0d8265577f511a482d5a0b16c3c3130e"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Authenticated users can update training covers\"",
+        "fingerprint": "54da84e7e63e3d6c06cf4ff071d6a375"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Authenticated users can upload logos\"",
+        "fingerprint": "e080d77466c762e65ce1b7ac977b43a9"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Authenticated users can upload signature images\"",
+        "fingerprint": "0d6e02effc47eae31e59f041dde11729"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Authenticated users can upload training covers\"",
+        "fingerprint": "e0c5e4c4757ac6069c56bc19c48011d1"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Profile images are publicly accessible\"",
+        "fingerprint": "6b5174fbb366bc4b9264f6644388c4c1"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Training covers are publicly accessible\"",
+        "fingerprint": "a2988554aae92fd412de6bdfbfdc15e2"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Users can delete own profile images\"",
+        "fingerprint": "5c6e6af5d17c10aceba04d4828dc541f"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Users can update own profile images\"",
+        "fingerprint": "2188da848f31fba5aa0926924bb0d139"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.\"Users can upload own profile images\"",
+        "fingerprint": "4a8da6e83c31664cf0e7ce0787342e7d"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.email_assets_crm_delete",
+        "fingerprint": "1b63e71b60a96ca6e94deac573e1a7db"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.email_assets_crm_insert",
+        "fingerprint": "0b89d314cf5f8fcd5285f5aed7437cab"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.email_assets_crm_select",
+        "fingerprint": "d2d8a99f081f2130d0fd7cf7ae45a961"
+      },
+      {
+        "kind": "policy",
+        "identity": "storage.objects.email_assets_crm_update",
+        "fingerprint": "f682c7d8fdac756f25a847c6bd405394"
+      },
+      {
+        "kind": "publication",
+        "identity": "supabase_realtime_messages_publication",
+        "fingerprint": "1aceea866d817b54eedae4c7ab2841cf"
+      },
+      {
+        "kind": "publication_table",
+        "identity": "supabase_realtime_messages_publication:realtime.messages_2026_10_18",
+        "fingerprint": "9d10b572727865e9885cee81eed4813f"
+      },
+      {
+        "kind": "publication_table",
+        "identity": "supabase_realtime_messages_publication:realtime.messages_2026_10_19",
+        "fingerprint": "9d10b572727865e9885cee81eed4813f"
+      },
+      {
+        "kind": "publication_table",
+        "identity": "supabase_realtime_messages_publication:realtime.messages_2026_10_20",
+        "fingerprint": "9d10b572727865e9885cee81eed4813f"
+      },
+      {
+        "kind": "publication_table",
+        "identity": "supabase_realtime_messages_publication:realtime.messages_2026_10_21",
+        "fingerprint": "9d10b572727865e9885cee81eed4813f"
+      },
+      {
+        "kind": "publication_table",
+        "identity": "supabase_realtime_messages_publication:realtime.messages_2026_10_22",
+        "fingerprint": "9d10b572727865e9885cee81eed4813f"
+      },
+      {
+        "kind": "publication_table",
+        "identity": "supabase_realtime_messages_publication:realtime.messages_2026_10_23",
+        "fingerprint": "9d10b572727865e9885cee81eed4813f"
+      },
+      {
+        "kind": "publication_table",
+        "identity": "supabase_realtime_messages_publication:realtime.messages_2026_10_24",
+        "fingerprint": "9d10b572727865e9885cee81eed4813f"
+      }
+    ],
+    "extra": [
+      {
+        "kind": "constraint",
+        "identity": "public.claim_clearinghouse_routes.claim_clearinghouse_routes_no_active_stedi",
+        "fingerprint": "f8c0f67bcc1fc9acfdb6bd8e8b264b44"
+      },
+      {
+        "kind": "function",
+        "identity": "private.claim_is_externally_submitted_internal_v1(p_claim_id uuid)",
+        "fingerprint": "4ad405119911055608d78ca35db4c29f"
+      },
+      {
+        "kind": "role_membership",
+        "identity": "supabase_realtime_admin->anon",
+        "fingerprint": "40fb38e361050ffaaaac636353137338"
+      },
+      {
+        "kind": "role_membership",
+        "identity": "supabase_realtime_admin->authenticated",
+        "fingerprint": "40fb38e361050ffaaaac636353137338"
+      },
+      {
+        "kind": "role_membership",
+        "identity": "supabase_realtime_admin->service_role",
+        "fingerprint": "40fb38e361050ffaaaac636353137338"
+      }
+    ],
+    "changed": [
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_settings.client_journey_batch_size",
+        "fingerprint": "d57b68b5c064fbef12130e13a4a1b884",
+        "test_fingerprint": "29c7682be6cdf77330b3facd126b3dd7"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_settings.created_at",
+        "fingerprint": "abe6293502e3ccd2a2657f56cef23503",
+        "test_fingerprint": "626372d7e8c8074b7c1d2e3ba4002f8d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_settings.max_model_concurrency",
+        "fingerprint": "baa5fe9ee43a17428d2d8149701693ab",
+        "test_fingerprint": "e94a17f60acdeab66cf6ea979bae1843"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_settings.model",
+        "fingerprint": "da95aeff4805dffa3082bd84f37ae1ea",
+        "test_fingerprint": "23730ca822abc864f2661351bbdd0208"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_settings.provider",
+        "fingerprint": "4ef305dbce76fd81977890c04931f312",
+        "test_fingerprint": "05fc1098e30346ea20830fc7d2adad41"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_settings.reanalysis_max_age_hours",
+        "fingerprint": "c0690310f38f574b7cc606a9b48fa9bd",
+        "test_fingerprint": "54f913e2bf981cc62abaf585f6fb8d36"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_settings.snapshot_retention_days",
+        "fingerprint": "153d3e167d88b261647d7ecbca4c89ba",
+        "test_fingerprint": "54a794a8029a9830e1e1534cbf7275c0"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_settings.updated_at",
+        "fingerprint": "2251fae4e2eb89314d91ccea60eaeee3",
+        "test_fingerprint": "28df986382d518ae15aab5c36e80eec6"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_settings.updated_by_profile_id",
+        "fingerprint": "743ee4457c4b35a7781c7f1ea2d19146",
+        "test_fingerprint": "590c03c5c627eadc22c86e8f89825a21"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.camera_framing",
+        "fingerprint": "9f133a34f97594998646b0ec15c81714",
+        "test_fingerprint": "44d5904585e7d1e0169f611a13b8da6d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.clip_type",
+        "fingerprint": "ae1c7bb5baf3edbabfebcc9233c50ddb",
+        "test_fingerprint": "f3e3d516fd7f1d959856edc2a4157166"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.cold_open_enabled",
+        "fingerprint": "972cd8cb4a1b8c3f024fe4de4ffb908f",
+        "test_fingerprint": "1d33c16b179853124f4fae3a13918fd3"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.cold_open_end_seconds",
+        "fingerprint": "2d4bc54f3cb6b2d1c79b0826d597f1a1",
+        "test_fingerprint": "1eae0787b8eeec987f6d2069939d7a07"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.cold_open_prompt_version",
+        "fingerprint": "d9f50c976ffaebb69cb2cbbdefda3cbe",
+        "test_fingerprint": "69b6d0121687f6f36e3a0bb6501a0d11"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.cold_open_reason",
+        "fingerprint": "5837f8b8d15725c34474edd850c45bc0",
+        "test_fingerprint": "598ca3a58048f7713e57748532781130"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.cold_open_score",
+        "fingerprint": "daf82baf3472504ec8abc3949f2327b8",
+        "test_fingerprint": "e8841e596d0469a447b7dec3995b33cd"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.cold_open_selected_at",
+        "fingerprint": "95a3bafc82ad1517dbf384715213d371",
+        "test_fingerprint": "8b38e7d2ca360fdd658884f2997278ff"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.cold_open_start_seconds",
+        "fingerprint": "22a8c2b72d42be7ce49f1d0d96b1f451",
+        "test_fingerprint": "1e2957b139560eb9de44f399918c0598"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.cold_open_text",
+        "fingerprint": "393da9aef93cb7c8d4636204243ad93d",
+        "test_fingerprint": "615166c5485f85bedaa94128b90076bc"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.copy_input_fingerprint",
+        "fingerprint": "9ddc9958191a62d2487f9121b58ee57b",
+        "test_fingerprint": "6d4c8355fa2b7d9260c66ebe0fea4544"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.core_visual",
+        "fingerprint": "bc0f1bd51830e4a7c948b6b5c44af06b",
+        "test_fingerprint": "189c7336354ea9394ddbedfccf2b628e"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.cover_image_file_id",
+        "fingerprint": "44d5904585e7d1e0169f611a13b8da6d",
+        "test_fingerprint": "5df9ff42aae4c1e3503f96c2687ca5cb"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.cover_image_url",
+        "fingerprint": "09b326cab89f42851204496bb116746f",
+        "test_fingerprint": "8c439da880bb480e41e72d8c42a4f40a"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.created_at",
+        "fingerprint": "42f07fbb293e5643fd946053e0951ee3",
+        "test_fingerprint": "05a5b8ec750b14a307e4cb4afca5a97b"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.drive_file_id",
+        "fingerprint": "b1d5394d59758ed832699e982b8ed567",
+        "test_fingerprint": "2a1c29d2f90df68dcc8ff56b367f2c8d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.drive_file_url",
+        "fingerprint": "8c4a1d90f6099f4d602af90eb09dfb07",
+        "test_fingerprint": "d7ca0b4ab39f8e29777a4f71ce0989ea"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.end_seconds",
+        "fingerprint": "27e4055adbd09093b266f9e201d604f3",
+        "test_fingerprint": "91780ba23779e6d553129dafd08df41a"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.error_message",
+        "fingerprint": "8c439da880bb480e41e72d8c42a4f40a",
+        "test_fingerprint": "46f5e4b6d8a73f6ff0e5359b46e4c685"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.facebook_description",
+        "fingerprint": "8994b552e5cefedc29f3ec41b3a71afa",
+        "test_fingerprint": "1fa275e8e771f8de565526b231e5be2f"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.facial_expression",
+        "fingerprint": "5abda1c7656f457946645677ee24c26a",
+        "test_fingerprint": "8994b552e5cefedc29f3ec41b3a71afa"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.gesture_action",
+        "fingerprint": "0ba5a239b0629e20c6a4c4f16e1ab659",
+        "test_fingerprint": "95766b98f1db279cca299cec38f7ab99"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.hashtags",
+        "fingerprint": "a1c5902b13e45c83b6083b1463e422a2",
+        "test_fingerprint": "bd18e0d5c58a12f8622ae608fb2e955a"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.hook_candidates",
+        "fingerprint": "eb494633eae36e03f3f3a992548c245c",
+        "test_fingerprint": "84f7f471bf3e03ba403b9be4e5d2844a"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.hook_generated_at",
+        "fingerprint": "13304b28410e088ed9f0854ebb2129a5",
+        "test_fingerprint": "ddd8ca46bca4d53d3464f8f92d5799fa"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.hook_generation_meta",
+        "fingerprint": "00fd0afe09e78539e02e76867647c6de",
+        "test_fingerprint": "4e486e4f136c41c6c1b77b741b15ada3"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.hook_generation_revision",
+        "fingerprint": "ac608b6d12f3308b9a3adbd1c20cc7f4",
+        "test_fingerprint": "9dba3c3e833a3caa6e3e42e4a793f4a9"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.hook_input_fingerprint",
+        "fingerprint": "31b5271d63a20c24b9464cc03afe811f",
+        "test_fingerprint": "65a1e7a3e4ec078ebbcb95a94822096e"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.hook_text",
+        "fingerprint": "65a1e7a3e4ec078ebbcb95a94822096e",
+        "test_fingerprint": "b1d5394d59758ed832699e982b8ed567"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.hook_text_placement",
+        "fingerprint": "b4e7fb2e44833acae39da39346cc8e5f",
+        "test_fingerprint": "d26089bc079e05340f109407d208f0ee"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.last_progress_at",
+        "fingerprint": "8c357c134a29a844c0a0af5cd066a244",
+        "test_fingerprint": "dca449355ce74c0229d4ccf90836f5ec"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.linkedin_description",
+        "fingerprint": "46943d04d26e80791ae02f1984f82395",
+        "test_fingerprint": "bba6ed2b2a426e67458b04b25868bdde"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.output_mime_type",
+        "fingerprint": "b4806f2ea8b95631a68c579a116a2742",
+        "test_fingerprint": "14c282d57a195a9d554dca662550d949"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.output_size_bytes",
+        "fingerprint": "c9d0b01d32308765edb1cdbc4c2a49e5",
+        "test_fingerprint": "1a55c68c76d5ae59334edd69e5fff283"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.parent_file_id",
+        "fingerprint": "18b940b6b0758b96ffbeff60807d64a3",
+        "test_fingerprint": "3923df27471de5cd08537319a9c001d7"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.part_number",
+        "fingerprint": "82b57903ebc45da3cf95ac7756c9b214",
+        "test_fingerprint": "24a4a9cbb4defdd91efa1760e00f1db2"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.person_positioning",
+        "fingerprint": "ae87039d5389c83f99acea7aad8f3f72",
+        "test_fingerprint": "46943d04d26e80791ae02f1984f82395"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.pipeline_status",
+        "fingerprint": "add020e7e4096e5174b410771f8334f8",
+        "test_fingerprint": "4dcaed3a41abc206238d68770c90c32e"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.pose_family",
+        "fingerprint": "651191479547144d7e06ec8c6cafb015",
+        "test_fingerprint": "09b326cab89f42851204496bb116746f"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.primary_speaker",
+        "fingerprint": "8efa3d74b8c9f45c7f7f57ea4f9d732e",
+        "test_fingerprint": "8c4a1d90f6099f4d602af90eb09dfb07"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.render_input_fingerprint",
+        "fingerprint": "598ca3a58048f7713e57748532781130",
+        "test_fingerprint": "2394503222f0e36a15cf2d1997a0836e"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.rendered_at",
+        "fingerprint": "dad9673abda051650fdd0d9dac5b18e2",
+        "test_fingerprint": "fb9ab427ca71e11cf8142e6644f1316d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.source_revision",
+        "fingerprint": "509689657ab2dbb6525bdae4fd4048f1",
+        "test_fingerprint": "2d01060d6772b7a73a31d8c792d44f2a"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.start_seconds",
+        "fingerprint": "e57e64b913091b51daf0a5dbe3682b6a",
+        "test_fingerprint": "9596a07c5920535f7306af9115bfe0c0"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.status",
+        "fingerprint": "5a8728be9f8e085203f7ae6370ee755d",
+        "test_fingerprint": "96c96b5bd5daea27556b7232d78c9dfe"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.thumbnail_expression_family",
+        "fingerprint": "c86e195f282a59ac6cba64a05a0e36fc",
+        "test_fingerprint": "5beb30ad80efc6dfa3a49e45f786db76"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.thumbnail_expression_locked",
+        "fingerprint": "2966da9f556357468997e0e11eaa3c45",
+        "test_fingerprint": "286d1f5737643144a5cb66b4b94783fb"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.thumbnail_expression_preset_id",
+        "fingerprint": "d51ab791993cad4cde29259bf7afb5eb",
+        "test_fingerprint": "27f33527610ad81c7b42b89f66c63b5d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.thumbnail_expression_selected_at",
+        "fingerprint": "adb85203b75ceb12139e4d31c0b4a2d2",
+        "test_fingerprint": "13304b28410e088ed9f0854ebb2129a5"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.thumbnail_expression_selection_reason",
+        "fingerprint": "117fd3b3d87106ed112db3afa4ca893e",
+        "test_fingerprint": "31b5271d63a20c24b9464cc03afe811f"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.thumbnail_expression_selection_version",
+        "fingerprint": "21142eabeea927609be278729ba986c5",
+        "test_fingerprint": "6651e42679508853de3cd3d62383955d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.thumbnail_generation_revision",
+        "fingerprint": "1fd3f628fbac741ee76aba25dbf711d5",
+        "test_fingerprint": "b2cfb4cca674ae4d15082b96d4edddee"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.thumbnail_input_fingerprint",
+        "fingerprint": "cd77f253749d70f37595a8ad8867bcd7",
+        "test_fingerprint": "3a8a9bd0fc1ec4e5fee538dac5d4ede3"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.thumbnail_metadata_input_fingerprint",
+        "fingerprint": "23487997037eb5408eb4ce82334edb16",
+        "test_fingerprint": "8aaf435e5a9690a8d00ba125664b5aa4"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.tiktok_description",
+        "fingerprint": "95766b98f1db279cca299cec38f7ab99",
+        "test_fingerprint": "42520dea50754a5641aa07acd8b6befd"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.title_candidates",
+        "fingerprint": "80b238daebf31f45762f132d92fc83e7",
+        "test_fingerprint": "e3a01a53a8493ffc6a044ee90a759617"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.title_generated_at",
+        "fingerprint": "931cb5b1c532f7fb9b7339cec98e93fa",
+        "test_fingerprint": "26e1e68b5e959975b8d62f50df98a08b"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.title_generation_meta",
+        "fingerprint": "4eed5bf486e67d83bb4783eea510585b",
+        "test_fingerprint": "67eda4a6579917e3386964e12a443a6d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.title_generation_revision",
+        "fingerprint": "dc760ef5b045b6987e4baaee0d637920",
+        "test_fingerprint": "73c47676531c0cf04302784413391978"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.title_input_fingerprint",
+        "fingerprint": "91f64631376c568ea0e443f969074498",
+        "test_fingerprint": "9f133a34f97594998646b0ec15c81714"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.transcript_text",
+        "fingerprint": "967fdf8dff77a4eb1aa85271dd2f7e3e",
+        "test_fingerprint": "bcd8673e96926ad94ac5ddb024e89b20"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.updated_at",
+        "fingerprint": "150f31442c80c1980108ac00de317b0a",
+        "test_fingerprint": "e91a0a50d13a2d88487dc38b7af03c76"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.uploaded_at",
+        "fingerprint": "7ecd4831d7aab20f262924c42147f0b3",
+        "test_fingerprint": "2993b4d7ec298b852f62d8643c1a2454"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.workflow_revision",
+        "fingerprint": "10556cb7dac877bfaaa5df34d8065057",
+        "test_fingerprint": "c7259c1ec77d018ae5a4fffa577b7213"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.youtube_description",
+        "fingerprint": "c2f6d3c9cc147c0bd030b7fd6e32ff72",
+        "test_fingerprint": "bd7b79c78a17dddfa0d450cdff707ed8"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.youtube_playlist_ids",
+        "fingerprint": "b70a02120a8478e4586c12fcfdb79d26",
+        "test_fingerprint": "de3c3312bcc284d3d2d2ad1fef6e312a"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.youtube_title",
+        "fingerprint": "ffd159b31a3b6fc2d638cd1cd74b087c",
+        "test_fingerprint": "d49536e8c27879e42df7a83b2b9cc49c"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.youtube_url",
+        "fingerprint": "1fa275e8e771f8de565526b231e5be2f",
+        "test_fingerprint": "752042d744c2a22b11d02d259d443d24"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_clips.youtube_video_id",
+        "fingerprint": "bba6ed2b2a426e67458b04b25868bdde",
+        "test_fingerprint": "9212c5cca720b3fb939f57f4c52f3525"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_transcript_segments.created_at",
+        "fingerprint": "ea280a21e3fd6bce17beb108e1a2019a",
+        "test_fingerprint": "62e777e3906f8cb32e945b60e22149c3"
+      },
+      {
+        "kind": "column",
+        "identity": "public.ai_operations_video_transcript_segments.speaker_label",
+        "fingerprint": "bd7b79c78a17dddfa0d450cdff707ed8",
+        "test_fingerprint": "d49536e8c27879e42df7a83b2b9cc49c"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.accept_assign",
+        "fingerprint": "a33b62a120029419b63b1d6d1ebcb417",
+        "test_fingerprint": "37439948153bb8a5736f54f95b513955"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.auto_accident",
+        "fingerprint": "203b935be970973c23ee23aa65eae858",
+        "test_fingerprint": "ff0ee7f0695808ddc932a807ee201228"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.auto_accident_state",
+        "fingerprint": "46f5e4b6d8a73f6ff0e5359b46e4c685",
+        "test_fingerprint": "86747eb1c396821d34799f159654c502"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.charge_1",
+        "fingerprint": "2ca604e771dcb72479f6d62d29cda10a",
+        "test_fingerprint": "b868476c080b6b04864c17688a740f94"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.created_at",
+        "fingerprint": "1e1e9340c32f2d17cc60388347a3a952",
+        "test_fingerprint": "af664ad81088d14bbddc550b54adda23"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.created_by_profile_id",
+        "fingerprint": "e9ec50c5e5c8c56089e2d5a035dd19c7",
+        "test_fingerprint": "c858d06a7531ba95e0b46ff37f728c92"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.documented_at",
+        "fingerprint": "3724f0c957aa499bcc9eb011c8b839ed",
+        "test_fingerprint": "38cb8b0ebd8cd0011da9f25bf391b9d3"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.employment_related",
+        "fingerprint": "919657e95cf5b416922bca55c4f71b47",
+        "test_fingerprint": "91832edf01d1e39d11f1b21ad6adfc86"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.from_date_1",
+        "fingerprint": "70ff798b8ae74f206c38931182388727",
+        "test_fingerprint": "d8ab57d7968cf0fbbb3c86310dfef47d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.mod1_1",
+        "fingerprint": "0b3261f6f3f7ef3c950097cd06dcf4aa",
+        "test_fingerprint": "c965279cc5e97f8d4fd8ad6a83d53da8"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.mod2_1",
+        "fingerprint": "5df9ff42aae4c1e3503f96c2687ca5cb",
+        "test_fingerprint": "42520dea50754a5641aa07acd8b6befd"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.mod3_1",
+        "fingerprint": "8c439da880bb480e41e72d8c42a4f40a",
+        "test_fingerprint": "5df9ff42aae4c1e3503f96c2687ca5cb"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.mod4_1",
+        "fingerprint": "47af7c3d4d70757c759f3ebdb7b91f14",
+        "test_fingerprint": "8c439da880bb480e41e72d8c42a4f40a"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.narrative_1",
+        "fingerprint": "5f03a5ddb5a412ae785d8d2567b9677a",
+        "test_fingerprint": "47af7c3d4d70757c759f3ebdb7b91f14"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.place_of_service_1",
+        "fingerprint": "a849a9381eb00f04381a767c2a094bb6",
+        "test_fingerprint": "4df3bb8e7ec7ef0a276e7fe08341b5ba"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.prior_auth",
+        "fingerprint": "c2f6d3c9cc147c0bd030b7fd6e32ff72",
+        "test_fingerprint": "ffd159b31a3b6fc2d638cd1cd74b087c"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.proc_code_1",
+        "fingerprint": "1fa275e8e771f8de565526b231e5be2f",
+        "test_fingerprint": "bba6ed2b2a426e67458b04b25868bdde"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.remote_chgid_1",
+        "fingerprint": "b1d5394d59758ed832699e982b8ed567",
+        "test_fingerprint": "48c44fd4b1a16fc87d8abe40c0572be6"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.thru_date_1",
+        "fingerprint": "019e86d87b124302767a74eaac59b6ee",
+        "test_fingerprint": "70ff798b8ae74f206c38931182388727"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.units_1",
+        "fingerprint": "48ea7b962016a313809b421bfd8020e1",
+        "test_fingerprint": "18d179026facd40495840cb010d57b77"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.updated_at",
+        "fingerprint": "de2219d2ee9a84bd29800dcb3dab3df8",
+        "test_fingerprint": "682076cb79a60e1aca0f22c762e3db1e"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.version",
+        "fingerprint": "f10425b1a6d66b20c832c729dd375bb5",
+        "test_fingerprint": "062ece11fca0b53815b793a27744f8bb"
+      },
+      {
+        "kind": "column",
+        "identity": "public.appointments.videoroom_url",
+        "fingerprint": "95766b98f1db279cca299cec38f7ab99",
+        "test_fingerprint": "8994b552e5cefedc29f3ec41b3a71afa"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.at_risk",
+        "fingerprint": "15e48f3b5c210104e4ce98232558367a",
+        "test_fingerprint": "08aee94fe8decd9ffc0aa0ba5838ae23"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.at_risk_anchor_at",
+        "fingerprint": "09b0a2f3527e26e7a01e352e35df9dcb",
+        "test_fingerprint": "a68ed032bcae1d2675ee360d7eaaa3fc"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.at_risk_since",
+        "fingerprint": "a68ed032bcae1d2675ee360d7eaaa3fc",
+        "test_fingerprint": "821c9248218eb8200e066f80adfd3376"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.care_cadence",
+        "fingerprint": "3c10a00e95e42f33c1bada2632a63e40",
+        "test_fingerprint": "afb0a56845f7cea7e47efc471005310e"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.care_cadence_changed_at",
+        "fingerprint": "0841b5f6d1b9a7ce5273e790d39d3b5e",
+        "test_fingerprint": "5d028ec15949122d1bdc77ba25984947"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.clickup_synced_at",
+        "fingerprint": "c70366b64ff123568bed96f0f553fd34",
+        "test_fingerprint": "567e0a12565cd88b3c78f7334ff93e3e"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.clickup_task_id",
+        "fingerprint": "b919fafbb1fb59e4acf1e7373f6c916d",
+        "test_fingerprint": "0ea6e6f2da0306027a950b608ee9b562"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.closed_at",
+        "fingerprint": "b06bc07c80f5c008240bd5fd46b311bf",
+        "test_fingerprint": "211c512d07a6e94cacb3c08b48a77ebd"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.closure_reason",
+        "fingerprint": "f21cb97a267b62e841ef360c0dd2ec23",
+        "test_fingerprint": "7b9779251be0e5c2f7692ff9d95bd8f5"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.contact_policy",
+        "fingerprint": "af71f42dfd82c1afa264f1cec6edab86",
+        "test_fingerprint": "0725474222f15b1251ca647072a2b752"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.contact_policy_changed_at",
+        "fingerprint": "e26e22c9a4dd34ef4fe2301811c58310",
+        "test_fingerprint": "a8ac8428dae71a6b7105612e21e69827"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.contract_version",
+        "fingerprint": "7774b5d6d29ab9f286cfa5c43a308044",
+        "test_fingerprint": "a59cdea3a54f851c0556ccf1e16927cd"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.created_at",
+        "fingerprint": "61c0faa3a7dfb1e10c04a3fce9a4aa69",
+        "test_fingerprint": "8548ac18c67212ea55826f5890640557"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.eligibility_state",
+        "fingerprint": "451fa26dc25c265108f51f7ac0e0759f",
+        "test_fingerprint": "6cd7a39e5ddcfe56272106e8769eca5f"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.eligibility_state_changed_at",
+        "fingerprint": "ce84716ab3213dd987cc3b041dd479de",
+        "test_fingerprint": "d55661f95bef43b3a7d76c2d6dd9cb8c"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.engagement_state",
+        "fingerprint": "4594354b842a47d0a7f5e87e0252702b",
+        "test_fingerprint": "6823731b78e972c8066a5b411befc788"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.engagement_state_changed_at",
+        "fingerprint": "2015cf413f1f39040cb9a03c3deb5a30",
+        "test_fingerprint": "ba42a72c64ab7fdc9734c337c67d0d17"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.last_contact_at",
+        "fingerprint": "5834bc2721cca5c002bca2e9059ed42d",
+        "test_fingerprint": "6c6906efa00864b3791af53c2c46bf86"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.last_contact_channel",
+        "fingerprint": "0ea6e6f2da0306027a950b608ee9b562",
+        "test_fingerprint": "7b8011757d10ffa534ff94033dcfdbbc"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.last_contact_direction",
+        "fingerprint": "7b8011757d10ffa534ff94033dcfdbbc",
+        "test_fingerprint": "4869993ccd6fe14b0c2341d995ea695b"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.lifecycle_stage",
+        "fingerprint": "f6dabdf7ee4396fbcb42fc438e7e96c5",
+        "test_fingerprint": "c0c8d4aaebabe0ddc6080a0f860bd7d3"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.lifecycle_stage_changed_at",
+        "fingerprint": "acd1b0f26c48bfd40b3ff2602442db1e",
+        "test_fingerprint": "73fd4cc0d921d044a35072f9d07839e1"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.pat_age",
+        "fingerprint": "4e67b7949c21bceebe3150fb165df302",
+        "test_fingerprint": "4eb68c3958501bee9bdca100b6f29545"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.referral_source",
+        "fingerprint": "a4736939082eb8efc41bc60cd76c0c39",
+        "test_fingerprint": "f29a961367d424850ef35689d8e8e0c6"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.service_policy",
+        "fingerprint": "5be1aff49b852d155b098d6c49a08986",
+        "test_fingerprint": "71b66237ad19532159f46541604fc3f0"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.service_policy_changed_at",
+        "fingerprint": "e11bd7455041a41aa52ffd5c937733b2",
+        "test_fingerprint": "f5cf726810bcc499770f6a5a040dfbc4"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.status_changed_at",
+        "fingerprint": "dc57e1cb79fbd5e6fc5ccaa757b0ad97",
+        "test_fingerprint": "ad7cbb53645070b9102b7bf4447bba60"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.tags",
+        "fingerprint": "b4776855e1d27f8e8285888a1dd5a3d8",
+        "test_fingerprint": "a4736939082eb8efc41bc60cd76c0c39"
+      },
+      {
+        "kind": "column",
+        "identity": "public.clients.updated_at",
+        "fingerprint": "3e80e039b66ea6c88771d5512285fe04",
+        "test_fingerprint": "61c0faa3a7dfb1e10c04a3fce9a4aa69"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.contact_email",
+        "fingerprint": "752042d744c2a22b11d02d259d443d24",
+        "test_fingerprint": "9212c5cca720b3fb939f57f4c52f3525"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.contact_name",
+        "fingerprint": "48db8de7b1a736cc382e6fd58899bd7d",
+        "test_fingerprint": "bd7b79c78a17dddfa0d450cdff707ed8"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.contact_phone",
+        "fingerprint": "86747eb1c396821d34799f159654c502",
+        "test_fingerprint": "b7ff958ed8e319415f174e9e38b3a2b3"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.contact_title",
+        "fingerprint": "9212c5cca720b3fb939f57f4c52f3525",
+        "test_fingerprint": "48db8de7b1a736cc382e6fd58899bd7d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.created_at",
+        "fingerprint": "40b48df5b18591041f061f7da3e7146c",
+        "test_fingerprint": "0b402c900b7f8d2d3d0ce9c0c3c73572"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.general_office_email",
+        "fingerprint": "b7ff958ed8e319415f174e9e38b3a2b3",
+        "test_fingerprint": "752042d744c2a22b11d02d259d443d24"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.organization_name",
+        "fingerprint": "3b00fe9e784f8b4c9239cd0fa0bdbd31",
+        "test_fingerprint": "2104cd748fe8b910e27283a7a1dc712d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.organization_type",
+        "fingerprint": "d49536e8c27879e42df7a83b2b9cc49c",
+        "test_fingerprint": "667d2fc6dbdc2ef72accb64a5b50c2e0"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.relationship_contact_id",
+        "fingerprint": "ea40d333bda2a7693516d5b9b93741e9",
+        "test_fingerprint": "4380c7dfffc0219e8eabf00b76d5036c"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.relationship_organization_id",
+        "fingerprint": "4380c7dfffc0219e8eabf00b76d5036c",
+        "test_fingerprint": "79a83435343c6aae4e709e514f4d01a9"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.research_cycle",
+        "fingerprint": "f73bc5c7584de4a9c2580b0c6c190c02",
+        "test_fingerprint": "4b0c2c1d9ffcf46fbfdd2d7b849e8878"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.researched_at",
+        "fingerprint": "0b402c900b7f8d2d3d0ce9c0c3c73572",
+        "test_fingerprint": "19cd7f3812ec1c8bead42cbfbd94b92d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.source_url",
+        "fingerprint": "ffd159b31a3b6fc2d638cd1cd74b087c",
+        "test_fingerprint": "46f5e4b6d8a73f6ff0e5359b46e4c685"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.specific_office",
+        "fingerprint": "bd7b79c78a17dddfa0d450cdff707ed8",
+        "test_fingerprint": "d49536e8c27879e42df7a83b2b9cc49c"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.state_code",
+        "fingerprint": "bcd8673e96926ad94ac5ddb024e89b20",
+        "test_fingerprint": "e11a227d5c22b2bfca9275c45d4cb8a3"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.state_name",
+        "fingerprint": "e11a227d5c22b2bfca9275c45d4cb8a3",
+        "test_fingerprint": "8c7026f889f49f888688cb2da23f9e6c"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.state_order",
+        "fingerprint": "20d3450545cd617e85613aa03f9bae76",
+        "test_fingerprint": "c5e96250ebd532411d20d750088e1647"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.updated_at",
+        "fingerprint": "62e3fc69fa5451f972ec5e96a1c1df54",
+        "test_fingerprint": "40b48df5b18591041f061f7da3e7146c"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.website",
+        "fingerprint": "46f5e4b6d8a73f6ff0e5359b46e4c685",
+        "test_fingerprint": "86747eb1c396821d34799f159654c502"
+      },
+      {
+        "kind": "column",
+        "identity": "public.relationship_institutional_recruiting_targets.why_worth_time",
+        "fingerprint": "c2f6d3c9cc147c0bd030b7fd6e32ff72",
+        "test_fingerprint": "ffd159b31a3b6fc2d638cd1cd74b087c"
+      },
+      {
+        "kind": "column",
+        "identity": "public.tenants.at_risk_days",
+        "fingerprint": "6299d2acc76e63d9fd2f490e338db0bf",
+        "test_fingerprint": "8bfadd500a4948769e1f0b6c493bc445"
+      },
+      {
+        "kind": "column",
+        "identity": "public.tenants.established_session_threshold",
+        "fingerprint": "53511b14a4a3a07b60c69f6f53d59f8f",
+        "test_fingerprint": "7728993456874782eef2d2f57baa7d3c"
+      },
+      {
+        "kind": "column",
+        "identity": "public.website_resources.cta",
+        "fingerprint": "3adcf57bfcf337d8a47aa23fa1d35dda",
+        "test_fingerprint": "9f86b4ccb0d571c4a0920022d71f9305"
+      },
+      {
+        "kind": "column",
+        "identity": "public.website_resources.group_slug",
+        "fingerprint": "b4b264b981b2276565099352b6fd4446",
+        "test_fingerprint": "ddfd45a362718384ee99de571f9b0b4d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.website_resources.import_content_hash",
+        "fingerprint": "d26089bc079e05340f109407d208f0ee",
+        "test_fingerprint": "44d5904585e7d1e0169f611a13b8da6d"
+      },
+      {
+        "kind": "column",
+        "identity": "public.website_resources.import_synced_at",
+        "fingerprint": "145354170eea19a3b02239fec6c0e46e",
+        "test_fingerprint": "d71fcd54d723850a8a41c7a3bb69f972"
+      },
+      {
+        "kind": "column",
+        "identity": "public.website_resources.in_practice_markdown",
+        "fingerprint": "a05e5aec62f92fd335d70c774c5ba657",
+        "test_fingerprint": "ad79e3d940628e63779f1cc74fb13a47"
+      },
+      {
+        "kind": "column",
+        "identity": "public.website_resources.last_reviewed_on",
+        "fingerprint": "7f5c6455976dc6a0a7e211dd0adb0165",
+        "test_fingerprint": "6a7087293052eea568c6b6b7e0f69ebe"
+      },
+      {
+        "kind": "column",
+        "identity": "public.website_resources.quick_answer",
+        "fingerprint": "6bca9645d7137cc9897d19c98aa911f5",
+        "test_fingerprint": "b3c1e619abe39d0c43b47bc6ba622203"
+      },
+      {
+        "kind": "column",
+        "identity": "public.website_resources.reviewed_by",
+        "fingerprint": "697377b3521784265cdeb83c23178207",
+        "test_fingerprint": "f4f8f038d2dfd7224cb3175b805de3e2"
+      },
+      {
+        "kind": "extension",
+        "identity": "pg_net",
+        "fingerprint": "0840e30e152a1988d042cdfcc9b9663e",
+        "test_fingerprint": "a0a123957c6d465a069029d8d1947d37"
+      },
+      {
+        "kind": "function",
+        "identity": "private.invalidate_ai_operations_video_downstream_on_title_change()",
+        "fingerprint": "b9324e63d8e60e7a432931a058efa315",
+        "test_fingerprint": "def8e57fe45ca2ec128235c56ad40314"
+      },
+      {
+        "kind": "function",
+        "identity": "public._crm_enrollment_tenant_check(p_enrollment_id uuid)",
+        "fingerprint": "3c4206e9b7a3d5572487ba3ae5b28682",
+        "test_fingerprint": "3eabf0ff1caa810d4167af728991250c"
+      },
+      {
+        "kind": "function",
+        "identity": "public._crm_idempotency_claim(p_key text, p_operation text, p_tenant_id uuid, p_target_id uuid)",
+        "fingerprint": "06ee1785bf084e3df503eb0953550448",
+        "test_fingerprint": "35beb58d5959aec63d4554689c5c8e23"
+      },
+      {
+        "kind": "function",
+        "identity": "public._crm_idempotency_record(p_key text, p_operation text, p_result jsonb)",
+        "fingerprint": "45ea568495d103e8a23275be1cdfd52d",
+        "test_fingerprint": "81fab4b49c45883d29fb16f7ce3a7f04"
+      },
+      {
+        "kind": "function",
+        "identity": "public.claim_is_externally_submitted_v1(p_claim_id uuid)",
+        "fingerprint": "c6284860372b2280a4129e2ac5d48e1a",
+        "test_fingerprint": "a42c5aaac4c6fd8e6d62621563f00f4b"
+      },
+      {
+        "kind": "function",
+        "identity": "public.crm_correlate_client_email_reply(p_inbound_email_message_id uuid)",
+        "fingerprint": "bd2cc4812271ae950c824aae145d3bae",
+        "test_fingerprint": "2a2c83ec18f892050354cb928dc8c84b"
+      },
+      {
+        "kind": "function",
+        "identity": "public.crm_donor_overview()",
+        "fingerprint": "66cff794dc4fa68dc9d16956eaf26e03",
+        "test_fingerprint": "13993627147268dd1be176bdbb22d919"
+      },
+      {
+        "kind": "function",
+        "identity": "public.crm_emit_automation_event(p_tenant_id uuid, p_event_type text, p_subject_type text, p_subject_id uuid, p_idempotency_key text, p_payload jsonb, p_source text, p_source_event_id uuid, p_occurred_at timestamp with time zone)",
+        "fingerprint": "6e4dbc31b4a5d7aaef3b765e0e5560e0",
+        "test_fingerprint": "abca1ddaab307f9677344763d2f26263"
+      },
+      {
+        "kind": "function",
+        "identity": "public.crm_enqueue_campaign_trigger_jobs(p_event_id uuid)",
+        "fingerprint": "a7e664c5f601e4c094bb2b73cdb7f283",
+        "test_fingerprint": "ec903f7ee99c006095dd92b2f880f859"
+      },
+      {
+        "kind": "function",
+        "identity": "public.crm_enqueue_donor_transactions(p_reason text, p_historical boolean, p_limit integer)",
+        "fingerprint": "9af7b7d74d0d8b13e08e30f0a84e9f03",
+        "test_fingerprint": "c41cda773d812d340a9745c4a4e58d73"
+      },
+      {
+        "kind": "function",
+        "identity": "public.crm_enroll_clients_in_campaign(p_campaign_id uuid, p_client_ids uuid[], p_reason text, p_idempotency_key uuid, p_contract_version text)",
+        "fingerprint": "f0902f9a6cb6c72687eedd91c095b8c2",
+        "test_fingerprint": "0c5b10baf39e374e423807b50d29b751"
+      },
+      {
+        "kind": "function",
+        "identity": "public.crm_evaluate_campaign_concurrency(p_tenant_id uuid, p_campaign_registry_id uuid, p_subject_type text, p_subject_id uuid)",
+        "fingerprint": "e5c5894728330b89b1e9c1a53e472ca0",
+        "test_fingerprint": "cd15143b96a05efc5c1adcbfd71d11aa"
+      },
+      {
+        "kind": "function",
+        "identity": "public.finalize_claim_submission(p_request_id uuid, p_status text, p_result jsonb)",
+        "fingerprint": "2a0ec9950d1390aa977167baf52858a1",
+        "test_fingerprint": "7f713ae5b1d3c2b7aaad3e9ac5902b06"
+      },
+      {
+        "kind": "function",
+        "identity": "public.finalize_stedi_submission_attempt_v2(p_attempt_id uuid, p_outcome text, p_sync_status text, p_sync_result jsonb, p_external_submission_id text, p_external_claim_id text, p_mark_submitted boolean)",
+        "fingerprint": "021643563096b7e33b99be9da57873df",
+        "test_fingerprint": "2ca4cbb0744990101aea17db97d42aa7"
+      },
+      {
+        "kind": "function",
+        "identity": "public.import_website_resources(p_payload jsonb, p_dry_run boolean)",
+        "fingerprint": "90ce74dc8be0a0eadd5d56bf6a0b467e",
+        "test_fingerprint": "24b0f6a039a5e3f656c1f74043c0e446"
+      },
+      {
+        "kind": "function",
+        "identity": "public.payroll_refresh_historical_gap_findings_v1()",
+        "fingerprint": "be23e074ed36515602dddf84b8a17fa9",
+        "test_fingerprint": "34ef9ec7904c58013ba7162aa40d661e"
+      },
+      {
+        "kind": "function",
+        "identity": "public.protect_claim_status_evidence_v1()",
+        "fingerprint": "a41e16d4f9a74e36a64b51a51efe1d7b",
+        "test_fingerprint": "32f912d573c34793daca166b84d5a7ff"
+      },
+      {
+        "kind": "function",
+        "identity": "public.protect_submitted_claim_lines_v1()",
+        "fingerprint": "0a4aee9b37d1be90a721762ce9457481",
+        "test_fingerprint": "cd63581df38f0d0c0e0ac06ed3404d63"
+      },
+      {
+        "kind": "function",
+        "identity": "public.protect_submitted_claim_v1()",
+        "fingerprint": "6ca50e8606ce4a776f977c8491469fb6",
+        "test_fingerprint": "f1d3bf340481515b128df1ba50f15b6a"
+      },
+      {
+        "kind": "function",
+        "identity": "public.reconcile_payroll_line_items_from_attempts(p_payroll_run_id uuid)",
+        "fingerprint": "96d64274df4478cbf40ac7d70d80c32a",
+        "test_fingerprint": "a2dd64ea972035847a3031b0892ac2fc"
+      },
+      {
+        "kind": "function",
+        "identity": "public.set_updated_at()",
+        "fingerprint": "f8a5b8f9c6b4ea98e155964b737c0ba2",
+        "test_fingerprint": "74ce72c305e817b2be600869ddf2028e"
+      },
+      {
+        "kind": "function",
+        "identity": "public.social_queue_publish(p_publication_id uuid)",
+        "fingerprint": "dcef717b602852319ed6096cfb7bd0eb",
+        "test_fingerprint": "5731c220704cd8e79715d10ae361afbf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.ai_operations_distribution_destinations",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.ai_operations_distribution_events",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.ai_operations_distribution_overrides",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.ai_operations_social_distribution_attempts",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.ai_operations_social_distribution_deliveries",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.ai_operations_youtube_release_registry",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.appointment_clinical_notes",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.appointment_exceptions",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.appointment_series",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.appointments",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.bty_published_features",
+        "fingerprint": "8a35586a1e4e37b5f09deea3d3ba089d",
+        "test_fingerprint": "39b4f85684dd6b9ea816c3f0eaca725f"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.bty_scheduler_activity_events",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.claim_lines",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.claims",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_diagnoses",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_insurance_deferment_acknowledgements",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_journey_exception_current_summary",
+        "fingerprint": "c928d983090c8d65ddc1f2d208b764c6",
+        "test_fingerprint": "4f3ee61eb223e37440a26e5f1996bb41"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_journey_exception_history",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_journey_exception_operations",
+        "fingerprint": "34a801a549b82027fd2835c8ca90a869",
+        "test_fingerprint": "6d0f5a34c4201389e2495d068b94e7b4"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_journey_exception_owner_options",
+        "fingerprint": "5c7d861d2eb475eca621b84614b77463",
+        "test_fingerprint": "e04107535959cba226a5074aef65ba5e"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_journey_exception_reason_catalog",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_journey_exceptions",
+        "fingerprint": "718b7d83f887d5dd556b7c97ee5150bb",
+        "test_fingerprint": "4c77e3915e742dd8590cd70aca9735d5"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_journey_phase4_reconciliation",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_journey_phase4_runs",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_provider_demand",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_provider_demand_reevaluation_queue",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_provider_demand_release_notifications",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_safety_plans",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_staff_relationships",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.client_treatment_plans",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.clients",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_activity_events",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_bulk_send_logs",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_bulk_send_recipients",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_bulk_send_staff_recipients",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_domain_contracts",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_eligibility_manual_reviews",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_email_events",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_email_messages",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_email_template_versions",
+        "fingerprint": "81c6b4720d5d0f87d7a23f16f6e5adec",
+        "test_fingerprint": "c672a47bb5c0fc1da6d1937066cb0e9d"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_email_templates",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_inbound_sms_logs",
+        "fingerprint": "908fc337a904c6be4b7755a14be130ad",
+        "test_fingerprint": "7bab625b718defa44e46216138d4bbf8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_pipeline_stage_events",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.crm_resend_email_settings",
+        "fingerprint": "718b7d83f887d5dd556b7c97ee5150bb",
+        "test_fingerprint": "4c77e3915e742dd8590cd70aca9735d5"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.eligibility_checks",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.era_adjustments",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.era_claims",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.era_service_line_copay_reconciliation",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.era_service_lines",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.eras",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.form_response_values",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.payroll_appointment_log",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.payroll_execution_log",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.payroll_line_items",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.payroll_payment_attempts",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.payroll_rate_configs",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.payroll_recipients",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.payroll_runs",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.payroll_settings",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_activity_events",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_campaign_enrollments",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_campaign_steps",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_campaigns",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_communication_events",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_communications",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_enrollment_events",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_import_rows",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_imports",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_meetings",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_message_observations",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_opportunities",
+        "fingerprint": "81c6b4720d5d0f87d7a23f16f6e5adec",
+        "test_fingerprint": "c672a47bb5c0fc1da6d1937066cb0e9d"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_opportunity_status_history",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_reconciliation_issues",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_replies",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_report_metrics_v",
+        "fingerprint": "0b2a16d5d9e06f669bf45c13de338988",
+        "test_fingerprint": "6a40a452874ecb789cc941e53ce9eb86"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_suppressions",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_target_cities",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.relationship_unsubscribe_requests",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.staff",
+        "fingerprint": "908fc337a904c6be4b7755a14be130ad",
+        "test_fingerprint": "7bab625b718defa44e46216138d4bbf8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.staff_calendar_blocks",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.staff_caqh_demographics",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.staff_care_pathway_readiness",
+        "fingerprint": "e9bb3da6b49073fc59ab96038b5195ea",
+        "test_fingerprint": "b1eec147689e8135d9482426ee23aedf"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.staff_licenses",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.user_roles",
+        "fingerprint": "999f62ae129ec5c6b2dcaa259be1af23",
+        "test_fingerprint": "4310bca19bc1640b47d39e4419ae13d8"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.v_client_canonical_state",
+        "fingerprint": "36a3517eee284ed03eade088275a00ba",
+        "test_fingerprint": "14619b9ade7d0865880100cad794a174"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.v_crm_reports_campaigns",
+        "fingerprint": "117eda0369bcd238c92a0ebf84588cec",
+        "test_fingerprint": "4ca8eb76f31ebbdc2c97302c72b0dea3"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.v_crm_reports_closure",
+        "fingerprint": "4a0fdea1ac1c7559acee6dab0a61acb3",
+        "test_fingerprint": "972f4f0c38f17222442b39ec9e6cb248"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.v_crm_reports_engagement",
+        "fingerprint": "bfd5e3ead8cfdfcb83224f28d3956d00",
+        "test_fingerprint": "9b3774d1dc535af2c22c8cce1ac3dc10"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.v_crm_reports_exceptions",
+        "fingerprint": "dfa9fdd774ac09eadb2b05b856be73a0",
+        "test_fingerprint": "4fca1326532e6b51922f9e49d63ce6d7"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.v_crm_reports_funnel",
+        "fingerprint": "a0e581da513f778082580bbcd6c8bc24",
+        "test_fingerprint": "7ae6bec1426759910df8c91c80ccd5d3"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.v_crm_reports_tasks",
+        "fingerprint": "69d08b35679cb1c6e6ab1828f5b36107",
+        "test_fingerprint": "803807ec70cc37913be354bc3f4eff06"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.website_resource_groups",
+        "fingerprint": "8a35586a1e4e37b5f09deea3d3ba089d",
+        "test_fingerprint": "39b4f85684dd6b9ea816c3f0eaca725f"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.website_resource_redirects",
+        "fingerprint": "8a35586a1e4e37b5f09deea3d3ba089d",
+        "test_fingerprint": "39b4f85684dd6b9ea816c3f0eaca725f"
+      },
+      {
+        "kind": "relation",
+        "identity": "public.website_resources_public",
+        "fingerprint": "6e33ecc2ad73ecbf3f4faf2d1b1fc83f",
+        "test_fingerprint": "0a0414b7ada3f3916a0b5057cd5a2f32"
+      },
+      {
+        "kind": "trigger",
+        "identity": "public.claim_lines.trg_08_protect_submitted_claim_lines_v1",
+        "fingerprint": "dc6f74cbf4034e41be881c581fb28a68",
+        "test_fingerprint": "8d3daca9551811de0c80a2e2e16b74ee"
+      }
+    ]
+  },
+  "normalized_column_differences": 0,
+  "relation_acl_differences_after": 0,
+  "function_differences": [
+    {
+      "identity": "public.crm_enroll_clients_in_campaign(p_campaign_id uuid, p_client_ids uuid[], p_reason text, p_idempotency_key uuid, p_contract_version text)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public.crm_enroll_clients_in_campaign(p_campaign_id uuid, p_client_ids uuid[], p_reason text, p_idempotency_key uuid, p_contract_version text)",
+        "definition_md5": "e05443f977221ab9626636fc08896d60"
+      },
+      "test": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public.crm_enroll_clients_in_campaign(p_campaign_id uuid, p_client_ids uuid[], p_reason text, p_idempotency_key uuid, p_contract_version text)",
+        "definition_md5": "93cd664eba68c5e11ade4c8f265e94e7"
+      }
+    },
+    {
+      "identity": "public._crm_idempotency_claim(p_key text, p_operation text, p_tenant_id uuid, p_target_id uuid)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public._crm_idempotency_claim(p_key text, p_operation text, p_tenant_id uuid, p_target_id uuid)",
+        "definition_md5": "71d51f33e034b12f6dbcab7239054eca"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public._crm_idempotency_claim(p_key text, p_operation text, p_tenant_id uuid, p_target_id uuid)",
+        "definition_md5": "5b3cd4a7763a256207935ffc2406cc05"
+      }
+    },
+    {
+      "identity": "public._crm_idempotency_record(p_key text, p_operation text, p_result jsonb)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public._crm_idempotency_record(p_key text, p_operation text, p_result jsonb)",
+        "definition_md5": "d7d02d5c05e749553008ca450930f07e"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public._crm_idempotency_record(p_key text, p_operation text, p_result jsonb)",
+        "definition_md5": "9d2d4d702657d4927b94a3aac9bb460c"
+      }
+    },
+    {
+      "identity": "public.payroll_refresh_historical_gap_findings_v1()",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.payroll_refresh_historical_gap_findings_v1()",
+        "definition_md5": "bb0e564d626c187a5d5be36dec67972f"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.payroll_refresh_historical_gap_findings_v1()",
+        "definition_md5": "bb0e564d626c187a5d5be36dec67972f"
+      }
+    },
+    {
+      "identity": "public.claim_is_externally_submitted_v1(p_claim_id uuid)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.claim_is_externally_submitted_v1(p_claim_id uuid)",
+        "definition_md5": "b2c732470bea0b84204ffa581f342b0c"
+      },
+      "test": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.claim_is_externally_submitted_v1(p_claim_id uuid)",
+        "definition_md5": "bfb6125f3cbdee01cdcfd42aa7b96579"
+      }
+    },
+    {
+      "identity": "public.protect_submitted_claim_v1()",
+      "production": {
+        "acl": [
+          "=X/postgres",
+          "anon=X/postgres",
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": false,
+        "identity": "public.protect_submitted_claim_v1()",
+        "definition_md5": "c65d34d9c0d6b011684f7eab7fec2848"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.protect_submitted_claim_v1()",
+        "definition_md5": "203bd5f0f05813c55a763afd562a7174"
+      }
+    },
+    {
+      "identity": "public.protect_submitted_claim_lines_v1()",
+      "production": {
+        "acl": [
+          "=X/postgres",
+          "anon=X/postgres",
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": false,
+        "identity": "public.protect_submitted_claim_lines_v1()",
+        "definition_md5": "d3e5fd9fab1cd2c72bfa8ffad5656bbf"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.protect_submitted_claim_lines_v1()",
+        "definition_md5": "9b1a1124668e37f69505166b3ffc5adc"
+      }
+    },
+    {
+      "identity": "public.protect_claim_status_evidence_v1()",
+      "production": {
+        "acl": [
+          "=X/postgres",
+          "anon=X/postgres",
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": false,
+        "identity": "public.protect_claim_status_evidence_v1()",
+        "definition_md5": "24c2d76e0935a5ea2f5aad52bb808e40"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.protect_claim_status_evidence_v1()",
+        "definition_md5": "8c5ca8f8ed76337d65c1793437a023e6"
+      }
+    },
+    {
+      "identity": "public.import_website_resources(p_payload jsonb, p_dry_run boolean)",
+      "production": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public.import_website_resources(p_payload jsonb, p_dry_run boolean)",
+        "definition_md5": "f012a0378d443218c0048fde7c32618c"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public.import_website_resources(p_payload jsonb, p_dry_run boolean)",
+        "definition_md5": "e7dba0d761026d0946131c13a77e19e9"
+      }
+    },
+    {
+      "identity": "public.finalize_claim_submission(p_request_id uuid, p_status text, p_result jsonb)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.finalize_claim_submission(p_request_id uuid, p_status text, p_result jsonb)",
+        "definition_md5": "6d33380956a4acc36900f2941b14f5a3"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.finalize_claim_submission(p_request_id uuid, p_status text, p_result jsonb)",
+        "definition_md5": "6d33380956a4acc36900f2941b14f5a3"
+      }
+    },
+    {
+      "identity": "public.finalize_stedi_submission_attempt_v2(p_attempt_id uuid, p_outcome text, p_sync_status text, p_sync_result jsonb, p_external_submission_id text, p_external_claim_id text, p_mark_submitted boolean)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public.finalize_stedi_submission_attempt_v2(p_attempt_id uuid, p_outcome text, p_sync_status text, p_sync_result jsonb, p_external_submission_id text, p_external_claim_id text, p_mark_submitted boolean)",
+        "definition_md5": "d920db070d671c92ce77c4e754903ab1"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public.finalize_stedi_submission_attempt_v2(p_attempt_id uuid, p_outcome text, p_sync_status text, p_sync_result jsonb, p_external_submission_id text, p_external_claim_id text, p_mark_submitted boolean)",
+        "definition_md5": "d920db070d671c92ce77c4e754903ab1"
+      }
+    },
+    {
+      "identity": "public.set_updated_at()",
+      "production": {
+        "acl": [
+          "=X/postgres",
+          "anon=X/postgres",
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": false,
+        "identity": "public.set_updated_at()",
+        "definition_md5": "9c22ebbaf711f368cb00f9c3efb83980"
+      },
+      "test": {
+        "acl": [
+          "=X/postgres",
+          "anon=X/postgres",
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": false,
+        "identity": "public.set_updated_at()",
+        "definition_md5": "d438a097a027605bdf1afb71d9d5534c"
+      }
+    },
+    {
+      "identity": "private.invalidate_ai_operations_video_downstream_on_title_change()",
+      "production": {
+        "acl": [],
+        "owner": "postgres",
+        "config": null,
+        "definer": false,
+        "identity": "private.invalidate_ai_operations_video_downstream_on_title_change()",
+        "definition_md5": "4f7d68ac54a6469a15dc891c1fa68190"
+      },
+      "test": {
+        "acl": [],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": false,
+        "identity": "private.invalidate_ai_operations_video_downstream_on_title_change()",
+        "definition_md5": "0a4ccda7a9f3dfd99d011420466b830f"
+      }
+    },
+    {
+      "identity": "public.crm_enqueue_campaign_trigger_jobs(p_event_id uuid)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.crm_enqueue_campaign_trigger_jobs(p_event_id uuid)",
+        "definition_md5": "35de546d0603eea7c0f9cf7f0b0d41ae"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.crm_enqueue_campaign_trigger_jobs(p_event_id uuid)",
+        "definition_md5": "35de546d0603eea7c0f9cf7f0b0d41ae"
+      }
+    },
+    {
+      "identity": "public.crm_correlate_client_email_reply(p_inbound_email_message_id uuid)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.crm_correlate_client_email_reply(p_inbound_email_message_id uuid)",
+        "definition_md5": "2ce1b6b57f9bcb801f98303f83681f99"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.crm_correlate_client_email_reply(p_inbound_email_message_id uuid)",
+        "definition_md5": "2ce1b6b57f9bcb801f98303f83681f99"
+      }
+    },
+    {
+      "identity": "public.social_queue_publish(p_publication_id uuid)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public.social_queue_publish(p_publication_id uuid)",
+        "definition_md5": "663f0abc72a4cb00754add0444e85472"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public.social_queue_publish(p_publication_id uuid)",
+        "definition_md5": "663f0abc72a4cb00754add0444e85472"
+      }
+    },
+    {
+      "identity": "public.crm_donor_overview()",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.crm_donor_overview()",
+        "definition_md5": "458d20b22f685814e9e973362da15aba"
+      },
+      "test": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.crm_donor_overview()",
+        "definition_md5": "75c6fd14ef5ce4fecfd4328bec0f434c"
+      }
+    },
+    {
+      "identity": "public.crm_emit_automation_event(p_tenant_id uuid, p_event_type text, p_subject_type text, p_subject_id uuid, p_idempotency_key text, p_payload jsonb, p_source text, p_source_event_id uuid, p_occurred_at timestamp with time zone)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.crm_emit_automation_event(p_tenant_id uuid, p_event_type text, p_subject_type text, p_subject_id uuid, p_idempotency_key text, p_payload jsonb, p_source text, p_source_event_id uuid, p_occurred_at timestamp with time zone)",
+        "definition_md5": "396a1abc642e4ba0087795a13d2c2b8e"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.crm_emit_automation_event(p_tenant_id uuid, p_event_type text, p_subject_type text, p_subject_id uuid, p_idempotency_key text, p_payload jsonb, p_source text, p_source_event_id uuid, p_occurred_at timestamp with time zone)",
+        "definition_md5": "396a1abc642e4ba0087795a13d2c2b8e"
+      }
+    },
+    {
+      "identity": "public.crm_evaluate_campaign_concurrency(p_tenant_id uuid, p_campaign_registry_id uuid, p_subject_type text, p_subject_id uuid)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.crm_evaluate_campaign_concurrency(p_tenant_id uuid, p_campaign_registry_id uuid, p_subject_type text, p_subject_id uuid)",
+        "definition_md5": "179cb91502e053a3267897d940de3f38"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.crm_evaluate_campaign_concurrency(p_tenant_id uuid, p_campaign_registry_id uuid, p_subject_type text, p_subject_id uuid)",
+        "definition_md5": "179cb91502e053a3267897d940de3f38"
+      }
+    },
+    {
+      "identity": "public.reconcile_payroll_line_items_from_attempts(p_payroll_run_id uuid)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public.reconcile_payroll_line_items_from_attempts(p_payroll_run_id uuid)",
+        "definition_md5": "3eeeedac76756fd8d8b5d3cbaf0e3e98"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public.reconcile_payroll_line_items_from_attempts(p_payroll_run_id uuid)",
+        "definition_md5": "3eeeedac76756fd8d8b5d3cbaf0e3e98"
+      }
+    },
+    {
+      "identity": "public.crm_enqueue_donor_transactions(p_reason text, p_historical boolean, p_limit integer)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.crm_enqueue_donor_transactions(p_reason text, p_historical boolean, p_limit integer)",
+        "definition_md5": "b80e0abcf8bd1ce812266076c4f7ed5f"
+      },
+      "test": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "definer": true,
+        "identity": "public.crm_enqueue_donor_transactions(p_reason text, p_historical boolean, p_limit integer)",
+        "definition_md5": "8dec71442c0db7f9d49f4d98fcb4df4c"
+      }
+    },
+    {
+      "identity": "public._crm_enrollment_tenant_check(p_enrollment_id uuid)",
+      "production": {
+        "acl": [
+          "authenticated=X/postgres",
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public._crm_enrollment_tenant_check(p_enrollment_id uuid)",
+        "definition_md5": "b197ede44067d28d96ae4b3a80ba7395"
+      },
+      "test": {
+        "acl": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "owner": "postgres",
+        "config": [
+          "search_path=public"
+        ],
+        "definer": true,
+        "identity": "public._crm_enrollment_tenant_check(p_enrollment_id uuid)",
+        "definition_md5": "b573f95cb4bdc1aee82f2ec6e2c0ed3a"
+      }
+    }
+  ],
+  "dependency_diff": {
+    "missing": [],
+    "extra": [
+      {
+        "kind": "dependency",
+        "identity": "{\"deptype\": \"n\", \"object_type\": \"table constraint\", \"object_schema\": \"public\", \"object_identity\": \"claim_clearinghouse_routes_no_active_stedi on public.claim_clearinghouse_routes\", \"referenced_type\": \"table column\", \"referenced_schema\": \"public\", \"referenced_identity\": \"public.claim_clearinghouse_routes.clearinghouse\"}",
+        "fingerprint": "679ac36bbbd3d5437b7baf14fab7f9c9"
+      },
+      {
+        "kind": "dependency",
+        "identity": "{\"deptype\": \"a\", \"object_type\": \"table constraint\", \"object_schema\": \"public\", \"object_identity\": \"claim_clearinghouse_routes_no_active_stedi on public.claim_clearinghouse_routes\", \"referenced_type\": \"table column\", \"referenced_schema\": \"public\", \"referenced_identity\": \"public.claim_clearinghouse_routes.clearinghouse\"}",
+        "fingerprint": "7f2947810c2deebc6978769890c5e2fe"
+      },
+      {
+        "kind": "dependency",
+        "identity": "{\"deptype\": \"n\", \"object_type\": \"function\", \"object_schema\": \"private\", \"object_identity\": \"private.claim_is_externally_submitted_internal_v1(pg_catalog.uuid)\", \"referenced_type\": \"schema\", \"referenced_schema\": null, \"referenced_identity\": \"private\"}",
+        "fingerprint": "9c6a40c1c6604ed30f016e571cbad874"
+      },
+      {
+        "kind": "dependency",
+        "identity": "{\"deptype\": \"n\", \"object_type\": \"function\", \"object_schema\": \"public\", \"object_identity\": \"public.claim_is_externally_submitted_v1(pg_catalog.uuid)\", \"referenced_type\": \"language\", \"referenced_schema\": null, \"referenced_identity\": \"plpgsql\"}",
+        "fingerprint": "7400d0eee540711dd34a84c281eab862"
+      },
+      {
+        "kind": "dependency",
+        "identity": "{\"deptype\": \"a\", \"object_type\": \"table constraint\", \"object_schema\": \"public\", \"object_identity\": \"claim_clearinghouse_routes_no_active_stedi on public.claim_clearinghouse_routes\", \"referenced_type\": \"table column\", \"referenced_schema\": \"public\", \"referenced_identity\": \"public.claim_clearinghouse_routes.enabled\"}",
+        "fingerprint": "8b1811faca3b0761233c86db55788e84"
+      },
+      {
+        "kind": "dependency",
+        "identity": "{\"deptype\": \"n\", \"object_type\": \"table constraint\", \"object_schema\": \"public\", \"object_identity\": \"claim_clearinghouse_routes_no_active_stedi on public.claim_clearinghouse_routes\", \"referenced_type\": \"table column\", \"referenced_schema\": \"public\", \"referenced_identity\": \"public.claim_clearinghouse_routes.enabled\"}",
+        "fingerprint": "26674fd0df7c0dce3d47e50c732e7c4f"
+      }
+    ],
+    "changed": []
+  },
+  "rpc_acl_production": [
+    {
+      "label": "campaign_concurrency",
+      "signature": "public.crm_evaluate_campaign_concurrency(uuid,uuid,text,uuid)",
+      "acl_result": "FAIL",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "campaign_trigger_enqueue",
+      "signature": "public.crm_enqueue_campaign_trigger_jobs(uuid)",
+      "acl_result": "FAIL",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "claim_submission_finalizer",
+      "signature": "public.finalize_claim_submission(uuid,text,jsonb)",
+      "acl_result": "FAIL",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_automation_event",
+      "signature": "public.crm_emit_automation_event(uuid,text,text,uuid,text,jsonb,text,uuid,timestamptz)",
+      "acl_result": "FAIL",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_donor_overview_api",
+      "signature": "public.crm_donor_overview()",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": true,
+      "expected_service": true
+    },
+    {
+      "label": "crm_idempotency_claim",
+      "signature": "public._crm_idempotency_claim(text,text,uuid,uuid)",
+      "acl_result": "FAIL",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_idempotency_record",
+      "signature": "public._crm_idempotency_record(text,text,jsonb)",
+      "acl_result": "FAIL",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_internal_tenant_check",
+      "signature": "public._crm_enrollment_tenant_check(uuid)",
+      "acl_result": "FAIL",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_legacy_replay_api",
+      "signature": "public.crm_enqueue_donor_transactions(text,boolean,integer)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": true,
+      "expected_service": true
+    },
+    {
+      "label": "crm_manual_enrollment_api",
+      "signature": "public.crm_enroll_clients_in_campaign(uuid,uuid[],text,uuid,text)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": true,
+      "expected_service": true
+    },
+    {
+      "label": "email_reply_correlate",
+      "signature": "public.crm_correlate_client_email_reply(uuid)",
+      "acl_result": "FAIL",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "payroll_historical_gap",
+      "signature": "public.payroll_refresh_historical_gap_findings_v1()",
+      "acl_result": "FAIL",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "payroll_reconciliation",
+      "signature": "public.reconcile_payroll_line_items_from_attempts(uuid)",
+      "acl_result": "FAIL",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "social_publish_enqueue",
+      "signature": "public.social_queue_publish(uuid)",
+      "acl_result": "FAIL",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "stedi_submission_finalizer",
+      "signature": "public.finalize_stedi_submission_attempt_v2(uuid,text,text,jsonb,text,text,boolean)",
+      "acl_result": "FAIL",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "stripe_payment_post",
+      "signature": "public.process_stripe_checkout_payment(text,text,integer,uuid[],uuid[])",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    }
+  ],
+  "rpc_acl_test": [
+    {
+      "label": "campaign_concurrency",
+      "signature": "public.crm_evaluate_campaign_concurrency(uuid,uuid,text,uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "campaign_trigger_enqueue",
+      "signature": "public.crm_enqueue_campaign_trigger_jobs(uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "claim_submission_finalizer",
+      "signature": "public.finalize_claim_submission(uuid,text,jsonb)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_automation_event",
+      "signature": "public.crm_emit_automation_event(uuid,text,text,uuid,text,jsonb,text,uuid,timestamptz)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_donor_overview_api",
+      "signature": "public.crm_donor_overview()",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": true,
+      "expected_service": true
+    },
+    {
+      "label": "crm_idempotency_claim",
+      "signature": "public._crm_idempotency_claim(text,text,uuid,uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_idempotency_record",
+      "signature": "public._crm_idempotency_record(text,text,jsonb)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_internal_tenant_check",
+      "signature": "public._crm_enrollment_tenant_check(uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_legacy_replay_api",
+      "signature": "public.crm_enqueue_donor_transactions(text,boolean,integer)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": true,
+      "expected_service": true
+    },
+    {
+      "label": "crm_manual_enrollment_api",
+      "signature": "public.crm_enroll_clients_in_campaign(uuid,uuid[],text,uuid,text)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": true,
+      "expected_service": true
+    },
+    {
+      "label": "email_reply_correlate",
+      "signature": "public.crm_correlate_client_email_reply(uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "payroll_historical_gap",
+      "signature": "public.payroll_refresh_historical_gap_findings_v1()",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "payroll_reconciliation",
+      "signature": "public.reconcile_payroll_line_items_from_attempts(uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "social_publish_enqueue",
+      "signature": "public.social_queue_publish(uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "stedi_submission_finalizer",
+      "signature": "public.finalize_stedi_submission_attempt_v2(uuid,text,text,jsonb,text,text,boolean)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "stripe_payment_post",
+      "signature": "public.process_stripe_checkout_payment(text,text,integer,uuid[],uuid[])",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    }
+  ],
+  "stedi_postdeploy": [
+    {
+      "check_name": "active_stedi_cron_jobs",
+      "observed": 0,
+      "acceptance_criterion": "0",
+      "verdict": "PASS"
+    },
+    {
+      "check_name": "enabled_stedi_routes",
+      "observed": 0,
+      "acceptance_criterion": "0",
+      "verdict": "PASS"
+    },
+    {
+      "check_name": "historical_stedi_attempts_retained",
+      "observed": 0,
+      "acceptance_criterion": ">= 4",
+      "verdict": "FAIL"
+    },
+    {
+      "check_name": "historical_stedi_events_retained",
+      "observed": 0,
+      "acceptance_criterion": ">= 6",
+      "verdict": "FAIL"
+    },
+    {
+      "check_name": "stedi_reactivation_constraint",
+      "observed": 1,
+      "acceptance_criterion": "1",
+      "verdict": "PASS"
+    },
+    {
+      "check_name": "unclosed_stedi_routes",
+      "observed": 0,
+      "acceptance_criterion": "0",
+      "verdict": "PASS"
+    }
+  ],
+  "test_ledger_hashes": [
+    {
+      "version": "20261021015119",
+      "name": "test_20261019000200_revoke_direct_crm_idempotency_helpers",
+      "statement_count": 1,
+      "body_md5": "13b25c6d25bdb2a0f33da89627075198",
+      "bytes": 764
+    },
+    {
+      "version": "20261021015124",
+      "name": "test_20261019000300_claim_payroll_internal_rpc_acl",
+      "statement_count": 1,
+      "body_md5": "d962f4b7caa1ab094b0c543a4eb769ca",
+      "bytes": 1296
+    },
+    {
+      "version": "20261021015129",
+      "name": "test_20261019000310_campaign_lifecycle_authorization_and_idempotency",
+      "statement_count": 1,
+      "body_md5": "90120c1b1dfdfdff5b35bafdaae29b55",
+      "bytes": 10319
+    },
+    {
+      "version": "20261021015135",
+      "name": "test_20261019165842_crm_campaign_membership_profile_contract",
+      "statement_count": 1,
+      "body_md5": "d416590b96324c864d602dbb28ff6dfa",
+      "bytes": 1109
+    },
+    {
+      "version": "20261021015141",
+      "name": "test_20261019000400_internal_campaign_social_worker_acl",
+      "statement_count": 1,
+      "body_md5": "7d0f61c8e9f0a44bb8883c1e605dd4c5",
+      "bytes": 1178
+    },
+    {
+      "version": "20261021015147",
+      "name": "test_20261019000410_ai_ops_title_trigger_search_path",
+      "statement_count": 1,
+      "body_md5": "426cc33630d344f1def847fe181b4b2c",
+      "bytes": 324
+    },
+    {
+      "version": "20261021015153",
+      "name": "test_20261019000500_fail_closed_legacy_donor_attribution",
+      "statement_count": 1,
+      "body_md5": "bd9985a60cc92dd2acc18d6a73af8f6f",
+      "bytes": 2061
+    },
+    {
+      "version": "20261021015159",
+      "name": "test_20261019000600_restrict_crm_automation_event_emitter",
+      "statement_count": 1,
+      "body_md5": "26599958df92f93557f0487df3a76a17",
+      "bytes": 856
+    },
+    {
+      "version": "20261021015205",
+      "name": "test_20261019000800_campaign_lifecycle_forbidden_response",
+      "statement_count": 1,
+      "body_md5": "b0301de6fe5f20c5b304a9556a6036b3",
+      "bytes": 1407
+    },
+    {
+      "version": "20261021015212",
+      "name": "test_20261019085103_claim_status_authorization_boundary",
+      "statement_count": 1,
+      "body_md5": "93214324372875d946ab16cd25825db1",
+      "bytes": 8390
+    },
+    {
+      "version": "20261021020450",
+      "name": "test_stedi_operational_routing_retirement",
+      "statement_count": 1,
+      "body_md5": "635729d61266e57e5f3d52d4ceacdb85",
+      "bytes": 1889
+    },
+    {
+      "version": "20261021105916",
+      "name": "recovery_restore_captured_relation_acl",
+      "statement_count": 1,
+      "body_md5": "145ab10afbab335b4bbad7a085cec67f",
+      "bytes": 131914
+    },
+    {
+      "version": "20261021110301",
+      "name": "recovery_restore_captured_auth_user_hook",
+      "statement_count": 1,
+      "body_md5": "a8891bc0b6ec53757fee7ac1ad056a02",
+      "bytes": 629
+    },
+    {
+      "version": "20261021111438",
+      "name": "recovery_restore_application_publication_memberships",
+      "statement_count": 1,
+      "body_md5": "a1e10b2d86573602343ad9f1bf2c5089",
+      "bytes": 636
+    }
+  ],
+  "postgrest_readonly_probes": [
+    {
+      "name": "anonymous",
+      "http_status": 401,
+      "database_code": "42501",
+      "rows": null,
+      "status": "PASS"
+    },
+    {
+      "name": "independently_signed_untrusted_jwt",
+      "http_status": 401,
+      "database_code": "PGRST301",
+      "rows": null,
+      "status": "PASS"
+    }
+  ],
+  "full_signed_acceptance_executed": false,
+  "provider_acceptance_executed": false,
+  "production_mutated": false,
+  "artifacts": {
+    "relation-acl-branch.json": {
+      "bytes": 74481,
+      "sha256": "0b82720989e78b7cb60f2a962bac18ff0001cdaa45f495c2597ade0788559551"
+    },
+    "branch-acl-repair.sql": {
+      "bytes": 131914,
+      "sha256": "ac5700b80ae6e99977837b79bdc3ba9d9482d7d7f2197eba66efe317afc823b9"
+    },
+    "relation-acl-production.json": {
+      "bytes": 63682,
+      "sha256": "d595e880a4c9f755606b751cb3badb6a892fd8800ce643a63b45f0c356ad8869"
+    },
+    "auth-hook-repair.sql": {
+      "bytes": 629,
+      "sha256": "79c01cb336b4e7c1ae0fe33b12a3dc3e0b6736b3deea7c26f1b967942316a140"
+    },
+    "publication-repair.sql": {
+      "bytes": 636,
+      "sha256": "a09855e4e369535da7edfd7772cebe26cd56124d34b9940426a922020094e40a"
+    }
+  },
+  "query_sha256": {
+    "catalog-dependencies-readonly.sql": "391f23aa40cbcedbf7eb2238ed009b9a911f35bf81abea53bba350e8a7451cb9",
+    "catalog-fingerprints.sql": "f206c88801af11a145621d2a71dd26eac9c307be2984ec48e7451f716c078f38",
+    "catalog-components-readonly.sql": "2ffc2af9793f4d70b502340ee52e7ef7ac20f119e78d22289b1d8ec889e1f0d9",
+    "catalog-relation-structure-readonly.sql": "0c0e86747e6ea062035e78c93b6e943421d1b0b5aac66b3b179a7c3b5c6487e7"
+  },
+  "release_sources": [
+    {
+      "repository": "billing-draft34",
+      "version": "20261018235900",
+      "sha256": "1fd5bd3fd11b3003441181cdc18729846d7af0395e4091b3489c26ddb2fe0881",
+      "path": "supabase/migrations/20261018235900_retire_stedi_operational_routing.sql",
+      "body_md5": "635729d61266e57e5f3d52d4ceacdb85",
+      "bytes": 1889,
+      "recorded_branch_bytes_match": true
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000200",
+      "sha256": "4ede96d545264ee0e3d7c06ad409393962e29915434736c9061afa88cf0e3314",
+      "path": "supabase/migrations/20261019000200_revoke_direct_crm_idempotency_helpers.sql",
+      "body_md5": "13b25c6d25bdb2a0f33da89627075198",
+      "bytes": 764,
+      "recorded_branch_bytes_match": true
+    },
+    {
+      "repository": "billing",
+      "version": "20261019000300",
+      "sha256": "a27d6e22a409d75772bf45d3c63d3c1784dd7e551a2c79ba5da1cefba8e3b3e9",
+      "path": "supabase/migrations/20261019000300_claim_payroll_internal_rpc_acl.sql",
+      "body_md5": "d962f4b7caa1ab094b0c543a4eb769ca",
+      "bytes": 1296,
+      "recorded_branch_bytes_match": true
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000310",
+      "sha256": "b2db8632a53b28ede9aa79d2118294440918195351cf7273841fcab543c32ad7",
+      "path": "supabase/migrations/20261019000310_campaign_lifecycle_authorization_and_idempotency.sql",
+      "body_md5": "90120c1b1dfdfdff5b35bafdaae29b55",
+      "bytes": 10319,
+      "recorded_branch_bytes_match": true
+    },
+    {
+      "repository": "crm-draft193",
+      "version": "20261019165842",
+      "sha256": "89404791b3d91e1d9585c82e4b2ef4bd329f92c67b9da9102322bbc46dab08da",
+      "path": "supabase/migrations/20261019165842_crm_campaign_membership_profile_contract.sql",
+      "body_md5": "d416590b96324c864d602dbb28ff6dfa",
+      "bytes": 1109,
+      "recorded_branch_bytes_match": true
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000400",
+      "sha256": "20ad3f8e35de44160811bd2848dcaa81ca1c679330c4479a6e6f88cb60b242b1",
+      "path": "supabase/migrations/20261019000400_internal_campaign_social_worker_acl.sql",
+      "body_md5": "7d0f61c8e9f0a44bb8883c1e605dd4c5",
+      "bytes": 1178,
+      "recorded_branch_bytes_match": true
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000410",
+      "sha256": "ee3588dc3205b86d724d15509c8d1881b9b1456bdee8f1ed62cb33d84305abd3",
+      "path": "supabase/migrations/20261019000410_ai_ops_title_trigger_search_path.sql",
+      "body_md5": "426cc33630d344f1def847fe181b4b2c",
+      "bytes": 324,
+      "recorded_branch_bytes_match": true
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000500",
+      "sha256": "959046ab269918c7a4c1faf0279d39cfae9e1f733dd4270aec7be95e844f80a1",
+      "path": "supabase/migrations/20261019000500_fail_closed_legacy_donor_attribution.sql",
+      "body_md5": "bd9985a60cc92dd2acc18d6a73af8f6f",
+      "bytes": 2061,
+      "recorded_branch_bytes_match": true
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000600",
+      "sha256": "0cb2d52694155152ffe4d50751927efd23c16fd63e7651ae9ab26a2a5ef20820",
+      "path": "supabase/migrations/20261019000600_restrict_crm_automation_event_emitter.sql",
+      "body_md5": "26599958df92f93557f0487df3a76a17",
+      "bytes": 856,
+      "recorded_branch_bytes_match": true
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000800",
+      "sha256": "23ec40992fce188b59dbb3b51d641b4ed50cd83155c72f17ef2149fdf8501335",
+      "path": "supabase/migrations/20261019000800_campaign_lifecycle_forbidden_response.sql",
+      "body_md5": "b0301de6fe5f20c5b304a9556a6036b3",
+      "bytes": 1407,
+      "recorded_branch_bytes_match": true
+    },
+    {
+      "repository": "billing",
+      "version": "20261019085103",
+      "sha256": "3da8a52d63096979a9e111ade49eb73d6f11b343e0e433ae5ac34f2357aef827",
+      "path": "supabase/migrations/20261019085103_claim_status_authorization_boundary.sql",
+      "body_md5": "93214324372875d946ab16cd25825db1",
+      "bytes": 8390,
+      "recorded_branch_bytes_match": true
+    }
+  ],
+  "normalizations": {
+    "view_exact_after_redundant_literal_alias_removal": true,
+    "aliases_removed": 22,
+    "functions_crlf_only": {
+      "set_updated_at()": true,
+      "import_website_resources(jsonb,boolean)": true
+    }
+  },
+  "relation_structure_differences": 0,
+  "production_advisors": [
+    {
+      "name": "rls_enabled_no_policy",
+      "level": "INFO",
+      "count": 144,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+    },
+    {
+      "name": "function_search_path_mutable",
+      "level": "WARN",
+      "count": 1,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable"
+    },
+    {
+      "name": "extension_in_public",
+      "level": "WARN",
+      "count": 1,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public"
+    },
+    {
+      "name": "anon_security_definer_function_executable",
+      "level": "WARN",
+      "count": 15,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable"
+    },
+    {
+      "name": "authenticated_security_definer_function_executable",
+      "level": "WARN",
+      "count": 318,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable"
+    },
+    {
+      "name": "auth_leaked_password_protection",
+      "level": "WARN",
+      "count": 1,
+      "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+    }
+  ],
+  "test_advisors_before_repairs": [
+    {
+      "name": "rls_enabled_no_policy",
+      "level": "INFO",
+      "count": 143,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+    },
+    {
+      "name": "anon_security_definer_function_executable",
+      "level": "WARN",
+      "count": 15,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable"
+    },
+    {
+      "name": "authenticated_security_definer_function_executable",
+      "level": "WARN",
+      "count": 306,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable"
+    }
+  ],
+  "followup_markers": {
+    "ledger_count": 28,
+    "ledger_latest": "20261021111438",
+    "enrollment_403_marker": true,
+    "auth_hook_matches_capture": true,
+    "legacy_replay_fail_closed": true,
+    "legacy_view_browser_denied": true,
+    "legacy_overview_unavailable": true,
+    "title_trigger_empty_search_path": true
+  },
+  "application_publication_memberships_matched": 2,
+  "source_revisions": {
+    "crm_main": "4d3e9f34aee0d81c5657033f022662370fd4ae49",
+    "billing_main": "050625035fbc43dc3a48bc53653b685e14b7142b",
+    "reviewed_prs": [
+      {
+        "url": "https://github.com/LPredmore/valorwell-crm/pull/193",
+        "head_sha": "83ec13d96f3936d6be5d7a018613fa038b60cfd1",
+        "base_sha": "7d195b69cbdf5e116dcfaa96359f57ea2f1e93f3",
+        "merged": false,
+        "draft": false
+      },
+      {
+        "url": "https://github.com/LPredmore/valorwell-billing-hub/pull/34",
+        "head_sha": "62489306d202f4cb46f86936506f39d367f9cab2",
+        "base_sha": "e38be031a1d7b5321e0666d11e3fa7579c5fe5f4",
+        "merged": false,
+        "draft": true
+      },
+      {
+        "url": "https://github.com/LPredmore/valorwell-billing-hub/pull/40",
+        "head_sha": "7164b2d810fa8bc22b27d009b2e8822c11bef466",
+        "base_sha": "ff33c920265b6bed6e4fe636e4440f67449f7c3a",
+        "merged": true,
+        "draft": false
+      }
+    ]
+  },
+  "rpc_acl_test_after_all_repairs": [
+    {
+      "label": "campaign_concurrency",
+      "signature": "public.crm_evaluate_campaign_concurrency(uuid,uuid,text,uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "campaign_trigger_enqueue",
+      "signature": "public.crm_enqueue_campaign_trigger_jobs(uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "claim_submission_finalizer",
+      "signature": "public.finalize_claim_submission(uuid,text,jsonb)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_automation_event",
+      "signature": "public.crm_emit_automation_event(uuid,text,text,uuid,text,jsonb,text,uuid,timestamptz)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_donor_overview_api",
+      "signature": "public.crm_donor_overview()",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": true,
+      "expected_service": true
+    },
+    {
+      "label": "crm_idempotency_claim",
+      "signature": "public._crm_idempotency_claim(text,text,uuid,uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_idempotency_record",
+      "signature": "public._crm_idempotency_record(text,text,jsonb)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_internal_tenant_check",
+      "signature": "public._crm_enrollment_tenant_check(uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "crm_legacy_replay_api",
+      "signature": "public.crm_enqueue_donor_transactions(text,boolean,integer)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": true,
+      "expected_service": true
+    },
+    {
+      "label": "crm_manual_enrollment_api",
+      "signature": "public.crm_enroll_clients_in_campaign(uuid,uuid[],text,uuid,text)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": true,
+      "expected_service": true
+    },
+    {
+      "label": "email_reply_correlate",
+      "signature": "public.crm_correlate_client_email_reply(uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "payroll_historical_gap",
+      "signature": "public.payroll_refresh_historical_gap_findings_v1()",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "payroll_reconciliation",
+      "signature": "public.reconcile_payroll_line_items_from_attempts(uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "social_publish_enqueue",
+      "signature": "public.social_queue_publish(uuid)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "stedi_submission_finalizer",
+      "signature": "public.finalize_stedi_submission_attempt_v2(uuid,text,text,jsonb,text,text,boolean)",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    },
+    {
+      "label": "stripe_payment_post",
+      "signature": "public.process_stripe_checkout_payment(text,text,integer,uuid[],uuid[])",
+      "acl_result": "PASS",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "expected_anon": false,
+      "expected_authenticated": false,
+      "expected_service": true
+    }
+  ]
+}
