@@ -1,0 +1,138 @@
+{
+  "source_refs": {
+    "observed_at": "2026-10-21T12:49:45.106010+00:00",
+    "repositories": {
+      "crm": {
+        "repository": "LPredmore/valorwell-crm",
+        "main_sha": "63052bdf6424bad437e268eb031b9300c8d6a894",
+        "pull_requests": [
+          {
+            "number": 193,
+            "state": "open",
+            "merged": false,
+            "head_sha": "83ec13d96f3936d6be5d7a018613fa038b60cfd1",
+            "base_sha": "7d195b69cbdf5e116dcfaa96359f57ea2f1e93f3",
+            "url": "https://github.com/LPredmore/valorwell-crm/pull/193"
+          },
+          {
+            "number": 197,
+            "state": "closed",
+            "merged": true,
+            "head_sha": "bfcf5e92032de4e2ce0cfcf76497f40d1d9ba45c",
+            "base_sha": "e0b5ed71800182b37615b5a2f4e5c8b08c21cc96",
+            "url": "https://github.com/LPredmore/valorwell-crm/pull/197"
+          },
+          {
+            "number": 198,
+            "state": "closed",
+            "merged": true,
+            "head_sha": "085ae871d18cce2021d628e656ba5735d65bfb3a",
+            "base_sha": "6804997e197e4c0bad6a416a012b5a9d638db3c5",
+            "url": "https://github.com/LPredmore/valorwell-crm/pull/198"
+          },
+          {
+            "number": 200,
+            "state": "open",
+            "merged": false,
+            "head_sha": "93e391ce8e00399957f3c3161e654fad8350e948",
+            "base_sha": "4d3e9f34aee0d81c5657033f022662370fd4ae49",
+            "url": "https://github.com/LPredmore/valorwell-crm/pull/200"
+          }
+        ]
+      },
+      "billing": {
+        "repository": "LPredmore/valorwell-billing-hub",
+        "main_sha": "050625035fbc43dc3a48bc53653b685e14b7142b",
+        "pull_requests": [
+          {
+            "number": 34,
+            "state": "open",
+            "merged": false,
+            "head_sha": "62489306d202f4cb46f86936506f39d367f9cab2",
+            "base_sha": "e38be031a1d7b5321e0666d11e3fa7579c5fe5f4",
+            "url": "https://github.com/LPredmore/valorwell-billing-hub/pull/34"
+          },
+          {
+            "number": 40,
+            "state": "closed",
+            "merged": true,
+            "head_sha": "7164b2d810fa8bc22b27d009b2e8822c11bef466",
+            "base_sha": "ff33c920265b6bed6e4fe636e4440f67449f7c3a",
+            "url": "https://github.com/LPredmore/valorwell-billing-hub/pull/40"
+          },
+          {
+            "number": 44,
+            "state": "closed",
+            "merged": true,
+            "head_sha": "cae421dc0d10179144097b5acada725696173cb1",
+            "base_sha": "ff33c920265b6bed6e4fe636e4440f67449f7c3a",
+            "url": "https://github.com/LPredmore/valorwell-billing-hub/pull/44"
+          },
+          {
+            "number": 50,
+            "state": "open",
+            "merged": false,
+            "head_sha": "697187f9944b481ea2a5c198b50f585cb3d9c92d",
+            "base_sha": "050625035fbc43dc3a48bc53653b685e14b7142b",
+            "url": "https://github.com/LPredmore/valorwell-billing-hub/pull/50"
+          }
+        ]
+      }
+    }
+  },
+  "readonly_observations": {
+    "project": "ahqauomkgflopxgnlndd",
+    "scope": "Control-plane metadata and catalog SELECT in explicit READ ONLY transactions; no business rows or executable bodies returned.",
+    "ledger_count": 966,
+    "ledger_max": "20261020214527",
+    "ordered_version_md5": "7a263d51891681b67ae85dffc2db5006",
+    "storage_policy_count": 19,
+    "diagnostic_preview": {
+      "project": "dskqovrvogmwrlmxsdjd",
+      "status": "MIGRATIONS_FAILED",
+      "used_for_acceptance": false
+    },
+    "edge_functions": [
+      {
+        "slug": "submit-claims",
+        "version": 136,
+        "ezbr_sha256": "117ba04245de5b7345fd3d742388075418bb5ccd5f693a1c3ae6bbf9ce1fd1b4",
+        "verify_jwt": false
+      },
+      {
+        "slug": "fetch-claim-status",
+        "version": 141,
+        "ezbr_sha256": "85ddb6ad466bae654c70bd2c7a70366e1cef4b6c01b5978fc3f6fe8aab8be031",
+        "verify_jwt": false
+      },
+      {
+        "slug": "execute-payroll-payments",
+        "version": 119,
+        "ezbr_sha256": "4119b38ead00775c6d0cbd20dfe43d38c0e3e9bd2922e05e883aaa506ef9cb46",
+        "verify_jwt": false
+      },
+      {
+        "slug": "stripe-webhook",
+        "version": 73,
+        "ezbr_sha256": "00d86c815fc1cb138fcc61185423588e34fdf65f8a1b6d7a3182d40b6e34bdaf",
+        "verify_jwt": false
+      },
+      {
+        "slug": "social-media-manager",
+        "version": 106,
+        "ezbr_sha256": "6468cf432966b62f1c05f94ffa38b2236fb44ea05e30a5bdb4a5c0dbd25004e6",
+        "verify_jwt": false
+      }
+    ],
+    "baseline_sha256": null,
+    "baseline_available": false,
+    "production_mutated": false,
+    "observation_window_utc": "2026-10-21T12:49:00Z/2026-10-21T12:52:38Z",
+    "partial_catalog": {
+      "compared_objects": 1603,
+      "md5": "fae2c72df2120376dad6703a6671c81b",
+      "query_sha256": "446909411564169470db60211e41e88ba4b5c51a4d4dbbd0f715ea319689b57a",
+      "scope": "relation metadata and function definitions/owners/ACL/config only; not full parity or complete schema fingerprint"
+    }
+  }
+}

@@ -34,6 +34,7 @@ jobs:
         run: |
           python3 scripts/migration-recovery/private-local-restore.py --help
           python3 scripts/migration-recovery/isolated-replay.py --help
+          python3 scripts/migration-recovery/retest_preflight.py --help
       - name: Validate CRM inventory (not full-schema replay)
         run: python3 scripts/migration-recovery/recovery.py inventory --repo crm=. --output /tmp/crm-migration-inventory.json
       - uses: actions/upload-artifact@v4
