@@ -1,3 +1,6 @@
+-- SUPERSEDED: capability alone does not establish asset tenant ownership.
+-- Deploy 20261021184721_production_storage_tenant_boundary.sql instead.
+-- Retained only as historical review evidence; do not apply this candidate.
 -- Security hardening: email-signatures Storage write ACL (GitHub issue #201)
 --
 -- SOURCE-ONLY / FORWARD-ONLY. This file is staged for review and operator
