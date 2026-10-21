@@ -4,6 +4,8 @@ on:
     paths:
       - 'scripts/migration-recovery/**'
       - 'scripts/run-campaign-lifecycle-acceptance.py'
+      - 'docs/architecture/2026-10-21-branch-recovery-source-receipt.md'
+      - 'docs/architecture/migration-recovery-evidence/20261021-branch-recovery-receipt.json'
       - '.github/workflows/schema-recovery-source-gates.yml'
 permissions:
   contents: read
@@ -18,6 +20,8 @@ jobs:
           python-version: '3.13'
       - name: Test collision, cutover, secret review and release-order rules
         run: python3 -m unittest discover -s scripts/migration-recovery -p 'test_*.py' -v
+      - name: Validate sanitized operator branch receipt (offline, not DB acceptance)
+        run: python3 scripts/migration-recovery/branch_receipt.py
       - name: Check capture shell syntax
         run: bash -n scripts/migration-recovery/capture-application-schema-only.sh
       - name: Check private operator entry points (no private inputs)

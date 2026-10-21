@@ -8,6 +8,15 @@ below is historical documentation, not a bypass. No private export is available
 to Lovable; no complete restore is claimed. Export-time ledger coverage and all
 post-export increments are distinct from the ten-file security-release order.
 
+**October 21 remote branch follow-up:** [Sanitized operator receipt](../../docs/architecture/2026-10-21-branch-recovery-source-receipt.md).
+The operator reports successful schema reconstruction and ten-file SQL application,
+not native 966-step replay or production release. Default ACL/view/pg_net drift and
+MIGRATIONS_FAILED remain; do not rebase/reset/merge the branch. Historical receipts
+above describe their original observation time and are not rewritten.
+Run `python3 scripts/migration-recovery/branch_receipt.py` for **offline metadata
+consistency only**; no secrets, private SQL, branch connection or production calls.
+This receipt does not relax the private local runner's exact parity gates.
+
 ## Inventory and source checks
 
 ```bash
