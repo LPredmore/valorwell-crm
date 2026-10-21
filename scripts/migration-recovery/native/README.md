@@ -120,3 +120,14 @@ Auth/Storage/Realtime migration versions and configuration fingerprints. Only an
 explicit allowlist of required configuration values is exported. Other settings
 retain hashes, avoiding possible credentials in custom configuration. Service
 image versions cannot be inferred as exact facts from migration ledgers alone.
+
+## Payroll database extension
+
+The runner tests exact-code effective-date rate selection, decimal statement
+aggregation, signed own/foreign clinician requests, and idempotent reconciliation
+of failed attempts with null provider transaction IDs. An original foreign-staff
+HTTP 500/P0002 is retained as a failed assertion. A hash-bound private forward
+candidate changes that single denial branch to 42501/HTTP 403 and verifies the
+owner/ACL and authorized statement remain unchanged. Complete function SQL is
+written only into the private run directory, never GitHub. No provider success or
+transaction ID is generated. This candidate also requires independent owner review.

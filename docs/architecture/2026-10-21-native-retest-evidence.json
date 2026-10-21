@@ -1,0 +1,340 @@
+{
+  "status": "NOT_READY_FOR_FULL_ACCEPTANCE_OR_RELEASE",
+  "source_commit": "63553e1f222b825113ee84518b13a2208f1bb838",
+  "pull_request": "https://github.com/LPredmore/valorwell-crm/pull/203",
+  "production_changes": false,
+  "provider_transactions": false,
+  "independent_owner_approval": false,
+  "candidate_manifest_sha256": "74cc42947a6cd7320d991e78d43f80c80e49dcca2187ca9e690deba58de06521",
+  "restore_scope": {
+    "application_schemas": 6,
+    "tables": 597,
+    "views": 37,
+    "catalog_categories": 31,
+    "redacted_rows": 46
+  },
+  "foundation_assertions": {
+    "PASS": 32
+  },
+  "application_billing_role_assertions": {
+    "PASS": 26
+  },
+  "storage_assertions": {
+    "captured_current_policies": {
+      "PASS": 8,
+      "FAIL": 10
+    },
+    "tenant_metadata_development_candidate": {
+      "PASS": 21
+    }
+  },
+  "worker_suites": {
+    "crm_workers": {
+      "status": "PASS",
+      "exit_code": 0,
+      "scope": "actual native database/Auth; provider transport simulated and external egress denied"
+    },
+    "stripe_database": {
+      "status": "PASS",
+      "exit_code": 0,
+      "scope": "actual native database/Auth; provider transport simulated and external egress denied"
+    }
+  },
+  "native_signup_hook": {
+    "status": "PASS",
+    "http": 200,
+    "profile_rows": 1,
+    "scope": "actual public GoTrue signup and captured application Auth hook; synthetic email only"
+  },
+  "native_realtime_transport": {
+    "status": "PASS",
+    "scope": "actual signed Realtime public broadcast; not application tenant authorization"
+  },
+  "claim_payroll_rpc_acl": "PASS: actual native catalog, four internal RPCs; not provider acceptance",
+  "stedi_preservation": {
+    "status": "PASS",
+    "migration_sha256": "1fd5bd3fd11b3003441181cdc18729846d7af0395e4091b3489c26ddb2fe0881",
+    "synthetic_attempts": 4,
+    "synthetic_events": 6,
+    "history_unchanged": true,
+    "operational_stedi_disabled": true,
+    "submitted_claim_line_delete_denied": true,
+    "provider_acknowledgements_created": 0
+  },
+  "catalog_comparison": {
+    "status": "FAIL",
+    "categories": {
+      "database": {
+        "source_count": 1,
+        "restored_count": 1,
+        "differences": 0
+      },
+      "schemas": {
+        "source_count": 17,
+        "restored_count": 17,
+        "differences": 2
+      },
+      "relations": {
+        "source_count": 715,
+        "restored_count": 719,
+        "differences": 12
+      },
+      "columns": {
+        "source_count": 9666,
+        "restored_count": 9698,
+        "differences": 85
+      },
+      "constraints": {
+        "source_count": 2568,
+        "restored_count": 2573,
+        "differences": 25
+      },
+      "indexes": {
+        "source_count": 1743,
+        "restored_count": 1750,
+        "differences": 19
+      },
+      "triggers": {
+        "source_count": 378,
+        "restored_count": 379,
+        "differences": 1
+      },
+      "policies": {
+        "source_count": 572,
+        "restored_count": 572,
+        "differences": 0
+      },
+      "functions": {
+        "source_count": 1244,
+        "restored_count": 1251,
+        "differences": 65
+      },
+      "types": {
+        "source_count": 776,
+        "restored_count": 779,
+        "differences": 11
+      },
+      "sequences": {
+        "source_count": 25,
+        "restored_count": 26,
+        "differences": 1
+      },
+      "privileges": {
+        "source_count": 15759,
+        "restored_count": 15873,
+        "differences": 680
+      },
+      "column_privileges": {
+        "source_count": 95,
+        "restored_count": 95,
+        "differences": 0
+      },
+      "default_privileges": {
+        "source_count": 360,
+        "restored_count": 360,
+        "differences": 96
+      },
+      "publications": {
+        "source_count": 2,
+        "restored_count": 1,
+        "differences": 1
+      },
+      "publication_memberships": {
+        "source_count": 3,
+        "restored_count": 2,
+        "differences": 1
+      },
+      "event_triggers": {
+        "source_count": 6,
+        "restored_count": 8,
+        "differences": 2
+      },
+      "extensions": {
+        "source_count": 7,
+        "restored_count": 8,
+        "differences": 5
+      },
+      "identified_dependencies": {
+        "source_count": 14634,
+        "restored_count": 14663,
+        "differences": 133
+      },
+      "roles": {
+        "source_count": 31,
+        "restored_count": 31,
+        "differences": 3
+      },
+      "role_memberships": {
+        "source_count": 22,
+        "restored_count": 23,
+        "differences": 5
+      }
+    },
+    "blocked": [
+      {
+        "category": "history",
+        "reason": "CalledProcessError"
+      }
+    ],
+    "comparison_scope": "Strict catalog before security deltas and application fixtures. Managed drift and redactions remain differences."
+  },
+  "cleanup": "PASS",
+  "source_tests": {
+    "crm": {
+      "passed": 979,
+      "failed": 0
+    },
+    "recovery_python": {
+      "passed": 128,
+      "failed": 0
+    },
+    "billing": {
+      "passed": 97,
+      "failed": 0
+    },
+    "billing_python": {
+      "passed": 6,
+      "failed": 0
+    },
+    "billing_failclosed_focused": {
+      "passed": 28,
+      "failed": 0
+    },
+    "stripe_source": {
+      "passed": 20,
+      "failed": 0
+    },
+    "stripe_deployed_v73": {
+      "passed": 15,
+      "failed": 5
+    },
+    "payroll_v119_simulated_db_and_provider": {
+      "passed": 13,
+      "failed": 0
+    },
+    "claims_nightly_simulated_db_and_provider": {
+      "passed": 5,
+      "failed": 0
+    }
+  },
+  "scope_note": "Source/provider simulations are not genuine provider acceptance; do not add overlapping suite counts.",
+  "private_log_sha256": {
+    "crm-final-source-suite.log": "6ee01a1ec897a34bb38e323bbd2a82f9476ae6d87f34dcc38e412380f02c53f7",
+    "python-final.log": "682739b35309c5fd373d26fddba268278a5b284833bf20b2c258ad54f19d0cf6",
+    "billing-full-source.log": "cc3458459e93fd6ceda6b33a87f32515a565c32eecf701d0945fd272f1cecbfa",
+    "billing-all-python.log": "e69559a3ca5db2e082d98d5632ce4325cf1d5d7354a79e30f5aa59d2158962b6",
+    "billing-failclosed-rerun.log": "74ec5ebef0726a5baf635b44b0b8013a7ca617637e4e0e841d37d0e04c9486e1",
+    "stripe-source.log": "737c3f71cad550b47c5719854843e68f5432631e355f68749f9618307899b10f",
+    "stripe-v73-regression.log": "f5fb2a43df0d3cb501cfab983995b405d905044a3c735a00a41826c15fb5fc03",
+    "payroll-source.log": "bcb64f8712aad7230643bd78353d47949612a1e90b0e480c872004e89f7c8fad",
+    "claims-nightly-source.log": "68496131a03ec134e9cf9b71e64a98e9744aae846ae8d8f8dc2151c439e6ed31",
+    "native-bandit-final.json": "35f3379ae938fb31dc397991ae2466c5a2c019027504ac29bd3283f9e78281bd",
+    "native-sdk-audit.json": "b8ad8ccce5417e5c46c79c79e5606b44df0dac8c7e5bd604f910d3c9474c5392",
+    "native-complete-final/results.json": "2c94a774d1e5d418ae5b0040dace43a91a71bd6fcffa2c9c76c11a31c3f268cd",
+    "native-complete-final/crm_workers.log": "bfbe85823fc1a3ebd45217a259527ef37039a4011a5ebd04184861fa1b88d944",
+    "native-complete-final/stripe_database.log": "952fa787eead13c7b5dfbf18f5ed5736bb13c71ecfce196317e63ead37d20206",
+    "native-complete-final/strict-parity.json": "82e4947f443dd9fc416d63e6f38094639c754a7fe49c9cf6734191bcc2bc1376",
+    "native-complete-final/parity-owner-review.json": "600db3f86b58b126429cf3793c9721fd51958910fbbbc3ae9ab279a41f4d1d73",
+    "native-acceptance-final/results.json": "2eac3dd8434b7283cc0b51fd818fb4070faf5a11ad3eda9fb13e5275a60de23f",
+    "native-acceptance-final/crm_workers.log": "0a15f868cebb35749cefda7a255ee21161ed73bb58498e785775f90be21bde63",
+    "native-acceptance-final/stripe_database.log": "3ad8863cd4143bbcb03cf1327a4bb31775e6c3d24df18792b6de6d5767a00c1c",
+    "native-acceptance-final/strict-parity.json": "82e4947f443dd9fc416d63e6f38094639c754a7fe49c9cf6734191bcc2bc1376",
+    "native-acceptance-final/parity-owner-review.json": "600db3f86b58b126429cf3793c9721fd51958910fbbbc3ae9ab279a41f4d1d73",
+    "native-acceptance-final/derived-source-private/payroll_staff_foreign_denial_candidate.sql": "1da469903a9bcd8fea465ff98622b7e89078840ea4affa81115b3c109e617436"
+  },
+  "payroll_denial_candidate": {
+    "status": "APPLIED_ONLY_TO_DEVELOPMENT_STACK",
+    "source_definition_sha256": "94a270c6385aa7102c875ec6f6590bd343afc9bbb804419ecfe2ebd84838650e",
+    "candidate_sql_sha256": "1da469903a9bcd8fea465ff98622b7e89078840ea4affa81115b3c109e617436",
+    "owner_and_acl_unchanged": true,
+    "scope": "Only STAFF_NOT_FOUND P0002 becomes 42501; private function body remains outside Git"
+  },
+  "payroll_database_assertions": {
+    "PASS": 17,
+    "FAIL": 1
+  },
+  "payroll_database_assertion_details": [
+    {
+      "name": "documented effective-date rate 2026-01-31",
+      "status": "PASS"
+    },
+    {
+      "name": "documented effective-date rate 2026-02-01",
+      "status": "PASS"
+    },
+    {
+      "name": "documented effective-date rate 2026-06-30",
+      "status": "PASS"
+    },
+    {
+      "name": "documented effective-date rate 2026-07-01",
+      "status": "PASS"
+    },
+    {
+      "name": "late_cancel effective-date rate 2026-03-01",
+      "status": "PASS"
+    },
+    {
+      "name": "noshow effective-date rate 2026-03-01",
+      "status": "PASS"
+    },
+    {
+      "name": "late_cancel/noshow effective-date rate 2026-03-01",
+      "status": "PASS"
+    },
+    {
+      "name": "statement exact decimal sum statementAmount",
+      "status": "PASS"
+    },
+    {
+      "name": "statement exact decimal sum documentedAmount",
+      "status": "PASS"
+    },
+    {
+      "name": "statement exact decimal sum lateCancelNoShowAmount",
+      "status": "PASS"
+    },
+    {
+      "name": "statement lifecycle totals retain exact cents without approval",
+      "status": "PASS"
+    },
+    {
+      "name": "signed clinician reads own statement",
+      "status": "PASS",
+      "http": 200
+    },
+    {
+      "name": "signed foreign clinician cannot read statement",
+      "status": "FAIL",
+      "http": 500
+    },
+    {
+      "name": "staged candidate returns forbidden for foreign clinician",
+      "status": "PASS",
+      "http": 403
+    },
+    {
+      "name": "staged denial candidate preserves own statement arithmetic",
+      "status": "PASS",
+      "http": 200
+    },
+    {
+      "name": "failed-attempt reconciliation is not payment evidence, replay 0",
+      "status": "PASS",
+      "http": 200
+    },
+    {
+      "name": "failed-attempt reconciliation is not payment evidence, replay 1",
+      "status": "PASS",
+      "http": 200
+    },
+    {
+      "name": "reconciliation preserves amount, null provider ID and one attempt",
+      "status": "PASS"
+    }
+  ],
+  "full_source_gate_ci": "https://github.com/LPredmore/valorwell-crm/actions/runs/39639563458",
+  "native_gate_exit_code": 2,
+  "native_gate_exit_reason": "Full acceptance/release deliberately fail closed; original failures and unresolved strict parity retained.",
+  "strict_catalog_difference_count": 1147
+}

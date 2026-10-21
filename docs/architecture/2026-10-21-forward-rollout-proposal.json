@@ -1,0 +1,97 @@
+{
+  "status": "PROPOSAL_ONLY_NOT_APPROVED",
+  "production_execution_authorized": false,
+  "baseline_on_production": false,
+  "historical_ledger_edits": false,
+  "new_forward_version": null,
+  "new_forward_version_reason": "Generate a fresh CLI version only for an independently approved release envelope; old source IDs below are provenance, never renamed/history-repaired.",
+  "private_baseline_manifest_sha256": "74cc42947a6cd7320d991e78d43f80c80e49dcca2187ca9e690deba58de06521",
+  "ordered_source_provenance": [
+    {
+      "repository": "crm",
+      "version": "20261019000200",
+      "sha256": "4ede96d545264ee0e3d7c06ad409393962e29915434736c9061afa88cf0e3314"
+    },
+    {
+      "repository": "billing",
+      "version": "20261019000300",
+      "sha256": "a27d6e22a409d75772bf45d3c63d3c1784dd7e551a2c79ba5da1cefba8e3b3e9"
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000310",
+      "sha256": "b2db8632a53b28ede9aa79d2118294440918195351cf7273841fcab543c32ad7"
+    },
+    {
+      "repository": "crm-draft193",
+      "version": "20261019165842",
+      "sha256": "89404791b3d91e1d9585c82e4b2ef4bd329f92c67b9da9102322bbc46dab08da"
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000400",
+      "sha256": "20ad3f8e35de44160811bd2848dcaa81ca1c679330c4479a6e6f88cb60b242b1"
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000410",
+      "sha256": "ee3588dc3205b86d724d15509c8d1881b9b1456bdee8f1ed62cb33d84305abd3"
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000500",
+      "sha256": "959046ab269918c7a4c1faf0279d39cfae9e1f733dd4270aec7be95e844f80a1"
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000600",
+      "sha256": "0cb2d52694155152ffe4d50751927efd23c16fd63e7651ae9ab26a2a5ef20820"
+    },
+    {
+      "repository": "crm",
+      "version": "20261019000800",
+      "sha256": "23ec40992fce188b59dbb3b51d641b4ed50cd83155c72f17ef2149fdf8501335"
+    },
+    {
+      "repository": "billing",
+      "version": "20261019085103",
+      "sha256": "3da8a52d63096979a9e111ade49eb73d6f11b343e0e433ae5ac34f2357aef827"
+    }
+  ],
+  "separate_optional_candidates": {
+    "stedi_retirement": {
+      "source_pr": "https://github.com/LPredmore/valorwell-billing-hub/pull/34",
+      "sha256": "1fd5bd3fd11b3003441181cdc18729846d7af0395e4091b3489c26ddb2fe0881",
+      "requires": "Independent owner approval and disposition of unknown provider attempts; no deletion or automatic Claim.MD resubmission"
+    },
+    "tenant_bound_storage": {
+      "path": "supabase/verification/crm_public_asset_tenant_metadata_candidate.sql",
+      "sha256": "24d8cdf5a668792be63f7ba0f4ffef2a833fe58a88060c4be31e37ab77bf2495",
+      "requires": "Independent review, compatible uploaders and verified legacy asset attribution"
+    },
+    "payroll_foreign_denial": {
+      "private_candidate_sha256": "1da469903a9bcd8fea465ff98622b7e89078840ea4affa81115b3c109e617436",
+      "source_definition_sha256": "94a270c6385aa7102c875ec6f6590bd343afc9bbb804419ecfe2ebd84838650e",
+      "requires": "Review private generated SQL; ownership and ACL remain unchanged"
+    },
+    "stripe_edge": {
+      "repository": "LPredmore/valorwell-billing-hub",
+      "source_commit": "050625035fbc43dc3a48bc53653b685e14b7142b",
+      "source_path": "supabase/functions/stripe-webhook/index.ts",
+      "sha256": "b76793099c58ffc32a8b4d806633010d84808f2e983d5ea4467556acb313235b",
+      "requires": "Sandbox DB reconciliation and separate Edge deployment authorization; no uncertain webhook auto-replay"
+    }
+  },
+  "required_before_execution": [
+    "Independent schema-owner approval tied to exact hashes and managed-runtime compatibility",
+    "Disposition of all strict parity differences and 46 redactions",
+    "Required hosted/native/provider acceptance evidence",
+    "Fresh read-only production preflight; preserve history and obtain backups/recovery plan",
+    "New explicit production rollout authorization"
+  ],
+  "rollback_constraints": [
+    "Never erase claim, payment, payroll or Stedi evidence",
+    "Never fabricate accepted claims, provider IDs, history or approvals",
+    "Do not merge/reset/rebase the failed diagnostic branch"
+  ]
+}
