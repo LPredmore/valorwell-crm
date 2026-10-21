@@ -8,7 +8,7 @@ Read-only inspection on October 21: production `ahqauomkgflopxgnlndd` has 966 mi
 
 A targeted production ACL check still finds all 12 reviewed internal RPCs callable by authenticated users; the prepared revocations are not deployed.
 
-Stedi now has zero enabled routes and zero active cron jobs whose name/command mentions Stedi. The no-reactivation constraint is absent. Twelve Stedi Edge endpoints remain ACTIVE; source tombstones below still require deployment. This supersedes older evidence of two active routes/four jobs. No historical claim records were retrieved or modified for this package.
+Stedi now has zero enabled routes and zero active cron jobs whose name/command mentions Stedi. The no-reactivation constraint is absent. All twelve Stedi Edge endpoints remain listed ACTIVE, but freshly retrieved deployed source confirms every one is already an inert 410 tombstone with no imports, data bindings or provider transport. ACTIVE is deployment lifecycle status, not evidence that Stedi processing remains enabled. Their previously missing source tombstones are now reconciled into main; replacement deployment is unnecessary. This supersedes older evidence of two active routes/four jobs. No historical claim records were retrieved or modified for this package.
 
 Stripe endpoint `we_1U0QK1K6NXPL7VzoDT0KzcRA`, canonical live account `acct_1OprKCK6NXPL7Vzo`, is enabled at the production `stripe-webhook` URL. Subscriptions remain `checkout.session.completed`, `checkout.session.expired`, `payment_intent.payment_failed`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`. Both `checkout.session.async_payment_succeeded` and `checkout.session.async_payment_failed` are missing. Deployed webhook remains v73; corrected source is already in Billing main via #44.
 
@@ -40,9 +40,9 @@ Before release, obtain normal schema-owner review and a restricted recovery expo
 
 From Billing main deploy `stripe-webhook`, retaining the existing account selection and privately configured signing secret. Use the project's established webhook deployment configuration (gateway JWT verification disabled, handler validates raw-body Stripe signature). Do not rotate or print existing secrets. After deploying the corrected handler, add the two asynchronous Checkout subscriptions to the existing endpoint while preserving all six current events and endpoint identity. Do not create a duplicate endpoint. This is an external production configuration step requiring separate authorization.
 
-From CRM main deploy `relationship-gmail-push`, `relationship-google-maintenance`, and `relationship-calendar-webhook` because all bundle the changed shared Google sync module. Deploy `relationship-campaign-worker` from current main to ensure the leased work item's trusted tenant scopes communication/step/reply-root reads. Existing campaign scheduler, trigger and social handlers must retain their authenticated/cron-secret entry guards and service-role internal RPC calls; no new provider credentials are required for these source changes.
+Fresh deployed-source comparison confirms the shared Google sync module matches current main in `relationship-gmail-push` v142, `relationship-google-maintenance` v145 and `relationship-calendar-webhook` v138. The `relationship-campaign-worker` v149 entrypoint also matches main, including trusted work-item tenant scoping. These four CRM functions do not need another deployment for the fixes in this package. Existing campaign scheduler, trigger and social handlers must retain their authenticated/cron-secret entry guards and service-role internal RPC calls; no new provider credentials are required for these source changes.
 
-From Billing main replace all twelve legacy deployments with the checked-in, data-free 410 tombstones before considering deletion:
+The following twelve Stedi endpoints already run data-free 410 tombstones, now preserved in Billing main. Keep them inert; optional later deletion requires separate approval and reference review:
 
 - `stedi-connection-test`
 - `stedi-build-claim`
@@ -57,7 +57,7 @@ From Billing main replace all twelve legacy deployments with the checked-in, dat
 - `stedi-uncertain-reconcile-v2`
 - `check-stedi-realtime-claim-status`
 
-Use `supabase functions deploy <slug> --project-ref ahqauomkgflopxgnlndd` from the correct repository after authorization; honor committed config and check the deployment receipt. Do not bulk deploy every function. The tombstones require no secrets, data access or provider transport. Keep historical Stedi database functions/types where needed to preserve evidence and legacy schema contracts. Do not delete claims, attempts, acknowledgments, response payloads, events or financial history. Do not turn uncertain Stedi attempts into Claim.MD retries; reconcile privately against real provider evidence first. Claim.MD active paths remain intact.
+Use `supabase functions deploy <slug> --project-ref ahqauomkgflopxgnlndd` from the correct repository after authorization; honor committed config and check the deployment receipt. Do not bulk deploy every function. The tombstones require no secrets, data access or provider transport. Only `stripe-webhook` currently requires an Edge replacement for this release. Keep historical Stedi database functions/types where needed to preserve evidence and legacy schema contracts. Do not delete claims, attempts, acknowledgments, response payloads, events or financial history. Do not turn uncertain Stedi attempts into Claim.MD retries; reconcile privately against real provider evidence first. Claim.MD active paths remain intact.
 
 ## Post-deployment checks and weekly operation
 
