@@ -61,6 +61,20 @@ Deno.serve(async (request: Request) => {
   const input = await request.json().catch(() => ({})) as { mode?: string };
   const apiKey = Deno.env.get("OPENROUTER_API_KEY") || "";
   const resendKey = Deno.env.get("RESEND_API_KEY") || "";
+  if (input.mode === "delivery_test") {
+    if (!resendKey) return json({ error: "resend_key_missing" }, 503);
+    const send = await fetch("https://api.resend.com/emails", {
+      method: "POST", signal: AbortSignal.timeout(15000),
+      headers: { authorization: `Bearer ${resendKey}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        from: FROM, to: [TO], subject: "TEST — ValorWell Daily Exception Watch delivery",
+        text: "This is an internal test of the new Supabase/OpenRouter monitoring alert route. No production incident or sensitive record was included.",
+      }),
+    }).catch(() => null);
+    return json({ accepted_by_resend: Boolean(send?.ok),
+      http_status: send?.status || null,
+      test_only: true }, send?.ok ? 200 : 502);
+  }
   if (input.mode === "diagnose") {
     const { data, error } = await db.rpc("valorwell_daily_watch_snapshot_v1");
     return json({ snapshot_ok: !error && !!data,
