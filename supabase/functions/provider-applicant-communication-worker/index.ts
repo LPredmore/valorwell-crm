@@ -14,7 +14,7 @@ interface ProviderApplicantJob {
   id: string;
   tenant_id: string;
   applicant_id: string;
-  communication_kind: "initial_email" | "initial_sms";
+  communication_kind: "initial_email" | "initial_sms" | "interview_followup_2" | "interview_followup_3";
   channel: "email" | "sms";
   content_version: string;
   scheduled_for: string;
@@ -143,6 +143,56 @@ export function providerApplicantEmailContent(applicant: ProviderApplicantData) 
   return { subject, html, text };
 }
 
+// Applicant interview messages are necessary recruiting communication, not marketing.
+export function interviewInvitationEmailContent(
+  applicant: ProviderApplicantData,
+  step: "initial_email" | "interview_followup_2" | "interview_followup_3",
+) {
+  const first = applicant.first_name.trim() || "there";
+  const link = "https://valorwell.org/clinicians/interview";
+  const invitation = "Enter the same email address you used on your application to access the scheduler.";
+  const copy = step === "initial_email"
+    ? {
+      subject: "Thank you for applying to ValorWell",
+      paragraphs: [
+        "Hi " + first + ",",
+        "Thank you for applying to ValorWell. I'd appreciate the chance to meet you and learn more about your experience.",
+        "Please choose a time for a one-hour interview here: " + link,
+        invitation,
+        "Looking forward to speaking with you,",
+        "Luke",
+      ],
+    }
+    : step === "interview_followup_2"
+    ? {
+      subject: "Following up on your ValorWell application",
+      paragraphs: [
+        "Hi " + first + ",",
+        "I wanted to follow up because we're still interested in interviewing you about joining ValorWell.",
+        "If you'd like to meet, please schedule a one-hour interview here: " + link,
+        invitation,
+        "Hope to connect soon,",
+        "Luke",
+      ],
+    }
+    : {
+      subject: "One last note about your ValorWell application",
+      paragraphs: [
+        "Hi " + first + ",",
+        "We're still interested in speaking with you, but I understand this may not be the right time.",
+        "This will be my last follow-up. We won't continue reaching out, but you're welcome to reconnect whenever you're ready.",
+        "You can book an interview at any time using this link: " + link,
+        invitation,
+        "Wishing you the best,",
+        "Luke",
+      ],
+    };
+  const html = copy.paragraphs.map((paragraph) =>
+    "<p>" + escapeHtml(paragraph).replace(link, '<a href="' + link + '">' + link + "</a>") + "</p>"
+  ).join("");
+  return { subject: copy.subject, html, text: copy.paragraphs.join("\n\n") };
+}
+
 export function providerApplicantSmsContent(applicant: ProviderApplicantData): string {
   const firstName = applicant.first_name.trim() || "there";
   return `Hi, ${firstName}, this is Luke with ValorWell. I got your application and I just sent you an email. Check it out and get back to me if you have any questions.\n\nThis goes straight to my cell.`;
@@ -178,7 +228,9 @@ async function sendProviderApplicantEmail(
   applicant: ProviderApplicantData,
 ): Promise<{ emailMessageId: string; providerMessageId: string }> {
   const settings = await resendSettings(db, job.tenant_id);
-  const content = providerApplicantEmailContent(applicant);
+  const content = job.content_version === "interview_invitation_v1"
+    ? interviewInvitationEmailContent(applicant, job.communication_kind as "initial_email" | "interview_followup_2" | "interview_followup_3")
+    : providerApplicantEmailContent(applicant);
   const now = new Date().toISOString();
   let emailMessageId = job.email_message_id;
 
@@ -222,12 +274,16 @@ async function sendProviderApplicantEmail(
       body_text: content.text,
       provider: "resend",
       message_class: "necessary_recruiting",
-      source: "provider_applicant_workflow",
+      source: job.content_version === "interview_invitation_v1"
+        ? "applicant_interview_campaign" : "provider_applicant_workflow",
       created_by_profile_id: null,
       occurred_at: now,
       metadata: {
         provider_applicant_job_id: job.id,
         content_version: job.content_version,
+        campaign_name: job.content_version === "interview_invitation_v1"
+          ? "Invitation to Interview" : null,
+        campaign_step: job.communication_kind,
       },
     }).select("id").single();
     if (error || !message) throw new Error(error?.message ?? "Email log creation failed");
@@ -362,7 +418,8 @@ export async function processProviderApplicantMessages(limit = 25) {
         result.skipped++;
         continue;
       }
-      if (job.content_version !== "provider_recruiting_v1") {
+      if (job.content_version !== "provider_recruiting_v1"
+          && job.content_version !== "interview_invitation_v1") {
         await completeApplicantJob(db, job, {
           status: "skipped",
           errorCode: "unsupported_content_version",
@@ -370,6 +427,29 @@ export async function processProviderApplicantMessages(limit = 25) {
         });
         result.skipped++;
         continue;
+      }
+
+      if (job.content_version === "interview_invitation_v1") {
+        if (job.channel !== "email" || !["initial_email", "interview_followup_2", "interview_followup_3"].includes(job.communication_kind)) {
+          await completeApplicantJob(db, job, {
+            status: "skipped", errorCode: "invalid_interview_step",
+            errorDetail: "Unexpected channel or communication kind for interview campaign",
+          });
+          result.skipped++;
+          continue;
+        }
+        const { data: canSend, error: gateError } = await db.rpc(
+          "crm_applicant_interview_can_send", { p_applicant_id: applicant.id },
+        );
+        if (gateError) throw new Error("Interview send gate: " + gateError.message);
+        if (canSend !== true) {
+          await completeApplicantJob(db, job, {
+            status: "cancelled", errorCode: "campaign_stopped",
+            errorDetail: "Staff match, interview booking, terminal status, or stopped enrollment",
+          });
+          result.skipped++;
+          continue;
+        }
       }
 
       let providerMessageId = job.provider_message_id;
@@ -409,16 +489,31 @@ export async function processProviderApplicantMessages(limit = 25) {
         }
       }
 
-      const { error: workflowError } = await db.rpc(
-        "staff_record_provider_applicant_contact_delivery",
-        {
-          p_applicant_id: applicant.id,
-          p_channel: job.channel,
-          p_job_id: job.id,
-          p_sent_at: job.sent_at ?? new Date().toISOString(),
-        },
-      );
-      if (workflowError) throw new Error(workflowError.message);
+      // Follow-ups never mutate the applicant stage.
+      // Recheck following provider acceptance to avoid regressing a concurrent booking.
+      if (job.content_version !== "interview_invitation_v1" ||
+          job.communication_kind === "initial_email") {
+        let updateFirstContact = true;
+        if (job.content_version === "interview_invitation_v1") {
+          const { data: canRecord, error: recordGateError } = await db.rpc(
+            "crm_applicant_interview_can_send", { p_applicant_id: applicant.id },
+          );
+          if (recordGateError) throw new Error(recordGateError.message);
+          updateFirstContact = canRecord === true;
+        }
+        if (updateFirstContact) {
+          const { error: workflowError } = await db.rpc(
+            "staff_record_provider_applicant_contact_delivery",
+            {
+              p_applicant_id: applicant.id,
+              p_channel: job.channel,
+              p_job_id: job.id,
+              p_sent_at: job.sent_at ?? new Date().toISOString(),
+            },
+          );
+          if (workflowError) throw new Error(workflowError.message);
+        }
+      }
 
       await completeApplicantJob(db, job, {
         status: "sent",
