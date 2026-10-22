@@ -412,3 +412,94 @@ begin
    ) values (v_tenant,v_pipeline,'Interview Scheduled',10,false,'interview_scheduled');
  end if;
 end $stage$;
+
+-- Existing worker uses the same claim RPC; dispatch controls are version scoped.
+create or replace function public.crm_claim_provider_applicant_communication_jobs(
+  p_limit integer default 25
+)
+returns table (
+  id uuid,
+  tenant_id uuid,
+  applicant_id uuid,
+  communication_kind text,
+  channel text,
+  content_version text,
+  scheduled_for timestamptz,
+  attempt_count integer,
+  max_attempts integer,
+  claim_token uuid,
+  email_message_id uuid,
+  provider_message_id text,
+  sent_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if not private.valorwell_is_service_role() then
+    raise exception 'ROLE_DENIED' using errcode = '42501';
+  end if;
+
+  return query
+  with candidates as (
+    select job.id
+    from public.crm_provider_applicant_communication_jobs job
+    where (
+        (
+          job.status in ('scheduled', 'failed')
+          and job.scheduled_for <= clock_timestamp()
+          and job.attempt_count < job.max_attempts
+        )
+        or (
+          job.status = 'processing'
+          and job.claimed_at < clock_timestamp() - interval '15 minutes'
+          and job.attempt_count < job.max_attempts
+        )
+      )
+      and (
+        -- New interview campaign is permitted EVERY DAY 06:00 through 17:59
+        -- America/Chicago, and ONLY while explicitly activated.
+        (job.content_version='interview_invitation_v1'
+           and (clock_timestamp() at time zone 'America/Chicago')::time >= time '06:00'
+           and (clock_timestamp() at time zone 'America/Chicago')::time < time '18:00'
+           and exists(select 1 from public.crm_applicant_interview_campaign_control ctl
+              where ctl.tenant_id=job.tenant_id and ctl.enabled=true))
+        or
+        -- Pre-existing unrelated applicant jobs retain their old dispatch policy.
+        (job.content_version<>'interview_invitation_v1'
+           and extract(isodow from clock_timestamp() at time zone 'America/Chicago') between 1 and 5
+           and (clock_timestamp() at time zone 'America/Chicago')::time >= time '08:00'
+           and (clock_timestamp() at time zone 'America/Chicago')::time < time '18:30')
+      )
+    order by job.scheduled_for, job.created_at
+    for update skip locked
+    limit greatest(1, least(coalesce(p_limit, 25), 100))
+  ), claimed as (
+    update public.crm_provider_applicant_communication_jobs job
+    set status = 'processing',
+        attempt_count = job.attempt_count + 1,
+        claim_token = gen_random_uuid(),
+        claimed_at = clock_timestamp(),
+        updated_at = clock_timestamp()
+    from candidates
+    where job.id = candidates.id
+    returning job.*
+  )
+  select
+    claimed.id,
+    claimed.tenant_id,
+    claimed.applicant_id,
+    claimed.communication_kind,
+    claimed.channel,
+    claimed.content_version,
+    claimed.scheduled_for,
+    claimed.attempt_count,
+    claimed.max_attempts,
+    claimed.claim_token,
+    claimed.email_message_id,
+    claimed.provider_message_id,
+    claimed.sent_at
+  from claimed;
+end;
+$function$;
