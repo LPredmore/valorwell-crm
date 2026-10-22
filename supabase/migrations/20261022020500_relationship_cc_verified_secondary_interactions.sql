@@ -31,7 +31,7 @@ BEGIN
 
    -- A contact's verified organization link is required, with no duplicate
    -- or competing matches. A CC address by itself never proves ownership.
-   SELECT count(*),min(c.id),min(co.organization_id)
+   SELECT count(*),(array_agg(c.id))[1],(array_agg(co.organization_id))[1]
      INTO v_unique,v_contact,v_org
    FROM public.relationship_contacts c
    JOIN public.relationship_contact_organizations co
@@ -43,7 +43,7 @@ BEGIN
 
    -- Add an active opportunity only when it is uniquely identified by the
    -- contact AND organization; never re-open a closed referring opportunity.
-   SELECT count(*),min(o.id) INTO v_opps,v_opportunity
+   SELECT count(*),(array_agg(o.id))[1] INTO v_opps,v_opportunity
    FROM public.relationship_opportunities o
    WHERE o.tenant_id=p_tenant_id AND o.organization_id=v_org
      AND o.primary_contact_id=v_contact
