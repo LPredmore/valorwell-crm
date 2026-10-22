@@ -144,7 +144,164 @@ begin
  if new.status::text<>'new' or new.closed_at is not null then return new; end if;
  v_match:=coalesce(new.converted_staff_id,
    private.crm_matching_staff_for_applicant(new.tenant_id,new.email,new.phone));
- if v_match is not null or nullif(btrim(coalesce(new.email,'')),'') is null then
+ if v_match is not null or nullif(btrim(coalesce(new.email,'')),'') is null
+    or new.email !~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}
+   select s.profile_id into v_owner from public.staff s
+    where s.id='af790579-5d4c-4aed-9d2e-77d72908ed85'::uuid
+      and s.tenant_id=new.tenant_id;
+   if v_owner is null then
+     raise exception 'Clinician duplicate review task owner is not configured';
+   end if;
+   insert into public.crm_tasks(
+     tenant_id,title,description,type,priority,status,owner_id,created_by_profile_id,
+     staff_id,due_at,tags
+   ) values (
+     new.tenant_id,
+     case when v_match is null then 'Review applicant without a usable email address'
+       else 'Review existing staff member who reapplied to ValorWell' end,
+     concat('Applicant: ',concat_ws(' ',new.first_name,new.last_name),
+       E'\nApplication ID: ',new.id::text,E'\nEmail: ',coalesce(new.email,''),
+       E'\nPhone: ',coalesce(new.phone,''),
+       E'\nMatched staff ID: ',coalesce(v_match::text,'(none)'),
+       E'\nDo not automatically change their staff or applicant status. Review and follow up manually.'),
+     'staff_follow_up','high','not_started',v_owner,v_owner,v_match,
+     clock_timestamp()+interval '1 day',array['clinician-reapplication','manual-review']
+   );
+   return new;
+ end if;
+ insert into public.crm_applicant_interview_enrollments(tenant_id,applicant_id)
+ values (new.tenant_id,new.id)
+ on conflict (tenant_id,applicant_id) do nothing;
+ insert into public.crm_provider_applicant_communication_jobs (
+   tenant_id,applicant_id,communication_kind,channel,content_version,scheduled_for,idempotency_key
+ ) values (
+   new.tenant_id,new.id,'initial_email','email','interview_invitation_v1',
+   clock_timestamp(),'provider-applicant/'||new.id::text||'/interview/1'
+ ) on conflict (tenant_id,idempotency_key) do nothing;
+ return new;
+end; $fn$;
+-- The original AFTER INSERT trigger calls this same function and remains installed.
+
+-- Chain follow-ups AFTER successful provider acceptance; delays are relative to
+-- the actual previous email, not merely the planned send time.
+create or replace function private.crm_chain_applicant_interview_followups()
+returns trigger language plpgsql security definer set search_path=''
+as $fn$
+declare v_next text;v_delay interval;
+begin
+ if old.status='sent' or new.status<>'sent'
+    or new.content_version<>'interview_invitation_v1' then return new; end if;
+ if new.communication_kind='initial_email' then
+   v_next:='interview_followup_2'; v_delay:=interval '2 days';
+ elsif new.communication_kind='interview_followup_2' then
+   v_next:='interview_followup_3'; v_delay:=interval '7 days';
+ elsif new.communication_kind='interview_followup_3' then
+   update public.crm_applicant_interview_enrollments
+     set status='completed',completed_at=clock_timestamp(),updated_at=clock_timestamp()
+   where tenant_id=new.tenant_id and applicant_id=new.applicant_id and status='active';
+   return new;
+ else return new; end if;
+ if public.crm_applicant_interview_can_send(new.applicant_id) then
+   insert into public.crm_provider_applicant_communication_jobs (
+      tenant_id,applicant_id,communication_kind,channel,content_version,scheduled_for,idempotency_key
+   ) values (
+      new.tenant_id,new.applicant_id,v_next,'email','interview_invitation_v1',
+      coalesce(new.sent_at,clock_timestamp())+v_delay,
+      'provider-applicant/'||new.applicant_id::text||'/interview/'||
+        case when v_next='interview_followup_2' then '2' else '3' end
+   ) on conflict (tenant_id,idempotency_key) do nothing;
+ end if;
+ return new;
+end; $fn$;
+drop trigger if exists crm_chain_applicant_interview_followups
+ on public.crm_provider_applicant_communication_jobs;
+create trigger crm_chain_applicant_interview_followups
+ after update of status on public.crm_provider_applicant_communication_jobs
+ for each row execute function private.crm_chain_applicant_interview_followups();
+
+-- Respect later staff decisions and closed applications as campaign exits.
+-- Changing an applicant outside New/Contacted never restarts outreach.
+create or replace function private.crm_stop_applicant_interview_for_status()
+returns trigger language plpgsql security definer set search_path=''
+as $fn$
+begin
+ if new.status::text not in ('new','contacted')
+     or new.closed_at is not null or new.converted_staff_id is not null then
+   update public.crm_applicant_interview_enrollments
+      set status='stopped',stopped_reason='applicant_status_changed',
+          updated_at=clock_timestamp()
+    where applicant_id=new.id and tenant_id=new.tenant_id and status='active';
+   update public.crm_provider_applicant_communication_jobs
+      set status='cancelled',claim_token=null,claimed_at=null,
+          error_code='applicant_status_changed',updated_at=clock_timestamp()
+    where applicant_id=new.id and tenant_id=new.tenant_id
+      and content_version='interview_invitation_v1'
+      and status in ('scheduled','failed');
+ end if;
+ return new;
+end; $fn$;
+drop trigger if exists crm_stop_applicant_interview_for_status on public.provider_applicants;
+create trigger crm_stop_applicant_interview_for_status
+ after update of status,closed_at,converted_staff_id on public.provider_applicants
+ for each row execute function private.crm_stop_applicant_interview_for_status();
+
+-- Booking confirmation is the authoritative appointment event.
+-- The scheduled interview stage is not set until the Google Calendar event
+-- has been committed to the booking table as confirmed.
+create or replace function private.crm_applicant_interview_booking_confirmed()
+returns trigger language plpgsql security definer set search_path=''
+as $fn$
+begin
+ if new.status='confirmed' and old.status is distinct from 'confirmed' then
+   update public.crm_applicant_interview_enrollments
+      set status='stopped',stopped_reason='interview_scheduled',
+          updated_at=clock_timestamp()
+    where tenant_id=new.tenant_id and applicant_id=new.applicant_id and status='active';
+   update public.crm_provider_applicant_communication_jobs
+      set status='cancelled',claim_token=null,claimed_at=null,
+          error_code='interview_booked',error_detail='Interview successfully scheduled',
+          updated_at=clock_timestamp()
+    where tenant_id=new.tenant_id and applicant_id=new.applicant_id
+      and content_version='interview_invitation_v1'
+      and status in ('scheduled','failed');
+   update public.provider_applicants
+      set status='interview_scheduled',next_action='Attend scheduled ValorWell clinician interview',
+          next_action_due_at=new.starts_at,last_activity_at=clock_timestamp()
+    where id=new.applicant_id and tenant_id=new.tenant_id
+      and closed_at is null and converted_staff_id is null
+      and status::text in ('new','contacted')
+      and private.crm_matching_staff_for_applicant(tenant_id,email,phone) is null;
+ end if;
+ return new;
+end; $fn$;
+drop trigger if exists crm_applicant_interview_booking_confirmed
+ on public.clinician_interview_bookings;
+create trigger crm_applicant_interview_booking_confirmed
+ after update of status on public.clinician_interview_bookings
+ for each row execute function private.crm_applicant_interview_booking_confirmed();
+
+-- Append stage without renumbering existing stage IDs. Note that position is
+-- a UI order, not the source applicant status.
+do $stage$
+declare v_pipeline uuid:='197bfeb7-a1d2-4c26-842f-045b5256d9e4';
+declare v_tenant uuid:='00000000-0000-0000-0000-000000000001';
+begin
+ if not exists(select 1 from public.crm_pipelines where id=v_pipeline
+   and tenant_id=v_tenant and source_key='provider_applicants') then
+   raise exception 'Unexpected clinician pipeline tenant/source';
+ end if;
+ if not exists(select 1 from public.crm_pipeline_stages
+    where pipeline_id=v_pipeline and source_stage_key='interview_scheduled') then
+   update public.crm_pipeline_stages set position=position+100
+     where pipeline_id=v_pipeline and position>=10;
+   update public.crm_pipeline_stages set position=position-99
+     where pipeline_id=v_pipeline and position>=110;
+   insert into public.crm_pipeline_stages (
+     tenant_id,pipeline_id,name,position,is_terminal,source_stage_key
+   ) values (v_tenant,v_pipeline,'Interview Scheduled',10,false,'interview_scheduled');
+ end if;
+end $stage$;
+ then
    select s.profile_id into v_owner from public.staff s
     where s.id='af790579-5d4c-4aed-9d2e-77d72908ed85'::uuid
       and s.tenant_id=new.tenant_id;
