@@ -12,7 +12,7 @@ import { applicantStatuses, listAllApplicantHandoffs, getApplicantProfessionalDe
 const originOptions = ['all', 'Cold', 'Indeed', 'Legacy', 'Website', 'Other'] as const;
 const originLabels: Record<string, string> = { all: 'All sources', Cold: 'Cold outreach', Indeed: 'Indeed', Legacy: 'Legacy (before July 2026)', Website: 'Website', Other: 'Other' };
 
-const statusLabels: Record<string, string> = { ready: 'Approved', hired: 'Onboarding started', screening: 'Interviewed', application: 'Application review', credentialing: 'Credentialing review', no_response: 'No response' };
+const statusLabels: Record<string, string> = { interview_scheduled: 'Interview Scheduled', ready: 'Approved', hired: 'Onboarding started', screening: 'Interviewed', application: 'Application review', credentialing: 'Credentialing review', no_response: 'No response' };
 function label(status: string) { return statusLabels[status] ?? status.replace(/_/g, ' '); }
 function dateLabel(value: string | null) {
   if (!value) return 'Not scheduled';
