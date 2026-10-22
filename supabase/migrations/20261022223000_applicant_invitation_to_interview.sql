@@ -160,7 +160,7 @@ begin
  v_match:=coalesce(new.converted_staff_id,
    private.crm_matching_staff_for_applicant(new.tenant_id,new.email,new.phone));
  if v_match is not null or nullif(btrim(coalesce(new.email,'')),'') is null
-    or new.email !~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$' then
+    or new.email !~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+[.][A-Z]{2,}$' then
    select s.profile_id into v_owner from public.staff s
     where s.id='af790579-5d4c-4aed-9d2e-77d72908ed85'::uuid
       and s.tenant_id=new.tenant_id;
