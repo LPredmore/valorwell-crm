@@ -21,7 +21,9 @@ describe('verified Gmail CC organization interactions',()=>{
         returns text language sql immutable as $$select h->>k$$;
       create table relationship_communications(
         id uuid primary key,tenant_id uuid,direction text,provider text,
-        recipient_email text,organization_id uuid,occurred_at timestamptz);
+        recipient_email text,organization_id uuid,occurred_at timestamptz,provider_message_id text default 'message',provider_thread_id text default 'thread');
+      create table relationship_reconciliation_issues(tenant_id uuid,issue_type text,source text,external_event_id text,summary text,details jsonb,status text default 'open',updated_at timestamptz);
+      create unique index open_issue on relationship_reconciliation_issues(tenant_id,issue_type,source,external_event_id) where status='open' and external_event_id is not null;
       create table relationship_contacts(id uuid,tenant_id uuid,email text);
       create table relationship_contact_organizations(
         tenant_id uuid,contact_id uuid,organization_id uuid);
@@ -32,13 +34,13 @@ describe('verified Gmail CC organization interactions',()=>{
         contact_id uuid,opportunity_id uuid,interaction_type text,occurred_at timestamptz,
         summary text,metadata jsonb);
     `);
-    const sql=readFileSync('supabase/migrations/20261022020500_relationship_cc_verified_secondary_interactions.sql','utf8');
-    await db.exec(sql.slice(0,sql.indexOf('-- Forward-only correction:')));
+    const sql=readFileSync('supabase/migrations/20261022200829_relationship_secondary_to_recipients.sql','utf8');
+    await db.exec(sql);
   },60_000);
   afterAll(async()=>db?.close());
   beforeEach(async()=>{
-    await db.exec('truncate relationship_communications, relationship_contacts, relationship_contact_organizations,relationship_opportunities,relationship_interactions');
-    await db.query('insert into relationship_communications values ($1,$2,$3,$4,$5,$6,now())',
+    await db.exec('truncate relationship_reconciliation_issues,relationship_communications, relationship_contacts, relationship_contact_organizations,relationship_opportunities,relationship_interactions');
+    await db.query('insert into relationship_communications(id,tenant_id,direction,provider,recipient_email,organization_id,occurred_at) values ($1,$2,$3,$4,$5,$6,now())',
       [COMM,TENANT,'outbound','gmail','primary@example.invalid',ORG_A]);
     await db.query('insert into relationship_contacts values ($1,$2,$3)',
       [CONTACT_B,TENANT,'guest@example.invalid']);
@@ -53,6 +55,20 @@ describe('verified Gmail CC organization interactions',()=>{
       [TENANT,COMM,JSON.stringify({cc})]);
     return x.rows[0].n;
   }
+  it('records a secondary To organization once even when also CCed',async()=>{
+    const headers={to:'primary@example.invalid, guest@example.invalid',cc:'guest@example.invalid'};
+    const q='select private.record_cc_relationship_interactions_v1($1,$2,$3::jsonb) as n';
+    expect((await db.query<{n:number}>(q,[TENANT,COMM,JSON.stringify(headers)])).rows[0].n).toBe(1);
+    expect((await db.query<{n:number}>(q,[TENANT,COMM,JSON.stringify(headers)])).rows[0].n).toBe(0);
+    expect((await db.query<{role:string}>("select metadata->>'recipient_role' role from relationship_interactions")).rows[0].role).toBe('to');
+  });
+  it('retains unknown secondary recipients as idempotent review exceptions',async()=>{
+    expect(await run('unknown@example.invalid')).toBe(0);
+    expect(await run('unknown@example.invalid')).toBe(0);
+    const result=await db.query<{details:{recipient_review:Record<string,string>}}>('select details from relationship_reconciliation_issues');
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0].details.recipient_review).toEqual({'unknown@example.invalid':'cc'});
+  });
   it('creates exactly one secondary interaction, no second physical email, without changing opportunity',async()=>{
     expect(await run('Guest <guest@example.invalid>')).toBe(1);
     expect(await run('Guest <guest@example.invalid>')).toBe(0);

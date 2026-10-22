@@ -7,12 +7,13 @@ const source=readFileSync('supabase/functions/_shared/relationship-google-sync.t
 const ast=ts.createSourceFile('sync.ts',source,ts.ScriptTarget.Latest,true);
 const names=['metadataUrl','processGmailMessage','syncState','updateState','syncGmail'];
 const code=ast.statements.filter(n=>ts.isFunctionDeclaration(n)&&names.includes(n.name?.text??'')).map(n=>n.getText(ast).replace('export async function','async function')).join('\n');
-function runtime(options: { match?: Record<string,unknown>; ingest?: Record<string,unknown>; fail?: boolean; deleted?: boolean; draftOnFull?: boolean }={}) {
-  const header = (from:string,to:string) => ({ headers:[{name:'From',value:from},{name:'To',value:to},{name:'Cc',value:'guest@example.invalid'},{name:'In-Reply-To',value:'<anchor@example.invalid>'}] });
+function runtime(options: { match?: Record<string,unknown>; ingest?: Record<string,unknown>; fail?: boolean; deleted?: boolean; draftOnFull?: boolean; forbidden?: boolean; wrongId?: boolean; conflictingRfc?: boolean }={}) {
+  const header = (from:string,to:string) => ({ headers:[{name:'From',value:from},{name:'To',value:to},{name:'Cc',value:'guest@example.invalid'},{name:'In-Reply-To',value:'<anchor@example.invalid>'},...(options.conflictingRfc?[{name:'Message-ID',value:'<a@example.invalid>'},{name:'Message-ID',value:'<b@example.invalid>'}]:[])] });
   const googleJson=vi.fn(async (url:string) => {
     if(url.includes('/history?')) return { historyId:'200',history:[{id:'199',messagesAdded:[{message:{id:'sent'}},{message:{id:'sent'}},{message:{id:'draft'}}]}] };
+    if(options.forbidden) throw Object.assign(new Error('permission denied'),{status:403});
     if(options.deleted) throw Object.assign(new Error('deleted'),{status:404});
-    return { threadId:'thread',internalDate:'0',payload:header(url.includes('format=full')?'authoritative@example.invalid':'metadata@example.invalid','primary@example.invalid'),labelIds:[(url.includes('/draft?') || (options.draftOnFull && url.includes('format=full')))?'DRAFT':'SENT'] };
+    return { id:options.wrongId?'wrong':new URL(url).pathname.split('/').pop(), threadId:'thread',internalDate:'0',payload:header(url.includes('format=full')?'authoritative@example.invalid':'metadata@example.invalid','primary@example.invalid'),labelIds:[(url.includes('/draft?') || (options.draftOnFull && url.includes('format=full')))?'DRAFT':'SENT'] };
   });
   const rpc=vi.fn(async (name:string) => {
     if(name==='get_relationship_google_sync_state') return {data:{gmailHistoryId:'100'},error:null};
@@ -49,7 +50,8 @@ describe('actual Gmail history orchestration with isolated provider and RPC I/O'
   it('does not checkpoint failed persistence',async()=>{
     const {api,rpc}=runtime({fail:true});
     await expect(api.syncGmail({rpc},'199')).rejects.toThrow('persistence failed');
-    expect(rpc.mock.calls.some(c=>c[0]==='update_relationship_google_sync_state')).toBe(false);
+    expect(rpc).toHaveBeenLastCalledWith('update_relationship_google_sync_state',expect.objectContaining({p_error_code:'gmail_sync_failed'}));
+    expect((rpc.mock.calls as unknown as [string,Record<string,unknown>][]).some(c=>c[0]==='update_relationship_google_sync_state' && c[1].p_gmail_history_id)).toBe(false);
   });
   it('allows push then hourly replay and repeated notification using the same provider IDs',async()=>{
     const {api,rpc}=runtime({ingest:{observed:true,deduplicated:true}});
@@ -64,9 +66,28 @@ describe('actual Gmail history orchestration with isolated provider and RPC I/O'
     expect(googleJson).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledTimes(1);
   });
-  it('continues safely when a message was deleted before retrieval',async()=>{
+  it('retains an unavailable message exception without inferring deletion',async()=>{
     const {api,rpc}=runtime({deleted:true});
     expect(await api.processGmailMessage({rpc},'token','gone')).toMatchObject({skipped:'message_not_found'});
-    expect(rpc).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith('record_relationship_gmail_retrieval_failure',{p_message_id:'gone',p_status:'NOT_FOUND'});
   });
+  it('preserves the cursor and records permission failures separately from NOT_FOUND',async()=>{
+    const {api,rpc}=runtime({forbidden:true});
+    await expect(api.syncGmail({rpc},'199')).rejects.toThrow('permission denied');
+    expect(rpc).toHaveBeenCalledWith('record_relationship_gmail_retrieval_failure',expect.objectContaining({p_status:'FORBIDDEN'}));
+    expect(rpc).toHaveBeenLastCalledWith('update_relationship_google_sync_state',expect.objectContaining({p_error_code:'FORBIDDEN',p_notification:true}));
+  });
+  it('rejects provider response ID mismatches before persisting receipts or communications',async()=>{
+    const {api,rpc}=runtime({wrongId:true});
+    await expect(api.processGmailMessage({rpc},'token','sent')).rejects.toThrow('identity mismatch');
+    expect(rpc.mock.calls.some(c=>c[0]==='record_relationship_gmail_source_receipt')).toBe(false);
+  });
+
+  it('rejects conflicting full RFC headers before flattening or recording a receipt',async()=>{
+    const {api,rpc}=runtime({conflictingRfc:true});
+    await expect(api.processGmailMessage({rpc},'token','sent')).rejects.toThrow('Conflicting Gmail RFC');
+    expect(rpc).toHaveBeenCalledWith('record_relationship_gmail_retrieval_failure',{p_message_id:'sent',p_status:'MISMATCH'});
+    expect(rpc.mock.calls.some(c=>c[0]==='record_relationship_gmail_source_receipt')).toBe(false);
+  });
+
 });

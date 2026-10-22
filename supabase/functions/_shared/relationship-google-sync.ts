@@ -54,14 +54,24 @@ async function processGmailMessage(
   accessToken: string,
   messageId: string,
 ) {
-  // Gmail history/list can race with deletion, including archived or moved messages.
+  // A 404 means unavailable to this request, not proof of deletion/non-delivery.
   // A missing single message must not strand the mailbox's recovery cursor.
   const metadata = await googleJson(metadataUrl(messageId, "metadata"), accessToken)
-    .catch((error: Error & { status?: number }) => {
+    .catch(async (error: Error & { status?: number }) => {
+      const { error: recordError } = await admin.rpc("record_relationship_gmail_retrieval_failure", {
+        p_message_id: messageId,
+        p_status: error.status === 404 ? "NOT_FOUND" : error.status === 403 ? "FORBIDDEN" : "UNAVAILABLE",
+      });
+      if (recordError) throw new Error(recordError.message);
       if (error.status === 404) return null;
       throw error;
     });
   if (!metadata) return { messageId, matched: false, skipped: "message_not_found" };
+  if (metadata.id !== messageId) {
+    const { error } = await admin.rpc("record_relationship_gmail_retrieval_failure", { p_message_id: messageId, p_status: "MISMATCH" });
+    if (error) throw new Error(error.message);
+    throw new Error("Gmail metadata message identity mismatch.");
+  }
   // Drafts can share a thread/RFC anchor with sent mail, but are not delivery evidence.
   if (Array.isArray(metadata.labelIds) && metadata.labelIds.includes("DRAFT")) {
     return { messageId, matched: false, skipped: "draft_message" };
@@ -96,16 +106,41 @@ async function processGmailMessage(
     return { messageId, matched: false, skipped: "unrelated_message" };
   }
   const full = await googleJson(metadataUrl(messageId, "full"), accessToken)
-    .catch((error: Error & { status?: number }) => {
+    .catch(async (error: Error & { status?: number }) => {
+      const { error: recordError } = await admin.rpc("record_relationship_gmail_retrieval_failure", {
+        p_message_id: messageId,
+        p_status: error.status === 404 ? "NOT_FOUND" : error.status === 403 ? "FORBIDDEN" : "UNAVAILABLE",
+      });
+      if (recordError) throw new Error(recordError.message);
       if (error.status === 404) return null;
       throw error;
     });
   if (!full) return { messageId, matched: false, skipped: "message_not_found" };
+  if (full.id !== messageId || !full.threadId || full.threadId !== metadata.threadId) {
+    const { error } = await admin.rpc("record_relationship_gmail_retrieval_failure", { p_message_id: messageId, p_status: "MISMATCH" });
+    if (error) throw new Error(error.message);
+    throw new Error("Gmail full message identity mismatch.");
+  }
   if (Array.isArray(full.labelIds) && full.labelIds.includes("DRAFT")) {
     return { messageId, matched: false, skipped: "draft_message" };
   }
   const fullPayload = (full.payload ?? {}) as Record<string, unknown>;
+  const rfcIds = ((fullPayload.headers ?? []) as Array<{ name: string; value: string }>)
+    .filter(header => header.name.toLowerCase() === "message-id").map(header => header.value.trim());
+  if (new Set(rfcIds).size > 1) {
+    const { error } = await admin.rpc("record_relationship_gmail_retrieval_failure", { p_message_id: messageId, p_status: "MISMATCH" });
+    if (error) throw new Error(error.message);
+    throw new Error("Conflicting Gmail RFC Message-ID headers.");
+  }
   const fullHeaders = headerMap(fullPayload);
+  // Persist independent retrieval provenance before ingestion. Never manufacture
+  // these receipts from a CRM communication or a matching thread/subject.
+  const { error: receiptError } = await admin.rpc("record_relationship_gmail_source_receipt", {
+    p_tenant_id: TENANT_ID, p_message_id: full.id, p_thread_id: full.threadId,
+    p_mailbox: GMAIL_MAILBOX, p_headers: fullHeaders,
+    p_label_ids: Array.isArray(full.labelIds) ? full.labelIds : [],
+  });
+  if (receiptError) throw new Error(receiptError.message);
   const fullFrom = firstEmail(fullHeaders.from ?? "") || from;
   const fullTo = emailList(`${fullHeaders.to ?? ""},${fullHeaders.cc ?? ""}`);
   const { data, error } = await admin.rpc("ingest_relationship_gmail_message", {
@@ -115,7 +150,7 @@ async function processGmailMessage(
     p_headers: fullHeaders,
     p_from_email: fullFrom,
     p_to_emails: fullTo.length ? fullTo : to,
-    p_subject: subject,
+    p_subject: fullHeaders.subject ?? subject,
     p_body: gmailBody(fullPayload),
     p_occurred_at: new Date(Number(full.internalDate ?? metadata.internalDate ?? Date.now())).toISOString(),
     p_label_ids: Array.isArray(full.labelIds) ? full.labelIds : [],
@@ -265,76 +300,86 @@ export async function syncGmail(
   const runtime = await connectionRuntime(admin, "gmail");
   if (!runtime) return { skipped: true, reason: "gmail_not_connected" };
   if (runtime.googleAccountEmail.toLowerCase() !== GMAIL_MAILBOX) throw new Error("Gmail mailbox restriction failed.");
-  const accessToken = await refreshGoogleAccessToken(runtime);
-  const state = await syncState(admin, runtime.id);
-  if (!state.gmailHistoryId) return fullGmailReconciliation(admin, runtime, accessToken, state);
-
-  // A single bounded Gmail history page fits scheduled HTTP invocations. Do
-  // NOT use page.historyId as the next cursor when more pages exist: it reflects
-  // the current mailbox, not necessarily the last fully processed page.
-  const params = new URLSearchParams({
-    startHistoryId: state.gmailHistoryId,
-    historyTypes: "messageAdded",
-    maxResults: "25",
-  });
-  let page: Record<string, unknown>;
   try {
-    page = await googleJson(
-      `https://gmail.googleapis.com/gmail/v1/users/me/history?${params}`,
-      accessToken,
-    );
-  } catch (error) {
-    if ((error as Error & { status?: number }).status === 404) {
-      return checkpointExpiredGmailHistory(admin, runtime, accessToken, state);
+    const accessToken = await refreshGoogleAccessToken(runtime);
+    const state = await syncState(admin, runtime.id);
+    if (!state.gmailHistoryId) return await fullGmailReconciliation(admin, runtime, accessToken, state);
+
+    // A single bounded Gmail history page fits scheduled HTTP invocations. Do
+    // NOT use page.historyId as the next cursor when more pages exist: it reflects
+    // the current mailbox, not necessarily the last fully processed page.
+    const params = new URLSearchParams({
+      startHistoryId: state.gmailHistoryId,
+      historyTypes: "messageAdded",
+      maxResults: "25",
+    });
+    let page: Record<string, unknown>;
+    try {
+      page = await googleJson(
+        `https://gmail.googleapis.com/gmail/v1/users/me/history?${params}`,
+        accessToken,
+      );
+    } catch (error) {
+      if ((error as Error & { status?: number }).status === 404) {
+        return await checkpointExpiredGmailHistory(admin, runtime, accessToken, state);
+      }
+      throw error;
     }
+
+    const history = (page.history ?? []) as Array<Record<string, unknown>>;
+    const hasMore = typeof page.nextPageToken === "string";
+    const lastSynced = state.lastSuccessfulSyncAt ? Date.parse(state.lastSuccessfulSyncAt) : NaN;
+    // A long-running backlog cannot block the live mailbox or be silently
+    // truncated. Preserve its evidence and recover historical messages via the
+    // dedicated paginated reconciliation process.
+    if (hasMore && (!Number.isFinite(lastSynced) || Date.now() - lastSynced > 48 * 3600_000)) {
+      return await checkpointExpiredGmailHistory(admin, runtime, accessToken, state);
+    }
+
+    const ids = new Set<string>();
+    for (const item of history) {
+      for (const added of (item.messagesAdded ?? []) as Array<{ message?: { id?: string } }>) {
+        if (added.message?.id) ids.add(added.message.id);
+      }
+    }
+    const messageIds = [...ids];
+    const results: Array<{ matched?: boolean; skipped?: string }> = [];
+    for (let i = 0; i < messageIds.length; i += 6) {
+      results.push(...await Promise.all(
+        messageIds.slice(i, i + 6).map((id) => processGmailMessage(admin, accessToken, id)),
+      ));
+    }
+    const lastHistoryRecordId = history.length
+      ? String(history[history.length - 1].id ?? "")
+      : "";
+    const nextHistoryId = hasMore
+      ? lastHistoryRecordId
+      : String(page.historyId ?? notificationHistoryId ?? state.gmailHistoryId);
+    if (!nextHistoryId || (hasMore && nextHistoryId === state.gmailHistoryId)) {
+      throw new Error("Gmail history page cannot be checkpointed without losing messages.");
+    }
+    await updateState(admin, {
+      p_connection_id: runtime.id,
+      p_gmail_history_id: nextHistoryId,
+      p_notification: Boolean(notificationHistoryId),
+      p_success: true,
+    });
+    return {
+      mode: "history",
+      processed: results.filter((row) => !row.skipped).length,
+      skippedUnavailable: results.filter((row) => row.skipped).length,
+      hasMore,
+      historyId: nextHistoryId,
+    };
+  } catch (error) {
+    const status = (error as Error & { status?: number }).status;
+    await updateState(admin, {
+      p_connection_id: runtime.id, p_notification: Boolean(notificationHistoryId),
+      p_error_code: status === 403 ? "FORBIDDEN" : status === 404 ? "NOT_FOUND" : "gmail_sync_failed",
+      p_error_reason: error instanceof Error ? error.message : "Gmail synchronization failed.",
+    });
     throw error;
   }
-
-  const history = (page.history ?? []) as Array<Record<string, unknown>>;
-  const hasMore = typeof page.nextPageToken === "string";
-  const lastSynced = state.lastSuccessfulSyncAt ? Date.parse(state.lastSuccessfulSyncAt) : NaN;
-  // A long-running backlog cannot block the live mailbox or be silently
-  // truncated. Preserve its evidence and recover historical messages via the
-  // dedicated paginated reconciliation process.
-  if (hasMore && (!Number.isFinite(lastSynced) || Date.now() - lastSynced > 48 * 3600_000)) {
-    return checkpointExpiredGmailHistory(admin, runtime, accessToken, state);
-  }
-
-  const ids = new Set<string>();
-  for (const item of history) {
-    for (const added of (item.messagesAdded ?? []) as Array<{ message?: { id?: string } }>) {
-      if (added.message?.id) ids.add(added.message.id);
-    }
-  }
-  const messageIds = [...ids];
-  const results: Array<{ matched?: boolean; skipped?: string }> = [];
-  for (let i = 0; i < messageIds.length; i += 6) {
-    results.push(...await Promise.all(
-      messageIds.slice(i, i + 6).map((id) => processGmailMessage(admin, accessToken, id)),
-    ));
-  }
-  const lastHistoryRecordId = history.length
-    ? String(history[history.length - 1].id ?? "")
-    : "";
-  const nextHistoryId = hasMore
-    ? lastHistoryRecordId
-    : String(page.historyId ?? notificationHistoryId ?? state.gmailHistoryId);
-  if (!nextHistoryId || (hasMore && nextHistoryId === state.gmailHistoryId)) {
-    throw new Error("Gmail history page cannot be checkpointed without losing messages.");
-  }
-  await updateState(admin, {
-    p_connection_id: runtime.id,
-    p_gmail_history_id: nextHistoryId,
-    p_notification: Boolean(notificationHistoryId),
-    p_success: true,
-  });
-  return {
-    mode: "history",
-    processed: results.filter((row) => !row.skipped).length,
-    skippedUnavailable: results.filter((row) => row.skipped).length,
-    hasMore,
-    historyId: nextHistoryId,
-  };
 }
 
 

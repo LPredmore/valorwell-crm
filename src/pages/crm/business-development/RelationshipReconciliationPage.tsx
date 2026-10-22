@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { relationshipTasksRepository } from '@/repositories/supabase/relationship-tasks';
 import { Badge } from '@/components/ui/badge';
+import { EmailSourceRecovery } from '@/components/crm/relationships/EmailSourceRecovery';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -133,14 +134,14 @@ function EmailReconciliationQueue() {
   });
   const cleanupPreview = useQuery({
     queryKey: ['relationship-email-review-task-cleanup', currentTenantId],
-    queryFn: async (): Promise<{ eligible: number; blocked: number }> => {
+    queryFn: async (): Promise<{ eligible: number; blocked: number; tasks: Array<{ taskId: string; title: string }> }> => {
       const { data, error } = await queueRpc.rpc('process_relationship_email_review_task_cleanup', {
         p_apply: false, p_limit: 100,
       });
       if (error) throw new Error(error.message);
       if (!data || typeof data !== 'object') throw new Error('Historical review cleanup preview unavailable.');
-      const result = data as { eligible?: number; blocked?: number };
-      return { eligible: result.eligible ?? 0, blocked: result.blocked ?? 0 };
+      const result = data as { eligible?: number; blocked?: number; tasks?: Array<{ taskId: string; title: string }> };
+      return { eligible: result.eligible ?? 0, blocked: result.blocked ?? 0, tasks: result.tasks ?? [] };
     },
     enabled: isAuthenticated && Boolean(currentTenantId) && capabilities.mutate,
     retry: false,
@@ -227,6 +228,9 @@ function EmailReconciliationQueue() {
             onClick={() => finishCompleted.mutate()}>
             {finishCompleted.isPending ? 'Completing reviewed tasks…' : `Complete ${cleanupPreview.data.eligible} finished review tasks`}
           </Button>
+          <details><summary className="text-sm">Preview eligible tasks</summary>
+            <ul className="list-disc pl-5 text-sm">{cleanupPreview.data.tasks.map(task => <li key={task.taskId}>{task.title}</li>)}</ul>
+          </details>
         </div>}
       {finishCompleted.isSuccess && <p className="text-sm text-muted-foreground">
         {finishCompleted.data.completed} finished review tasks completed. Source-blocked tasks remain open.
@@ -309,6 +313,7 @@ export default function RelationshipReconciliationPage() {
     </div>
 
     <EmailReconciliationQueue />
+    <EmailSourceRecovery />
 
     <Card><CardHeader><CardTitle>Dry run</CardTitle><CardDescription>The dry run never writes. Applying is blocked until the reconciliation-writes switch is enabled.</CardDescription></CardHeader><CardContent className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
