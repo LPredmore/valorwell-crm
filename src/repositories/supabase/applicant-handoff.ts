@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { ApplicantHandoff } from '@/domain/pipelines/applicant-handoff';
 
-export const applicantStatuses = ['new', 'contacted', 'screening', 'application', 'credentialing', 'ready', 'hired', 'declined', 'withdrawn', 'no_response', 'inactive'] as const;
+export const applicantStatuses = ['new', 'contacted', 'interview_scheduled', 'screening', 'application', 'credentialing', 'ready', 'hired', 'declined', 'withdrawn', 'no_response', 'inactive'] as const;
 type HandoffRow = ApplicantHandoff & {
   id: string; name: string; status: string; nextAction: string | null; nextActionDueAt: string | null;
 };
