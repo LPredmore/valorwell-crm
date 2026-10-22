@@ -1,4 +1,5 @@
 import { applicantWorkspaceLink } from '@/domain/pipelines/applicant-workspace-link';
+import { RecruitmentInterviewCampaignControl } from './RecruitmentInterviewCampaignControl';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -53,6 +54,7 @@ function ApplicantHandoffWorkspace() {
   if (!currentTenantId) return <p>Select a CRM tenant to review staff handoffs.</p>;
   return <div className="space-y-4 p-4">
     <h1 className="text-2xl font-bold">Recruitment → staff handoff</h1>
+    <RecruitmentInterviewCampaignControl tenantId={currentTenantId} />
     <p className="text-sm text-muted-foreground">Submitted applications, including onboarding and closed records. Staff access is required. Payer enrollment and network availability require separate source confirmation.</p>
     <div className="flex flex-wrap gap-2">
       <Button variant="outline" asChild><Link to="/crm/recruitment/prospects">Prospect queue</Link></Button>
