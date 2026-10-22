@@ -58,6 +58,94 @@ alter table public.crm_applicant_interview_enrollments enable row level security
 revoke all on public.crm_applicant_interview_enrollments from public,anon,authenticated;
 grant all on public.crm_applicant_interview_enrollments to service_role;
 
+-- Campaign is PAUSED after deployment. Only a CRM administrator can explicitly
+-- activate this applicant-only program; do not use client campaign enrollment.
+create table if not exists public.crm_applicant_interview_campaign_control (
+  tenant_id uuid primary key references public.tenants(id) on delete cascade,
+  campaign_name text not null default 'Invitation to Interview'
+    check (campaign_name = 'Invitation to Interview'),
+  enabled boolean not null default false,
+  updated_at timestamptz not null default clock_timestamp(),
+  activated_by uuid references public.profiles(id) on delete set null
+);
+alter table public.crm_applicant_interview_campaign_control enable row level security;
+revoke all on public.crm_applicant_interview_campaign_control from public,anon,authenticated;
+grant all on public.crm_applicant_interview_campaign_control to service_role;
+insert into public.crm_applicant_interview_campaign_control(tenant_id,enabled)
+values('00000000-0000-0000-0000-000000000001'::uuid,false)
+on conflict (tenant_id) do update set enabled=false, activated_by=null,updated_at=clock_timestamp();
+
+-- This helper rounds any due timestamp forward to the next sendable instant
+-- in America/Chicago, observing CST in winter and CDT in summer. Upper bound
+-- 18:00 is exclusive to prevent a late-evening start.
+create or replace function private.crm_applicant_interview_next_window(p_after timestamptz)
+returns timestamptz language plpgsql immutable set search_path=''
+as $fn$
+declare v_local timestamp without time zone;
+begin
+ if p_after is null then return null; end if;
+ v_local:=p_after at time zone 'America/Chicago';
+ if v_local::time < time '06:00' then
+   return (v_local::date+time '06:00') at time zone 'America/Chicago';
+ elsif v_local::time >= time '18:00' then
+   return ((v_local::date+1)+time '06:00') at time zone 'America/Chicago';
+ end if;
+ return p_after;
+end; $fn$;
+revoke all on function private.crm_applicant_interview_next_window(timestamptz)
+ from public,anon,authenticated;
+
+-- Read-only campaign state for the staff recruitment screen.
+create or replace function public.crm_applicant_interview_campaign_status(p_tenant_id uuid)
+returns jsonb language plpgsql stable security definer set search_path=''
+as $fn$
+declare v_context jsonb; v_on boolean;
+begin
+ v_context:=public.get_crm_operating_context();
+ if auth.uid() is null or coalesce(v_context->>'current_tenant_id','')<>p_tenant_id::text
+   or coalesce(v_context->>'crm_role','') not in ('crm_admin','crm_operator') then
+   raise exception 'ROLE_DENIED' using errcode='42501';
+ end if;
+ perform private.valorwell_require_staff_contract(p_tenant_id,false);
+ select c.enabled into v_on from public.crm_applicant_interview_campaign_control c
+ where c.tenant_id=p_tenant_id;
+ return jsonb_build_object(
+   'name','Invitation to Interview',
+   'enabled',coalesce(v_on,false),
+   'initialDelayHours',2,
+   'windowStart','06:00','windowEnd','18:00',
+   'timezone','America/Chicago','steps',3
+ );
+end; $fn$;
+revoke all on function public.crm_applicant_interview_campaign_status(uuid) from public,anon,authenticated;
+grant execute on function public.crm_applicant_interview_campaign_status(uuid) to authenticated;
+
+-- One explicitly authorized action changes campaign activation state.
+create or replace function public.crm_set_applicant_interview_campaign_enabled(
+ p_tenant_id uuid,p_enabled boolean)
+returns jsonb language plpgsql security definer set search_path=''
+as $fn$
+declare v_context jsonb;
+begin
+ v_context:=public.get_crm_operating_context();
+ if auth.uid() is null or p_enabled is null or
+   coalesce(v_context->>'current_tenant_id','')<>p_tenant_id::text
+   or coalesce(v_context->>'crm_role','')<>'crm_admin' then
+   raise exception 'ROLE_DENIED' using errcode='42501';
+ end if;
+ perform private.valorwell_require_staff_contract(p_tenant_id,true);
+ update public.crm_applicant_interview_campaign_control
+ set enabled=p_enabled,updated_at=clock_timestamp(),
+     activated_by=case when p_enabled then auth.uid() else null end
+ where tenant_id=p_tenant_id;
+ if not found then raise exception 'CAMPAIGN_NOT_CONFIGURED'; end if;
+ return jsonb_build_object('name','Invitation to Interview','enabled',p_enabled);
+end; $fn$;
+revoke all on function public.crm_set_applicant_interview_campaign_enabled(uuid,boolean)
+ from public,anon,authenticated;
+grant execute on function public.crm_set_applicant_interview_campaign_enabled(uuid,boolean)
+ to authenticated;
+
 -- Only reliable staff identifiers count as an existing staff match.
 -- We intentionally DO NOT use a similar name as proof of identity.
 create or replace function private.crm_matching_staff_for_applicant(
@@ -94,6 +182,8 @@ begin
  if not found or a.closed_at is not null or a.converted_staff_id is not null
    or a.status::text not in ('new','contacted') or nullif(btrim(a.email),'') is null
  then return false; end if;
+ if not exists (select 1 from public.crm_applicant_interview_campaign_control ctl
+   where ctl.tenant_id=a.tenant_id and ctl.enabled=true) then return false; end if;
  if private.crm_matching_staff_for_applicant(a.tenant_id,a.email,a.phone) is not null then
    return false;
  end if;
@@ -184,6 +274,10 @@ begin
    );
    return new;
  end if;
+ if not exists (select 1 from public.crm_applicant_interview_campaign_control ctl
+    where ctl.tenant_id=new.tenant_id and ctl.enabled=true) then
+   return new;
+ end if;
  insert into public.crm_applicant_interview_enrollments(tenant_id,applicant_id)
  values (new.tenant_id,new.id)
  on conflict (tenant_id,applicant_id) do nothing;
@@ -191,7 +285,9 @@ begin
    tenant_id,applicant_id,communication_kind,channel,content_version,scheduled_for,idempotency_key
  ) values (
    new.tenant_id,new.id,'initial_email','email','interview_invitation_v1',
-   clock_timestamp(),'provider-applicant/'||new.id::text||'/interview/1'
+   private.crm_applicant_interview_next_window(
+     greatest(new.created_at+interval '2 hours',clock_timestamp())
+   ),'provider-applicant/'||new.id::text||'/interview/1'
  ) on conflict (tenant_id,idempotency_key) do nothing;
  return new;
 end; $fn$;
@@ -221,7 +317,7 @@ begin
       tenant_id,applicant_id,communication_kind,channel,content_version,scheduled_for,idempotency_key
    ) values (
       new.tenant_id,new.applicant_id,v_next,'email','interview_invitation_v1',
-      coalesce(new.sent_at,clock_timestamp())+v_delay,
+      private.crm_applicant_interview_next_window(coalesce(new.sent_at,clock_timestamp())+v_delay),
       'provider-applicant/'||new.applicant_id::text||'/interview/'||
         case when v_next='interview_followup_2' then '2' else '3' end
    ) on conflict (tenant_id,idempotency_key) do nothing;
