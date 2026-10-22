@@ -68,6 +68,11 @@ describe('source-safe reconciliation and authorized review completion',()=>{
    insert into crm_tasks(id,tenant_id,title,status,relationship_organization_id,owner_id,created_by_profile_id) values('${K}','${T}','Review BTY email associations · Synthetic','not_started','${O}','${A}','${A}');
    insert into private.relationship_email_review_groups values('${T}','org','${K}','${O}','${A}',1,now());`);
  });
+ it('uses the literal review-task title prefix consistently across preview and apply',()=>{
+  const migration=sql('20261022195848_relationship_review_organization_completion.sql');
+  expect(migration).not.toContain('Review BTY email associations Â·');
+  expect(migration.match(/Review BTY email associations · %/g)).toHaveLength(3);
+ });
  it('blocks all seven structural candidates without source identity, including later same-thread mail',async()=>{
   for(let n=1;n<7;n++) await db.exec(`insert into relationship_reconciliation_issues(id,tenant_id,source,external_event_id) values(gen_random_uuid(),'${T}','gmail','original-${n}'); insert into private.relationship_email_issue_triage select id,'${T}','gmail','existing_communication_needs_opportunity_review','${M}','needs_review','org','${O}',null,'${K}',now() from relationship_reconciliation_issues where external_event_id='original-${n}';`);
   await receipt('later');
