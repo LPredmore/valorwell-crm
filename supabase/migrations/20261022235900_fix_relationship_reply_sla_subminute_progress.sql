@@ -53,3 +53,34 @@ REVOKE ALL ON FUNCTION private.relationship_work_minutes_due_v1(
 
 -- This migration changes no previously recorded SLA dates, sends no mail,
 -- and does not alter Gmail Pub/Sub subscriptions or delivery acknowledgments.
+
+-- Fail the migration transaction rather than accepting an unverified boundary
+-- calculation. Test immediately before close, over a weekend, across US DST,
+-- and with the smallest workday/largest supported SLA target.
+DO $verify$
+DECLARE v_due timestamptz;
+BEGIN
+ v_due:=private.relationship_work_minutes_due_v1(
+  '2026-10-22T21:59:59Z'::timestamptz,'America/Chicago',9,17,480);
+ IF v_due IS DISTINCT FROM '2026-10-23T21:59:59Z'::timestamptz THEN
+  RAISE EXCEPTION 'Working-hours SLA boundary regression (weekday): %', v_due;
+ END IF;
+
+ v_due:=private.relationship_work_minutes_due_v1(
+  '2026-10-23T21:59:59Z'::timestamptz,'America/Chicago',9,17,480);
+ IF v_due IS DISTINCT FROM '2026-10-26T21:59:59Z'::timestamptz THEN
+  RAISE EXCEPTION 'Working-hours SLA boundary regression (weekend): %', v_due;
+ END IF;
+
+ v_due:=private.relationship_work_minutes_due_v1(
+  '2026-10-30T21:59:59Z'::timestamptz,'America/Chicago',9,17,480);
+ IF v_due IS DISTINCT FROM '2026-11-02T22:59:59Z'::timestamptz THEN
+  RAISE EXCEPTION 'Working-hours SLA boundary regression (DST): %', v_due;
+ END IF;
+
+ v_due:=private.relationship_work_minutes_due_v1(
+  '2026-10-26T14:00:00Z'::timestamptz,'America/Chicago',9,10,2400);
+ IF v_due IS NULL OR v_due < '2026-10-26T14:00:00Z'::timestamptz THEN
+  RAISE EXCEPTION 'Working-hours SLA boundary regression (maximum target)';
+ END IF;
+END $verify$;
