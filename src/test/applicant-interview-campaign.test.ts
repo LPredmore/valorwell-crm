@@ -45,13 +45,36 @@ describe('Invitation to Interview clinician workflow', () => {
     expect(sql).toContain('private.crm_matching_staff_for_applicant(new.tenant_id,new.email,new.phone)');
     expect(sql).toContain('insert into public.crm_tasks');
     expect(sql).toContain("where s.id='af790579-5d4c-4aed-9d2e-77d72908ed85'");
-    expect(sql).toContain("return new;\n end if;\n insert into public.crm_applicant_interview_enrollments");
+    expect(sql).toContain('if v_match is not null');
+    expect(sql).toContain('insert into public.crm_applicant_interview_enrollments');
+    expect(sql.indexOf('insert into public.crm_tasks')).toBeLessThan(sql.indexOf('insert into public.crm_applicant_interview_enrollments'));
     expect(sql).not.toContain("'initial_sms','sms','interview_invitation_v1'");
   });
 
   it('uses successful provider acceptance for two-day and seven-day delays', () => {
     expect(sql).toContain("v_delay:=interval '2 days'");
     expect(sql).toContain("v_delay:=interval '7 days'");
+    expect(sql).toContain('coalesce(new.sent_at,clock_timestamp())+v_delay');
+  });
+
+  it('is disabled until an administrator explicitly activates it', () => {
+    expect(sql).toContain('enabled boolean not null default false');
+    expect(sql).toContain("values('00000000-0000-0000-0000-000000000001'::uuid,false)");
+    expect(sql).toContain('where ctl.tenant_id=new.tenant_id and ctl.enabled=true');
+    expect(sql).toContain("coalesce(v_context->>'crm_role','')<>'crm_admin'");
+  });
+
+  it('enforces at least two hours from application submission', () => {
+    expect(sql).toContain("new.created_at+interval '2 hours'");
+    expect(sql).toContain('private.crm_applicant_interview_next_window(');
+  });
+
+  it('uses a 6 AM to 6 PM America/Chicago window for initial and follow-up dispatch', () => {
+    expect(sql).toContain("time '06:00'");
+    expect(sql).toContain("time '18:00'");
+    expect(sql).toContain("v_local:=p_after at time zone 'America/Chicago'");
+    expect(sql).toContain("job.content_version='interview_invitation_v1'");
+    expect(sql).toContain("job.content_version<>'interview_invitation_v1'");
     expect(sql).toContain("coalesce(new.sent_at,clock_timestamp())+v_delay");
   });
 
