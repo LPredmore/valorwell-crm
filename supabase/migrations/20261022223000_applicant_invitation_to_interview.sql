@@ -111,6 +111,19 @@ end; $fn$;
 revoke all on function public.crm_applicant_interview_can_send(uuid) from public,anon,authenticated;
 grant execute on function public.crm_applicant_interview_can_send(uuid) to service_role;
 
+-- Grandfather historic manually invited applicants so a new access gate does
+-- not revoke interviews already offered before the automation cutover.
+create table if not exists public.crm_applicant_interview_cutovers (
+  tenant_id uuid primary key references public.tenants(id) on delete cascade,
+  started_at timestamptz not null default clock_timestamp()
+);
+alter table public.crm_applicant_interview_cutovers enable row level security;
+revoke all on public.crm_applicant_interview_cutovers from public,anon,authenticated;
+grant all on public.crm_applicant_interview_cutovers to service_role;
+insert into public.crm_applicant_interview_cutovers(tenant_id)
+values ('00000000-0000-0000-0000-000000000001'::uuid)
+on conflict (tenant_id) do nothing;
+
 -- The public interview scheduler is email-gated, but membership in the
 -- applicant campaign is the additional server-side prerequisite. Existing staff
 -- reapplications are not granted scheduling access even if they know the URL.
@@ -129,7 +142,9 @@ begin
  if private.crm_matching_staff_for_applicant(a.tenant_id,a.email,a.phone) is not null
  then return false; end if;
  return exists (select 1 from public.crm_applicant_interview_enrollments e
-    where e.applicant_id=a.id and e.tenant_id=a.tenant_id);
+    where e.applicant_id=a.id and e.tenant_id=a.tenant_id)
+  or a.created_at < (select c.started_at from public.crm_applicant_interview_cutovers c
+      where c.tenant_id=a.tenant_id);
 end; $fn$;
 revoke all on function public.crm_applicant_interview_can_access(uuid) from public,anon,authenticated;
 grant execute on function public.crm_applicant_interview_can_access(uuid) to service_role;
