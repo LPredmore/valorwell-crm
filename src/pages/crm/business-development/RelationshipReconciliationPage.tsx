@@ -24,11 +24,13 @@ type EmailReviewGroup = {
   organizationName: string | null;
   issueCount: number;
   reviewTaskId: string | null;
+  ownerProfileId: string | null;
+  ownerReviewRequired: boolean;
   candidateOpportunityCount: number;
   classifications: string[];
 };
 type EmailReviewQueueResult = {
-  summary: { openIssues?: number; candidateOpportunities?: number; existingCommunications?: number; awaitingReview?: number };
+  summary: { openIssues?: number; candidateOpportunities?: number; existingCommunications?: number; awaitingReview?: number; unownedGroups?: number };
   groups: EmailReviewGroup[];
 };
 // The queue RPCs are additive to the deployed database and may precede
@@ -139,7 +141,7 @@ function EmailReconciliationQueue() {
         title: 'Review BTY email associations · ' + (group.organizationName ?? 'Organization'),
         description: 'Reconcile ' + group.issueCount + ' unresolved email evidence items against the existing CRM conversation and opportunity. No automatic email sending or stage transition is authorized.',
         priority: 'High',
-        ownerId: userId,
+        ownerId: group.ownerProfileId ?? userId,
       },
       { tenantId: currentTenantId, userId },
     );
@@ -188,6 +190,7 @@ function EmailReconciliationQueue() {
         <Badge variant="outline">{data.summary.openIssues ?? 0} unresolved email issues</Badge>
         <Badge variant="secondary">{data.summary.candidateOpportunities ?? 0} opportunity candidates</Badge>
         <Badge variant="outline">{data.summary.existingCommunications ?? 0} stored communication links</Badge>
+        <Badge variant={data.summary.unownedGroups ? 'destructive' : 'secondary'}>{data.summary.unownedGroups ?? 0} groups requiring owner review</Badge>
       </div>}
       {create.isError && <p role="alert" className="text-sm text-destructive">{create.error instanceof Error ? create.error.message : 'Task creation failed.'}</p>}
       {capabilities.mutate && pendingOrganizations.length > 0 && <div className="space-y-2 rounded border p-3">
@@ -211,6 +214,7 @@ function EmailReconciliationQueue() {
             {group.issueCount} unresolved messages · {group.candidateOpportunityCount} candidate opportunities
           </p>
           <p className="text-xs text-muted-foreground">Evidence types: {group.classifications.join(', ').replace(/_/g, ' ')}</p>
+          {group.ownerReviewRequired ? <Badge variant="destructive">Owner review required</Badge> : <Badge variant="secondary">Owner assigned</Badge>}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline"
