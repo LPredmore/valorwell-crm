@@ -1,4 +1,5 @@
 import { applicantWorkspaceLink } from '@/domain/pipelines/applicant-workspace-link';
+import { RecruitmentInterviewCampaignControl } from './RecruitmentInterviewCampaignControl';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -12,7 +13,7 @@ import { applicantStatuses, listAllApplicantHandoffs, getApplicantProfessionalDe
 const originOptions = ['all', 'Cold', 'Indeed', 'Legacy', 'Website', 'Other'] as const;
 const originLabels: Record<string, string> = { all: 'All sources', Cold: 'Cold outreach', Indeed: 'Indeed', Legacy: 'Legacy (before July 2026)', Website: 'Website', Other: 'Other' };
 
-const statusLabels: Record<string, string> = { ready: 'Approved', hired: 'Onboarding started', screening: 'Interviewed', application: 'Application review', credentialing: 'Credentialing review', no_response: 'No response' };
+const statusLabels: Record<string, string> = { interview_scheduled: 'Interview Scheduled', ready: 'Approved', hired: 'Onboarding started', screening: 'Interviewed', application: 'Application review', credentialing: 'Credentialing review', no_response: 'No response' };
 function label(status: string) { return statusLabels[status] ?? status.replace(/_/g, ' '); }
 function dateLabel(value: string | null) {
   if (!value) return 'Not scheduled';
@@ -53,6 +54,7 @@ function ApplicantHandoffWorkspace() {
   if (!currentTenantId) return <p>Select a CRM tenant to review staff handoffs.</p>;
   return <div className="space-y-4 p-4">
     <h1 className="text-2xl font-bold">Recruitment → staff handoff</h1>
+    <RecruitmentInterviewCampaignControl tenantId={currentTenantId} />
     <p className="text-sm text-muted-foreground">Submitted applications, including onboarding and closed records. Staff access is required. Payer enrollment and network availability require separate source confirmation.</p>
     <div className="flex flex-wrap gap-2">
       <Button variant="outline" asChild><Link to="/crm/recruitment/prospects">Prospect queue</Link></Button>

@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { interviewInvitationEmailContent } from "./interview-content.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +15,7 @@ interface ProviderApplicantJob {
   id: string;
   tenant_id: string;
   applicant_id: string;
-  communication_kind: "initial_email" | "initial_sms";
+  communication_kind: "initial_email" | "initial_sms" | "interview_followup_2" | "interview_followup_3";
   channel: "email" | "sms";
   content_version: string;
   scheduled_for: string;
@@ -178,7 +179,9 @@ async function sendProviderApplicantEmail(
   applicant: ProviderApplicantData,
 ): Promise<{ emailMessageId: string; providerMessageId: string }> {
   const settings = await resendSettings(db, job.tenant_id);
-  const content = providerApplicantEmailContent(applicant);
+  const content = job.content_version === "interview_invitation_v1"
+    ? interviewInvitationEmailContent(applicant, job.communication_kind as "initial_email" | "interview_followup_2" | "interview_followup_3")
+    : providerApplicantEmailContent(applicant);
   const now = new Date().toISOString();
   let emailMessageId = job.email_message_id;
 
@@ -228,6 +231,9 @@ async function sendProviderApplicantEmail(
       metadata: {
         provider_applicant_job_id: job.id,
         content_version: job.content_version,
+        campaign_name: job.content_version === "interview_invitation_v1"
+          ? "Invitation to Interview" : null,
+        campaign_step: job.communication_kind,
       },
     }).select("id").single();
     if (error || !message) throw new Error(error?.message ?? "Email log creation failed");
@@ -362,7 +368,8 @@ export async function processProviderApplicantMessages(limit = 25) {
         result.skipped++;
         continue;
       }
-      if (job.content_version !== "provider_recruiting_v1") {
+      if (job.content_version !== "provider_recruiting_v1"
+          && job.content_version !== "interview_invitation_v1") {
         await completeApplicantJob(db, job, {
           status: "skipped",
           errorCode: "unsupported_content_version",
@@ -370,6 +377,29 @@ export async function processProviderApplicantMessages(limit = 25) {
         });
         result.skipped++;
         continue;
+      }
+
+      if (job.content_version === "interview_invitation_v1") {
+        if (job.channel !== "email" || !["initial_email", "interview_followup_2", "interview_followup_3"].includes(job.communication_kind)) {
+          await completeApplicantJob(db, job, {
+            status: "skipped", errorCode: "invalid_interview_step",
+            errorDetail: "Unexpected channel or communication kind for interview campaign",
+          });
+          result.skipped++;
+          continue;
+        }
+        const { data: canSend, error: gateError } = await db.rpc(
+          "crm_applicant_interview_can_send", { p_applicant_id: applicant.id },
+        );
+        if (gateError) throw new Error("Interview send gate: " + gateError.message);
+        if (canSend !== true) {
+          await completeApplicantJob(db, job, {
+            status: "cancelled", errorCode: "campaign_stopped",
+            errorDetail: "Staff match, interview booking, terminal status, or stopped enrollment",
+          });
+          result.skipped++;
+          continue;
+        }
       }
 
       let providerMessageId = job.provider_message_id;
@@ -409,16 +439,31 @@ export async function processProviderApplicantMessages(limit = 25) {
         }
       }
 
-      const { error: workflowError } = await db.rpc(
-        "staff_record_provider_applicant_contact_delivery",
-        {
-          p_applicant_id: applicant.id,
-          p_channel: job.channel,
-          p_job_id: job.id,
-          p_sent_at: job.sent_at ?? new Date().toISOString(),
-        },
-      );
-      if (workflowError) throw new Error(workflowError.message);
+      // Follow-ups never mutate the applicant stage.
+      // Recheck following provider acceptance to avoid regressing a concurrent booking.
+      if (job.content_version !== "interview_invitation_v1" ||
+          job.communication_kind === "initial_email") {
+        let updateFirstContact = true;
+        if (job.content_version === "interview_invitation_v1") {
+          const { data: canRecord, error: recordGateError } = await db.rpc(
+            "crm_applicant_interview_can_send", { p_applicant_id: applicant.id },
+          );
+          if (recordGateError) throw new Error(recordGateError.message);
+          updateFirstContact = canRecord === true;
+        }
+        if (updateFirstContact) {
+          const { error: workflowError } = await db.rpc(
+            "staff_record_provider_applicant_contact_delivery",
+            {
+              p_applicant_id: applicant.id,
+              p_channel: job.channel,
+              p_job_id: job.id,
+              p_sent_at: job.sent_at ?? new Date().toISOString(),
+            },
+          );
+          if (workflowError) throw new Error(workflowError.message);
+        }
+      }
 
       await completeApplicantJob(db, job, {
         status: "sent",
