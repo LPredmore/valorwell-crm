@@ -8,8 +8,8 @@ const ast = ts.createSourceFile('sync.ts', source, ts.ScriptTarget.Latest, true)
 const declaration = ast.statements.find((node) => ts.isFunctionDeclaration(node) && node.name?.text === 'processGmailMessage');
 if (!declaration) throw new Error('Gmail processor missing');
 const processGmailMessage = vm.runInNewContext(ts.transpileModule(declaration.getText(ast) + '\nprocessGmailMessage;', { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText, {
-  TENANT_ID: 'synthetic-tenant',
-  googleJson: async () => ({ threadId: 'thread', internalDate: '0', payload: {}, labelIds: [] }),
+  TENANT_ID: 'synthetic-tenant', GMAIL_MAILBOX: 'info@valorwell.org',
+  googleJson: async () => ({ id: 'message', threadId: 'thread', internalDate: '0', payload: {}, labelIds: [] }),
   metadataUrl: () => 'https://example.invalid',
   headerMap: () => ({ from: 'sender@example.invalid', to: 'recipient@example.invalid' }),
   firstEmail: (value: string) => value,
@@ -27,7 +27,7 @@ describe('Gmail replay reports actual ingestion outcomes', () => {
       ? { observationEnabled: true, matched: true } : result, error: null }));
     const actual = await processGmailMessage({ rpc } as unknown as Parameters<typeof processGmailMessage>[0], 'synthetic-token', 'message');
     expect(actual.matched).toBe(expected);
-    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenCalledTimes(3);
   });
   it('propagates failed persistence so replay can retry', async () => {
     const rpc = vi.fn(async (name: string) => name === 'match_relationship_gmail_message'
