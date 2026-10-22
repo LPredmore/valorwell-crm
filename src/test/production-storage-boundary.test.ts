@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-const sql = readFileSync('supabase/migrations/20261021184721_production_storage_tenant_boundary.sql', 'utf8');
+const sql = readFileSync('supabase/migrations/20261021184721_production_storage_tenant_boundary.sql', 'utf8').replace(/\r\n/g, '\n');
 const uploader = readFileSync('src/components/crm/settings/EmailSignaturesPanel.tsx', 'utf8');
 describe('production public asset authorization contract', () => {
   it('binds all four write predicates to trusted tenant, membership and capability', () => {
