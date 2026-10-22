@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { interviewInvitationEmailContent } from '../../supabase/functions/provider-applicant-communication-worker/interview-content';
 
 const sql = readFileSync(
-  new URL('../../supabase/migrations/20261022223000_applicant_invitation_to_interview.sql', import.meta.url),
+  resolve(process.cwd(), 'supabase/migrations/20261022223000_applicant_invitation_to_interview.sql'),
   'utf8',
 );
 
