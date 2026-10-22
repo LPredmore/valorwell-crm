@@ -2,7 +2,7 @@
  * contact-delivery and onboarding contracts. No generic CRM action can claim
  * outreach was delivered or skip Approved -> Invited staff handoff. */
 export function allowedApplicantSourceStatuses(current:string):readonly string[]{
-  if(current==='contacted')return ['screening'];
+  if(current==='contacted'||current==='interview_scheduled')return ['screening'];
   return [];
 }
 export function requireApplicantSourceTransition(
