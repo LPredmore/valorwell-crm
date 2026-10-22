@@ -62,6 +62,10 @@ async function processGmailMessage(
       throw error;
     });
   if (!metadata) return { messageId, matched: false, skipped: "message_not_found" };
+  // Drafts can share a thread/RFC anchor with sent mail, but are not delivery evidence.
+  if (Array.isArray(metadata.labelIds) && metadata.labelIds.includes("DRAFT")) {
+    return { messageId, matched: false, skipped: "draft_message" };
+  }
   const payload = (metadata.payload ?? {}) as Record<string, unknown>;
   const headers = headerMap(payload);
   const from = firstEmail(headers.from ?? "");
@@ -97,6 +101,9 @@ async function processGmailMessage(
       throw error;
     });
   if (!full) return { messageId, matched: false, skipped: "message_not_found" };
+  if (Array.isArray(full.labelIds) && full.labelIds.includes("DRAFT")) {
+    return { messageId, matched: false, skipped: "draft_message" };
+  }
   const fullPayload = (full.payload ?? {}) as Record<string, unknown>;
   const fullHeaders = headerMap(fullPayload);
   const fullFrom = firstEmail(fullHeaders.from ?? "") || from;

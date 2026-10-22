@@ -21,11 +21,12 @@ export default function RelationshipReplyQueuePage() {
   const [status, setStatus] = useState<RelationshipReplyStatus | ''>('');
   const [owner, setOwner] = useState('');
   const [unownedOnly, setUnownedOnly] = useState(false);
+  const [page, setPage] = useState(1);
   const [drafts, setDrafts] = useState<Record<string, { ownerId: string; status: RelationshipReplyStatus; followUpDueAt: string; reason: string }>>({});
 
   const replies = useQuery({
-    queryKey: ['relationship-replies', status, owner, unownedOnly],
-    queryFn: () => dataProvider.relationships.listReplies({ statuses: status ? [status] : undefined, ownerId: owner.trim() || undefined, unownedOnly, page: 1, pageSize: 100 }),
+    queryKey: ['relationship-replies', status, owner, unownedOnly, page],
+    queryFn: () => dataProvider.relationships.listReplies({ statuses: status ? [status] : undefined, ownerId: owner.trim() || undefined, unownedOnly, page, pageSize: 100 }),
     enabled: available,
     retry: false,
   });
@@ -54,18 +55,24 @@ export default function RelationshipReplyQueuePage() {
     <div><div className="mb-2 flex gap-2"><Badge variant="outline">Pass 12</Badge><Badge variant="secondary">Non-clinical replies</Badge></div><h1 className="text-3xl font-bold tracking-tight">Relationship reply queue</h1><p className="mt-2 max-w-3xl text-muted-foreground">Review inbound partnership and outreach replies. This queue is isolated from clinical, billing, appointment, and client communications.</p></div>
     <RelationshipCapabilityState state={capability} isLoading={isLoading} isError={isError} onRetry={() => { void refetch(); }} />
     <Card><CardHeader><CardTitle>Queue filters</CardTitle><CardDescription>Unmatched provider messages never appear here; every reply must be linked to a canonical inbound communication.</CardDescription></CardHeader><CardContent className="grid gap-4 md:grid-cols-3">
-      <Field label="Status" id="reply-status"><select id="reply-status" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={status} onChange={(event) => setStatus(event.target.value as RelationshipReplyStatus | '')}><option value="">Any status</option>{relationshipReplyStatuses.map((value) => <option key={value} value={value}>{labels[value]}</option>)}</select></Field>
-      <Field label="Owner profile ID" id="reply-owner"><Input id="reply-owner" value={owner} onChange={(event) => setOwner(event.target.value)} placeholder="Optional UUID" /></Field>
-      <label className="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" checked={unownedOnly} onChange={(event) => setUnownedOnly(event.target.checked)} />Unowned only</label>
+      <Field label="Status" id="reply-status"><select id="reply-status" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={status} onChange={(event) => { setStatus(event.target.value as RelationshipReplyStatus | ''); setPage(1); }}><option value="">Any status</option>{relationshipReplyStatuses.map((value) => <option key={value} value={value}>{labels[value]}</option>)}</select></Field>
+      <Field label="Owner profile ID" id="reply-owner"><Input id="reply-owner" value={owner} onChange={(event) => { setOwner(event.target.value); setPage(1); }} placeholder="Optional UUID" /></Field>
+      <label className="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" checked={unownedOnly} onChange={(event) => { setUnownedOnly(event.target.checked); setPage(1); }} />Unowned only</label>
     </CardContent></Card>
     {available && replies.data && <Card><CardHeader><CardTitle>Replies</CardTitle><CardDescription>{replies.data.total} matching replies.</CardDescription></CardHeader><CardContent className="space-y-4">
       {replies.data.items.map((reply) => { const draft = edit(reply); return <div key={reply.id} className="space-y-4 rounded-lg border p-4">
         <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-medium">{reply.senderEmail}</p><p className="text-sm text-muted-foreground">{reply.subject ?? 'No subject'} · {new Date(reply.receivedAt).toLocaleString()}</p></div><div className="flex gap-2"><Badge variant={reply.status === 'new' || reply.status === 'needs_action' ? 'destructive' : 'outline'}>{labels[reply.status]}</Badge><Badge variant="secondary">Version {reply.version}</Badge></div></div>
+        {(!reply.ownerId || reply.metadata.owner_review_required === true) && <p role="status" className="text-sm font-medium text-destructive">Owner review required: assign a verified owner before handing off this reply.</p>}
         <p className="whitespace-pre-wrap rounded bg-muted/40 p-3 text-sm">{reply.body || 'No plain-text body was supplied by the provider.'}</p>
         <div className="grid gap-3 md:grid-cols-3"><Field label="Workflow status" id={`status-${reply.id}`}><select id={`status-${reply.id}`} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={draft.status} onChange={(event) => patch(reply, { status: event.target.value as RelationshipReplyStatus })}>{relationshipReplyStatuses.map((value) => <option key={value} value={value}>{labels[value]}</option>)}</select></Field><Field label="Owner profile ID" id={`owner-${reply.id}`}><Input id={`owner-${reply.id}`} value={draft.ownerId} onChange={(event) => patch(reply, { ownerId: event.target.value })} /></Field><Field label="Follow-up due" id={`due-${reply.id}`}><Input id={`due-${reply.id}`} type="datetime-local" value={draft.followUpDueAt} onChange={(event) => patch(reply, { followUpDueAt: event.target.value })} /></Field></div>
         <div className="flex flex-wrap gap-3"><Input className="min-w-72 flex-1" value={draft.reason} onChange={(event) => patch(reply, { reason: event.target.value })} placeholder="Reason or handoff note" /><Button disabled={update.isPending} onClick={() => update.mutate({ reply, draft })}>{update.isPending ? 'Saving…' : 'Save workflow'}</Button></div>
       </div>; })}
       {replies.data.items.length === 0 && <p className="text-sm text-muted-foreground">No replies match the current filters.</p>}
+      <nav aria-label="Reply pages" className="flex items-center gap-3">
+        <Button variant="outline" disabled={page <= 1 || replies.isFetching} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous page</Button>
+        <span>Page {page} of {Math.max(1, Math.ceil(replies.data.total / 100))}</span>
+        <Button variant="outline" disabled={page * 100 >= replies.data.total || replies.isFetching} onClick={() => setPage((current) => current + 1)}>Next page</Button>
+      </nav>
       {update.isError && <p className="text-sm text-destructive">{message(update.error)}</p>}
     </CardContent></Card>}
     {replies.isError && <Card><CardHeader><CardTitle>Reply queue could not be loaded</CardTitle><CardDescription>{message(replies.error)}</CardDescription></CardHeader></Card>}
