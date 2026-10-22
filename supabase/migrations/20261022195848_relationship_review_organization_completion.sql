@@ -94,7 +94,7 @@ BEGIN
     FROM private.relationship_email_review_groups g
     JOIN public.crm_tasks t ON t.id=g.task_id AND t.tenant_id=g.tenant_id
     WHERE g.tenant_id=v_tenant AND t.status='not_started'
-      AND t.title LIKE 'Review BTY email associations · %'
+      AND t.title LIKE 'Review BTY email associations Â· %'
       AND t.relationship_organization_id=g.organization_id AND t.owner_id=g.owner_profile_id
       AND t.relationship_contact_id IS NULL AND t.relationship_opportunity_id IS NULL
       AND t.client_id IS NULL AND t.staff_id IS NULL AND t.campaign_id IS NULL AND t.exception_id IS NULL
