@@ -49,6 +49,19 @@ function incidents(current: Metric, previous: Metric | null): Incident[] {
   item("stripe_webhook_failures", "stripe", "failed_24h", 1);
   item("stripe_webhook_unprocessed", "stripe", "unprocessed_older_than_hour", 1);
   item("gmail_maintenance_jobs_disabled", "cron", "maintenance_jobs_disabled", 1);
+  // The historical backlog is a baseline, not a daily repeat alert.
+  // Flag a NEW issue only if it was created in the last day and moves the
+  // authoritative maximum creation timestamp beyond the prior snapshot.
+  const latestAmbiguity = numberAt(current, "ambiguity", "latest_created_epoch");
+  const previousAmbiguity = previous ? numberAt(previous, "ambiguity", "latest_created_epoch") : null;
+  const ambiguityNew24h = numberAt(current, "ambiguity", "new_last_24h") ?? 0;
+  if (latestAmbiguity !== null && latestAmbiguity > 0 && ambiguityNew24h > 0 &&
+      (previousAmbiguity === null || latestAmbiguity > previousAmbiguity)) {
+    out.push({ code: "new_ambiguous_email_review", severity: "warning",
+      current: ambiguityNew24h,
+      previous: previous ? numberAt(previous, "ambiguity", "new_last_24h") : null });
+  }
+
   return out;
 }
 const htmlSafe = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -106,6 +119,13 @@ Deno.serve(async (request: Request) => {
   if (histErr) return json({ error: "baseline_unavailable" }, 503);
   const prev = history?.[0]?.metrics as Metric | undefined;
   const data = snapshot as Metric;
+  // Aggregate-only, service-role-restricted query; no recipient/message details.
+  // Failure to fetch this supplemental metric must not disable core monitoring.
+  const { data: ambiguity, error: ambiguityError } =
+    await db.rpc("valorwell_daily_watch_ambiguity_snapshot_v1");
+  if (!ambiguityError && ambiguity && typeof ambiguity === "object" && !Array.isArray(ambiguity)) {
+    data.ambiguity = ambiguity as Metric;
+  }
   const signals = incidents(data, prev || null);
   const prompt = {
     purpose: "Anomaly-only daily operating review. No PHI or message content.",
