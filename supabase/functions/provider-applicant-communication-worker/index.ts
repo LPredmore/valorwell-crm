@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { interviewInvitationEmailContent } from "./interview-content.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -141,56 +142,6 @@ export function providerApplicantEmailContent(applicant: ProviderApplicantData) 
   ].join("");
   const text = `${firstName},\n\nThank you for applying to ValorWell. I wanted to reach out to you personally.\n\nOne of the most important parts of ValorWell is our community. We are dedicated to ensuring that we put the right people in place to meet the needs of our clients.\n\nPlease take a minute to review this video about how ValorWell operates: https://youtu.be/BoB2GSy0NQk\n\nIf you feel this would be a good fit for you, please use this link to schedule a 30–60 minute call where I can learn more about you and answer any questions you have:\n\nhttps://calendly.com/valorwell/1hr`;
   return { subject, html, text };
-}
-
-// Applicant interview messages are necessary recruiting communication, not marketing.
-export function interviewInvitationEmailContent(
-  applicant: ProviderApplicantData,
-  step: "initial_email" | "interview_followup_2" | "interview_followup_3",
-) {
-  const first = applicant.first_name.trim() || "there";
-  const link = "https://valorwell.org/clinicians/interview";
-  const invitation = "Enter the same email address you used on your application to access the scheduler.";
-  const copy = step === "initial_email"
-    ? {
-      subject: "Thank you for applying to ValorWell",
-      paragraphs: [
-        "Hi " + first + ",",
-        "Thank you for applying to ValorWell. I'd appreciate the chance to meet you and learn more about your experience.",
-        "Please choose a time for a one-hour interview here: " + link,
-        invitation,
-        "Looking forward to speaking with you,",
-        "Luke",
-      ],
-    }
-    : step === "interview_followup_2"
-    ? {
-      subject: "Following up on your ValorWell application",
-      paragraphs: [
-        "Hi " + first + ",",
-        "I wanted to follow up because we're still interested in interviewing you about joining ValorWell.",
-        "If you'd like to meet, please schedule a one-hour interview here: " + link,
-        invitation,
-        "Hope to connect soon,",
-        "Luke",
-      ],
-    }
-    : {
-      subject: "One last note about your ValorWell application",
-      paragraphs: [
-        "Hi " + first + ",",
-        "We're still interested in speaking with you, but I understand this may not be the right time.",
-        "This will be my last follow-up. We won't continue reaching out, but you're welcome to reconnect whenever you're ready.",
-        "You can book an interview at any time using this link: " + link,
-        invitation,
-        "Wishing you the best,",
-        "Luke",
-      ],
-    };
-  const html = copy.paragraphs.map((paragraph) =>
-    "<p>" + escapeHtml(paragraph).replace(link, '<a href="' + link + '">' + link + "</a>") + "</p>"
-  ).join("");
-  return { subject: copy.subject, html, text: copy.paragraphs.join("\n\n") };
 }
 
 export function providerApplicantSmsContent(applicant: ProviderApplicantData): string {
