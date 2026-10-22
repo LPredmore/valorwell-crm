@@ -131,6 +131,38 @@ function EmailReconciliationQueue() {
     enabled: isAuthenticated && Boolean(currentTenantId),
     retry: false,
   });
+  const cleanupPreview = useQuery({
+    queryKey: ['relationship-email-review-task-cleanup', currentTenantId],
+    queryFn: async (): Promise<{ eligible: number; blocked: number }> => {
+      const { data, error } = await queueRpc.rpc('process_relationship_email_review_task_cleanup', {
+        p_apply: false, p_limit: 100,
+      });
+      if (error) throw new Error(error.message);
+      if (!data || typeof data !== 'object') throw new Error('Historical review cleanup preview unavailable.');
+      const result = data as { eligible?: number; blocked?: number };
+      return { eligible: result.eligible ?? 0, blocked: result.blocked ?? 0 };
+    },
+    enabled: isAuthenticated && Boolean(currentTenantId) && capabilities.mutate,
+    retry: false,
+  });
+  const finishCompleted = useMutation({
+    mutationFn: async () => {
+      if (!currentTenantId || !capabilities.mutate) throw new Error('CRM task editing permission is required.');
+      const { data, error } = await queueRpc.rpc('process_relationship_email_review_task_cleanup', {
+        p_apply: true, p_limit: 100,
+      });
+      if (error) throw new Error(error.message);
+      if (!data || typeof data !== 'object') throw new Error('Historical review completion was not confirmed.');
+      return data as { completed: number };
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['relationship-email-review-task-cleanup', currentTenantId] }),
+        queryClient.invalidateQueries({ queryKey: ['relationship-email-review-queue', currentTenantId] }),
+        queryClient.invalidateQueries({ queryKey: ['crm-tasks'] }),
+      ]);
+    },
+  });
   const [bulkProcessed, setBulkProcessed] = useState(0);
   const createReviewTask = async (group: EmailReviewGroup): Promise<string> => {
     if (!group.organizationId) throw new Error('Unlinked messages require manual identity review first.');
@@ -184,6 +216,27 @@ function EmailReconciliationQueue() {
       <CardDescription>Message scanning is complete. Proposed associations are evidence for review, not confirmed opportunity changes. This queue is non-clinical and never sends email automatically.</CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
+      {capabilities.mutate && cleanupPreview.data && cleanupPreview.data.eligible > 0 &&
+        <div className="space-y-2 rounded border p-3">
+          <p className="text-sm text-muted-foreground">
+            {cleanupPreview.data.eligible} historical review tasks have no unresolved issues.
+            {cleanupPreview.data.blocked > 0 ? ` ${cleanupPreview.data.blocked} task groups still need source verification.` : ''}
+            Completing finished tasks does not approve any email, reconstruct a reply anchor, or change an opportunity.
+          </p>
+          <Button size="sm" variant="outline" disabled={finishCompleted.isPending}
+            onClick={() => finishCompleted.mutate()}>
+            {finishCompleted.isPending ? 'Completing reviewed tasks…' : `Complete ${cleanupPreview.data.eligible} finished review tasks`}
+          </Button>
+        </div>}
+      {finishCompleted.isSuccess && <p className="text-sm text-muted-foreground">
+        {finishCompleted.data.completed} finished review tasks completed. Source-blocked tasks remain open.
+      </p>}
+      {finishCompleted.isError && <p role="alert" className="text-sm text-destructive">
+        {finishCompleted.error instanceof Error ? finishCompleted.error.message : 'Historical review cleanup failed.'}
+      </p>}
+      {cleanupPreview.isError && capabilities.mutate && <p className="text-xs text-muted-foreground">
+        Historical review task completion is not available: {cleanupPreview.error instanceof Error ? cleanupPreview.error.message : 'Unable to load preview.'}
+      </p>}
       {queue.isLoading && <p className="text-sm text-muted-foreground">Loading reconciliation evidence…</p>}
       {queue.isError && <p role="alert" className="text-sm text-destructive">{queue.error instanceof Error ? queue.error.message : 'Review queue unavailable'}</p>}
       {data && <div className="flex flex-wrap gap-2">
