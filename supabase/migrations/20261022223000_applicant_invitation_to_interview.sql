@@ -111,6 +111,29 @@ end; $fn$;
 revoke all on function public.crm_applicant_interview_can_send(uuid) from public,anon,authenticated;
 grant execute on function public.crm_applicant_interview_can_send(uuid) to service_role;
 
+-- The public interview scheduler is email-gated, but membership in the
+-- applicant campaign is the additional server-side prerequisite. Existing staff
+-- reapplications are not granted scheduling access even if they know the URL.
+create or replace function public.crm_applicant_interview_can_access(p_applicant_id uuid)
+returns boolean language plpgsql stable security definer set search_path=''
+as $fn$
+declare a public.provider_applicants%rowtype;
+begin
+ if not private.valorwell_is_service_role() then
+   raise exception 'ROLE_DENIED' using errcode='42501';
+ end if;
+ select * into a from public.provider_applicants where id=p_applicant_id;
+ if not found or a.closed_at is not null or a.converted_staff_id is not null
+    or a.status::text in ('declined','withdrawn','hired','inactive','no_response')
+ then return false; end if;
+ if private.crm_matching_staff_for_applicant(a.tenant_id,a.email,a.phone) is not null
+ then return false; end if;
+ return exists (select 1 from public.crm_applicant_interview_enrollments e
+    where e.applicant_id=a.id and e.tenant_id=a.tenant_id);
+end; $fn$;
+revoke all on function public.crm_applicant_interview_can_access(uuid) from public,anon,authenticated;
+grant execute on function public.crm_applicant_interview_can_access(uuid) to service_role;
+
 -- A genuine new application receives EITHER an owner-only task OR a campaign enrollment.
 -- Do not modify staff status, and never email or text staff reapplicants.
 create or replace function private.crm_enqueue_provider_applicant_initial_contact()
