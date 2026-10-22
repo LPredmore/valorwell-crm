@@ -225,8 +225,7 @@ async function sendProviderApplicantEmail(
       body_text: content.text,
       provider: "resend",
       message_class: "necessary_recruiting",
-      source: job.content_version === "interview_invitation_v1"
-        ? "applicant_interview_campaign" : "provider_applicant_workflow",
+      source: "provider_applicant_workflow",
       created_by_profile_id: null,
       occurred_at: now,
       metadata: {
