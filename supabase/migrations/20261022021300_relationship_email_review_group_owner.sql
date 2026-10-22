@@ -90,8 +90,7 @@ begin
  where t.tenant_id=v_tenant and i.status='open';
  return jsonb_build_object('summary',coalesce(v_counts,'{}'::jsonb),'groups',v_groups);
 end;
-$function$
-
+$function$;
 
 REVOKE ALL ON FUNCTION public.list_relationship_email_review_queue(integer) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.list_relationship_email_review_queue(integer) TO authenticated,service_role;
