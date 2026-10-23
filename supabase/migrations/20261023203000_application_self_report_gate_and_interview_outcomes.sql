@@ -72,7 +72,9 @@ begin
           next_action_due_at=case when v_stage='screening'
             then clock_timestamp()+interval '1 day'
             else greatest(new.completed_at+interval '2 hours',clock_timestamp()) end,
-          last_activity_at=clock_timestamp()
+          last_activity_at=clock_timestamp(),
+          updated_at=clock_timestamp(),
+          version=a.version+1
     where a.id=new.provider_applicant_id
       and a.tenant_id=new.tenant_id
       and a.source='website'
