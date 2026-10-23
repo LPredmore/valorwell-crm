@@ -1,0 +1,12 @@
+# RPCs called by Edge Functions whose definitions are NOT in supabase/migrations
+# but were verified present in production on 2026-10-23 (defined by the
+# 2026-07-14 live snapshot, by the Staff app, or by dynamic SQL).
+# Add an entry only after confirming the function exists live. Remove an entry
+# once a tracked migration defines it.
+crm_apply_remove
+crm_newsletter_recipient_send_guard
+crm_record_newsletter_send_attempt
+record_relationship_campaign_work_result
+release_campaign_step_claim
+staff_record_provider_applicant_contact_delivery
+staff_record_provider_applicant_response
