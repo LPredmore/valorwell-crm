@@ -37,6 +37,9 @@ ledger edits, paid resources or branch operations were performed here.
 - Security advisor: 477 aggregate findings (152 RLS-without-policy informational,
   1 extension location, 14 anonymous definer, 309 authenticated definer, 1 password
   protection). None proves this missing writer exists; no blanket revocations made.
+- Final read at **15:01:06.577029 UTC**: cursor **3485910**, receipts absent, same
+  `gmail_sync_failed` missing-function error; age **86,411 seconds / 24h 00m 11s**.
+  No provider message recovery counts were established.
 
 ## Root cause and provenance
 
@@ -94,6 +97,11 @@ for fresh inspection rather than overwriting concurrently created objects.
   CI cannot authorize deployment or read live schema.
 - Focused provider/cursor/receipt/PGlite/UI tests run locally; PGlite dependencies
   and auth are synthetic, **not complete-schema or signed-JWT/PostgREST proof**.
+  Final run at 15:00:43 UTC: **70/70 tests, 9 files PASS**. Offline source verifier,
+  repository boundary and diff whitespace checks PASS. Harness build/typecheck
+  reported **build OK at 15:00:59 UTC**. Hosted CI was not observed.
+  Staged SQL SHA256:
+  `6d4fa04b2b6afe0fbee4229f5bb12e2856b6a2b153ae3cbed55ffbabfc7887b0`.
 
 ## Required release and acceptance (blocked, not performed)
 
