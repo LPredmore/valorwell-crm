@@ -14,3 +14,9 @@ staff_record_provider_applicant_response
 # Implemented in Billing Hub migration 20261023190000_new_contacted_therapist_followups.sql;
 # confirmed installed in the shared production DB 2026-10-23 (service_role only).
 crm_therapist_interest_sms_can_send
+
+# Verified in live Billing Hub production schema 2026-10-23; migration
+# 20261023193100_screening_interview_campaign.sql (cross-repository ownership).
+crm_claim_screening_interview_jobs
+crm_screening_interview_can_send
+crm_finish_screening_interview_job
