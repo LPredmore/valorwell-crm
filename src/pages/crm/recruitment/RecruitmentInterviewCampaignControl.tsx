@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { supabase } from '@/integrations/supabase/client';
+import {ScreeningInterviewCampaignControl} from './ScreeningInterviewCampaignControl';
 
 type Control = {
   name: string;
@@ -58,6 +59,7 @@ export function RecruitmentInterviewCampaignControl({ tenantId }: { tenantId: st
   };
 
   return (
+    <div className="space-y-4">
     <Card>
       <CardHeader><CardTitle>Therapist Application — new interest follow-ups</CardTitle></CardHeader>
       <CardContent className="space-y-3 text-sm">
@@ -75,5 +77,7 @@ export function RecruitmentInterviewCampaignControl({ tenantId }: { tenantId: st
         </>}
       </CardContent>
     </Card>
+    <ScreeningInterviewCampaignControl tenantId={tenantId}/>
+    </div>
   );
 }
