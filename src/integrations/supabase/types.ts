@@ -34364,6 +34364,17 @@ export type Database = {
         }
         Returns: Json
       }
+      record_relationship_gmail_source_receipt: {
+        Args: {
+          p_headers: Json
+          p_label_ids: Json
+          p_mailbox: string
+          p_message_id: string
+          p_tenant_id: string
+          p_thread_id: string
+        }
+        Returns: undefined
+      }
       record_relationship_operator_activity: {
         Args: {
           p_activity_type: string
