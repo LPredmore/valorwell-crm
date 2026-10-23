@@ -1,8 +1,8 @@
 # Shared Supabase baseline recovery
 
 ## Gmail P0 incident — October 23
-- [ ] Verify live sanitized checkpoint/catalog/ledger and five-app dependency closure.
-- [ ] Prepare minimal staged forward repair, contract preflight, error/count/monitoring regressions and incident receipt.
+- [x] Verify live sanitized checkpoint/catalog/ledger and five-app dependency closure; catalog absence and hourly 502 responses confirmed.
+- [x] Prepare minimal staged forward repair, pinned non-deployed worker/monitor candidates, contract preflight, regressions and incident receipt.
 - [ ] Apply reviewed repair and deploy compatible workers (blocked: isolated signed-JWT acceptance and explicit shared release approval).
 - [ ] Verify bounded provider reconciliation and enumerate history debt (blocked: approved database/worker release and authorized provider run).
 
