@@ -1,0 +1,16 @@
+--- a/supabase/functions/valorwell-daily-operations-watch/index.ts
++++ b/supabase/functions/valorwell-daily-operations-watch/index.ts
+@@ -71,9 +71,10 @@
+     signals.push({ code: rule.code, metric: rule.metric, current, previous: was, severity: rule.severity });
+   }
+   const lastSync = timestamp(now, "gmail.last_sync");
+-  const priorSync = previous ? timestamp(previous, "gmail.last_sync") : null;
+-  if ((lastSync === null || Date.now() - lastSync > 135 * 60_000) && (previous === null || priorSync !== lastSync)) {
+-    signals.push({code:"gmail_sync_stalled",metric:"gmail.last_sync",severity:"high",current: lastSync ? Math.round((Date.now()-lastSync)/60_000) : -1,previous:null});
++  const age = lastSync === null ? null : Math.max(0, (Date.now() - lastSync) / 60_000);
++  if (age === null || age >= 60) {
++    signals.push({code:age === null ? "gmail_sync_unknown" : age >= 240 ? "gmail_sync_critical" : "gmail_sync_stale",
++      metric:"gmail.last_sync",severity:age === null || age >= 240 ? "high" : "medium",current:age === null ? -1 : Math.floor(age),previous:null});
+   }
+   const watch = timestamp(now, "gmail.watch_expires");
+   const priorWatch = previous ? timestamp(previous, "gmail.watch_expires") : null;

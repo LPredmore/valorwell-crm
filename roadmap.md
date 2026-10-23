@@ -1,5 +1,11 @@
 # Shared Supabase baseline recovery
 
+## Gmail P0 incident — October 23
+- [x] Verify live sanitized checkpoint/catalog/ledger and five-app dependency closure; catalog absence and hourly 502 responses confirmed.
+- [x] Prepare minimal staged forward repair, pinned non-deployed worker/monitor candidates, contract preflight, regressions and incident receipt.
+- [ ] Apply reviewed repair and deploy compatible workers (blocked: isolated signed-JWT acceptance and explicit shared release approval).
+- [ ] Verify bounded provider reconciliation and enumerate history debt (blocked: approved database/worker release and authorized provider run).
+
 ## Storage write ACL hardening — issue #201 (October 21, source-only)
 - [x] Trace org-logos/training-covers/email-signatures call sites: only email-signatures is CRM-owned; the other two have no call sites or policies in this repo.
 - [x] Stage forward-only email-signatures hardening (capability-gated writes, public read preserved, flat paths kept) plus 9 offline regressions and a 6-check operator catalog contract; all pass, build OK.

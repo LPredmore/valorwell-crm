@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { gmailContractMissing, gmailSyncHealth } from '@/lib/crm/gmail-sync-health';
 
 type Recovery = {
   issueId: string; claimedMessageId: string; threadId: string | null;
@@ -28,7 +29,7 @@ export function EmailSourceRecovery() {
   const report = useQuery({ queryKey: ['email-source-recovery', currentTenantId], enabled,
     queryFn: () => readRpc<Recovery[]>('get_relationship_email_source_recovery'), retry: false });
   const diagnostics = useQuery({ queryKey: ['gmail-source-diagnostics', currentTenantId], enabled,
-    queryFn: () => readRpc<Diagnostic[]>('get_relationship_gmail_diagnostics'), retry: false });
+    queryFn: () => readRpc<Diagnostic[]>('get_relationship_gmail_diagnostics'), retry: false, refetchInterval: 60_000 });
   return <Card>
     <CardHeader><CardTitle>Gmail source verification</CardTitle></CardHeader>
     <CardContent className="space-y-3">
@@ -36,10 +37,13 @@ export function EmailSourceRecovery() {
       {diagnostics.data?.map(d => <div key={d.connectionId} className="text-sm">
         <p>Last successful sync: {d.lastSuccessfulSyncAt ?? 'Not recorded'} · Last push: {d.lastPushAt ?? 'Not recorded'}</p>
         <p>Time since successful sync: {d.secondsSinceSuccessfulSync == null ? 'Unknown' : `${Math.floor(d.secondsSinceSuccessfulSync / 60)} minutes`} · Watch expires: {d.watchExpiration ?? 'Not recorded'}</p>
+        {['warning', 'critical'].includes(gmailSyncHealth(d.secondsSinceSuccessfulSync)) && <p role="alert">{gmailSyncHealth(d.secondsSinceSuccessfulSync) === 'critical' ? 'Critical' : 'Warning'}: Gmail reconciliation is overdue.</p>}
+        {gmailContractMissing({ message: d.lastErrorReason ?? '' }) && <p role="alert">Required Gmail service is missing. Reviewed database recovery is required; renewing the watch does not repair synchronization.</p>}
         {d.lastErrorCode && <p role="alert">{d.lastErrorCode}: {d.lastErrorReason}</p>}
       </div>)}
       {report.isLoading && <p>Loading source evidence…</p>}
       {(report.error || diagnostics.error) && <p role="alert">{(report.error || diagnostics.error)?.message}</p>}
+      {(gmailContractMissing(report.error) || gmailContractMissing(diagnostics.error)) && <p role="alert">Gmail evidence is unavailable until the reviewed recovery is released. Zero issues would not establish recovery.</p>}
       {report.data && <p>{report.data.length} open issues · {report.data.filter(r => r.exactIdentityVerified).length} exact identities verified · {report.data.filter(r => r.safelyRepairable).length} eligible for audited repair</p>}
       {report.data?.map(r => <details key={r.issueId} className="rounded border p-2 text-sm">
         <summary>{r.claimedMessageId} · {r.sourceStatus.replace(/_/g, ' ')}</summary>
