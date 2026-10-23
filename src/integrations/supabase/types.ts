@@ -33447,6 +33447,8 @@ export type Database = {
         Args: { p_campaign_id: string }
         Returns: Json
       }
+      get_relationship_email_source_recovery: { Args: never; Returns: Json }
+      get_relationship_gmail_diagnostics: { Args: never; Returns: Json }
       get_relationship_google_connection_runtime: {
         Args: {
           p_connection_id?: string
@@ -34363,6 +34365,10 @@ export type Database = {
           p_retry_at?: string
         }
         Returns: Json
+      }
+      record_relationship_gmail_retrieval_failure: {
+        Args: { p_message_id: string; p_status: string }
+        Returns: undefined
       }
       record_relationship_gmail_source_receipt: {
         Args: {
