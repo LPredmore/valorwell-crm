@@ -16,11 +16,11 @@ function runtime(options: { match?: Record<string,unknown>; ingest?: Record<stri
     if(options.deleted) throw Object.assign(new Error('deleted'),{status:404});
     return { id:options.wrongId?'wrong':new URL(url).pathname.split('/').pop(), threadId:'thread',internalDate:'0',payload:header(url.includes('format=full')?'authoritative@example.invalid':'metadata@example.invalid','primary@example.invalid'),labelIds:[(url.includes('/draft?') || (options.draftOnFull && url.includes('format=full')))?'DRAFT':'SENT'] };
   });
-  const rpc=vi.fn(async (name:string) => {
+  const rpc=vi.fn(async (name:string, _args?: Record<string,unknown>) => {
     if(name==='get_relationship_gmail_runtime_contract') return options.missingContract ? {data:null,error:{code:'PGRST202',message:'missing contract'}} : {data:{contractVersion:1,ready:true},error:null};
     if(name==='record_relationship_gmail_retrieval_failure' && options.missingFailure) return {data:null,error:{code:'PGRST202',message:'missing failure RPC'}};
     if(name==='record_relationship_gmail_source_receipt' && options.receiptFail) return {data:null,error:{message:'receipt persistence failed'}};
-    if(name==='get_relationship_google_sync_state') return {data:{gmailHistoryId:'100'},error:null};
+    if(name==='get_relationship_google_sync_state') return {data:{gmailHistoryId:'100',lastSuccessfulSyncAt:new Date().toISOString()},error:null};
     if(name==='match_relationship_gmail_message') return {data:{observationEnabled:true,ambiguous:true,...options.match},error:null};
     if(name==='ingest_relationship_gmail_message') return options.fail?{error:{message:'persistence failed'}}:{data:options.ingest??{observed:false,ambiguous:true},error:null};
     return {data:{},error:null};
