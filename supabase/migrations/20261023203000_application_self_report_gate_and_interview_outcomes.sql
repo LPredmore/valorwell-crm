@@ -224,6 +224,7 @@ declare
   v_applicant public.provider_applicants%rowtype;
   v_actor uuid;
   v_status text := lower(btrim(coalesce(p_to_status,'')));
+  v_previous_status text;
   v_note text := nullif(btrim(coalesce(p_note,'')),'');
 begin
   if p_applicant_id is null or p_prior_version is null or p_client_action_id is null
@@ -245,6 +246,7 @@ begin
   end if;
   if v_applicant.closed_at is not null or v_applicant.converted_staff_id is not null
   then raise exception 'APPLICANT_CLOSED' using errcode='23514'; end if;
+  v_previous_status := v_applicant.status::text;
   if not (
     (v_applicant.status::text='screening' and v_status='interview_invited')
     or (v_applicant.status::text='interview_scheduled' and v_status in ('interview_completed','accepted'))
@@ -271,10 +273,8 @@ begin
   values
     (v_applicant.tenant_id,v_applicant.id,'interview_stage_recorded',
      v_actor,p_client_action_id,v_note,
-     jsonb_build_object('previousStatus',case when v_status='interview_invited' then 'screening'
-         when v_status='accepted' and p_prior_version is not null then 'manual_interview_decision'
-         else 'interview_scheduled' end,
-        'status',v_status,'staffProfileCreated',false));
+     jsonb_build_object('previousStatus',v_previous_status,
+                        'status',v_status,'staffProfileCreated',false));
   return jsonb_build_object('id',v_applicant.id,'version',v_applicant.version,'idempotent',false);
 end;
 $fn$;
