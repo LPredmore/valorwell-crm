@@ -1,0 +1,30 @@
+name: Gmail recovery source contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/gmail-recovery/**'
+      - 'supabase/functions/_shared/relationship-google-sync.ts'
+      - 'supabase/functions/valorwell-daily-operations-watch/index.ts'
+      - 'supabase/staged-migrations/*gmail*'
+      - 'supabase/migrations/*relationship_source*'
+      - 'supabase/migrations/*relationship_review_organization_completion*'
+      - 'supabase/migrations/*relationship_secondary_to_recipients*'
+      - 'src/test/gmail-incident*'
+      - 'src/test/gmail-sync-health*'
+      - '.github/workflows/gmail-recovery-source.yml'
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: python3 scripts/gmail-recovery/verify-source.py
+      - run: bunx vitest run src/test/gmail-incident-candidate.test.ts src/test/gmail-incident-sql.test.ts src/test/gmail-incident-monitor.test.ts src/test/gmail-sync-health.test.ts
+      # Never connect CI to Supabase or a provider. Staged SQL is not a release job.
