@@ -22,7 +22,7 @@ export function RecruitmentInterviewCampaignControl({ tenantId }: { tenantId: st
     queryKey,
     enabled: isAuthenticated && Boolean(tenantId),
     queryFn: async (): Promise<Control> => {
-      const { data, error } = await supabase.rpc('crm_applicant_interview_campaign_status' as never, {
+      const { data, error } = await supabase.rpc('crm_therapist_application_campaign_status' as never, {
         p_tenant_id: tenantId,
       } as never);
       if (error) throw new Error(error.message);
@@ -35,7 +35,7 @@ export function RecruitmentInterviewCampaignControl({ tenantId }: { tenantId: st
   });
   const toggle = useMutation({
     mutationFn: async (enabled: boolean) => {
-      const { data, error } = await supabase.rpc('crm_set_applicant_interview_campaign_enabled' as never, {
+      const { data, error } = await supabase.rpc('crm_set_therapist_application_campaign_enabled' as never, {
         p_tenant_id: tenantId,
         p_enabled: enabled,
       } as never);
@@ -51,22 +51,22 @@ export function RecruitmentInterviewCampaignControl({ tenantId }: { tenantId: st
   const canControl = crmRole === 'crm_admin';
   const update = (value: boolean) => {
     if (value && !window.confirm(
-      'Activate Invitation to Interview for NEW clinician applicants? This authorizes three recruiting emails, beginning no sooner than two hours after each application and only from 6 AM to 6 PM Central Time. Existing applicants will not be backfilled.'
+      'Activate therapist application follow-ups for FUTURE interest submissions? New interests receive an immediate application link and, if they have not started, reminders 2 days and 7 days after the previous email, during 6 AM–6 PM Central Time. No historical applicants will be enrolled; the interview campaign stays paused.'
     )) return;
-    if (!value && !window.confirm('Pause Invitation to Interview? Pending campaign emails will not be sent while it is paused.')) return;
+    if (!value && !window.confirm('Pause therapist application follow-ups? Initial interest receipt emails will still send immediately, but no scheduled reminders will be dispatched.')) return;
     toggle.mutate(value);
   };
 
   return (
     <Card>
-      <CardHeader><CardTitle>Invitation to Interview — clinician applicant campaign</CardTitle></CardHeader>
+      <CardHeader><CardTitle>Therapist Application — new interest follow-ups</CardTitle></CardHeader>
       <CardContent className="space-y-3 text-sm">
         {state.isPending && <p role="status">Checking campaign activation…</p>}
         {state.isError && <p role="alert">Campaign status unavailable: {state.error.message}</p>}
         {state.data && <>
-          <p><strong>Activation:</strong> {enabled ? 'Active — new eligible applications start the sequence' : 'Paused — no new interview campaign emails'}</p>
-          <p>First invitation: no sooner than 2 hours after applying. Email window: 6:00 AM to 6:00 PM Central Time (CST/CDT). Follow-ups: 2 days and 7 days after the preceding successful email, also within the window.</p>
-          <p>Existing staff matches create a manual task instead. Confirmed bookings stop follow-ups and move the applicant to Interview Scheduled. No existing applicants are automatically backfilled.</p>
+          <p><strong>Activation:</strong> {enabled ? 'Active — new interest submissions enter the reminder sequence' : 'Paused — only immediate confirmation emails continue'}</p>
+          <p>First invitation: immediately after new interest registration, with a link to /therapistapplication. Follow-up 1: two days after the initial successfully sent email. Final reminder: seven days after the first reminder. Follow-ups send between 6:00 AM and 6:00 PM Central Time (CST/CDT).</p>
+          <p>Reminders stop as soon as a clinician verifies their email and begins the application. Only new, consented /clinicians interest registrations are enrolled; older applicants and Indeed applicants are excluded. The old Interview campaign remains paused.</p>
           {canControl && <Button variant={enabled ? 'outline' : 'default'} disabled={toggle.isPending} onClick={() => update(!enabled)}>
             {toggle.isPending ? 'Saving…' : enabled ? 'Pause campaign' : 'Activate campaign'}
           </Button>}
