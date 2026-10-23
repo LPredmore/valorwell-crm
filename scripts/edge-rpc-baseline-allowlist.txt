@@ -10,3 +10,7 @@ record_relationship_campaign_work_result
 release_campaign_step_claim
 staff_record_provider_applicant_contact_delivery
 staff_record_provider_applicant_response
+
+# Implemented in Billing Hub migration 20261023190000_new_contacted_therapist_followups.sql;
+# confirmed installed in the shared production DB 2026-10-23 (service_role only).
+crm_therapist_interest_sms_can_send
