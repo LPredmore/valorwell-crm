@@ -28,3 +28,15 @@ kept working, which hid the failure.
   signatures and grants. Every row must be `ok = true`.
 - `get_relationship_gmail_diagnostics()` reports seconds since the last verified success
   (60-minute warning, 240-minute critical).
+
+## First verified sync after repair
+The hourly run at 2026-10-23 16:17 UTC succeeded, with no manual timestamp or cursor
+changes:
+- The error cleared. Cursor 3485910 → 3488133, with `hasMore: true`, so catch-up continues
+  on later runs. `last_successful_sync_at` = 16:17:04 UTC.
+- 2 messages were ingested and 2 provider receipts recorded. Gmail communications went from
+  178 to 179, all with distinct provider IDs, so no duplicates.
+- 23 history entries were unavailable. 9 were recorded as `NOT_FOUND` review items, and
+  1 secondary-recipient address went to review. Unavailable does not mean deleted.
+- The final counts of recovered and unresolved messages will be known once the cursor
+  reaches the current mailbox head (~3494427).
