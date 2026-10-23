@@ -20,7 +20,8 @@ export function ConnectedStageEditor({pipeline,card,stages,busy,save}:{
   },[pipeline.source_key,card.sourceStatus,stages]);
   if(pipeline.source_mode!=='connected'||!action||card.sourceKind==='therapist_prospect'
     ||card.sourceVersion===undefined)return null;
-  const isApplicant=action.requiresFollowup;
+  const isApplicant=pipeline.source_key==='provider_applicants';
+  const needsFollowup=isApplicant&&action.requiresFollowup;
   const applicantReady=!!card.owner_profile_id&&!!card.next_action?.trim()&&!!card.next_action_due_at;
   return <div className="space-y-2">
     <Button size="sm" variant="outline" disabled={busy||candidates.length===0}
@@ -29,7 +30,7 @@ export function ConnectedStageEditor({pipeline,card,stages,busy,save}:{
       <p className="text-xs text-muted-foreground">
         {action.guidance}
       </p>
-      {isApplicant&&!applicantReady&&<p role="status" className="text-xs text-destructive">
+      {needsFollowup&&!applicantReady&&<p role="status" className="text-xs text-destructive">
         The applicant requires an assigned owner and scheduled next action. Complete those fields in the staff applicant workspace before transitioning.
       </p>}
       <label className="block space-y-1 text-xs">{isApplicant?'New applicant stage':'New BTY stage'}
@@ -42,7 +43,7 @@ export function ConnectedStageEditor({pipeline,card,stages,busy,save}:{
       <label className="block space-y-1 text-xs">Reason for this status change (recorded in history)
         <Input value={reason} maxLength={500} placeholder="What actually changed?" onChange={e=>setReason(e.target.value)}/>
       </label>
-      <Button size="sm" disabled={busy||!toStatus||reason.trim().length<8||(isApplicant&&!applicantReady)}
+      <Button size="sm" disabled={busy||!toStatus||reason.trim().length<8||(needsFollowup&&!applicantReady)}
         onClick={()=>save(async()=>{
           await transitionConnectedSourceCard(pipeline,card,toStatus,reason);
           setReason('');setToStatus('');setOpen(false);
