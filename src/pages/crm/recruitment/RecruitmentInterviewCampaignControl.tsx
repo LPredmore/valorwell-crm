@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { supabase } from '@/integrations/supabase/client';
+import {ScreeningInterviewCampaignControl} from './ScreeningInterviewCampaignControl';
 
 type Control = {
   name: string;
@@ -53,18 +54,19 @@ export function RecruitmentInterviewCampaignControl({ tenantId }: { tenantId: st
     if (value && !window.confirm(
       'Activate therapist application follow-ups for FUTURE website interest submissions? New interests receive an immediate application link, transition to Contacted upon successful sending, and receive follow-ups after 2 business days, 7 days and 7 days, during 6 AM–6 PM Central Time. No historical applicants will be enrolled; the interview campaign stays paused.'
     )) return;
-    if (!value && !window.confirm('Pause therapist application follow-ups? Initial interest receipt emails will still send immediately, but no scheduled reminders will be dispatched.')) return;
+    if (!value && !window.confirm('Pause therapist application outreach? The initial invitation and all reminders will be blocked. The application form itself remains available.')) return;
     toggle.mutate(value);
   };
 
   return (
+    <div className="space-y-4">
     <Card>
       <CardHeader><CardTitle>Therapist Application — new interest follow-ups</CardTitle></CardHeader>
       <CardContent className="space-y-3 text-sm">
         {state.isPending && <p role="status">Checking campaign activation…</p>}
         {state.isError && <p role="alert">Campaign status unavailable: {state.error.message}</p>}
         {state.data && <>
-          <p><strong>Activation:</strong> {enabled ? 'Active — new interest submissions start in New; after the immediate email sends, Contacted starts the follow-ups' : 'Paused — only immediate confirmation emails continue'}</p>
+          <p><strong>Activation:</strong> {enabled ? 'Active — new interest submissions start in New; after the immediate email sends, Contacted starts the follow-ups' : 'Paused — initial invitations and follow-ups are blocked'}</p>
           <p>First invitation: immediately after new interest registration, with a link to /therapistapplication. Follow-up 1: two business days after New → Contacted, paired with RingCentral SMS when the applicant opts in. Follow-up 2: a soft reminder seven days after the first successful reminder. Follow-up 3: the final reminder seven days after that. After final successful sending, still-unresponsive applicants move to No Response. Follow-ups send between 6:00 AM and 6:00 PM Central Time (CST/CDT).</p>
           <p>Reminders stop as soon as a clinician verifies their email and begins the application. SMS requires a mobile number and separate optional SMS consent. Only new, consented /clinicians interest registrations are enrolled; older applicants and Indeed applicants are excluded. The old Interview campaign remains paused.</p>
           {canControl && <Button variant={enabled ? 'outline' : 'default'} disabled={toggle.isPending} onClick={() => update(!enabled)}>
@@ -75,5 +77,7 @@ export function RecruitmentInterviewCampaignControl({ tenantId }: { tenantId: st
         </>}
       </CardContent>
     </Card>
+    <ScreeningInterviewCampaignControl tenantId={tenantId}/>
+    </div>
   );
 }
