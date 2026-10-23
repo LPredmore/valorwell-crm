@@ -33,8 +33,8 @@ export function screeningInterviewEmail(step:1|2|3|4,firstName:string|null){
   4:{
     subject:"Closing the loop on your ValorWell interview invitation",
     paragraphs:[greeting,
-      "I wanted to send one final note about the opportunity to interview with ValorWell.",
-      "I understand that this may not be the right time, and that's completely fine. I haven't heard back about scheduling, so I'll close out my follow-ups rather than keep filling your inbox.",
+      "I wanted to send one last note about the opportunity to interview with ValorWell.",
+      "I understand that this may not be the right time, and that's completely fine. I haven't heard back about scheduling, so I'll close out my follow-ups rather than keep filling your inbox. I won't send any further reminders about this opportunity.",
       "If your circumstances change and you'd like to reconnect, you're welcome to reach out. You can also still use the interview link here:",
       INTERVIEW_BOOKING_URL,instruction,
       "Thank you again for your interest, and I wish you the best.","Luke"]
