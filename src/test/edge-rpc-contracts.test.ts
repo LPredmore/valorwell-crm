@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error plain ESM script without types
 import { rpcCalls, definedFunctions, missingRpcs } from '../../scripts/check-edge-rpc-contracts.mjs';
 
 describe('edge RPC contract check', () => {
