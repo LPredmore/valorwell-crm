@@ -369,7 +369,8 @@ export async function processProviderApplicantMessages(limit = 25) {
         continue;
       }
       if (job.content_version !== "provider_recruiting_v1"
-          && job.content_version !== "interview_invitation_v1") {
+          && job.content_version !== "interview_invitation_v1"
+          && job.content_version !== "therapist_application_sms_v1") {
         await completeApplicantJob(db, job, {
           status: "skipped",
           errorCode: "unsupported_content_version",
@@ -379,6 +380,21 @@ export async function processProviderApplicantMessages(limit = 25) {
         continue;
       }
 
+      if (job.content_version === "therapist_application_sms_v1") {
+        if (job.channel !== "sms" || job.communication_kind !== "initial_sms") {
+          await completeApplicantJob(db,job,{status:"skipped",errorCode:"unsupported_application_sms_step"});
+          result.skipped++;
+          continue;
+        }
+        const {data:eligible,error:gateError}=await db.rpc(
+          "crm_therapist_interest_sms_can_send",{p_job_id:job.id});
+        if(gateError) throw new Error("SMS eligibility unavailable: "+gateError.code);
+        if(eligible!==true) {
+          await completeApplicantJob(db,job,{status:"skipped",errorCode:"sms_ineligible_or_app_started"});
+          result.skipped++;
+          continue;
+        }
+      }
       if (job.content_version === "interview_invitation_v1") {
         if (job.channel !== "email" || !["initial_email", "interview_followup_2", "interview_followup_3"].includes(job.communication_kind)) {
           await completeApplicantJob(db, job, {
@@ -433,7 +449,9 @@ export async function processProviderApplicantMessages(limit = 25) {
           providerMessageId = await sendSms(
             ringCentralToken,
             phone,
-            providerApplicantSmsContent(applicant),
+            job.content_version === "therapist_application_sms_v1"
+              ? "Hi, this is Luke from ValorWell. Did you get the email I sent you with the link to the application portal?"
+              : providerApplicantSmsContent(applicant),
           );
           await recordApplicantTransportAcceptance(db, job, providerMessageId, null);
         }
@@ -441,8 +459,9 @@ export async function processProviderApplicantMessages(limit = 25) {
 
       // Follow-ups never mutate the applicant stage.
       // Recheck following provider acceptance to avoid regressing a concurrent booking.
-      if (job.content_version !== "interview_invitation_v1" ||
-          job.communication_kind === "initial_email") {
+      if (job.content_version !== "therapist_application_sms_v1"
+          && (job.content_version !== "interview_invitation_v1" ||
+          job.communication_kind === "initial_email")) {
         let updateFirstContact = true;
         if (job.content_version === "interview_invitation_v1") {
           const { data: canRecord, error: recordGateError } = await db.rpc(
