@@ -1,0 +1,110 @@
+--- a/supabase/functions/_shared/relationship-google-sync.ts
++++ b/supabase/functions/_shared/relationship-google-sync.ts
+@@ -49,6 +49,27 @@
+   return `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}?${params}`;
+ }
+ 
++async function assertGmailRuntimeContract(admin: SupabaseClient) {
++  const { data, error } = await admin.rpc("get_relationship_gmail_runtime_contract");
++  if (error || data?.contractVersion !== 1 || data?.ready !== true) {
++    throw Object.assign(new Error("Required Gmail database contract unavailable; reviewed database release required."), {
++      code: "gmail_contract_missing", contractErrorCode: error?.code ?? "contract_not_ready",
++    });
++  }
++}
++
++async function recordGmailRetrievalFailure(admin: SupabaseClient, messageId: string, providerError: Error & { status?: number }) {
++  const { error } = await admin.rpc("record_relationship_gmail_retrieval_failure", {
++    p_message_id: messageId,
++    p_status: providerError.status === 404 ? "NOT_FOUND" : providerError.status === 403 ? "FORBIDDEN" : "UNAVAILABLE",
++  });
++  if (error) {
++    throw Object.assign(new Error(`Gmail retrieval failed (HTTP ${providerError.status ?? "unknown"}); failure recording failed (${error.code ?? "database_error"}); cursor preserved.`), {
++      status: providerError.status, code: error.code === "PGRST202" ? "gmail_contract_missing" : "gmail_failure_recording_failed",
++    });
++  }
++}
++
+ async function processGmailMessage(
+   admin: SupabaseClient,
+   accessToken: string,
+@@ -58,11 +79,7 @@
+   // A missing single message must not strand the mailbox's recovery cursor.
+   const metadata = await googleJson(metadataUrl(messageId, "metadata"), accessToken)
+     .catch(async (error: Error & { status?: number }) => {
+-      const { error: recordError } = await admin.rpc("record_relationship_gmail_retrieval_failure", {
+-        p_message_id: messageId,
+-        p_status: error.status === 404 ? "NOT_FOUND" : error.status === 403 ? "FORBIDDEN" : "UNAVAILABLE",
+-      });
+-      if (recordError) throw new Error(recordError.message);
++      await recordGmailRetrievalFailure(admin, messageId, error);
+       if (error.status === 404) return null;
+       throw error;
+     });
+@@ -107,11 +124,7 @@
+   }
+   const full = await googleJson(metadataUrl(messageId, "full"), accessToken)
+     .catch(async (error: Error & { status?: number }) => {
+-      const { error: recordError } = await admin.rpc("record_relationship_gmail_retrieval_failure", {
+-        p_message_id: messageId,
+-        p_status: error.status === 404 ? "NOT_FOUND" : error.status === 403 ? "FORBIDDEN" : "UNAVAILABLE",
+-      });
+-      if (recordError) throw new Error(recordError.message);
++      await recordGmailRetrievalFailure(admin, messageId, error);
+       if (error.status === 404) return null;
+       throw error;
+     });
+@@ -160,7 +173,7 @@
+   // persisted. Ingestion can reject a false thread anchor and return matched:false.
+   const ingested = (data ?? {}) as Record<string, unknown>;
+   const captured = ingested.observed === true || ingested.matched === true;
+-  return { messageId, matched: captured, result: data };
++  return { messageId, matched: captured, ambiguous: ingested.ambiguous === true, result: data };
+ }
+ 
+ async function fullGmailReconciliation(
+@@ -301,6 +314,7 @@
+   if (!runtime) return { skipped: true, reason: "gmail_not_connected" };
+   if (runtime.googleAccountEmail.toLowerCase() !== GMAIL_MAILBOX) throw new Error("Gmail mailbox restriction failed.");
+   try {
++    await assertGmailRuntimeContract(admin);
+     const accessToken = await refreshGoogleAccessToken(runtime);
+     const state = await syncState(admin, runtime.id);
+     if (!state.gmailHistoryId) return await fullGmailReconciliation(admin, runtime, accessToken, state);
+@@ -367,7 +381,9 @@
+     return {
+       mode: "history",
+       processed: results.filter((row) => !row.skipped).length,
+-      skippedUnavailable: results.filter((row) => row.skipped).length,
++      skippedUnavailable: results.filter((row) => row.skipped === "message_not_found").length,
++      skipped: results.filter((row) => row.skipped).length,
++      matched: results.filter((row) => row.matched === true).length,
+       hasMore,
+       historyId: nextHistoryId,
+     };
+@@ -375,7 +391,8 @@
+     const status = (error as Error & { status?: number }).status;
+     await updateState(admin, {
+       p_connection_id: runtime.id, p_notification: Boolean(notificationHistoryId),
+-      p_error_code: status === 403 ? "FORBIDDEN" : status === 404 ? "NOT_FOUND" : "gmail_sync_failed",
++      p_error_code: (error as Error & { code?: string }).code === "gmail_contract_missing"
++        ? "gmail_contract_missing" : status === 403 ? "FORBIDDEN" : status === 404 ? "NOT_FOUND" : "gmail_sync_failed",
+       p_error_reason: error instanceof Error ? error.message : "Gmail synchronization failed.",
+     });
+     throw error;
+@@ -389,6 +406,7 @@
+  * cursor. Failed pages are retried without skipping messages.
+  */
+ export async function backfillGmailBatch(admin: SupabaseClient) {
++  await assertGmailRuntimeContract(admin);
+   const { data: candidates, error: listError } = await admin
+     .from("relationship_reconciliation_issues")
+     .select("id,details,created_at")
+@@ -512,6 +530,7 @@
+  * else stays in the human review queue. No outbound messages are sent.
+  */
+ export async function replayExactBtyGmailCandidates(admin: SupabaseClient) {
++  await assertGmailRuntimeContract(admin);
+   const runtime = await connectionRuntime(admin, "gmail");
+   if (!runtime || runtime.googleAccountEmail.toLowerCase() !== GMAIL_MAILBOX) {
+     throw new Error("Authorized canonical Gmail mailbox unavailable for exact replay.");
