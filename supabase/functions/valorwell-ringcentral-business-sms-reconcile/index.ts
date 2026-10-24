@@ -32,6 +32,19 @@ Deno.serve(async(req:Request)=>{
   if(!token)return reply({error:"provider_access_token_missing"},503);
   const end=new Date(),start=new Date(end.getTime()-hours*3600000);
   let examined=0,eligible=0,imported=0,existing=0,excludedScope=0,skippedInvalid=0,complete=false,pages=0;
+  let applicantResponsesLinked=0;
+  async function linkKnownApplicantReply(messageId:string){
+    const {data:match,error:matchError}=await admin.rpc("valorwell_link_sms_unique_applicant_v1",{p_ringcentral_message_id:messageId});
+    if(matchError)throw new Error("sms_match_rpc_failed_"+String(matchError.code??"unknown").replace(/[^A-Za-z0-9_]/g,"").slice(0,20));
+    if(match?.matched!==true)return;
+    const {error:responseError}=await admin.rpc("staff_record_provider_applicant_response",{
+      p_applicant_id:match.applicant_id,p_channel:"sms",
+      p_provider_message_id:messageId,p_received_at:match.received_at
+    });
+    if(responseError)throw new Error("sms_applicant_response_record_failed");
+    if(match.already_linked!==true)applicantResponsesLinked++;
+  }
+
   for(let page=1;page<=5;page++){
     const params=new URLSearchParams({dateFrom:start.toISOString(),dateTo:end.toISOString(),messageType:"SMS",direction:"Inbound",availability:"Alive",perPage:"100",page:String(page)});
     const response=await fetch(host+"/restapi/v1.0/account/~/extension/~/message-store?"+params,{
@@ -51,7 +64,7 @@ Deno.serve(async(req:Request)=>{
       eligible++;
       const {data:found,error:foundError}=await admin.from("crm_inbound_sms_logs").select("id").eq("ringcentral_message_id",messageId).maybeSingle();
       if(foundError)return reply({error:"crm_duplicate_check_failed",pages,imported},503);
-      if(found){existing++;continue;}
+      if(found){existing++;await linkKnownApplicantReply(messageId);continue;}
       // Store a business number's message in the existing HIPAA-controlled CRM database,
       // not the OpenRouter AI payload. Never guess a client or applicant identity.
       const {error:insertError}=await admin.from("crm_inbound_sms_logs").insert({
@@ -63,14 +76,15 @@ Deno.serve(async(req:Request)=>{
       if(insertError?.code==="23505"){existing++;continue;}
       if(insertError)return reply({error:"crm_insert_failed",code:insertError.code??"unknown",pages,imported},503);
       imported++;
+      await linkKnownApplicantReply(messageId);
     }
     const pageCount=Number(data?.paging?.totalPages);
     if(rows.length<100||(Number.isFinite(pageCount)&&page>=pageCount)){complete=true;break;}
   }
   if(!complete)return reply({error:"provider_page_limit_exceeded",hours,pages,imported,success:false},503);
-  return reply({ok:true,hours,pages,examined,eligible,existing,imported,excluded_scope:excludedScope,invalid_skipped:skippedInvalid,complete,
+  return reply({ok:true,hours,pages,examined,eligible,existing,imported,applicant_responses_linked:applicantResponsesLinked,excluded_scope:excludedScope,invalid_skipped:skippedInvalid,complete,
     note:"Only exact configured business-number messages imported; no guessed CRM contact link and no external AI content sharing."});
  }catch(e){
-  return reply({error:e instanceof Error&&e.name==="TimeoutError"?"provider_timeout":"reconciliation_failed"},503);
+  return reply({error:e instanceof Error&&e.name==="TimeoutError"?"provider_timeout":e instanceof Error&&/^sms_[A-Za-z0-9_]+$/.test(e.message)?e.message:"reconciliation_failed"},503);
  }
 });
