@@ -49,7 +49,7 @@ async function closeCase(id: string, decision: 'resolved' | 'ignored'): Promise<
   return data as DecisionResult;
 }
 
-const title = (key: string) => key.replaceAll('_', ' ').replace(/\b\w/g, char => char.toUpperCase());
+const title = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
 function centralDate(value: string) {
   return new Intl.DateTimeFormat('en-US', {
     month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
