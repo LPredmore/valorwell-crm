@@ -63,7 +63,7 @@ EXCEPTION WHEN OTHERS THEN
  RAISE WARNING 'Local inbox triage failed with SQLSTATE %',SQLSTATE;
  RETURN NEW;
 END;
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION private.autonomous_inbox_record_local_triage_v1() FROM PUBLIC,anon,authenticated,service_role;
 DROP TRIGGER IF EXISTS vw_hourly_case_local_triage ON public.valorwell_hourly_comms_review_cases;
