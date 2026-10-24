@@ -37,7 +37,7 @@ export function AutonomousInboxDrafts({caseId,canEdit}:{caseId:string;canEdit:bo
  const draft=useQuery({queryKey,queryFn:()=>read(caseId),enabled:expanded,retry:false});
  useEffect(()=>{
   if(draft.data)setText(draft.data.body??'');
- },[draft.data?.latestRevision, draft.data?.body]);
+ },[draft.data]);
  const saveDraft=useMutation({
   mutationFn:async()=>save(caseId,text,draft.data?.latestRevision??0),
   onSuccess:async()=>{
