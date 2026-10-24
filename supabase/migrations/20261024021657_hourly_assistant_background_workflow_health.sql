@@ -14,7 +14,7 @@ AS $function$
   'applicant_invites_overdue',(SELECT count(*) FROM public.therapist_application_invites i WHERE i.status IN('pending','failed') AND i.created_at<now()-interval '1 hour'),
   'open_comms_reviews',(SELECT count(*) FROM public.valorwell_hourly_comms_review_cases c WHERE c.state='pending_review')
  );
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION public.valorwell_hourly_operations_health_v1() FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.valorwell_hourly_operations_health_v1() TO service_role;
