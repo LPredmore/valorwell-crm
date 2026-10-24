@@ -65,3 +65,17 @@ verify_jwt = true
 [functions.recruitment-unsubscribe]
 # Public single-use token endpoint; hashed token verified server-side.
 verify_jwt = false
+
+# Hourly non-PHI reconciliation; each verifies X-Cron-Secret internally.
+[functions.valorwell-hourly-comms-audit]
+verify_jwt = false
+
+[functions.valorwell-ringcentral-business-sms-reconcile]
+verify_jwt = false
+
+[functions.ringcentral-sms-subscription-maintenance]
+verify_jwt = false
+
+[functions.crm-applicant-email-recovery]
+# Cron-header authenticated CRM worker; initial website send still happens independently.
+verify_jwt = false

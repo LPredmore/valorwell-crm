@@ -44,6 +44,7 @@ import RelationshipReconciliationPage from "./pages/crm/business-development/Rel
 import BtyAutomationPage from "./pages/crm/business-development/BtyAutomationPage";
 import BtySchedulingActivityPage from "./pages/crm/business-development/BtySchedulingActivityPage";
 import CommunicationsHubPage from "./pages/crm/CommunicationsHubPage";
+import AutonomousInboxPage from "./pages/crm/AutonomousInboxPage";
 import CommunicationsControlPlanePage from "./pages/crm/CommunicationsControlPlanePage";
 import NewsletterManagementPage from "./pages/crm/NewsletterManagementPage";
 import CampaignManagementPage from "./pages/crm/CampaignManagementPage";
@@ -99,6 +100,7 @@ const App = () => (
             <Route path="campaigns/:id/edit" element={<CrmCampaignEditor />} />
             <Route path="campaigns/:id/enrollments" element={<CrmCampaignEnrollments />} />
             <Route path="communications" element={<CommunicationsHubPage />} />
+            <Route path="communications/autonomous-inbox" element={<AutonomousInboxPage />} />
             <Route path="donations" element={<ZeffyDonationsPage />} />
             <Route path="communications/campaigns" element={<CampaignManagementPage />} />
             <Route path="communications/newsletters" element={<NewsletterManagementPage />} />

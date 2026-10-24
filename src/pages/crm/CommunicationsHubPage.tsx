@@ -17,6 +17,7 @@ const destinations = [
   { name:'Direct email', detail:'Compose an individual email and choose a permitted recipient.', href:'/crm/email-studio', section:'direct', icon:Mail, capability:'communicate' },
   { name:'Client inbox', detail:'Review client conversations in the secured client workspace.', href:'/crm/inbox', section:'direct', icon:Inbox },
   { name:'Relationship replies', detail:'Review partner and organization replies, ownership and follow-ups.', href:'/crm/business-development/replies', section:'direct', icon:Inbox },
+  { name:'Autonomous Inbox', detail:'Review the assistant\'s Gmail and business SMS cases, approve closure, and verify actions.', href:'/crm/communications/autonomous-inbox', section:'direct', icon:Inbox },
   { name:'Campaign management', detail:'View client, staff, donor and relationship campaigns and their enrollments.', href:'/crm/communications/campaigns', section:'campaigns', icon:Megaphone },
   { name:'Relationship outreach', detail:'Manage organization outreach campaigns, previews and delivery records.', href:'/crm/business-development/campaigns', section:'campaigns', icon:Users },
   { name:'Recruitment sequences & replies', detail:'Prepare clinician recruitment sequences and review replies and delivery status.', href:'/crm/recruitment/sequences', section:'campaigns', icon:Users },
