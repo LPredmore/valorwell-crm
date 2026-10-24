@@ -42,7 +42,7 @@ BEGIN
  jsonb_build_object('actionId',v_action.id,'decision',v_target,'note',nullif(btrim(coalesce(p_note,'')),'')));
  RETURN jsonb_build_object('id',v_action.id,'status',v_target,'idempotent',false,'messageSent',false);
 END;
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION public.crm_autonomous_inbox_decide_action_v1(uuid,text,text) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.crm_autonomous_inbox_decide_action_v1(uuid,text,text) TO authenticated;
