@@ -134,6 +134,10 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(url,svc,{auth:{persistSession:false,autoRefreshToken:false}});
   const requestBody=await req.json().catch(()=>({})) as Json;
   if(requestBody.action==="source_probe")return reply({ok:true,ringcentral_provider:await ringcentralCoverage(admin,requestBody.window_hours===168?168:48)});
+  if(requestBody.action==="health_probe"){
+    const {data,error}=await admin.rpc("valorwell_hourly_operations_health_v1");
+    return reply({ok:!error,health:error?null:data},error?503:200);
+  }
   if(requestBody.action==="signals_probe"){
     const result=await admin.rpc("valorwell_hourly_comms_snapshot_v1");
     if(result.error||!result.data)return reply({error:"snapshot_unavailable"},503);
@@ -184,10 +188,24 @@ Deno.serve(async (req: Request) => {
   }
   const snap = metrics as Json;
   snap.crm_triage=triage as Json;
+  const {data:operations,error:operationsError}=await admin.rpc("valorwell_hourly_operations_health_v1");
+  snap.workflow_health=operationsError?{status:"unavailable"}:(operations as Json);
   snap.ringcentral_crm_reconcile=smsRepair;
   snap.ringcentral_provider=await ringcentralCoverage(admin);
   const findings = signals(snap);
   if(smsRepair.ok!==true)findings.push({code:"ringcentral_reconcile_unavailable",severity:"high"});
+  const ops=section(snap,"workflow_health");
+  if(operationsError) findings.push({code:"workflow_health_unavailable",severity:"high"});
+  for(const [key,code] of [
+    ["appointment_pending_over_10m","appointment_provisioning_delayed"],
+    ["appointment_failed_recent_24h","appointment_recent_failed"],
+    ["billing_outbox_stale_10m","clinical_billing_delayed"],
+    ["therapist_match_outbox_overdue","therapist_match_notifications_delayed"],
+    ["applicant_invites_overdue","applicant_invites_delayed"]
+  ] as [string,string][]){
+    const count=numberAt(ops,key);
+    if(count>0)findings.push({code,severity:"high",count});
+  }
   const rc=section(snap,"ringcentral_provider");
   const sub=section(rc,"subscriptions");
   if(sub.status==="ok" && Number(sub.webhook_active_sms_subscriptions||0)===0)
