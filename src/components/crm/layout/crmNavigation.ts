@@ -51,6 +51,7 @@ export const crmNavGroups: readonly CrmNavGroup[] = [
       { label: 'Organizations', href: '/crm/business-development/organizations', icon: Building2 },
       { label: 'Pipelines', href: '/crm/pipelines', icon: GitBranch, description: 'Configurable personal and organization relationship pipelines' },
       { label: 'Communications', href: '/crm/communications', icon: MessageCircle, exact: true, description: 'Direct messages, replies, campaigns, newsletters and templates' },
+      { label: 'Autonomous Inbox', href: '/crm/communications/autonomous-inbox', icon: Inbox, description: 'Authorized assistant review cases, source evidence, tasks and decisions' },
       { label: 'Campaigns', href: '/crm/communications/campaigns', icon: Megaphone },
       { label: 'Foundation Donations', href: '/crm/donations', icon: HeartHandshake, capability: 'report', description: 'Reconciled Zeffy payment amounts and source coverage' },
     ],
