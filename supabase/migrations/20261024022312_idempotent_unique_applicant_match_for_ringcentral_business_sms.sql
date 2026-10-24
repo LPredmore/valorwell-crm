@@ -28,7 +28,7 @@ BEGIN
  UPDATE public.crm_inbound_sms_logs SET provider_applicant_id=v_id WHERE id=v_sms.id;
  RETURN jsonb_build_object('matched',true,'applicant_id',v_id,'received_at',v_sms.received_at,'already_linked',false);
 END;
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION public.valorwell_link_sms_unique_applicant_v1(text) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.valorwell_link_sms_unique_applicant_v1(text) TO service_role;
