@@ -19,6 +19,8 @@ type AgentCase = {
   taskId: string | null;
   taskStatus: string | null;
   observedEvents: number;
+  triageHint?: string | null;
+  triageMethod?: string;
   proposedActions: number;
 };
 type QueueResult = { cases: AgentCase[]; openCount: number };
@@ -125,6 +127,9 @@ export default function AutonomousInboxPage() {
           </div>
           <div>
             <h2 className="font-medium">{title(item.reason)}</h2>
+            {item.triageHint && <p className="mt-1 text-xs text-muted-foreground">
+              Local suggestion: {title(item.triageHint)} · Requires human review
+            </p>}
             <p className="mt-1 text-xs text-muted-foreground">
               Source record {item.sourceRecordId.slice(0,8)} · Evidence events {item.observedEvents}
               {item.proposedActions>0 && <> · Proposed actions {item.proposedActions}</>}
