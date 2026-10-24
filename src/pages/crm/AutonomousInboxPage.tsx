@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Inbox, RefreshCw, ShieldCheck, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { AutonomousInboxActions } from '@/components/crm/AutonomousInboxActions';
 import { useCrmAuth } from '@/hooks/crm/useCrmAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -147,6 +148,7 @@ export default function AutonomousInboxPage() {
               </Button>
             </>}
           </div>
+          <AutonomousInboxActions caseId={item.id} canEdit={capabilities.mutate && item.state==='pending_review'} />
         </article>)}
       </CardContent>
     </Card>
