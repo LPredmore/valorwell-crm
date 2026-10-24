@@ -122,7 +122,7 @@ BEGIN
   'deferred',v_deferred,'failed_terminal',v_terminal,
   'outbound_messages_sent',0);
 END;
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION public.autonomous_inbox_process_approved_v1(integer)
  FROM PUBLIC,anon,authenticated;
