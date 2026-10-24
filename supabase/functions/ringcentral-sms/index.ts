@@ -315,15 +315,27 @@ async function handleInbound(req: Request): Promise<Response> {
   if (validationToken) {
     return new Response("", {
       status: 200,
-      headers: { ...corsHeaders, "Validation-Token": validationToken },
+      headers: { ...corsHeaders, "Content-Type": "application/json", "Validation-Token": validationToken },
     });
   }
 
-  const expectedToken = Deno.env.get("RINGCENTRAL_WEBHOOK_VERIFICATION_TOKEN");
-  if (!expectedToken) return json({ error: "Webhook verification not configured" }, 500);
-  if (req.headers.get("Verification-Token") !== expectedToken) {
-    return json({ error: "Invalid verification token" }, 401);
+  const suppliedToken = req.headers.get("Verification-Token") ?? "";
+  if (!suppliedToken || suppliedToken.length > 2048) return json({ error: "Invalid verification token" }, 401);
+  const expectedToken = Deno.env.get("RINGCENTRAL_WEBHOOK_VERIFICATION_TOKEN") ?? "";
+  let tokenValid = Boolean(expectedToken && suppliedToken === expectedToken);
+  if (!tokenValid) {
+    const dbUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!dbUrl || !serviceKey) return json({ error: "Webhook verification temporarily unavailable" }, 503);
+    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(suppliedToken)));
+    const hash = [...digest].map((value) => value.toString(16).padStart(2, "0")).join("");
+    const verifier = createClient(dbUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data: match, error: verifyError } = await verifier.from("ringcentral_sms_webhook_token_hashes")
+      .select("id").eq("token_sha256", hash).eq("enabled", true).maybeSingle();
+    if (verifyError) return json({ error: "Webhook verification temporarily unavailable" }, 503);
+    tokenValid = Boolean(match);
   }
+  if (!tokenValid) return json({ error: "Invalid verification token" }, 401);
 
   const payload = await req.json();
   const fromNumber =
