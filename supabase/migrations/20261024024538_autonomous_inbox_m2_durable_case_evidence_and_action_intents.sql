@@ -57,7 +57,7 @@ BEGIN
  ON CONFLICT (tenant_id,case_id,event_key) DO NOTHING;
  RETURN NEW;
 END;
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION private.autonomous_inbox_case_observed_v1() FROM PUBLIC,anon,authenticated,service_role;
 DROP TRIGGER IF EXISTS vw_hourly_case_observed ON public.valorwell_hourly_comms_review_cases;
