@@ -53,7 +53,7 @@ BEGIN
   'closed',v_actor,jsonb_build_object('decision',p_decision,'note',v_note));
  RETURN jsonb_build_object('id',v_case.id,'status',p_decision,'idempotent',false);
 END;
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION public.crm_autonomous_inbox_review_v1(uuid,text,text) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.crm_autonomous_inbox_review_v1(uuid,text,text) TO authenticated;

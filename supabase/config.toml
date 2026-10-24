@@ -79,3 +79,7 @@ verify_jwt = false
 [functions.crm-applicant-email-recovery]
 # Cron-header authenticated CRM worker; initial website send still happens independently.
 verify_jwt = false
+
+# Authenticated with CRON_SECRET; only invokes service-gated, internal-task verification.
+[functions.autonomous-inbox-approved-action-worker]
+verify_jwt = false

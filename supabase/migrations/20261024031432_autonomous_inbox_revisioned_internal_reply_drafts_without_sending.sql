@@ -43,7 +43,7 @@ BEGIN
  'savedAt',v_latest.created_at,
  'history',v_history,'deliveryState','not_sent');
 END;
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION public.crm_autonomous_inbox_drafts_v1(uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.crm_autonomous_inbox_drafts_v1(uuid) TO authenticated;
@@ -85,7 +85,7 @@ BEGIN
  RETURN jsonb_build_object('caseId',v_case.id,'revision',v_revision+1,
  'deliveryState','not_sent','messageSent',false);
 END;
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION public.crm_autonomous_inbox_save_draft_v1(uuid,text,integer) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.crm_autonomous_inbox_save_draft_v1(uuid,text,integer) TO authenticated;

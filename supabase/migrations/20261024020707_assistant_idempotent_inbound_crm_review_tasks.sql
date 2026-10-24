@@ -105,7 +105,7 @@ BEGIN
   END LOOP;
   RETURN jsonb_build_object('new_email_review_tasks',v_mail_added,'new_sms_review_tasks',v_sms_added);
 END;
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION public.valorwell_hourly_comms_triage_v1(integer) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.valorwell_hourly_comms_triage_v1(integer) TO service_role;

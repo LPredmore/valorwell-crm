@@ -22,7 +22,7 @@ BEGIN
  WHERE a.tenant_id=v_case.tenant_id AND a.case_id=v_case.id;
  RETURN v_payload;
 END;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.crm_autonomous_inbox_decide_action_v1(p_action_id uuid, p_decision text, p_note text DEFAULT NULL::text)
@@ -69,7 +69,7 @@ BEGIN
  jsonb_build_object('actionId',v_action.id,'decision',v_target,'note',nullif(btrim(coalesce(p_note,'')),'')));
  RETURN jsonb_build_object('id',v_action.id,'status',v_target,'idempotent',false,'messageSent',false);
 END;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.crm_autonomous_inbox_verify_followup_v1(p_action_id uuid)
@@ -122,7 +122,7 @@ BEGIN
  ON CONFLICT(tenant_id,case_id,event_key) DO NOTHING;
  RETURN jsonb_build_object('id',v_action.id,'status','succeeded','idempotent',false,'messageSent',false);
 END;
-$function$
+$function$;
 
 
 REVOKE ALL ON FUNCTION public.crm_autonomous_inbox_actions_v1(uuid) FROM PUBLIC,anon;

@@ -43,7 +43,7 @@ AS $function$
     'active_minutely_jobs',(SELECT count(*) FROM cron.job j WHERE j.active AND j.schedule='* * * * *')
   )
  );
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION public.valorwell_hourly_comms_snapshot_v1() FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.valorwell_hourly_comms_snapshot_v1() TO service_role;

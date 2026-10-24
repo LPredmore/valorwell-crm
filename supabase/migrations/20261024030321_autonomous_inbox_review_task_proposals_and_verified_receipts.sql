@@ -40,7 +40,7 @@ BEGIN
  END IF;
  RETURN NEW;
 END;
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION private.autonomous_inbox_seed_followup_intent_v1() FROM PUBLIC,anon,authenticated,service_role;
 DROP TRIGGER IF EXISTS vw_hourly_case_followup_proposal ON public.valorwell_hourly_comms_review_cases;

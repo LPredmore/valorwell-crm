@@ -41,7 +41,7 @@ BEGIN
   'openCount',(SELECT count(*) FROM public.valorwell_hourly_comms_review_cases
    WHERE tenant_id=p_tenant_id AND state='pending_review'));
 END;
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION public.crm_autonomous_inbox_queue_v1(uuid,integer) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.crm_autonomous_inbox_queue_v1(uuid,integer) TO authenticated;
