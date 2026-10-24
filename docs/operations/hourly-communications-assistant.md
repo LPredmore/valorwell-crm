@@ -34,3 +34,15 @@ This branch mirrors production Edge functions and three database schema/function
 - Avoid direct sends or subject/person inference solely on AI model output.
 - Error/exception reviews should be linked to authoritative evidence; an unmatched message ID alone does not justify guessing a relationship.
 - Do not log any provider API token, email/SMS body, or phone number.
+
+## Follow-up implementation (same deployment)
+
+- `valorwell-hourly-comms-audit` v11 now invokes the business-number SMS reconciliation before triage, creates idempotent CRM follow-up tasks, and includes `valorwell_hourly_operations_health_v1` queue health with recent vs historical appointment failures differentiated.
+- `valorwell-ringcentral-business-sms-reconcile` v5 invokes `valorwell_link_sms_unique_applicant_v1` only when exactly one applicant and no client matches an inbound business SMS. It calls the existing idempotent CRM RPC `staff_record_provider_applicant_response`; message contents stay in CRM. One recovered SMS was safely linked to exactly one applicant, with one recorded response event. The associated RingCentral CRM sync issue was marked resolved. The webhook permission issue remains open.
+- `crm-applicant-email-recovery` v1 is CRM-owned, imports the existing source-verified Resend retry and reminder logic, and passed the authenticated empty-queue smoke test (200, zero failures). Previous cron #109 was unscheduled and replaced atomically with `crm-applicant-email-recovery-hourly` (job #114, minute 29). **The initial website invitation send remains immediate and website-owned; only retry/reminder dispatch moved to CRM.**
+- The assistant's completed full model cycle returned HTTP 200 `status=ok` with `z-ai/glm-5.3-flash`, 1 additional CRM review task, and zero automated outbound sends. CRM tasks and review cases have duplicate-protected source IDs.
+- Production-only changes beyond this PR remain tracked separately: appointment and billing event triggers, matching trigger, daily Claim.MD gate, cron-history retention, and ancillary cron schedules. Verify schema owner and migration history before syncing those into another repository.
+
+### Known acceptance limits
+
+Natural future user actions are needed to verify delivery of an applicant reminder and the complete clinical/appointment/matching path. Never send a synthetic applicant email, claim submission, or fake patient booking as an acceptance test. OpenRouter receives non-identifying aggregate signals only; actual message-body semantic analysis requires approved healthcare-data handling and additional privacy controls. The app's `SubscriptionWebhook` permission still requires RingCentral console authorization.
