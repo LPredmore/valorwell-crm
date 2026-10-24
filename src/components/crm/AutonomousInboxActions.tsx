@@ -12,6 +12,9 @@ type InboxAction = {
   summary: string;
   createdAt: string;
   approvedAt: string | null;
+  executionAttempts?: number;
+  nextAttemptAt?: string | null;
+  lastErrorCode?: string | null;
   verifiedReceipt: { recordedAt: string; outcome: string; sourceTaskId: string } | null;
 };
 const actionsRpc = supabase as unknown as {
@@ -77,6 +80,14 @@ export function AutonomousInboxActions({caseId,canEdit}: {caseId:string;canEdit:
           <span className="text-xs text-muted-foreground">Risk: {action.riskTier}</span>
         </div>
         <p className="text-sm">{action.summary || 'Internal CRM task review'}</p>
+        {action.lastErrorCode && <p className="text-xs text-destructive">
+          The internal verification could not complete ({action.lastErrorCode.replace(/_/g,' ')}).
+          {action.nextAttemptAt ? ' It will retry after ' + new Date(action.nextAttemptAt).toLocaleString() + '.' : ' Manual review is required.'}
+          {' '}Attempts: {action.executionAttempts ?? 0}.
+        </p>}
+        {action.status==='approved' && !action.lastErrorCode && <p className="text-xs text-muted-foreground">
+          Approved; the internal task check will run automatically. The Verify button also remains available.
+        </p>}
         {action.verifiedReceipt && <p className="text-xs text-muted-foreground">
           Verified against the existing CRM task on {new Date(action.verifiedReceipt.recordedAt).toLocaleString()}.
         </p>}
