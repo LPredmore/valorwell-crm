@@ -75,3 +75,7 @@ verify_jwt = false
 
 [functions.ringcentral-sms-subscription-maintenance]
 verify_jwt = false
+
+[functions.crm-applicant-email-recovery]
+# Cron-header authenticated CRM worker; initial website send still happens independently.
+verify_jwt = false
