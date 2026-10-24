@@ -45,5 +45,5 @@ BEGIN
    FROM candidates WHERE j.id=candidates.id RETURNING j.*
  )
  SELECT claimed.id,claimed.tenant_id,claimed.invite_id,claimed.step,claimed.claim_token FROM claimed;
-END; $function$
+END; $function$;
 
